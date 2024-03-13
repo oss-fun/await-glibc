@@ -1,0 +1,422 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>sysdeps/s390/multiarch/8bit-generic.c</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18977.html'>sysdeps</a>/<a href='../files/19209.html'>s390</a>/<a href='../files/19213.html'>multiarch</a>/8bit-generic.c</h2>
+<em class='comment'>/* [&lt;][&gt;][^][v][top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* Generic conversion to and from 8bit charsets - S390 version.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   Copyright (C) 2016-2022 Free Software Foundation, Inc.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'></em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'></em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'></em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   License along with the GNU C Library; if not, see</em>
+<a id='L17' name='L17'></a>  17 <em class='comment'>   &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L18' name='L18'></a>  18 
+<a id='L19' name='L19'></a>  19 <em class='sharp'>#if</em> <strong class='reserved'>defined</strong> <a href='../Y/824.html' title='Multiple used in 60 places.'>HAVE_S390_VX_ASM_SUPPORT</a>
+<a id='L20' name='L20'></a>  20 
+<a id='L21' name='L21'></a>  21 <em class='sharp'># if</em> <strong class='reserved'>defined</strong> <a href='../Y/825.html' title='Multiple used in 6 places.'>HAVE_S390_VX_GCC_SUPPORT</a>
+<a id='L22' name='L22'></a>  22 <em class='sharp'>#  define</em> <a href='../R/293.html' title='Multiple referred from 81 places.'>ASM_CLOBBER_VR</a>(<a href='../S/1074.html#L10' title='Defined at 10 in posix/test-vfork.c.'>NR</a>) , <a href='../S/1074.html#L10' title='Defined at 10 in posix/test-vfork.c.'>NR</a>
+<a id='L23' name='L23'></a>  23 <em class='sharp'># else</em>
+<a id='L24' name='L24'></a>  24 <em class='sharp'>#  define</em> <a href='../R/293.html' title='Multiple referred from 81 places.'>ASM_CLOBBER_VR</a>(<a href='../S/1074.html#L10' title='Defined at 10 in posix/test-vfork.c.'>NR</a>)
+<a id='L25' name='L25'></a>  25 <em class='sharp'># endif</em>
+<a id='L26' name='L26'></a>  26 
+<a id='L27' name='L27'></a>  27 <em class='comment'>/* Generate the conversion loop routines without vector instructions as</em>
+<a id='L28' name='L28'></a>  28 <em class='comment'>   fallback, if vector instructions aren't available at runtime.  */</em>
+<a id='L29' name='L29'></a>  29 <em class='sharp'># define</em> <a href='../S/17793.html#L19' title='Referred from 19 in sysdeps/s390/multiarch/iconv/skeleton.c.'>IGNORE_ICONV_SKELETON</a>
+<a id='L30' name='L30'></a>  30 <em class='sharp'># define</em> <a href='../S/700.html#L22' title='Referred from 22 in iconvdata/8bit-generic.c.'>from_generic</a> <a href='../Y/4588.html' title='Multiple used in 3 places.'>__from_generic_c</a>
+<a id='L31' name='L31'></a>  31 <em class='sharp'># define</em> <a href='../S/700.html#L23' title='Referred from 23 in iconvdata/8bit-generic.c.'>to_generic</a> <a href='../Y/8181.html' title='Multiple used in 3 places.'>__to_generic_c</a>
+<a id='L32' name='L32'></a>  32 <em class='sharp'># include</em> "iconvdata/8bit-generic.c"
+<a id='L33' name='L33'></a>  33 <em class='sharp'># undef</em> <a href='../S/17793.html#L19' title='Referred from 19 in sysdeps/s390/multiarch/iconv/skeleton.c.'>IGNORE_ICONV_SKELETON</a>
+<a id='L34' name='L34'></a>  34 <em class='sharp'># undef</em> <a href='../S/700.html#L22' title='Referred from 22 in iconvdata/8bit-generic.c.'>from_generic</a>
+<a id='L35' name='L35'></a>  35 <em class='sharp'># undef</em> <a href='../S/700.html#L23' title='Referred from 23 in iconvdata/8bit-generic.c.'>to_generic</a>
+<a id='L36' name='L36'></a>  36 
+<a id='L37' name='L37'></a>  37 <em class='comment'>/* Generate the converion routines with vector instructions. The vector</em>
+<a id='L38' name='L38'></a>  38 <em class='comment'>   routines can only be used with charsets where the maximum UCS4 value</em>
+<a id='L39' name='L39'></a>  39 <em class='comment'>   fits in 1 byte size. Then the hardware translate-instruction is used</em>
+<a id='L40' name='L40'></a>  40 <em class='comment'>   to translate between multiple generic characters and "1 byte UCS4"</em>
+<a id='L41' name='L41'></a>  41 <em class='comment'>   characters at once. The vector instructions are used to convert between</em>
+<a id='L42' name='L42'></a>  42 <em class='comment'>   the "1 byte UCS4" and UCS4.  */</em>
+<a id='L43' name='L43'></a>  43 <em class='sharp'># include</em> &lt;<a href='17784.html'>ifunc-resolve.h</a>&gt;
+<a id='L44' name='L44'></a>  44 
+<a id='L45' name='L45'></a>  45 <em class='sharp'># undef</em> <a href='../R/2814.html' title='Multiple referred from 77 places.'>FROM_LOOP</a>
+<a id='L46' name='L46'></a>  46 <em class='sharp'># undef</em> <a href='../R/8875.html' title='Multiple referred from 63 places.'>TO_LOOP</a>
+<a id='L47' name='L47'></a>  47 <em class='sharp'># define</em> <a href='../R/2814.html' title='Multiple referred from 77 places.'>FROM_LOOP</a>      <a href='../Y/4589.html' title='Multiple used in 2 places.'>__from_generic_vx</a>
+<a id='L48' name='L48'></a>  48 <em class='sharp'># define</em> <a href='../R/8875.html' title='Multiple referred from 63 places.'>TO_LOOP</a>        <a href='../Y/8184.html' title='Multiple used in 2 places.'>__to_generic_vx</a>
+<a id='L49' name='L49'></a>  49 
+<a id='L50' name='L50'></a>  50 <em class='sharp'># define</em> <a href='../R/4916.html' title='Multiple referred from 131 places.'>MIN_NEEDED_FROM</a>    1
+<a id='L51' name='L51'></a>  51 <em class='sharp'># define</em> <a href='../R/4919.html' title='Multiple referred from 133 places.'>MIN_NEEDED_TO</a>      4
+<a id='L52' name='L52'></a>  52 <em class='sharp'># define</em> <a href='../S/7088.html#L571' title='Referred from 571 in iconv/skeleton.c.'>ONE_DIRECTION</a>      0
+<a id='L53' name='L53'></a>  53 
+<a id='L54' name='L54'></a>  54 <em class='comment'>/* First define the conversion function from the 8bit charset to UCS4.  */</em>
+<a id='L55' name='L55'></a>  55 <em class='sharp'># define</em> <a href='../R/4917.html' title='Multiple referred from 8 places.'>MIN_NEEDED_INPUT</a>   <a href='../D/7994.html' title='Multiple defined in 60 places.'>MIN_NEEDED_FROM</a>
+<a id='L56' name='L56'></a>  56 <em class='sharp'># define</em> <a href='../R/4918.html' title='Multiple referred from 9 places.'>MIN_NEEDED_OUTPUT</a>  <a href='../D/7997.html' title='Multiple defined in 60 places.'>MIN_NEEDED_TO</a>
+<a id='L57' name='L57'></a>  57 <em class='sharp'># define</em> <a href='../R/4491.html' title='Multiple referred from 3 places.'>LOOPFCT</a>        <a href='../D/4718.html' title='Multiple defined in 88 places.'>FROM_LOOP</a>
+<a id='L58' name='L58'></a>  58 <em class='sharp'># define</em> <a href='../S/17789.html#L78' title='Referred from 78 in sysdeps/s390/multiarch/8bit-generic.c.'>BODY_FROM_ORIG</a> \
+<a id='L59' name='L59'></a>  59   <em class='brace'>{</em>                                       \
+<a id='L60' name='L60'></a>  60     <a href='../S/223.html#L26' title='Defined at 26 in bits/stdint-uintn.h.'>uint32_t</a> <a href='../D/28608.html' title='Multiple defined in 4 places.'>ch</a> = <a href='../Y/27573.html' title='Multiple used in 78 places.'>to_ucs4</a>[*<a href='../Y/16908.html' title='Multiple used in 980 places.'>inptr</a>];                        \
+<a id='L61' name='L61'></a>  61                                           \
+<a id='L62' name='L62'></a>  62     <strong class='reserved'>if</strong> (<a href='../D/5222.html' title='Multiple defined in 196 places.'>HAS_HOLES</a> &amp;&amp; <a href='../D/23349.html' title='Multiple defined in 3 places.'>__builtin_expect</a> (<a href='../D/28608.html' title='Multiple defined in 4 places.'>ch</a> == L'\0', 0) &amp;&amp; *<a href='../Y/16908.html' title='Multiple used in 980 places.'>inptr</a> != '\0')     \
+<a id='L63' name='L63'></a>  63       <em class='brace'>{</em>                                       \
+<a id='L64' name='L64'></a>  64     <em class='comment'>/* This is an illegal character.  */</em>                      \
+<a id='L65' name='L65'></a>  65     <a href='../S/7078.html#L194' title='Defined at 194 in iconv/loop.c.'>STANDARD_FROM_LOOP_ERR_HANDLER</a> (1);                   \
+<a id='L66' name='L66'></a>  66       <em class='brace'>}</em>                                       \
+<a id='L67' name='L67'></a>  67                                           \
+<a id='L68' name='L68'></a>  68     <a href='../D/35195.html' title='Multiple defined in 5 places.'>put32</a> (<a href='../Y/21994.html' title='Multiple used in 1121 places.'>outptr</a>, <a href='../D/28608.html' title='Multiple defined in 4 places.'>ch</a>);                               \
+<a id='L69' name='L69'></a>  69     <a href='../Y/21994.html' title='Multiple used in 1121 places.'>outptr</a> += 4;                                  \
+<a id='L70' name='L70'></a>  70     ++<a href='../Y/16908.html' title='Multiple used in 980 places.'>inptr</a>;                                      \
+<a id='L71' name='L71'></a>  71   <em class='brace'>}</em>
+<a id='L72' name='L72'></a>  72 
+<a id='L73' name='L73'></a>  73 <em class='sharp'># define</em> <a href='../R/549.html' title='Multiple referred from 6 places.'>BODY</a>                               \
+<a id='L74' name='L74'></a>  74   <em class='brace'>{</em>                                 \
+<a id='L75' name='L75'></a>  75     <strong class='reserved'>if</strong> (<a href='../D/23349.html' title='Multiple defined in 3 places.'>__builtin_expect</a> (<a href='../Y/16764.html' title='Multiple used in 218 places.'>inend</a> - <a href='../Y/16908.html' title='Multiple used in 980 places.'>inptr</a> &lt; 16, 1)            \
+<a id='L76' name='L76'></a>  76     || <a href='../Y/21971.html' title='Multiple used in 282 places.'>outend</a> - <a href='../Y/21994.html' title='Multiple used in 1121 places.'>outptr</a> &lt; 64)                    \
+<a id='L77' name='L77'></a>  77       <em class='comment'>/* Convert remaining bytes with c code.  */</em>           \
+<a id='L78' name='L78'></a>  78       <a href='../S/17789.html#L58' title='Defined at 58 in sysdeps/s390/multiarch/8bit-generic.c.'>BODY_FROM_ORIG</a>                            \
+<a id='L79' name='L79'></a>  79     <strong class='reserved'>else</strong>                                \
+<a id='L80' name='L80'></a>  80        <em class='brace'>{</em>                                \
+<a id='L81' name='L81'></a>  81      <em class='comment'>/* Convert 16 ... 256 bytes at once with tr-instruction.  */</em>   \
+<a id='L82' name='L82'></a>  82      <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../D/31778.html' title='Multiple defined in 3 places.'>index</a>;                          \
+<a id='L83' name='L83'></a>  83      <strong class='reserved'>char</strong> <a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>[256];                         \
+<a id='L84' name='L84'></a>  84      <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/18529.html' title='Multiple used in 37 places.'>loop_count</a> = (<a href='../Y/16764.html' title='Multiple used in 218 places.'>inend</a> - <a href='../Y/16908.html' title='Multiple used in 980 places.'>inptr</a>) / 16;          \
+<a id='L85' name='L85'></a>  85      <strong class='reserved'>if</strong> (<a href='../Y/18529.html' title='Multiple used in 37 places.'>loop_count</a> &gt; (<a href='../Y/21971.html' title='Multiple used in 282 places.'>outend</a> - <a href='../Y/21994.html' title='Multiple used in 1121 places.'>outptr</a>) / 64)           \
+<a id='L86' name='L86'></a>  86        <a href='../Y/18529.html' title='Multiple used in 37 places.'>loop_count</a> = (<a href='../Y/21971.html' title='Multiple used in 282 places.'>outend</a> - <a href='../Y/21994.html' title='Multiple used in 1121 places.'>outptr</a>) / 64;             \
+<a id='L87' name='L87'></a>  87      <strong class='reserved'>if</strong> (<a href='../Y/18529.html' title='Multiple used in 37 places.'>loop_count</a> &gt; 16)                       \
+<a id='L88' name='L88'></a>  88        <a href='../Y/18529.html' title='Multiple used in 37 places.'>loop_count</a> = 16;                     \
+<a id='L89' name='L89'></a>  89      <strong class='reserved'>__asm__</strong> <strong class='reserved'>volatile</strong> (".machine push\n\t"              \
+<a id='L90' name='L90'></a>  90                ".machine \"z13\"\n\t"           \
+<a id='L91' name='L91'></a>  91                ".machinemode \"zarch_nohighgprs\"\n\t"  \
+<a id='L92' name='L92'></a>  92                "    sllk %[R_I],%[R_LI],4\n\t"      \
+<a id='L93' name='L93'></a>  93                "    ahi %[R_I],-1\n\t"          \
+<a id='L94' name='L94'></a>  94                <em class='comment'>/* Execute mvc and tr with correct len.  */</em>  \
+<a id='L95' name='L95'></a>  95                "    exrl %[R_I],21f\n\t"            \
+<a id='L96' name='L96'></a>  96                "    exrl %[R_I],22f\n\t"            \
+<a id='L97' name='L97'></a>  97                <em class='comment'>/* Post-processing.  */</em>          \
+<a id='L98' name='L98'></a>  98                "    lghi %[R_I],0\n\t"          \
+<a id='L99' name='L99'></a>  99                "    vzero %%v0\n\t"             \
+<a id='L100' name='L100'></a> 100                "0:  \n\t"                   \
+<a id='L101' name='L101'></a> 101                <em class='comment'>/* Find invalid character - value is zero.  */</em> \
+<a id='L102' name='L102'></a> 102                "    vl %%v16,0(%[R_I],%[R_BUF])\n\t"    \
+<a id='L103' name='L103'></a> 103                "    vceqbs %%v23,%%v0,%%v16\n\t"        \
+<a id='L104' name='L104'></a> 104                "    jle 10f\n\t"                \
+<a id='L105' name='L105'></a> 105                "1:  \n\t"                   \
+<a id='L106' name='L106'></a> 106                <em class='comment'>/* Enlarge to UCS4.  */</em>          \
+<a id='L107' name='L107'></a> 107                "    vuplhb %%v17,%%v16\n\t"         \
+<a id='L108' name='L108'></a> 108                "    vupllb %%v18,%%v16\n\t"         \
+<a id='L109' name='L109'></a> 109                "    vuplhh %%v19,%%v17\n\t"         \
+<a id='L110' name='L110'></a> 110                "    vupllh %%v20,%%v17\n\t"         \
+<a id='L111' name='L111'></a> 111                "    vuplhh %%v21,%%v18\n\t"         \
+<a id='L112' name='L112'></a> 112                "    vupllh %%v22,%%v18\n\t"         \
+<a id='L113' name='L113'></a> 113                <em class='comment'>/* Store 64bytes to buf_out.  */</em>     \
+<a id='L114' name='L114'></a> 114                "    vstm %%v19,%%v22,0(%[R_OUT])\n\t"   \
+<a id='L115' name='L115'></a> 115                "    aghi %[R_I],16\n\t"         \
+<a id='L116' name='L116'></a> 116                "    la %[R_OUT],64(%[R_OUT])\n\t"       \
+<a id='L117' name='L117'></a> 117                "    brct %[R_LI],0b\n\t"            \
+<a id='L118' name='L118'></a> 118                "    la %[R_IN],0(%[R_I],%[R_IN])\n\t"   \
+<a id='L119' name='L119'></a> 119                "    j 20f\n\t"              \
+<a id='L120' name='L120'></a> 120                "21: mvc 0(1,%[R_BUF]),0(%[R_IN])\n\t"   \
+<a id='L121' name='L121'></a> 121                "22: tr 0(1,%[R_BUF]),0(%[R_TBL])\n\t"   \
+<a id='L122' name='L122'></a> 122                <em class='comment'>/* Possibly invalid character found.  */</em> \
+<a id='L123' name='L123'></a> 123                "10: \n\t"                   \
+<a id='L124' name='L124'></a> 124                <em class='comment'>/* Test if input was zero, too.  */</em>      \
+<a id='L125' name='L125'></a> 125                "    vl %%v24,0(%[R_I],%[R_IN])\n\t"     \
+<a id='L126' name='L126'></a> 126                "    vceqb %%v24,%%v0,%%v24\n\t"     \
+<a id='L127' name='L127'></a> 127                <em class='comment'>/* Zeros in buf (v23) and inptr (v24) are marked \</em>
+<a id='L128' name='L128'></a> 128 <em class='comment'>                  with one bits. After xor, invalid characters \</em>
+<a id='L129' name='L129'></a> 129 <em class='comment'>                  are marked as one bits. Proceed, if no    \</em>
+<a id='L130' name='L130'></a> 130 <em class='comment'>                  invalid characters are found.  */</em>     \
+<a id='L131' name='L131'></a> 131                "    vx %%v24,%%v23,%%v24\n\t"       \
+<a id='L132' name='L132'></a> 132                "    vfenebs %%v24,%%v24,%%v0\n\t"       \
+<a id='L133' name='L133'></a> 133                "    jo 1b\n\t"              \
+<a id='L134' name='L134'></a> 134                <em class='comment'>/* Found an invalid translation.     \</em>
+<a id='L135' name='L135'></a> 135 <em class='comment'>                  Store the preceding chars.  */</em>        \
+<a id='L136' name='L136'></a> 136                "    la %[R_IN],0(%[R_I],%[R_IN])\n\t"   \
+<a id='L137' name='L137'></a> 137                "    vlgvb %[R_I],%%v24,7\n\t"       \
+<a id='L138' name='L138'></a> 138                "    la %[R_IN],0(%[R_I],%[R_IN])\n\t"   \
+<a id='L139' name='L139'></a> 139                "    sll %[R_I],2\n\t"           \
+<a id='L140' name='L140'></a> 140                "    ahi %[R_I],-1\n\t"          \
+<a id='L141' name='L141'></a> 141                "    jl 20f\n\t"             \
+<a id='L142' name='L142'></a> 142                "    lgr %[R_LI],%[R_I]\n\t"         \
+<a id='L143' name='L143'></a> 143                "    vuplhb %%v17,%%v16\n\t"         \
+<a id='L144' name='L144'></a> 144                "    vuplhh %%v19,%%v17\n\t"         \
+<a id='L145' name='L145'></a> 145                "    vstl %%v19,%[R_I],0(%[R_OUT])\n\t"  \
+<a id='L146' name='L146'></a> 146                "    ahi %[R_I],-16\n\t"         \
+<a id='L147' name='L147'></a> 147                "    jl 11f\n\t"             \
+<a id='L148' name='L148'></a> 148                "    vupllh %%v20,%%v17\n\t"         \
+<a id='L149' name='L149'></a> 149                "    vstl %%v20,%[R_I],16(%[R_OUT])\n\t" \
+<a id='L150' name='L150'></a> 150                "    ahi %[R_I],-16\n\t"         \
+<a id='L151' name='L151'></a> 151                "    jl 11f\n\t"             \
+<a id='L152' name='L152'></a> 152                "    vupllb %%v18,%%v16\n\t"         \
+<a id='L153' name='L153'></a> 153                "    vuplhh %%v21,%%v18\n\t"         \
+<a id='L154' name='L154'></a> 154                "    vstl %%v21,%[R_I],32(%[R_OUT])\n\t" \
+<a id='L155' name='L155'></a> 155                "    ahi %[R_I],-16\n\t"         \
+<a id='L156' name='L156'></a> 156                "    jl 11f\n\t"             \
+<a id='L157' name='L157'></a> 157                "    vupllh %%v22,%%v18\n\t"         \
+<a id='L158' name='L158'></a> 158                "    vstl %%v22,%[R_I],48(%[R_OUT])\n\t" \
+<a id='L159' name='L159'></a> 159                "11: \n\t"                   \
+<a id='L160' name='L160'></a> 160                "    la %[R_OUT],1(%[R_LI],%[R_OUT])\n\t"    \
+<a id='L161' name='L161'></a> 161                "20: \n\t"                   \
+<a id='L162' name='L162'></a> 162                ".machine pop"               \
+<a id='L163' name='L163'></a> 163                : <em class='comment'>/* outputs */</em> [<a href='../Y/1707.html' title='Multiple used in 22 places.'>R_IN</a>] "+a" (<a href='../Y/16908.html' title='Multiple used in 980 places.'>inptr</a>)      \
+<a id='L164' name='L164'></a> 164                  , [<a href='../Y/1713.html' title='Multiple used in 22 places.'>R_OUT</a>] "+a" (<a href='../Y/21994.html' title='Multiple used in 1121 places.'>outptr</a>), [<a href='../Y/1706.html' title='Multiple used in 7 places.'>R_I</a>] "=&amp;a" (<a href='../D/31778.html' title='Multiple defined in 3 places.'>index</a>) \
+<a id='L165' name='L165'></a> 165                  , [<a href='../Y/1710.html' title='Multiple used in 14 places.'>R_LI</a>] "+a" (<a href='../Y/18529.html' title='Multiple used in 37 places.'>loop_count</a>)         \
+<a id='L166' name='L166'></a> 166                : <em class='comment'>/* inputs */</em> [<a href='../Y/1703.html' title='Multiple used in 3 places.'>R_BUF</a>] "a" (<a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>)     \
+<a id='L167' name='L167'></a> 167                  , [<a href='../Y/1721.html' title='Multiple used in 3 places.'>R_TBL</a>] "a" (to_ucs1)            \
+<a id='L168' name='L168'></a> 168                : <em class='comment'>/* clobber list*/</em> "memory", "cc"       \
+<a id='L169' name='L169'></a> 169                  <a href='../D/486.html' title='Multiple defined in 10 places.'>ASM_CLOBBER_VR</a> ("v0")  <a href='../D/486.html' title='Multiple defined in 10 places.'>ASM_CLOBBER_VR</a> ("v16") \
+<a id='L170' name='L170'></a> 170                  <a href='../D/486.html' title='Multiple defined in 10 places.'>ASM_CLOBBER_VR</a> ("v17") <a href='../D/486.html' title='Multiple defined in 10 places.'>ASM_CLOBBER_VR</a> ("v18") \
+<a id='L171' name='L171'></a> 171                  <a href='../D/486.html' title='Multiple defined in 10 places.'>ASM_CLOBBER_VR</a> ("v19") <a href='../D/486.html' title='Multiple defined in 10 places.'>ASM_CLOBBER_VR</a> ("v20") \
+<a id='L172' name='L172'></a> 172                  <a href='../D/486.html' title='Multiple defined in 10 places.'>ASM_CLOBBER_VR</a> ("v21") <a href='../D/486.html' title='Multiple defined in 10 places.'>ASM_CLOBBER_VR</a> ("v22") \
+<a id='L173' name='L173'></a> 173                  <a href='../D/486.html' title='Multiple defined in 10 places.'>ASM_CLOBBER_VR</a> ("v23") <a href='../D/486.html' title='Multiple defined in 10 places.'>ASM_CLOBBER_VR</a> ("v24") \
+<a id='L174' name='L174'></a> 174                );                       \
+<a id='L175' name='L175'></a> 175      <em class='comment'>/* Error occured?  */</em>                      \
+<a id='L176' name='L176'></a> 176      <strong class='reserved'>if</strong> (<a href='../Y/18529.html' title='Multiple used in 37 places.'>loop_count</a> != 0)                       \
+<a id='L177' name='L177'></a> 177        <em class='brace'>{</em>                                \
+<a id='L178' name='L178'></a> 178          <em class='comment'>/* Found an invalid character!  */</em>             \
+<a id='L179' name='L179'></a> 179         <a href='../S/7078.html#L194' title='Defined at 194 in iconv/loop.c.'>STANDARD_FROM_LOOP_ERR_HANDLER</a> (1);             \
+<a id='L180' name='L180'></a> 180       <em class='brace'>}</em>                             \
+<a id='L181' name='L181'></a> 181       <em class='brace'>}</em>                                 \
+<a id='L182' name='L182'></a> 182     <em class='brace'>}</em>
+<a id='L183' name='L183'></a> 183 
+<a id='L184' name='L184'></a> 184 <em class='sharp'># define</em> <a href='../R/4495.html' title='Multiple referred from 2 places.'>LOOP_NEED_FLAGS</a>
+<a id='L185' name='L185'></a> 185 <em class='sharp'># include</em> &lt;iconv/loop.c&gt;
+<a id='L186' name='L186'></a> 186 
+<a id='L187' name='L187'></a> 187 <em class='comment'>/* Next, define the other direction - from UCS4 to 8bit charset.  */</em>
+<a id='L188' name='L188'></a> 188 <em class='sharp'># define</em> <a href='../R/4917.html' title='Multiple referred from 8 places.'>MIN_NEEDED_INPUT</a>   <a href='../D/7997.html' title='Multiple defined in 60 places.'>MIN_NEEDED_TO</a>
+<a id='L189' name='L189'></a> 189 <em class='sharp'># define</em> <a href='../R/4918.html' title='Multiple referred from 9 places.'>MIN_NEEDED_OUTPUT</a>  <a href='../D/7994.html' title='Multiple defined in 60 places.'>MIN_NEEDED_FROM</a>
+<a id='L190' name='L190'></a> 190 <em class='sharp'># define</em> <a href='../R/4491.html' title='Multiple referred from 3 places.'>LOOPFCT</a>        <a href='../D/16170.html' title='Multiple defined in 88 places.'>TO_LOOP</a>
+<a id='L191' name='L191'></a> 191 <em class='sharp'># define</em> <a href='../S/17789.html#L212' title='Referred from 212 in sysdeps/s390/multiarch/8bit-generic.c.'>BODY_TO_ORIG</a> \
+<a id='L192' name='L192'></a> 192   <em class='brace'>{</em>                                       \
+<a id='L193' name='L193'></a> 193     <a href='../S/223.html#L26' title='Defined at 26 in bits/stdint-uintn.h.'>uint32_t</a> <a href='../D/28608.html' title='Multiple defined in 4 places.'>ch</a> = <a href='../D/31072.html' title='Multiple defined in 5 places.'>get32</a> (<a href='../Y/16908.html' title='Multiple used in 980 places.'>inptr</a>);                          \
+<a id='L194' name='L194'></a> 194                                           \
+<a id='L195' name='L195'></a> 195     <strong class='reserved'>if</strong> (<a href='../D/23349.html' title='Multiple defined in 3 places.'>__builtin_expect</a> (<a href='../D/28608.html' title='Multiple defined in 4 places.'>ch</a> &gt;= <strong class='reserved'>sizeof</strong> (<a href='../Y/15105.html' title='Multiple used in 108 places.'>from_ucs4</a>) / <strong class='reserved'>sizeof</strong> (<a href='../Y/15105.html' title='Multiple used in 108 places.'>from_ucs4</a>[0]), 0)\
+<a id='L196' name='L196'></a> 196     || (<a href='../D/23349.html' title='Multiple defined in 3 places.'>__builtin_expect</a> (<a href='../Y/15105.html' title='Multiple used in 108 places.'>from_ucs4</a>[<a href='../D/28608.html' title='Multiple defined in 4 places.'>ch</a>], '\1') == '\0' &amp;&amp; <a href='../D/28608.html' title='Multiple defined in 4 places.'>ch</a> != 0))       \
+<a id='L197' name='L197'></a> 197       <em class='brace'>{</em>                                       \
+<a id='L198' name='L198'></a> 198     <a href='../S/7078.html#L270' title='Defined at 270 in iconv/loop.c.'>UNICODE_TAG_HANDLER</a> (<a href='../D/28608.html' title='Multiple defined in 4 places.'>ch</a>, 4);                          \
+<a id='L199' name='L199'></a> 199                                           \
+<a id='L200' name='L200'></a> 200     <em class='comment'>/* This is an illegal character.  */</em>                      \
+<a id='L201' name='L201'></a> 201     <a href='../S/7078.html#L213' title='Defined at 213 in iconv/loop.c.'>STANDARD_TO_LOOP_ERR_HANDLER</a> (4);                     \
+<a id='L202' name='L202'></a> 202       <em class='brace'>}</em>                                       \
+<a id='L203' name='L203'></a> 203                                           \
+<a id='L204' name='L204'></a> 204     *<a href='../Y/21994.html' title='Multiple used in 1121 places.'>outptr</a>++ = <a href='../Y/15105.html' title='Multiple used in 108 places.'>from_ucs4</a>[<a href='../D/28608.html' title='Multiple defined in 4 places.'>ch</a>];                            \
+<a id='L205' name='L205'></a> 205     <a href='../Y/16908.html' title='Multiple used in 980 places.'>inptr</a> += 4;                                   \
+<a id='L206' name='L206'></a> 206   <em class='brace'>}</em>
+<a id='L207' name='L207'></a> 207 <em class='sharp'># define</em> <a href='../R/549.html' title='Multiple referred from 6 places.'>BODY</a>                               \
+<a id='L208' name='L208'></a> 208   <em class='brace'>{</em>                                 \
+<a id='L209' name='L209'></a> 209     <strong class='reserved'>if</strong> (<a href='../D/23349.html' title='Multiple defined in 3 places.'>__builtin_expect</a> (<a href='../Y/16764.html' title='Multiple used in 218 places.'>inend</a> - <a href='../Y/16908.html' title='Multiple used in 980 places.'>inptr</a> &lt; 64, 1)            \
+<a id='L210' name='L210'></a> 210     || <a href='../Y/21971.html' title='Multiple used in 282 places.'>outend</a> - <a href='../Y/21994.html' title='Multiple used in 1121 places.'>outptr</a> &lt; 16)                    \
+<a id='L211' name='L211'></a> 211       <em class='comment'>/* Convert remaining bytes with c code.  */</em>           \
+<a id='L212' name='L212'></a> 212       <a href='../S/17789.html#L191' title='Defined at 191 in sysdeps/s390/multiarch/8bit-generic.c.'>BODY_TO_ORIG</a>                          \
+<a id='L213' name='L213'></a> 213     <strong class='reserved'>else</strong>                                \
+<a id='L214' name='L214'></a> 214       <em class='brace'>{</em>                                 \
+<a id='L215' name='L215'></a> 215     <em class='comment'>/* Convert 64 ... 1024 bytes at once with tr-instruction.  */</em>   \
+<a id='L216' name='L216'></a> 216     <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../D/31778.html' title='Multiple defined in 3 places.'>index</a>, <a href='../D/38191.html' title='Multiple defined in 23 places.'>tmp</a>;                      \
+<a id='L217' name='L217'></a> 217     <strong class='reserved'>char</strong> <a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>[256];                          \
+<a id='L218' name='L218'></a> 218     <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/18529.html' title='Multiple used in 37 places.'>loop_count</a> = (<a href='../Y/16764.html' title='Multiple used in 218 places.'>inend</a> - <a href='../Y/16908.html' title='Multiple used in 980 places.'>inptr</a>) / 64;           \
+<a id='L219' name='L219'></a> 219     <a href='../S/223.html#L26' title='Defined at 26 in bits/stdint-uintn.h.'>uint32_t</a> <a href='../S/9052.html#L32' title='Defined at 32 in sysdeps/ieee754/dbl-64/mydefs.h.'>max</a> = <strong class='reserved'>sizeof</strong> (<a href='../Y/15105.html' title='Multiple used in 108 places.'>from_ucs4</a>) / <strong class='reserved'>sizeof</strong> (<a href='../Y/15105.html' title='Multiple used in 108 places.'>from_ucs4</a>[0]);  \
+<a id='L220' name='L220'></a> 220     <strong class='reserved'>if</strong> (<a href='../Y/18529.html' title='Multiple used in 37 places.'>loop_count</a> &gt; (<a href='../Y/21971.html' title='Multiple used in 282 places.'>outend</a> - <a href='../Y/21994.html' title='Multiple used in 1121 places.'>outptr</a>) / 16)            \
+<a id='L221' name='L221'></a> 221       <a href='../Y/18529.html' title='Multiple used in 37 places.'>loop_count</a> = (<a href='../Y/21971.html' title='Multiple used in 282 places.'>outend</a> - <a href='../Y/21994.html' title='Multiple used in 1121 places.'>outptr</a>) / 16;              \
+<a id='L222' name='L222'></a> 222     <strong class='reserved'>if</strong> (<a href='../Y/18529.html' title='Multiple used in 37 places.'>loop_count</a> &gt; 16)                        \
+<a id='L223' name='L223'></a> 223       <a href='../Y/18529.html' title='Multiple used in 37 places.'>loop_count</a> = 16;                      \
+<a id='L224' name='L224'></a> 224     <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/23750.html' title='Multiple used in 3 places.'>remaining_loop_count</a> = <a href='../Y/18529.html' title='Multiple used in 37 places.'>loop_count</a>;           \
+<a id='L225' name='L225'></a> 225     <em class='comment'>/* Step 1: Check for ch&gt;=max, ch == 0 and shorten to bytes. \</em>
+<a id='L226' name='L226'></a> 226 <em class='comment'>       (ch == 0 is no error, but is handled differently)  */</em>    \
+<a id='L227' name='L227'></a> 227     <strong class='reserved'>__asm__</strong> <strong class='reserved'>volatile</strong> (".machine push\n\t"               \
+<a id='L228' name='L228'></a> 228               ".machine \"z13\"\n\t"            \
+<a id='L229' name='L229'></a> 229               ".machinemode \"zarch_nohighgprs\"\n\t"   \
+<a id='L230' name='L230'></a> 230               <em class='comment'>/* Setup to check for ch &gt;= max.  */</em>      \
+<a id='L231' name='L231'></a> 231               "    vzero %%v21\n\t"             \
+<a id='L232' name='L232'></a> 232               "    vleih %%v21,-24576,0\n\t" <em class='comment'>/* element 0:   &gt;  */</em> \
+<a id='L233' name='L233'></a> 233               "    vleih %%v21,-8192,2\n\t"  <em class='comment'>/* element 1: =&lt;&gt;  */</em> \
+<a id='L234' name='L234'></a> 234               "    vlvgf %%v20,%[R_MAX],0\n\t" <em class='comment'>/* element 0: val  */</em> \
+<a id='L235' name='L235'></a> 235               <em class='comment'>/* Process in 64byte - 16 characters blocks.  */</em> \
+<a id='L236' name='L236'></a> 236               "    lghi %[R_I],0\n\t"           \
+<a id='L237' name='L237'></a> 237               "    lghi %[R_TMP],0\n\t"         \
+<a id='L238' name='L238'></a> 238               "0:  \n\t"                    \
+<a id='L239' name='L239'></a> 239               "    vlm %%v16,%%v19,0(%[R_IN])\n\t"      \
+<a id='L240' name='L240'></a> 240               <em class='comment'>/* Test for ch &gt;= max and ch == 0.  */</em>    \
+<a id='L241' name='L241'></a> 241               "    vstrczfs %%v22,%%v16,%%v20,%%v21\n\t"    \
+<a id='L242' name='L242'></a> 242               "    jno 10f\n\t"             \
+<a id='L243' name='L243'></a> 243               "    vstrczfs %%v22,%%v17,%%v20,%%v21\n\t"    \
+<a id='L244' name='L244'></a> 244               "    jno 11f\n\t"             \
+<a id='L245' name='L245'></a> 245               "    vstrczfs %%v22,%%v18,%%v20,%%v21\n\t"    \
+<a id='L246' name='L246'></a> 246               "    jno 12f\n\t"             \
+<a id='L247' name='L247'></a> 247               "    vstrczfs %%v22,%%v19,%%v20,%%v21\n\t"    \
+<a id='L248' name='L248'></a> 248               "    jno 13f\n\t"             \
+<a id='L249' name='L249'></a> 249               <em class='comment'>/* Shorten to byte values.  */</em>        \
+<a id='L250' name='L250'></a> 250               "    vpkf %%v16,%%v16,%%v17\n\t"      \
+<a id='L251' name='L251'></a> 251               "    vpkf %%v18,%%v18,%%v19\n\t"      \
+<a id='L252' name='L252'></a> 252               "    vpkh %%v16,%%v16,%%v18\n\t"      \
+<a id='L253' name='L253'></a> 253               <em class='comment'>/* Store 16bytes to buf.  */</em>          \
+<a id='L254' name='L254'></a> 254               "    vst %%v16,0(%[R_I],%[R_BUF])\n\t"    \
+<a id='L255' name='L255'></a> 255               <em class='comment'>/* Loop until all blocks are processed.  */</em>   \
+<a id='L256' name='L256'></a> 256               "    la %[R_IN],64(%[R_IN])\n\t"      \
+<a id='L257' name='L257'></a> 257               "    aghi %[R_I],16\n\t"          \
+<a id='L258' name='L258'></a> 258               "    brct %[R_LI],0b\n\t"         \
+<a id='L259' name='L259'></a> 259               "    j 20f\n\t"               \
+<a id='L260' name='L260'></a> 260               <em class='comment'>/* Found error ch &gt;= max or ch == 0. */</em>   \
+<a id='L261' name='L261'></a> 261               "13: aghi %[R_TMP],4\n\t"         \
+<a id='L262' name='L262'></a> 262               "12: aghi %[R_TMP],4\n\t"         \
+<a id='L263' name='L263'></a> 263               "11: aghi %[R_TMP],4\n\t"         \
+<a id='L264' name='L264'></a> 264               "10: vlgvb %[R_I],%%v22,7\n\t"        \
+<a id='L265' name='L265'></a> 265               "    srlg %[R_I],%[R_I],2\n\t"        \
+<a id='L266' name='L266'></a> 266               "    agr %[R_I],%[R_TMP]\n\t"         \
+<a id='L267' name='L267'></a> 267               "20: \n\t"                    \
+<a id='L268' name='L268'></a> 268               ".machine pop"                \
+<a id='L269' name='L269'></a> 269               : <em class='comment'>/* outputs */</em> [<a href='../Y/1707.html' title='Multiple used in 22 places.'>R_IN</a>] "+a" (<a href='../Y/16908.html' title='Multiple used in 980 places.'>inptr</a>)       \
+<a id='L270' name='L270'></a> 270                 , [<a href='../Y/1706.html' title='Multiple used in 7 places.'>R_I</a>] "=&amp;a" (<a href='../D/31778.html' title='Multiple defined in 3 places.'>index</a>)           \
+<a id='L271' name='L271'></a> 271                 , [<a href='../Y/1722.html' title='Multiple used in 17 places.'>R_TMP</a>] "=d" (<a href='../D/38191.html' title='Multiple defined in 23 places.'>tmp</a>)            \
+<a id='L272' name='L272'></a> 272                 , [<a href='../Y/1710.html' title='Multiple used in 14 places.'>R_LI</a>] "+d" (<a href='../Y/23750.html' title='Multiple used in 3 places.'>remaining_loop_count</a>)    \
+<a id='L273' name='L273'></a> 273               : <em class='comment'>/* inputs */</em> [<a href='../Y/1703.html' title='Multiple used in 3 places.'>R_BUF</a>] "a" (<a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>)      \
+<a id='L274' name='L274'></a> 274                 , [R_MAX] "d" (<a href='../S/9052.html#L32' title='Defined at 32 in sysdeps/ieee754/dbl-64/mydefs.h.'>max</a>)             \
+<a id='L275' name='L275'></a> 275               : <em class='comment'>/* clobber list*/</em> "memory", "cc"        \
+<a id='L276' name='L276'></a> 276                 <a href='../D/486.html' title='Multiple defined in 10 places.'>ASM_CLOBBER_VR</a> ("v16") <a href='../D/486.html' title='Multiple defined in 10 places.'>ASM_CLOBBER_VR</a> ("v17") \
+<a id='L277' name='L277'></a> 277                 <a href='../D/486.html' title='Multiple defined in 10 places.'>ASM_CLOBBER_VR</a> ("v18") <a href='../D/486.html' title='Multiple defined in 10 places.'>ASM_CLOBBER_VR</a> ("v19") \
+<a id='L278' name='L278'></a> 278                 <a href='../D/486.html' title='Multiple defined in 10 places.'>ASM_CLOBBER_VR</a> ("v20") <a href='../D/486.html' title='Multiple defined in 10 places.'>ASM_CLOBBER_VR</a> ("v21") \
+<a id='L279' name='L279'></a> 279                 <a href='../D/486.html' title='Multiple defined in 10 places.'>ASM_CLOBBER_VR</a> ("v22")          \
+<a id='L280' name='L280'></a> 280               );                        \
+<a id='L281' name='L281'></a> 281     <em class='comment'>/* Error occured in step 1? An error (ch &gt;= max || ch == 0) \</em>
+<a id='L282' name='L282'></a> 282 <em class='comment'>       occured, if remaining_loop_count &gt; 0. The error occured  \</em>
+<a id='L283' name='L283'></a> 283 <em class='comment'>       at character-index (index) after already processed blocks.  */</em> \
+<a id='L284' name='L284'></a> 284     <a href='../Y/18529.html' title='Multiple used in 37 places.'>loop_count</a> -= <a href='../Y/23750.html' title='Multiple used in 3 places.'>remaining_loop_count</a>;             \
+<a id='L285' name='L285'></a> 285     <strong class='reserved'>if</strong> (<a href='../Y/18529.html' title='Multiple used in 37 places.'>loop_count</a> &gt; 0)                     \
+<a id='L286' name='L286'></a> 286       <em class='brace'>{</em>                             \
+<a id='L287' name='L287'></a> 287         <em class='comment'>/* Step 2: Translate already processed blocks in buf and    \</em>
+<a id='L288' name='L288'></a> 288 <em class='comment'>           check for errors (from_ucs4[ch] == 0).  */</em>       \
+<a id='L289' name='L289'></a> 289         <strong class='reserved'>__asm__</strong> <strong class='reserved'>volatile</strong> (".machine push\n\t"           \
+<a id='L290' name='L290'></a> 290                   ".machine \"z13\"\n\t"            \
+<a id='L291' name='L291'></a> 291                   ".machinemode \"zarch_nohighgprs\"\n\t"   \
+<a id='L292' name='L292'></a> 292                   "    sllk %[R_I],%[R_LI],4\n\t"       \
+<a id='L293' name='L293'></a> 293                   "    ahi %[R_I],-1\n\t"           \
+<a id='L294' name='L294'></a> 294                   <em class='comment'>/* Execute tr with correct len.  */</em>   \
+<a id='L295' name='L295'></a> 295                   "    exrl %[R_I],21f\n\t"         \
+<a id='L296' name='L296'></a> 296                   <em class='comment'>/* Post-processing.  */</em>           \
+<a id='L297' name='L297'></a> 297                   "    lghi %[R_I],0\n\t"           \
+<a id='L298' name='L298'></a> 298                   "0:  \n\t"                \
+<a id='L299' name='L299'></a> 299                   <em class='comment'>/* Find invalid character - value == 0.  */</em> \
+<a id='L300' name='L300'></a> 300                   "    vl %%v16,0(%[R_I],%[R_BUF])\n\t" \
+<a id='L301' name='L301'></a> 301                   "    vfenezbs %%v17,%%v16,%%v16\n\t"  \
+<a id='L302' name='L302'></a> 302                   "    je 10f\n\t"              \
+<a id='L303' name='L303'></a> 303                   <em class='comment'>/* Store 16bytes to buf_out.  */</em>      \
+<a id='L304' name='L304'></a> 304                   "    vst %%v16,0(%[R_I],%[R_OUT])\n\t"    \
+<a id='L305' name='L305'></a> 305                   "    aghi %[R_I],16\n\t"          \
+<a id='L306' name='L306'></a> 306                   "    brct %[R_LI],0b\n\t"         \
+<a id='L307' name='L307'></a> 307                   "    la %[R_OUT],0(%[R_I],%[R_OUT])\n\t"  \
+<a id='L308' name='L308'></a> 308                   "    j 20f\n\t"               \
+<a id='L309' name='L309'></a> 309                   "21: tr 0(1,%[R_BUF]),0(%[R_TBL])\n\t"    \
+<a id='L310' name='L310'></a> 310                   <em class='comment'>/* Found an error: from_ucs4[ch] == 0.  */</em> \
+<a id='L311' name='L311'></a> 311                   "10: la %[R_OUT],0(%[R_I],%[R_OUT])\n\t"  \
+<a id='L312' name='L312'></a> 312                   "    vlgvb %[R_I],%%v17,7\n\t"        \
+<a id='L313' name='L313'></a> 313                   "20: \n\t"                \
+<a id='L314' name='L314'></a> 314                   ".machine pop"                \
+<a id='L315' name='L315'></a> 315                   : <em class='comment'>/* outputs */</em> [<a href='../Y/1713.html' title='Multiple used in 22 places.'>R_OUT</a>] "+a" (<a href='../Y/21994.html' title='Multiple used in 1121 places.'>outptr</a>) \
+<a id='L316' name='L316'></a> 316                 , [<a href='../Y/1706.html' title='Multiple used in 7 places.'>R_I</a>] "=&amp;a" (<a href='../D/38191.html' title='Multiple defined in 23 places.'>tmp</a>)         \
+<a id='L317' name='L317'></a> 317                 , [<a href='../Y/1710.html' title='Multiple used in 14 places.'>R_LI</a>] "+d" (<a href='../Y/18529.html' title='Multiple used in 37 places.'>loop_count</a>)      \
+<a id='L318' name='L318'></a> 318                   : <em class='comment'>/* inputs */</em> [<a href='../Y/1703.html' title='Multiple used in 3 places.'>R_BUF</a>] "a" (<a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>)      \
+<a id='L319' name='L319'></a> 319                 , [<a href='../Y/1721.html' title='Multiple used in 3 places.'>R_TBL</a>] "a" (<a href='../Y/15105.html' title='Multiple used in 108 places.'>from_ucs4</a>)       \
+<a id='L320' name='L320'></a> 320                   : <em class='comment'>/* clobber list*/</em> "memory", "cc"    \
+<a id='L321' name='L321'></a> 321                 <a href='../D/486.html' title='Multiple defined in 10 places.'>ASM_CLOBBER_VR</a> ("v16")          \
+<a id='L322' name='L322'></a> 322                 <a href='../D/486.html' title='Multiple defined in 10 places.'>ASM_CLOBBER_VR</a> ("v17")          \
+<a id='L323' name='L323'></a> 323                   );                    \
+<a id='L324' name='L324'></a> 324         <em class='comment'>/* Error occured in processed bytes of step 2?      \</em>
+<a id='L325' name='L325'></a> 325 <em class='comment'>           Thus possible error in step 1 is obselete.*/</em>     \
+<a id='L326' name='L326'></a> 326         <strong class='reserved'>if</strong> (<a href='../D/38191.html' title='Multiple defined in 23 places.'>tmp</a> &lt; 16)                       \
+<a id='L327' name='L327'></a> 327           <em class='brace'>{</em>                             \
+<a id='L328' name='L328'></a> 328         <a href='../D/31778.html' title='Multiple defined in 3 places.'>index</a> = <a href='../D/38191.html' title='Multiple defined in 23 places.'>tmp</a>;                        \
+<a id='L329' name='L329'></a> 329         <a href='../Y/16908.html' title='Multiple used in 980 places.'>inptr</a> -= <a href='../Y/18529.html' title='Multiple used in 37 places.'>loop_count</a> * 64;               \
+<a id='L330' name='L330'></a> 330           <em class='brace'>}</em>                             \
+<a id='L331' name='L331'></a> 331       <em class='brace'>}</em>                             \
+<a id='L332' name='L332'></a> 332     <em class='comment'>/* Error occured in step 1/2?  */</em>               \
+<a id='L333' name='L333'></a> 333     <strong class='reserved'>if</strong> (<a href='../D/31778.html' title='Multiple defined in 3 places.'>index</a> &lt; 16)                         \
+<a id='L334' name='L334'></a> 334       <em class='brace'>{</em>                             \
+<a id='L335' name='L335'></a> 335         <em class='comment'>/* Found an invalid character (see step 2) or zero      \</em>
+<a id='L336' name='L336'></a> 336 <em class='comment'>           (see step 1) at index! Convert the chars before index    \</em>
+<a id='L337' name='L337'></a> 337 <em class='comment'>           manually. If there is a zero at index detected by step 1, \</em>
+<a id='L338' name='L338'></a> 338 <em class='comment'>           there could be invalid characters before this zero.  */</em>  \
+<a id='L339' name='L339'></a> 339         <strong class='reserved'>int</strong> <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>;                          \
+<a id='L340' name='L340'></a> 340         <a href='../S/223.html#L26' title='Defined at 26 in bits/stdint-uintn.h.'>uint32_t</a> <a href='../D/28608.html' title='Multiple defined in 4 places.'>ch</a>;                        \
+<a id='L341' name='L341'></a> 341         <strong class='reserved'>for</strong> (<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> = 0; <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> &lt; <a href='../D/31778.html' title='Multiple defined in 3 places.'>index</a>; <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>++)                 \
+<a id='L342' name='L342'></a> 342           <em class='brace'>{</em>                             \
+<a id='L343' name='L343'></a> 343         <a href='../D/28608.html' title='Multiple defined in 4 places.'>ch</a> = <a href='../D/31072.html' title='Multiple defined in 5 places.'>get32</a> (<a href='../Y/16908.html' title='Multiple used in 980 places.'>inptr</a>);                 \
+<a id='L344' name='L344'></a> 344         <strong class='reserved'>if</strong> (<a href='../D/23349.html' title='Multiple defined in 3 places.'>__builtin_expect</a> (<a href='../Y/15105.html' title='Multiple used in 108 places.'>from_ucs4</a>[<a href='../D/28608.html' title='Multiple defined in 4 places.'>ch</a>], '\1') == '\0')     \
+<a id='L345' name='L345'></a> 345           <strong class='reserved'>break</strong>;                        \
+<a id='L346' name='L346'></a> 346         *<a href='../Y/21994.html' title='Multiple used in 1121 places.'>outptr</a>++ = <a href='../Y/15105.html' title='Multiple used in 108 places.'>from_ucs4</a>[<a href='../D/28608.html' title='Multiple defined in 4 places.'>ch</a>];              \
+<a id='L347' name='L347'></a> 347         <a href='../Y/16908.html' title='Multiple used in 980 places.'>inptr</a> += 4;                     \
+<a id='L348' name='L348'></a> 348           <em class='brace'>}</em>                             \
+<a id='L349' name='L349'></a> 349         <strong class='reserved'>if</strong> (<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> == <a href='../D/31778.html' title='Multiple defined in 3 places.'>index</a>)                     \
+<a id='L350' name='L350'></a> 350           <em class='brace'>{</em>                             \
+<a id='L351' name='L351'></a> 351         <a href='../D/28608.html' title='Multiple defined in 4 places.'>ch</a> = <a href='../D/31072.html' title='Multiple defined in 5 places.'>get32</a> (<a href='../Y/16908.html' title='Multiple used in 980 places.'>inptr</a>);                 \
+<a id='L352' name='L352'></a> 352         <strong class='reserved'>if</strong> (<a href='../D/28608.html' title='Multiple defined in 4 places.'>ch</a> == 0)                        \
+<a id='L353' name='L353'></a> 353           <em class='brace'>{</em>                         \
+<a id='L354' name='L354'></a> 354             <em class='comment'>/* This is no error, but handled differently.  */</em>   \
+<a id='L355' name='L355'></a> 355             *<a href='../Y/21994.html' title='Multiple used in 1121 places.'>outptr</a>++ = <a href='../Y/15105.html' title='Multiple used in 108 places.'>from_ucs4</a>[<a href='../D/28608.html' title='Multiple defined in 4 places.'>ch</a>];              \
+<a id='L356' name='L356'></a> 356             <a href='../Y/16908.html' title='Multiple used in 980 places.'>inptr</a> += 4;                     \
+<a id='L357' name='L357'></a> 357             <strong class='reserved'>continue</strong>;                       \
+<a id='L358' name='L358'></a> 358           <em class='brace'>}</em>                         \
+<a id='L359' name='L359'></a> 359           <em class='brace'>}</em>                             \
+<a id='L360' name='L360'></a> 360                                     \
+<a id='L361' name='L361'></a> 361         <em class='comment'>/* iconv/loop.c disables -Wmaybe-uninitialized for a false  \</em>
+<a id='L362' name='L362'></a> 362 <em class='comment'>           positive warning in this code with -Os and has a     \</em>
+<a id='L363' name='L363'></a> 363 <em class='comment'>           comment referencing this code accordingly.  Updates in   \</em>
+<a id='L364' name='L364'></a> 364 <em class='comment'>           one place may require updates in the other.  */</em>      \
+<a id='L365' name='L365'></a> 365         <a href='../S/7078.html#L270' title='Defined at 270 in iconv/loop.c.'>UNICODE_TAG_HANDLER</a> (<a href='../D/28608.html' title='Multiple defined in 4 places.'>ch</a>, 4);                \
+<a id='L366' name='L366'></a> 366                                     \
+<a id='L367' name='L367'></a> 367         <em class='comment'>/* This is an illegal character.  */</em>            \
+<a id='L368' name='L368'></a> 368         <a href='../S/7078.html#L213' title='Defined at 213 in iconv/loop.c.'>STANDARD_TO_LOOP_ERR_HANDLER</a> (4);               \
+<a id='L369' name='L369'></a> 369       <em class='brace'>}</em>                             \
+<a id='L370' name='L370'></a> 370       <em class='brace'>}</em>                                 \
+<a id='L371' name='L371'></a> 371   <em class='brace'>}</em>
+<a id='L372' name='L372'></a> 372 
+<a id='L373' name='L373'></a> 373 <em class='sharp'># define</em> <a href='../R/4495.html' title='Multiple referred from 2 places.'>LOOP_NEED_FLAGS</a>
+<a id='L374' name='L374'></a> 374 <em class='sharp'># include</em> &lt;iconv/loop.c&gt;
+<a id='L375' name='L375'></a> 375 
+<a id='L376' name='L376'></a> 376 
+<a id='L377' name='L377'></a> 377 <em class='comment'>/* Generate ifunc'ed loop function.  */</em>
+<a id='L378' name='L378'></a> 378 <a href='../S/17784.html#L58' title='Defined at 58 in sysdeps/s390/multiarch/ifunc-resolve.h.'>s390_libc_ifunc_expr</a> (<a href='../Y/4588.html' title='Multiple used in 3 places.'>__from_generic_c</a>, <a href='../Y/4587.html' title='Multiple used in 2 places.'>__from_generic</a>,
+<a id='L379' name='L379'></a> 379               (<strong class='reserved'>sizeof</strong> (<a href='../Y/15105.html' title='Multiple used in 108 places.'>from_ucs4</a>) / <strong class='reserved'>sizeof</strong> (<a href='../Y/15105.html' title='Multiple used in 108 places.'>from_ucs4</a>[0]) &lt;= 256
+<a id='L380' name='L380'></a> 380                &amp;&amp; <a href='../Y/16260.html' title='Multiple used in 496 places.'>hwcap</a> &amp; <a href='../D/5686.html' title='Multiple defined in 2 places.'>HWCAP_S390_VX</a>)
+<a id='L381' name='L381'></a> 381               ? <a href='../Y/4589.html' title='Multiple used in 2 places.'>__from_generic_vx</a>
+<a id='L382' name='L382'></a> 382               : <a href='../Y/4588.html' title='Multiple used in 3 places.'>__from_generic_c</a>);
+<a id='L383' name='L383'></a> 383 
+<a id='L384' name='L384'></a> 384 <a href='../S/17784.html#L58' title='Defined at 58 in sysdeps/s390/multiarch/ifunc-resolve.h.'>s390_libc_ifunc_expr</a> (<a href='../Y/8181.html' title='Multiple used in 3 places.'>__to_generic_c</a>, <a href='../Y/8180.html' title='Multiple used in 2 places.'>__to_generic</a>,
+<a id='L385' name='L385'></a> 385               (<strong class='reserved'>sizeof</strong> (<a href='../Y/15105.html' title='Multiple used in 108 places.'>from_ucs4</a>) / <strong class='reserved'>sizeof</strong> (<a href='../Y/15105.html' title='Multiple used in 108 places.'>from_ucs4</a>[0]) &lt;= 256
+<a id='L386' name='L386'></a> 386                &amp;&amp; <a href='../Y/16260.html' title='Multiple used in 496 places.'>hwcap</a> &amp; <a href='../D/5686.html' title='Multiple defined in 2 places.'>HWCAP_S390_VX</a>)
+<a id='L387' name='L387'></a> 387               ? <a href='../Y/8184.html' title='Multiple used in 2 places.'>__to_generic_vx</a>
+<a id='L388' name='L388'></a> 388               : <a href='../Y/8181.html' title='Multiple used in 3 places.'>__to_generic_c</a>);
+<a id='L389' name='L389'></a> 389 
+<a id='L390' name='L390'></a> 390 <a href='../D/37125.html' title='Multiple defined in 84 places.'>strong_alias</a> (__to_generic_c_single, __to_generic_single)
+<a id='L391' name='L391'></a> 391 
+<a id='L392' name='L392'></a> 392 <em class='sharp'># undef</em> <a href='../D/4718.html' title='Multiple defined in 88 places.'>FROM_LOOP</a>
+<a id='L393' name='L393'></a> 393 <em class='sharp'># undef</em> <a href='../D/16170.html' title='Multiple defined in 88 places.'>TO_LOOP</a>
+<a id='L394' name='L394'></a> 394 <em class='sharp'># define</em> <a href='../R/2814.html' title='Multiple referred from 77 places.'>FROM_LOOP</a>      <a href='../Y/4587.html' title='Multiple used in 2 places.'>__from_generic</a>
+<a id='L395' name='L395'></a> 395 <em class='sharp'># define</em> <a href='../R/8875.html' title='Multiple referred from 63 places.'>TO_LOOP</a>        <a href='../Y/8180.html' title='Multiple used in 2 places.'>__to_generic</a>
+<a id='L396' name='L396'></a> 396 <em class='sharp'># include</em> &lt;iconv/skeleton.c&gt;
+<a id='L397' name='L397'></a> 397 
+<a id='L398' name='L398'></a> 398 <em class='sharp'>#else</em>
+<a id='L399' name='L399'></a> 399 <em class='comment'>/* Generate this module without ifunc if build environment lacks vector</em>
+<a id='L400' name='L400'></a> 400 <em class='comment'>   support.  Instead the common 8bit-generic.c is used.  */</em>
+<a id='L401' name='L401'></a> 401 <em class='sharp'># include</em> "iconvdata/8bit-generic.c"
+<a id='L402' name='L402'></a> 402 <em class='sharp'>#endif</em> <em class='comment'>/* !defined HAVE_S390_VX_ASM_SUPPORT */</em>
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;][^][v]<a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

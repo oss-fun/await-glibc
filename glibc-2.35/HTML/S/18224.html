@@ -1,0 +1,182 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>sunrpc/pm_getport.c</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18974.html'>sunrpc</a>/pm_getport.c</h2>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L49'>[^]</a><a href='#L137'>[v]</a>[top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<h2 class='header'>DEFINITIONS</h2>
+This source file includes following definitions.
+<ol>
+<li><a href='#L49' title='Defined at 49.'>__get_socket</a></li>
+<li><a href='#L84' title='Defined at 84.'>__libc_rpc_getport</a></li>
+<li><a href='#L137' title='Defined at 137.'>libc_hidden_def</a></li>
+</ol>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/*</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'> * pmap_getport.c</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'> * Client interface to pmap rpc service.</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'> *</em>
+<a id='L5' name='L5'></a>   5 <em class='comment'> * Copyright (c) 2010, Oracle America, Inc.</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'> *</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'> * Redistribution and use in source and binary forms, with or without</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'> * modification, are permitted provided that the following conditions are</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'> * met:</em>
+<a id='L10' name='L10'></a>  10 <em class='comment'> *</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'> *     * Redistributions of source code must retain the above copyright</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'> *       notice, this list of conditions and the following disclaimer.</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'> *     * Redistributions in binary form must reproduce the above</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'> *       copyright notice, this list of conditions and the following</em>
+<a id='L15' name='L15'></a>  15 <em class='comment'> *       disclaimer in the documentation and/or other materials</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'> *       provided with the distribution.</em>
+<a id='L17' name='L17'></a>  17 <em class='comment'> *     * Neither the name of the "Oracle America, Inc." nor the names of its</em>
+<a id='L18' name='L18'></a>  18 <em class='comment'> *       contributors may be used to endorse or promote products derived</em>
+<a id='L19' name='L19'></a>  19 <em class='comment'> *       from this software without specific prior written permission.</em>
+<a id='L20' name='L20'></a>  20 <em class='comment'> *</em>
+<a id='L21' name='L21'></a>  21 <em class='comment'> *   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS</em>
+<a id='L22' name='L22'></a>  22 <em class='comment'> *   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT</em>
+<a id='L23' name='L23'></a>  23 <em class='comment'> *   LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS</em>
+<a id='L24' name='L24'></a>  24 <em class='comment'> *   FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE</em>
+<a id='L25' name='L25'></a>  25 <em class='comment'> *   COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,</em>
+<a id='L26' name='L26'></a>  26 <em class='comment'> *   INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL</em>
+<a id='L27' name='L27'></a>  27 <em class='comment'> *   DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE</em>
+<a id='L28' name='L28'></a>  28 <em class='comment'> *   GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS</em>
+<a id='L29' name='L29'></a>  29 <em class='comment'> *   INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,</em>
+<a id='L30' name='L30'></a>  30 <em class='comment'> *   WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING</em>
+<a id='L31' name='L31'></a>  31 <em class='comment'> *   NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE</em>
+<a id='L32' name='L32'></a>  32 <em class='comment'> *   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.</em>
+<a id='L33' name='L33'></a>  33 <em class='comment'> */</em>
+<a id='L34' name='L34'></a>  34 
+<a id='L35' name='L35'></a>  35 <em class='sharp'>#include</em> &lt;stdbool.h&gt;
+<a id='L36' name='L36'></a>  36 <em class='sharp'>#include</em> &lt;<a href='../I/1819.html'>unistd.h</a>&gt;
+<a id='L37' name='L37'></a>  37 <em class='sharp'>#include</em> &lt;<a href='../I/1939.html'>rpc/rpc.h</a>&gt;
+<a id='L38' name='L38'></a>  38 <em class='sharp'>#include</em> &lt;<a href='../I/1937.html'>rpc/pmap_prot.h</a>&gt;
+<a id='L39' name='L39'></a>  39 <em class='sharp'>#include</em> &lt;<a href='../I/1936.html'>rpc/pmap_clnt.h</a>&gt;
+<a id='L40' name='L40'></a>  40 <em class='sharp'>#include</em> &lt;<a href='../I/165.html'>sys/socket.h</a>&gt;
+<a id='L41' name='L41'></a>  41 <em class='sharp'>#include</em> &lt;<a href='17977.html'>shlib-compat.h</a>&gt;
+<a id='L42' name='L42'></a>  42 
+<a id='L43' name='L43'></a>  43 <em class='comment'>/*</em>
+<a id='L44' name='L44'></a>  44 <em class='comment'> * Create a socket that is locally bound to a non-reserve port. For</em>
+<a id='L45' name='L45'></a>  45 <em class='comment'> * any failures, -1 is returned which will cause the RPC code to</em>
+<a id='L46' name='L46'></a>  46 <em class='comment'> * create the socket.</em>
+<a id='L47' name='L47'></a>  47 <em class='comment'> */</em>
+<a id='L48' name='L48'></a>  48 <strong class='reserved'>int</strong>
+<a id='L49' name='L49'></a>  49 <a href='../R/14242.html' title='Multiple referred from 3 places.'>__get_socket</a> (<strong class='reserved'>struct</strong> <a href='../S/1485.html#L245' title='Defined at 245 in inet/netinet/in.h.'>sockaddr_in</a> *<a href='../S/12331.html#L101' title='Defined at 101 in sysdeps/generic/unwind-dw2-fde.h.'>saddr</a>)
+<a id='L50' name='L50'></a>  50 <em class='brace'>{</em>
+<a id='L51' name='L51'></a>  51   <strong class='reserved'>int</strong> <a href='../Y/25684.html' title='Multiple used in 39 places.'>so</a> = <a href='../D/26089.html' title='Multiple defined in 8 places.'>__socket</a> (<a href='../D/130.html' title='Multiple defined in 3 places.'>AF_INET</a>, <a href='../D/14541.html' title='Multiple defined in 21 places.'>SOCK_STREAM</a>, <a href='../D/6517.html' title='Multiple defined in 3 places.'>IPPROTO_TCP</a>);
+<a id='L52' name='L52'></a>  52   <strong class='reserved'>if</strong> (<a href='../Y/25684.html' title='Multiple used in 39 places.'>so</a> &lt; 0)
+<a id='L53' name='L53'></a>  53     <strong class='reserved'>return</strong> -1;
+<a id='L54' name='L54'></a>  54 
+<a id='L55' name='L55'></a>  55   <strong class='reserved'>struct</strong> <a href='../S/1485.html#L245' title='Defined at 245 in inet/netinet/in.h.'>sockaddr_in</a> <a href='../Y/17725.html' title='Multiple used in 16 places.'>laddr</a>;
+<a id='L56' name='L56'></a>  56   <a href='../D/36864.html' title='Multiple defined in 5 places.'>socklen_t</a> <a href='../Y/20198.html' title='Multiple used in 166 places.'>namelen</a> = <strong class='reserved'>sizeof</strong> (<a href='../Y/17725.html' title='Multiple used in 16 places.'>laddr</a>);
+<a id='L57' name='L57'></a>  57   <a href='../Y/17725.html' title='Multiple used in 16 places.'>laddr</a>.<a href='../Y/25529.html' title='Multiple used in 75 places.'>sin_family</a> = <a href='../D/130.html' title='Multiple defined in 3 places.'>AF_INET</a>;
+<a id='L58' name='L58'></a>  58   <a href='../Y/17725.html' title='Multiple used in 16 places.'>laddr</a>.<a href='../Y/25534.html' title='Multiple used in 81 places.'>sin_port</a> = 0;
+<a id='L59' name='L59'></a>  59   <a href='../Y/17725.html' title='Multiple used in 16 places.'>laddr</a>.<a href='../Y/25526.html' title='Multiple used in 112 places.'>sin_addr</a>.<a href='../Y/24490.html' title='Multiple used in 85 places.'>s_addr</a> = <a href='../D/31573.html' title='Multiple defined in 8 places.'>htonl</a> (<a href='../S/1485.html#L194' title='Defined at 194 in inet/netinet/in.h.'>INADDR_ANY</a>);
+<a id='L60' name='L60'></a>  60 
+<a id='L61' name='L61'></a>  61   <strong class='reserved'>int</strong> <a href='../Y/11390.html' title='Multiple used in 183 places.'>cc</a> = <a href='../D/23328.html' title='Multiple defined in 4 places.'>__bind</a> (<a href='../Y/25684.html' title='Multiple used in 39 places.'>so</a>, (<strong class='reserved'>struct</strong> <a href='../D/36846.html' title='Multiple defined in 3 places.'>sockaddr</a> *) &amp;<a href='../Y/17725.html' title='Multiple used in 16 places.'>laddr</a>, <a href='../Y/20198.html' title='Multiple used in 166 places.'>namelen</a>);
+<a id='L62' name='L62'></a>  62   <strong class='reserved'>if</strong> (<a href='../D/24205.html' title='Multiple defined in 2 places.'>__glibc_unlikely</a> (<a href='../Y/11390.html' title='Multiple used in 183 places.'>cc</a> &lt; 0))
+<a id='L63' name='L63'></a>  63     <em class='brace'>{</em>
+<a id='L64' name='L64'></a>  64     <a href='../D/30351.html' title='Multiple defined in 2 places.'>fail</a>:
+<a id='L65' name='L65'></a>  65       <a href='../D/23503.html' title='Multiple defined in 3 places.'>__close</a> (<a href='../Y/25684.html' title='Multiple used in 39 places.'>so</a>);
+<a id='L66' name='L66'></a>  66       <strong class='reserved'>return</strong> -1;
+<a id='L67' name='L67'></a>  67     <em class='brace'>}</em>
+<a id='L68' name='L68'></a>  68 
+<a id='L69' name='L69'></a>  69   <a href='../Y/11390.html' title='Multiple used in 183 places.'>cc</a> = <a href='../D/23544.html' title='Multiple defined in 2 places.'>__connect</a> (<a href='../Y/25684.html' title='Multiple used in 39 places.'>so</a>, (<strong class='reserved'>struct</strong> <a href='../D/36846.html' title='Multiple defined in 3 places.'>sockaddr</a> *) <a href='../S/12331.html#L101' title='Defined at 101 in sysdeps/generic/unwind-dw2-fde.h.'>saddr</a>, <a href='../Y/20198.html' title='Multiple used in 166 places.'>namelen</a>);
+<a id='L70' name='L70'></a>  70   <strong class='reserved'>if</strong> (<a href='../D/24205.html' title='Multiple defined in 2 places.'>__glibc_unlikely</a> (<a href='../Y/11390.html' title='Multiple used in 183 places.'>cc</a> &lt; 0))
+<a id='L71' name='L71'></a>  71     <strong class='reserved'>goto</strong> <a href='../D/30351.html' title='Multiple defined in 2 places.'>fail</a>;
+<a id='L72' name='L72'></a>  72 
+<a id='L73' name='L73'></a>  73   <strong class='reserved'>return</strong> <a href='../Y/25684.html' title='Multiple used in 39 places.'>so</a>;
+<a id='L74' name='L74'></a>  74 <em class='brace'>}</em>
+<a id='L75' name='L75'></a>  75 
+<a id='L76' name='L76'></a>  76 
+<a id='L77' name='L77'></a>  77 <em class='comment'>/*</em>
+<a id='L78' name='L78'></a>  78 <em class='comment'> * Find the mapped port for program,version.</em>
+<a id='L79' name='L79'></a>  79 <em class='comment'> * Internal version with additional parameters.</em>
+<a id='L80' name='L80'></a>  80 <em class='comment'> * Calls the pmap service remotely to do the lookup.</em>
+<a id='L81' name='L81'></a>  81 <em class='comment'> * Returns 0 if no map exists.</em>
+<a id='L82' name='L82'></a>  82 <em class='comment'> */</em>
+<a id='L83' name='L83'></a>  83 <a href='../D/38635.html' title='Multiple defined in 2 places.'>u_short</a>
+<a id='L84' name='L84'></a>  84 <a href='../R/14750.html' title='Multiple referred from 6 places.'>__libc_rpc_getport</a> (<strong class='reserved'>struct</strong> <a href='../S/1485.html#L245' title='Defined at 245 in inet/netinet/in.h.'>sockaddr_in</a> *<a href='../Y/9972.html' title='Multiple used in 342 places.'>address</a>, <a href='../D/38633.html' title='Multiple defined in 2 places.'>u_long</a> <a href='../Y/22851.html' title='Multiple used in 48 places.'>program</a>,
+<a id='L85' name='L85'></a>  85             <a href='../D/38633.html' title='Multiple defined in 2 places.'>u_long</a> <a href='../Y/28665.html' title='Multiple used in 388 places.'>version</a>, <a href='../D/38628.html' title='Multiple defined in 2 places.'>u_int</a> <a href='../Y/22878.html' title='Multiple used in 69 places.'>protocol</a>, <a href='../D/38112.html' title='Multiple defined in 6 places.'>time_t</a> <a href='../Y/27318.html' title='Multiple used in 3 places.'>timeout_sec</a>,
+<a id='L86' name='L86'></a>  86             <a href='../D/38112.html' title='Multiple defined in 6 places.'>time_t</a> <a href='../Y/27696.html' title='Multiple used in 3 places.'>tottimeout_sec</a>)
+<a id='L87' name='L87'></a>  87 <em class='brace'>{</em>
+<a id='L88' name='L88'></a>  88   <strong class='reserved'>const</strong> <strong class='reserved'>struct</strong> <a href='../S/3985.html#L8' title='Defined at 8 in time/bits/types/struct_timeval.h.'>timeval</a> <a href='../Y/27314.html' title='Multiple used in 406 places.'>timeout</a> = <em class='brace'>{</em><a href='../Y/27318.html' title='Multiple used in 3 places.'>timeout_sec</a>, 0<em class='brace'>}</em>;
+<a id='L89' name='L89'></a>  89   <strong class='reserved'>const</strong> <strong class='reserved'>struct</strong> <a href='../S/3985.html#L8' title='Defined at 8 in time/bits/types/struct_timeval.h.'>timeval</a> <a href='../Y/27695.html' title='Multiple used in 11 places.'>tottimeout</a> = <em class='brace'>{</em><a href='../Y/27696.html' title='Multiple used in 3 places.'>tottimeout_sec</a>, 0<em class='brace'>}</em>;
+<a id='L90' name='L90'></a>  90 
+<a id='L91' name='L91'></a>  91   <a href='../D/38635.html' title='Multiple defined in 2 places.'>u_short</a> <a href='../Y/22541.html' title='Multiple used in 781 places.'>port</a> = 0;
+<a id='L92' name='L92'></a>  92   <strong class='reserved'>int</strong> <a href='../Y/25701.html' title='Multiple used in 79 places.'>socket</a> = -1;
+<a id='L93' name='L93'></a>  93   <a href='../D/1302.html' title='Multiple defined in 3 places.'>CLIENT</a> *<a href='../S/18340.html#L46' title='Defined at 46 in socket/tst-accept4.c.'>client</a>;
+<a id='L94' name='L94'></a>  94   <strong class='reserved'>struct</strong> <a href='../S/18255.html#L87' title='Defined at 87 in sunrpc/rpc/pmap_prot.h.'>pmap</a> <a href='../Y/22202.html' title='Multiple used in 19 places.'>parms</a>;
+<a id='L95' name='L95'></a>  95   <a href='../S/3749.html#L624' title='Defined at 624 in timezone/private.h.'>bool</a> <a href='../Y/11728.html' title='Multiple used in 6 places.'>closeit</a> = <a href='../D/30360.html' title='Multiple defined in 5 places.'>false</a>;
+<a id='L96' name='L96'></a>  96 
+<a id='L97' name='L97'></a>  97   <a href='../Y/9972.html' title='Multiple used in 342 places.'>address</a>-&gt;<a href='../Y/25534.html' title='Multiple used in 81 places.'>sin_port</a> = <a href='../D/31575.html' title='Multiple defined in 7 places.'>htons</a> (<a href='../S/18255.html#L75' title='Defined at 75 in sunrpc/rpc/pmap_prot.h.'>PMAPPORT</a>);
+<a id='L98' name='L98'></a>  98   <strong class='reserved'>if</strong> (<a href='../Y/22878.html' title='Multiple used in 69 places.'>protocol</a> == <a href='../D/6517.html' title='Multiple defined in 3 places.'>IPPROTO_TCP</a>)
+<a id='L99' name='L99'></a>  99     <em class='brace'>{</em>
+<a id='L100' name='L100'></a> 100       <em class='comment'>/* Don't need a reserved port to get ports from the portmapper.  */</em>
+<a id='L101' name='L101'></a> 101       <a href='../Y/25701.html' title='Multiple used in 79 places.'>socket</a> = <a href='../S/18224.html#L49' title='Defined at 49 in sunrpc/pm_getport.c.'>__get_socket</a>(<a href='../Y/9972.html' title='Multiple used in 342 places.'>address</a>);
+<a id='L102' name='L102'></a> 102       <strong class='reserved'>if</strong> (<a href='../Y/25701.html' title='Multiple used in 79 places.'>socket</a> != -1)
+<a id='L103' name='L103'></a> 103     <a href='../Y/11728.html' title='Multiple used in 6 places.'>closeit</a> = <a href='../D/38483.html' title='Multiple defined in 5 places.'>true</a>;
+<a id='L104' name='L104'></a> 104       <a href='../S/18340.html#L46' title='Defined at 46 in socket/tst-accept4.c.'>client</a> = <a href='../S/18214.html#L112' title='Defined at 112 in sunrpc/clnt_tcp.c.'>clnttcp_create</a> (<a href='../Y/9972.html' title='Multiple used in 342 places.'>address</a>, <a href='../S/18255.html#L76' title='Defined at 76 in sunrpc/rpc/pmap_prot.h.'>PMAPPROG</a>, <a href='../S/18255.html#L77' title='Defined at 77 in sunrpc/rpc/pmap_prot.h.'>PMAPVERS</a>, &amp;<a href='../Y/25701.html' title='Multiple used in 79 places.'>socket</a>,
+<a id='L105' name='L105'></a> 105                    <a href='../S/18252.html#L414' title='Defined at 414 in sunrpc/rpc/clnt.h.'>RPCSMALLMSGSIZE</a>, <a href='../S/18252.html#L414' title='Defined at 414 in sunrpc/rpc/clnt.h.'>RPCSMALLMSGSIZE</a>);
+<a id='L106' name='L106'></a> 106     <em class='brace'>}</em>
+<a id='L107' name='L107'></a> 107   <strong class='reserved'>else</strong>
+<a id='L108' name='L108'></a> 108     <a href='../S/18340.html#L46' title='Defined at 46 in socket/tst-accept4.c.'>client</a> = <a href='../Y/11688.html' title='Multiple used in 8 places.'>clntudp_bufcreate</a> (<a href='../Y/9972.html' title='Multiple used in 342 places.'>address</a>, <a href='../S/18255.html#L76' title='Defined at 76 in sunrpc/rpc/pmap_prot.h.'>PMAPPROG</a>, <a href='../S/18255.html#L77' title='Defined at 77 in sunrpc/rpc/pmap_prot.h.'>PMAPVERS</a>, <a href='../Y/27314.html' title='Multiple used in 406 places.'>timeout</a>,
+<a id='L109' name='L109'></a> 109                 &amp;<a href='../Y/25701.html' title='Multiple used in 79 places.'>socket</a>, <a href='../S/18252.html#L414' title='Defined at 414 in sunrpc/rpc/clnt.h.'>RPCSMALLMSGSIZE</a>, <a href='../S/18252.html#L414' title='Defined at 414 in sunrpc/rpc/clnt.h.'>RPCSMALLMSGSIZE</a>);
+<a id='L110' name='L110'></a> 110   <strong class='reserved'>if</strong> (<a href='../S/18340.html#L46' title='Defined at 46 in socket/tst-accept4.c.'>client</a> != (<a href='../D/1302.html' title='Multiple defined in 3 places.'>CLIENT</a> *) <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>)
+<a id='L111' name='L111'></a> 111     <em class='brace'>{</em>
+<a id='L112' name='L112'></a> 112       <strong class='reserved'>struct</strong> <a href='../D/36128.html' title='Multiple defined in 4 places.'>rpc_createerr</a> *<a href='../Y/11411.html' title='Multiple used in 44 places.'>ce</a> = &amp;<a href='../S/18261.html#L75' title='Defined at 75 in sunrpc/rpc/rpc.h.'>get_rpc_createerr</a> ();
+<a id='L113' name='L113'></a> 113       <a href='../Y/22202.html' title='Multiple used in 19 places.'>parms</a>.<a href='../Y/22489.html' title='Multiple used in 7 places.'>pm_prog</a> = <a href='../Y/22851.html' title='Multiple used in 48 places.'>program</a>;
+<a id='L114' name='L114'></a> 114       <a href='../Y/22202.html' title='Multiple used in 19 places.'>parms</a>.<a href='../Y/22491.html' title='Multiple used in 7 places.'>pm_vers</a> = <a href='../Y/28665.html' title='Multiple used in 388 places.'>version</a>;
+<a id='L115' name='L115'></a> 115       <a href='../Y/22202.html' title='Multiple used in 19 places.'>parms</a>.<a href='../Y/22490.html' title='Multiple used in 6 places.'>pm_prot</a> = <a href='../Y/22878.html' title='Multiple used in 69 places.'>protocol</a>;
+<a id='L116' name='L116'></a> 116       <a href='../Y/22202.html' title='Multiple used in 19 places.'>parms</a>.<a href='../Y/22488.html' title='Multiple used in 6 places.'>pm_port</a> = 0;    <em class='comment'>/* not needed or used */</em>
+<a id='L117' name='L117'></a> 117       <strong class='reserved'>if</strong> (<a href='../S/18252.html#L167' title='Defined at 167 in sunrpc/rpc/clnt.h.'>CLNT_CALL</a> (<a href='../S/18340.html#L46' title='Defined at 46 in socket/tst-accept4.c.'>client</a>, <a href='../S/18255.html#L83' title='Defined at 83 in sunrpc/rpc/pmap_prot.h.'>PMAPPROC_GETPORT</a>, (<a href='../Y/29404.html' title='Multiple used in 290 places.'>xdrproc_t</a>)<a href='../S/18213.html#L42' title='Defined at 42 in sunrpc/pmap_prot.c.'>xdr_pmap</a>,
+<a id='L118' name='L118'></a> 118              (<a href='../D/28435.html' title='Multiple defined in 2 places.'>caddr_t</a>)&amp;<a href='../Y/22202.html' title='Multiple used in 19 places.'>parms</a>, (<a href='../Y/29404.html' title='Multiple used in 290 places.'>xdrproc_t</a>)<a href='../Y/29366.html' title='Multiple used in 9 places.'>xdr_u_short</a>,
+<a id='L119' name='L119'></a> 119              (<a href='../D/28435.html' title='Multiple defined in 2 places.'>caddr_t</a>)&amp;<a href='../Y/22541.html' title='Multiple used in 781 places.'>port</a>, <a href='../Y/27695.html' title='Multiple used in 11 places.'>tottimeout</a>) != <a href='../S/18252.html#L51' title='Defined at 51 in sunrpc/rpc/clnt.h.'>RPC_SUCCESS</a>)
+<a id='L120' name='L120'></a> 120     <em class='brace'>{</em>
+<a id='L121' name='L121'></a> 121       <a href='../Y/11411.html' title='Multiple used in 44 places.'>ce</a>-&gt;<a href='../Y/11430.html' title='Multiple used in 19 places.'>cf_stat</a> = <a href='../S/18252.html#L82' title='Defined at 82 in sunrpc/rpc/clnt.h.'>RPC_PMAPFAILURE</a>;
+<a id='L122' name='L122'></a> 122       <a href='../S/18252.html#L186' title='Defined at 186 in sunrpc/rpc/clnt.h.'>clnt_geterr</a> (<a href='../S/18340.html#L46' title='Defined at 46 in socket/tst-accept4.c.'>client</a>, &amp;<a href='../Y/11411.html' title='Multiple used in 44 places.'>ce</a>-&gt;<a href='../Y/11429.html' title='Multiple used in 15 places.'>cf_error</a>);
+<a id='L123' name='L123'></a> 123     <em class='brace'>}</em>
+<a id='L124' name='L124'></a> 124       <strong class='reserved'>else</strong> <strong class='reserved'>if</strong> (<a href='../Y/22541.html' title='Multiple used in 781 places.'>port</a> == 0)
+<a id='L125' name='L125'></a> 125     <em class='brace'>{</em>
+<a id='L126' name='L126'></a> 126       <a href='../Y/11411.html' title='Multiple used in 44 places.'>ce</a>-&gt;<a href='../Y/11430.html' title='Multiple used in 19 places.'>cf_stat</a> = <a href='../S/18252.html#L83' title='Defined at 83 in sunrpc/rpc/clnt.h.'>RPC_PROGNOTREGISTERED</a>;
+<a id='L127' name='L127'></a> 127     <em class='brace'>}</em>
+<a id='L128' name='L128'></a> 128       <a href='../S/18252.html#L243' title='Defined at 243 in sunrpc/rpc/clnt.h.'>CLNT_DESTROY</a> (<a href='../S/18340.html#L46' title='Defined at 46 in socket/tst-accept4.c.'>client</a>);
+<a id='L129' name='L129'></a> 129     <em class='brace'>}</em>
+<a id='L130' name='L130'></a> 130   <em class='comment'>/* We only need to close the socket here if we opened  it.  */</em>
+<a id='L131' name='L131'></a> 131   <strong class='reserved'>if</strong> (<a href='../Y/11728.html' title='Multiple used in 6 places.'>closeit</a>)
+<a id='L132' name='L132'></a> 132     (<strong class='reserved'>void</strong>) <a href='../D/23503.html' title='Multiple defined in 3 places.'>__close</a> (<a href='../Y/25701.html' title='Multiple used in 79 places.'>socket</a>);
+<a id='L133' name='L133'></a> 133   <a href='../Y/9972.html' title='Multiple used in 342 places.'>address</a>-&gt;<a href='../Y/25534.html' title='Multiple used in 81 places.'>sin_port</a> = 0;
+<a id='L134' name='L134'></a> 134   <strong class='reserved'>return</strong> <a href='../Y/22541.html' title='Multiple used in 781 places.'>port</a>;
+<a id='L135' name='L135'></a> 135 <em class='brace'>}</em>
+<a id='L136' name='L136'></a> 136 <em class='sharp'>#ifdef</em> <a href='../Y/438.html' title='Multiple used in 61 places.'>EXPORT_RPC_SYMBOLS</a>
+<a id='L137' name='L137'></a> 137 <a href='../R/21255.html' title='Multiple referred from 702 places.'>libc_hidden_def</a> (<a href='../S/18224.html#L84' title='Defined at 84 in sunrpc/pm_getport.c.'>__libc_rpc_getport</a>)
+<a id='L138' name='L138'></a> 138 <em class='sharp'>#else</em>
+<a id='L139' name='L139'></a> 139 <a href='../D/32799.html' title='Multiple defined in 73 places.'>libc_hidden_nolink_sunrpc</a> (<a href='../S/18224.html#L84' title='Defined at 84 in sunrpc/pm_getport.c.'>__libc_rpc_getport</a>, <a href='../Y/713.html' title='Multiple used in 21 places.'>GLIBC_PRIVATE</a>)
+<a id='L140' name='L140'></a> 140 <em class='sharp'>#endif</em>
+<a id='L141' name='L141'></a> 141 
+<a id='L142' name='L142'></a> 142 
+<a id='L143' name='L143'></a> 143 <em class='comment'>/*</em>
+<a id='L144' name='L144'></a> 144 <em class='comment'> * Find the mapped port for program,version.</em>
+<a id='L145' name='L145'></a> 145 <em class='comment'> * Calls the pmap service remotely to do the lookup.</em>
+<a id='L146' name='L146'></a> 146 <em class='comment'> * Returns 0 if no map exists.</em>
+<a id='L147' name='L147'></a> 147 <em class='comment'> */</em>
+<a id='L148' name='L148'></a> 148 <a href='../D/38635.html' title='Multiple defined in 2 places.'>u_short</a>
+<a id='L149' name='L149'></a> 149 <a href='../Y/22492.html' title='Multiple used in 7 places.'>pmap_getport</a> (<strong class='reserved'>struct</strong> <a href='../S/1485.html#L245' title='Defined at 245 in inet/netinet/in.h.'>sockaddr_in</a> *<a href='../Y/9972.html' title='Multiple used in 342 places.'>address</a>, <a href='../D/38633.html' title='Multiple defined in 2 places.'>u_long</a> <a href='../Y/22851.html' title='Multiple used in 48 places.'>program</a>, <a href='../D/38633.html' title='Multiple defined in 2 places.'>u_long</a> <a href='../Y/28665.html' title='Multiple used in 388 places.'>version</a>,
+<a id='L150' name='L150'></a> 150           <a href='../D/38628.html' title='Multiple defined in 2 places.'>u_int</a> <a href='../Y/22878.html' title='Multiple used in 69 places.'>protocol</a>)
+<a id='L151' name='L151'></a> 151 <em class='brace'>{</em>
+<a id='L152' name='L152'></a> 152   <strong class='reserved'>return</strong> <a href='../S/18224.html#L84' title='Defined at 84 in sunrpc/pm_getport.c.'>__libc_rpc_getport</a> (<a href='../Y/9972.html' title='Multiple used in 342 places.'>address</a>, <a href='../Y/22851.html' title='Multiple used in 48 places.'>program</a>, <a href='../Y/28665.html' title='Multiple used in 388 places.'>version</a>, <a href='../Y/22878.html' title='Multiple used in 69 places.'>protocol</a>, 5, 60);
+<a id='L153' name='L153'></a> 153 <em class='brace'>}</em>
+<a id='L154' name='L154'></a> 154 <a href='../D/32799.html' title='Multiple defined in 73 places.'>libc_hidden_nolink_sunrpc</a> (<a href='../Y/22492.html' title='Multiple used in 7 places.'>pmap_getport</a>, <a href='../S/1773.html#L416' title='Defined at 416 in nss/getXXbyYY_r.c.'>GLIBC_2_0</a>)
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L49'>[^]</a><a href='#L137'>[v]</a><a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

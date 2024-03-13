@@ -1,0 +1,147 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>sysdeps/unix/sysv/linux/dl-execstack.c</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18977.html'>sysdeps</a>/<a href='../files/19246.html'>unix</a>/<a href='../files/19257.html'>sysv</a>/<a href='../files/19258.html'>linux</a>/dl-execstack.c</h2>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L33'>[^]</a><a href='#L97'>[v]</a>[top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<h2 class='header'>DEFINITIONS</h2>
+This source file includes following definitions.
+<ol>
+<li><a href='#L33' title='Defined at 33.'>make_main_stack_executable</a></li>
+<li><a href='#L62' title='Defined at 62.'>_dl_make_stacks_executable</a></li>
+<li><a href='#L97' title='Defined at 97.'>__nptl_change_stack_perm</a></li>
+</ol>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* Stack executability handling for GNU dynamic linker.  Linux version.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   Copyright (C) 2003-2022 Free Software Foundation, Inc.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'></em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'></em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'></em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   License along with the GNU C Library; if not, see</em>
+<a id='L17' name='L17'></a>  17 <em class='comment'>   &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L18' name='L18'></a>  18 
+<a id='L19' name='L19'></a>  19 <em class='sharp'>#include</em> &lt;<a href='../I/116.html'>errno.h</a>&gt;
+<a id='L20' name='L20'></a>  20 <em class='sharp'>#include</em> &lt;<a href='../I/5906.html'>ldsodefs.h</a>&gt;
+<a id='L21' name='L21'></a>  21 <em class='sharp'>#include</em> &lt;<a href='../I/1881.html'>libintl.h</a>&gt;
+<a id='L22' name='L22'></a>  22 <em class='sharp'>#include</em> &lt;<a href='18118.html'>list.h</a>&gt;
+<a id='L23' name='L23'></a>  23 <em class='sharp'>#include</em> &lt;<a href='../I/6831.html'>pthreadP.h</a>&gt;
+<a id='L24' name='L24'></a>  24 <em class='sharp'>#include</em> &lt;<a href='../I/1966.html'>stackinfo.h</a>&gt;
+<a id='L25' name='L25'></a>  25 <em class='sharp'>#include</em> &lt;stdbool.h&gt;
+<a id='L26' name='L26'></a>  26 <em class='sharp'>#include</em> &lt;<a href='../I/140.html'>sys/mman.h</a>&gt;
+<a id='L27' name='L27'></a>  27 <em class='sharp'>#include</em> &lt;<a href='../I/5967.html'>sysdep.h</a>&gt;
+<a id='L28' name='L28'></a>  28 <em class='sharp'>#include</em> &lt;<a href='../I/1819.html'>unistd.h</a>&gt;
+<a id='L29' name='L29'></a>  29 
+<a id='L30' name='L30'></a>  30 <strong class='reserved'>extern</strong> <strong class='reserved'>int</strong> <a href='../Y/7575.html' title='Multiple used in 8 places.'>__stack_prot</a> <a href='../S/18012.html#L443' title='Defined at 443 in include/libc-symbols.h.'>attribute_relro</a> <a href='../D/27947.html' title='Multiple defined in 7 places.'>attribute_hidden</a>;
+<a id='L31' name='L31'></a>  31 
+<a id='L32' name='L32'></a>  32 <strong class='reserved'>static</strong> <strong class='reserved'>int</strong>
+<a id='L33' name='L33'></a>  33 <a href='../S/11291.html#L65' title='Referred from 65 in sysdeps/unix/sysv/linux/dl-execstack.c.'>make_main_stack_executable</a> (<strong class='reserved'>void</strong> **<a href='../Y/26040.html' title='Multiple used in 14 places.'>stack_endp</a>)
+<a id='L34' name='L34'></a>  34 <em class='brace'>{</em>
+<a id='L35' name='L35'></a>  35   <em class='comment'>/* This gives us the highest/lowest page that needs to be changed.  */</em>
+<a id='L36' name='L36'></a>  36   <a href='../D/38692.html' title='Multiple defined in 2 places.'>uintptr_t</a> <a href='../Y/22158.html' title='Multiple used in 43 places.'>page</a> = ((<a href='../D/38692.html' title='Multiple defined in 2 places.'>uintptr_t</a>) *<a href='../Y/26040.html' title='Multiple used in 14 places.'>stack_endp</a>
+<a id='L37' name='L37'></a>  37             &amp; -(<a href='../D/32203.html' title='Multiple defined in 3 places.'>intptr_t</a>) <a href='../D/5109.html' title='Multiple defined in 6 places.'>GLRO</a>(<a href='../Y/12927.html' title='Multiple used in 83 places.'>dl_pagesize</a>));
+<a id='L38' name='L38'></a>  38   <strong class='reserved'>int</strong> <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a> = 0;
+<a id='L39' name='L39'></a>  39 
+<a id='L40' name='L40'></a>  40   <strong class='reserved'>if</strong> (<a href='../D/23349.html' title='Multiple defined in 3 places.'>__builtin_expect</a> (<a href='../D/25008.html' title='Multiple defined in 2 places.'>__mprotect</a> ((<strong class='reserved'>void</strong> *) <a href='../Y/22158.html' title='Multiple used in 43 places.'>page</a>, <a href='../D/5109.html' title='Multiple defined in 6 places.'>GLRO</a>(<a href='../Y/12927.html' title='Multiple used in 83 places.'>dl_pagesize</a>),
+<a id='L41' name='L41'></a>  41                     <a href='../Y/7575.html' title='Multiple used in 8 places.'>__stack_prot</a>) == 0, 1))
+<a id='L42' name='L42'></a>  42     <strong class='reserved'>goto</strong> <a href='../Y/24014.html' title='Multiple used in 2 places.'>return_success</a>;
+<a id='L43' name='L43'></a>  43   <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a> = <a href='../D/30023.html' title='Multiple defined in 13 places.'>errno</a>;
+<a id='L44' name='L44'></a>  44   <strong class='reserved'>goto</strong> <a href='../S/1663.html#L112' title='Defined at 112 in nscd/initgrcache.c.'>out</a>;
+<a id='L45' name='L45'></a>  45 
+<a id='L46' name='L46'></a>  46  <a href='../Y/24014.html' title='Multiple used in 2 places.'>return_success</a>:
+<a id='L47' name='L47'></a>  47   <em class='comment'>/* Clear the address.  */</em>
+<a id='L48' name='L48'></a>  48   *<a href='../Y/26040.html' title='Multiple used in 14 places.'>stack_endp</a> = <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>;
+<a id='L49' name='L49'></a>  49 
+<a id='L50' name='L50'></a>  50   <em class='comment'>/* Remember that we changed the permission.  */</em>
+<a id='L51' name='L51'></a>  51   <a href='../D/5057.html' title='Multiple defined in 6 places.'>GL</a>(<a href='../Y/12954.html' title='Multiple used in 8 places.'>dl_stack_flags</a>) |= <a href='../S/3101.html#L733' title='Defined at 733 in elf/elf.h.'>PF_X</a>;
+<a id='L52' name='L52'></a>  52 
+<a id='L53' name='L53'></a>  53  <a href='../S/1663.html#L112' title='Defined at 112 in nscd/initgrcache.c.'>out</a>:
+<a id='L54' name='L54'></a>  54 <em class='sharp'>#ifdef</em> <a href='../Y/11504.html' title='Multiple used in 4 places.'>check_consistency</a>
+<a id='L55' name='L55'></a>  55   <a href='../Y/11504.html' title='Multiple used in 4 places.'>check_consistency</a> ();
+<a id='L56' name='L56'></a>  56 <em class='sharp'>#endif</em>
+<a id='L57' name='L57'></a>  57 
+<a id='L58' name='L58'></a>  58   <strong class='reserved'>return</strong> <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a>;
+<a id='L59' name='L59'></a>  59 <em class='brace'>}</em>
+<a id='L60' name='L60'></a>  60 
+<a id='L61' name='L61'></a>  61 <strong class='reserved'>int</strong>
+<a id='L62' name='L62'></a>  62 <a href='../R/16561.html' title='Multiple referred from 2 places.'>_dl_make_stacks_executable</a> (<strong class='reserved'>void</strong> **<a href='../Y/26040.html' title='Multiple used in 14 places.'>stack_endp</a>)
+<a id='L63' name='L63'></a>  63 <em class='brace'>{</em>
+<a id='L64' name='L64'></a>  64   <em class='comment'>/* First the main thread's stack.  */</em>
+<a id='L65' name='L65'></a>  65   <strong class='reserved'>int</strong> <a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a> = <a href='../S/11291.html#L33' title='Defined at 33 in sysdeps/unix/sysv/linux/dl-execstack.c.'>make_main_stack_executable</a> (<a href='../Y/26040.html' title='Multiple used in 14 places.'>stack_endp</a>);
+<a id='L66' name='L66'></a>  66   <strong class='reserved'>if</strong> (<a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a> != 0)
+<a id='L67' name='L67'></a>  67     <strong class='reserved'>return</strong> <a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a>;
+<a id='L68' name='L68'></a>  68 
+<a id='L69' name='L69'></a>  69   <a href='../D/33010.html' title='Multiple defined in 2 places.'>lll_lock</a> (<a href='../D/5057.html' title='Multiple defined in 6 places.'>GL</a> (<a href='../Y/12953.html' title='Multiple used in 20 places.'>dl_stack_cache_lock</a>), <a href='../D/7214.html' title='Multiple defined in 2 places.'>LLL_PRIVATE</a>);
+<a id='L70' name='L70'></a>  70 
+<a id='L71' name='L71'></a>  71   <a href='../S/18015.html#L28' title='Defined at 28 in include/list_t.h.'>list_t</a> *<a href='../Y/24405.html' title='Multiple used in 753 places.'>runp</a>;
+<a id='L72' name='L72'></a>  72   <a href='../S/18118.html#L82' title='Defined at 82 in include/list.h.'>list_for_each</a> (<a href='../Y/24405.html' title='Multiple used in 753 places.'>runp</a>, &amp;<a href='../D/5057.html' title='Multiple defined in 6 places.'>GL</a> (<a href='../Y/12955.html' title='Multiple used in 15 places.'>dl_stack_used</a>))
+<a id='L73' name='L73'></a>  73     <em class='brace'>{</em>
+<a id='L74' name='L74'></a>  74       <a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a> = <a href='../S/11291.html#L97' title='Defined at 97 in sysdeps/unix/sysv/linux/dl-execstack.c.'>__nptl_change_stack_perm</a> (<a href='../S/18118.html#L76' title='Defined at 76 in include/list.h.'>list_entry</a> (<a href='../Y/24405.html' title='Multiple used in 753 places.'>runp</a>, <strong class='reserved'>struct</strong> <a href='../D/35082.html' title='Multiple defined in 2 places.'>pthread</a>, <a href='../D/32957.html' title='Multiple defined in 3 places.'>list</a>));
+<a id='L75' name='L75'></a>  75       <strong class='reserved'>if</strong> (<a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a> != 0)
+<a id='L76' name='L76'></a>  76     <strong class='reserved'>break</strong>;
+<a id='L77' name='L77'></a>  77     <em class='brace'>}</em>
+<a id='L78' name='L78'></a>  78 
+<a id='L79' name='L79'></a>  79   <em class='comment'>/* Also change the permission for the currently unused stacks.  This</em>
+<a id='L80' name='L80'></a>  80 <em class='comment'>     might be wasted time but better spend it here than adding a check</em>
+<a id='L81' name='L81'></a>  81 <em class='comment'>     in the fast path.  */</em>
+<a id='L82' name='L82'></a>  82   <strong class='reserved'>if</strong> (<a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a> == 0)
+<a id='L83' name='L83'></a>  83     <a href='../S/18118.html#L82' title='Defined at 82 in include/list.h.'>list_for_each</a> (<a href='../Y/24405.html' title='Multiple used in 753 places.'>runp</a>, &amp;<a href='../D/5057.html' title='Multiple defined in 6 places.'>GL</a> (<a href='../Y/12951.html' title='Multiple used in 8 places.'>dl_stack_cache</a>))
+<a id='L84' name='L84'></a>  84       <em class='brace'>{</em>
+<a id='L85' name='L85'></a>  85     <a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a> = <a href='../S/11291.html#L97' title='Defined at 97 in sysdeps/unix/sysv/linux/dl-execstack.c.'>__nptl_change_stack_perm</a> (<a href='../S/18118.html#L76' title='Defined at 76 in include/list.h.'>list_entry</a> (<a href='../Y/24405.html' title='Multiple used in 753 places.'>runp</a>, <strong class='reserved'>struct</strong> <a href='../D/35082.html' title='Multiple defined in 2 places.'>pthread</a>,
+<a id='L86' name='L86'></a>  86                             <a href='../D/32957.html' title='Multiple defined in 3 places.'>list</a>));
+<a id='L87' name='L87'></a>  87     <strong class='reserved'>if</strong> (<a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a> != 0)
+<a id='L88' name='L88'></a>  88       <strong class='reserved'>break</strong>;
+<a id='L89' name='L89'></a>  89       <em class='brace'>}</em>
+<a id='L90' name='L90'></a>  90 
+<a id='L91' name='L91'></a>  91   <a href='../D/33019.html' title='Multiple defined in 2 places.'>lll_unlock</a> (<a href='../D/5057.html' title='Multiple defined in 6 places.'>GL</a> (<a href='../Y/12953.html' title='Multiple used in 20 places.'>dl_stack_cache_lock</a>), <a href='../D/7214.html' title='Multiple defined in 2 places.'>LLL_PRIVATE</a>);
+<a id='L92' name='L92'></a>  92 
+<a id='L93' name='L93'></a>  93   <strong class='reserved'>return</strong> <a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a>;
+<a id='L94' name='L94'></a>  94 <em class='brace'>}</em>
+<a id='L95' name='L95'></a>  95 
+<a id='L96' name='L96'></a>  96 <strong class='reserved'>int</strong>
+<a id='L97' name='L97'></a>  97 <a href='../R/15224.html' title='Multiple referred from 6 places.'>__nptl_change_stack_perm</a> (<strong class='reserved'>struct</strong> <a href='../D/35082.html' title='Multiple defined in 2 places.'>pthread</a> *<a href='../Y/22310.html' title='Multiple used in 361 places.'>pd</a>)
+<a id='L98' name='L98'></a>  98 <em class='brace'>{</em>
+<a id='L99' name='L99'></a>  99 <em class='sharp'>#ifdef</em> <a href='../S/12815.html#L25' title='Defined at 25 in sysdeps/ia64/nptl/pthreaddef.h.'>NEED_SEPARATE_REGISTER_STACK</a>
+<a id='L100' name='L100'></a> 100   <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/22167.html' title='Multiple used in 5 places.'>pagemask</a> = <a href='../D/24152.html' title='Multiple defined in 6 places.'>__getpagesize</a> () - 1;
+<a id='L101' name='L101'></a> 101   <strong class='reserved'>void</strong> *<a href='../Y/26025.html' title='Multiple used in 187 places.'>stack</a> = (<a href='../Y/22310.html' title='Multiple used in 361 places.'>pd</a>-&gt;<a href='../Y/26055.html' title='Multiple used in 18 places.'>stackblock</a>
+<a id='L102' name='L102'></a> 102          + (((((<a href='../Y/22310.html' title='Multiple used in 361 places.'>pd</a>-&gt;<a href='../Y/26056.html' title='Multiple used in 23 places.'>stackblock_size</a> - <a href='../Y/22310.html' title='Multiple used in 361 places.'>pd</a>-&gt;<a href='../Y/15863.html' title='Multiple used in 98 places.'>guardsize</a>) / 2)
+<a id='L103' name='L103'></a> 103               &amp; <a href='../Y/22167.html' title='Multiple used in 5 places.'>pagemask</a>) + <a href='../Y/22310.html' title='Multiple used in 361 places.'>pd</a>-&gt;<a href='../Y/15863.html' title='Multiple used in 98 places.'>guardsize</a>) &amp; <a href='../Y/22167.html' title='Multiple used in 5 places.'>pagemask</a>));
+<a id='L104' name='L104'></a> 104   <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../D/32598.html' title='Multiple defined in 10 places.'>len</a> = <a href='../Y/22310.html' title='Multiple used in 361 places.'>pd</a>-&gt;<a href='../Y/26055.html' title='Multiple used in 18 places.'>stackblock</a> + <a href='../Y/22310.html' title='Multiple used in 361 places.'>pd</a>-&gt;<a href='../Y/26056.html' title='Multiple used in 23 places.'>stackblock_size</a> - <a href='../Y/26025.html' title='Multiple used in 187 places.'>stack</a>;
+<a id='L105' name='L105'></a> 105 <em class='sharp'>#elif</em> <a href='../D/20362.html' title='Multiple defined in 19 places.'>_STACK_GROWS_DOWN</a>
+<a id='L106' name='L106'></a> 106   <strong class='reserved'>void</strong> *<a href='../Y/26025.html' title='Multiple used in 187 places.'>stack</a> = <a href='../Y/22310.html' title='Multiple used in 361 places.'>pd</a>-&gt;<a href='../Y/26055.html' title='Multiple used in 18 places.'>stackblock</a> + <a href='../Y/22310.html' title='Multiple used in 361 places.'>pd</a>-&gt;<a href='../Y/15863.html' title='Multiple used in 98 places.'>guardsize</a>;
+<a id='L107' name='L107'></a> 107   <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../D/32598.html' title='Multiple defined in 10 places.'>len</a> = <a href='../Y/22310.html' title='Multiple used in 361 places.'>pd</a>-&gt;<a href='../Y/26056.html' title='Multiple used in 23 places.'>stackblock_size</a> - <a href='../Y/22310.html' title='Multiple used in 361 places.'>pd</a>-&gt;<a href='../Y/15863.html' title='Multiple used in 98 places.'>guardsize</a>;
+<a id='L108' name='L108'></a> 108 <em class='sharp'>#elif</em> <a href='../D/20363.html' title='Multiple defined in 2 places.'>_STACK_GROWS_UP</a>
+<a id='L109' name='L109'></a> 109   <strong class='reserved'>void</strong> *<a href='../Y/26025.html' title='Multiple used in 187 places.'>stack</a> = <a href='../Y/22310.html' title='Multiple used in 361 places.'>pd</a>-&gt;<a href='../Y/26055.html' title='Multiple used in 18 places.'>stackblock</a>;
+<a id='L110' name='L110'></a> 110   <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../D/32598.html' title='Multiple defined in 10 places.'>len</a> = (<a href='../D/38692.html' title='Multiple defined in 2 places.'>uintptr_t</a>) <a href='../Y/22310.html' title='Multiple used in 361 places.'>pd</a> - <a href='../Y/22310.html' title='Multiple used in 361 places.'>pd</a>-&gt;<a href='../Y/15863.html' title='Multiple used in 98 places.'>guardsize</a> - (<a href='../D/38692.html' title='Multiple defined in 2 places.'>uintptr_t</a>) <a href='../Y/22310.html' title='Multiple used in 361 places.'>pd</a>-&gt;<a href='../Y/26055.html' title='Multiple used in 18 places.'>stackblock</a>;
+<a id='L111' name='L111'></a> 111 <em class='sharp'>#else</em>
+<a id='L112' name='L112'></a> 112 <em class='sharp'># error</em> "Define either _STACK_GROWS_DOWN or _STACK_GROWS_UP"
+<a id='L113' name='L113'></a> 113 <em class='sharp'>#endif</em>
+<a id='L114' name='L114'></a> 114   <strong class='reserved'>if</strong> (<a href='../D/25008.html' title='Multiple defined in 2 places.'>__mprotect</a> (<a href='../Y/26025.html' title='Multiple used in 187 places.'>stack</a>, <a href='../D/32598.html' title='Multiple defined in 10 places.'>len</a>, <a href='../D/10287.html' title='Multiple defined in 2 places.'>PROT_READ</a> | <a href='../D/10289.html' title='Multiple defined in 2 places.'>PROT_WRITE</a> | <a href='../D/10282.html' title='Multiple defined in 2 places.'>PROT_EXEC</a>) != 0)
+<a id='L115' name='L115'></a> 115     <strong class='reserved'>return</strong> <a href='../D/30023.html' title='Multiple defined in 13 places.'>errno</a>;
+<a id='L116' name='L116'></a> 116 
+<a id='L117' name='L117'></a> 117   <strong class='reserved'>return</strong> 0;
+<a id='L118' name='L118'></a> 118 <em class='brace'>}</em>
+<a id='L119' name='L119'></a> 119 <a href='../D/36176.html' title='Multiple defined in 10 places.'>rtld_hidden_def</a> (<a href='../S/11291.html#L97' title='Defined at 97 in sysdeps/unix/sysv/linux/dl-execstack.c.'>__nptl_change_stack_perm</a>)
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L33'>[^]</a><a href='#L97'>[v]</a><a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

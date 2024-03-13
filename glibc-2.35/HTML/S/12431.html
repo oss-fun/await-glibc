@@ -1,0 +1,471 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>sysdeps/ia64/fpu/s_libm_scalbnl.S</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18977.html'>sysdeps</a>/<a href='../files/19053.html'>ia64</a>/<a href='../files/19055.html'>fpu</a>/s_libm_scalbnl.S</h2>
+<em class='comment'>/* [&lt;][&gt;][^][v][top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 .file "libm_scalbnl.s"
+<a id='L2' name='L2'></a>   2 
+<a id='L3' name='L3'></a>   3 
+<a id='L4' name='L4'></a>   4 <em class='comment'>// Copyright (c) 2000 - 2003, Intel Corporation</em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>// All rights reserved.</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>//</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>//</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'>// Redistribution and use in source and binary forms, with or without</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'>// modification, are permitted provided that the following conditions are</em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>// met:</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>//</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>// * Redistributions of source code must retain the above copyright</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'>// notice, this list of conditions and the following disclaimer.</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'>//</em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>// * Redistributions in binary form must reproduce the above copyright</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>// notice, this list of conditions and the following disclaimer in the</em>
+<a id='L17' name='L17'></a>  17 <em class='comment'>// documentation and/or other materials provided with the distribution.</em>
+<a id='L18' name='L18'></a>  18 <em class='comment'>//</em>
+<a id='L19' name='L19'></a>  19 <em class='comment'>// * The name of Intel Corporation may not be used to endorse or promote</em>
+<a id='L20' name='L20'></a>  20 <em class='comment'>// products derived from this software without specific prior written</em>
+<a id='L21' name='L21'></a>  21 <em class='comment'>// permission.</em>
+<a id='L22' name='L22'></a>  22 
+<a id='L23' name='L23'></a>  23 <em class='comment'>// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS</em>
+<a id='L24' name='L24'></a>  24 <em class='comment'>// "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT</em>
+<a id='L25' name='L25'></a>  25 <em class='comment'>// LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR</em>
+<a id='L26' name='L26'></a>  26 <em class='comment'>// A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL INTEL OR ITS</em>
+<a id='L27' name='L27'></a>  27 <em class='comment'>// CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,</em>
+<a id='L28' name='L28'></a>  28 <em class='comment'>// EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,</em>
+<a id='L29' name='L29'></a>  29 <em class='comment'>// PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR</em>
+<a id='L30' name='L30'></a>  30 <em class='comment'>// PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY</em>
+<a id='L31' name='L31'></a>  31 <em class='comment'>// OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY OR TORT (INCLUDING</em>
+<a id='L32' name='L32'></a>  32 <em class='comment'>// NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS</em>
+<a id='L33' name='L33'></a>  33 <em class='comment'>// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.</em>
+<a id='L34' name='L34'></a>  34 <em class='comment'>//</em>
+<a id='L35' name='L35'></a>  35 <em class='comment'>// Intel Corporation is the author of this code, and requests that all</em>
+<a id='L36' name='L36'></a>  36 <em class='comment'>// problem reports or change requests be submitted to it directly at</em>
+<a id='L37' name='L37'></a>  37 <em class='comment'>// http://www.intel.com/software/products/opensource/libraries/num.htm.</em>
+<a id='L38' name='L38'></a>  38 <em class='comment'>//</em>
+<a id='L39' name='L39'></a>  39 <em class='comment'>// History</em>
+<a id='L40' name='L40'></a>  40 <em class='comment'>//==============================================================</em>
+<a id='L41' name='L41'></a>  41 <em class='comment'>// 02/02/00 Initial version</em>
+<a id='L42' name='L42'></a>  42 <em class='comment'>// 01/26/01 Scalbnl completely reworked and now standalone version</em>
+<a id='L43' name='L43'></a>  43 <em class='comment'>// 01/04/02 Added handling for int 32 or 64 bits</em>
+<a id='L44' name='L44'></a>  44 <em class='comment'>// 05/20/02 Cleaned up namespace and sf0 syntax</em>
+<a id='L45' name='L45'></a>  45 <em class='comment'>// 02/10/03 Reordered header: .section, .global, .proc, .align</em>
+<a id='L46' name='L46'></a>  46 <em class='comment'>// 08/04/03 Improved performance</em>
+<a id='L47' name='L47'></a>  47 <em class='comment'>//</em>
+<a id='L48' name='L48'></a>  48 <em class='comment'>// API</em>
+<a id='L49' name='L49'></a>  49 <em class='comment'>//==============================================================</em>
+<a id='L50' name='L50'></a>  50 <em class='comment'>// long double __libm_scalbnl  (long double x, int n, int int_type)</em>
+<a id='L51' name='L51'></a>  51 <em class='comment'>// input  floating point f8 and int n (r34), int int_type (r35)</em>
+<a id='L52' name='L52'></a>  52 <em class='comment'>// output floating point f8</em>
+<a id='L53' name='L53'></a>  53 <em class='comment'>//</em>
+<a id='L54' name='L54'></a>  54 <em class='comment'>// int_type = 0 if int is 32 bits</em>
+<a id='L55' name='L55'></a>  55 <em class='comment'>// int_type = 1 if int is 64 bits</em>
+<a id='L56' name='L56'></a>  56 <em class='comment'>//</em>
+<a id='L57' name='L57'></a>  57 <em class='comment'>// Returns x* 2**n using an fma and detects overflow</em>
+<a id='L58' name='L58'></a>  58 <em class='comment'>// and underflow.</em>
+<a id='L59' name='L59'></a>  59 <em class='comment'>//</em>
+<a id='L60' name='L60'></a>  60 <em class='comment'>//</em>
+<a id='L61' name='L61'></a>  61 <em class='comment'>// Strategy:</em>
+<a id='L62' name='L62'></a>  62 <em class='comment'>//  Compute biased exponent of result exp_Result = N + exp_X</em>
+<a id='L63' name='L63'></a>  63 <em class='comment'>//  Break into ranges:</em>
+<a id='L64' name='L64'></a>  64 <em class='comment'>//   exp_Result &gt; 0x13ffe                 -&gt; Certain overflow</em>
+<a id='L65' name='L65'></a>  65 <em class='comment'>//   exp_Result = 0x13ffe                 -&gt; Possible overflow</em>
+<a id='L66' name='L66'></a>  66 <em class='comment'>//   0x0c001 &lt;= exp_Result &lt; 0x13ffe      -&gt; No over/underflow (main path)</em>
+<a id='L67' name='L67'></a>  67 <em class='comment'>//   0x0c001 - 63 &lt;= exp_Result &lt; 0x0c001 -&gt; Possible underflow</em>
+<a id='L68' name='L68'></a>  68 <em class='comment'>//   exp_Result &lt; 0x0c001 - 63            -&gt; Certain underflow</em>
+<a id='L69' name='L69'></a>  69 
+<a id='L70' name='L70'></a>  70 FR_Big         = f6
+<a id='L71' name='L71'></a>  71 FR_NBig        = f7
+<a id='L72' name='L72'></a>  72 FR_Floating_X  = f8
+<a id='L73' name='L73'></a>  73 FR_Result      = f8
+<a id='L74' name='L74'></a>  74 FR_Result2     = f9
+<a id='L75' name='L75'></a>  75 FR_Result3     = f10
+<a id='L76' name='L76'></a>  76 FR_Norm_X      = f11
+<a id='L77' name='L77'></a>  77 FR_Two_N       = f12
+<a id='L78' name='L78'></a>  78 
+<a id='L79' name='L79'></a>  79 GR_neg_ov_limit= r14
+<a id='L80' name='L80'></a>  80 GR_N_Biased    = r15
+<a id='L81' name='L81'></a>  81 GR_Big         = r16
+<a id='L82' name='L82'></a>  82 GR_NBig        = r17
+<a id='L83' name='L83'></a>  83 GR_exp_Result  = r18
+<a id='L84' name='L84'></a>  84 GR_pos_ov_limit= r19
+<a id='L85' name='L85'></a>  85 GR_Bias        = r20
+<a id='L86' name='L86'></a>  86 GR_N_as_int    = r21
+<a id='L87' name='L87'></a>  87 GR_signexp_X   = r22
+<a id='L88' name='L88'></a>  88 GR_exp_X       = r23
+<a id='L89' name='L89'></a>  89 GR_exp_mask    = r24
+<a id='L90' name='L90'></a>  90 GR_max_exp     = r25
+<a id='L91' name='L91'></a>  91 GR_min_exp     = r26
+<a id='L92' name='L92'></a>  92 GR_min_den_exp = r27
+<a id='L93' name='L93'></a>  93 
+<a id='L94' name='L94'></a>  94 GR_SAVE_B0          = r32
+<a id='L95' name='L95'></a>  95 GR_SAVE_GP          = r33
+<a id='L96' name='L96'></a>  96 GR_SAVE_PFS         = r34
+<a id='L97' name='L97'></a>  97 GR_Parameter_X      = r35
+<a id='L98' name='L98'></a>  98 GR_Parameter_Y      = r36
+<a id='L99' name='L99'></a>  99 GR_Parameter_RESULT = r37
+<a id='L100' name='L100'></a> 100 GR_Tag              = r38
+<a id='L101' name='L101'></a> 101 
+<a id='L102' name='L102'></a> 102 .section .text
+<a id='L103' name='L103'></a> 103 GLOBAL_LIBM_ENTRY(__libm_scalbnl)
+<a id='L104' name='L104'></a> 104 
+<a id='L105' name='L105'></a> 105 <em class='comment'>//</em>
+<a id='L106' name='L106'></a> 106 <em class='comment'>//   Is x NAN, INF, ZERO, +-?</em>
+<a id='L107' name='L107'></a> 107 <em class='comment'>//   Build the exponent Bias</em>
+<a id='L108' name='L108'></a> 108 <em class='comment'>//</em>
+<a id='L109' name='L109'></a> 109 <em class='brace'>{</em>    .mfi
+<a id='L110' name='L110'></a> 110      getf.exp      GR_signexp_X = FR_Floating_X <em class='comment'>// Get signexp of x</em>
+<a id='L111' name='L111'></a> 111      fclass.m      p6,p0 = FR_Floating_X, 0xe7  <em class='comment'>// @snan | @qnan | @inf | @zero</em>
+<a id='L112' name='L112'></a> 112      mov           GR_Bias = 0x0ffff
+<a id='L113' name='L113'></a> 113 <em class='brace'>}</em>
+<a id='L114' name='L114'></a> 114 <em class='comment'>//</em>
+<a id='L115' name='L115'></a> 115 <em class='comment'>//   Normalize x</em>
+<a id='L116' name='L116'></a> 116 <em class='comment'>//   Is integer type 32 bits?</em>
+<a id='L117' name='L117'></a> 117 <em class='comment'>//</em>
+<a id='L118' name='L118'></a> 118 <em class='brace'>{</em>    .mfi
+<a id='L119' name='L119'></a> 119      mov           GR_Big = 35000      <em class='comment'>// If N this big then certain overflow</em>
+<a id='L120' name='L120'></a> 120      fnorm.s1      FR_Norm_X = FR_Floating_X
+<a id='L121' name='L121'></a> 121      cmp.eq        p8,p9 = r35,r0
+<a id='L122' name='L122'></a> 122 <em class='brace'>}</em>
+<a id='L123' name='L123'></a> 123 ;;
+<a id='L124' name='L124'></a> 124 
+<a id='L125' name='L125'></a> 125 <em class='comment'>//   Sign extend N if int is 32 bits</em>
+<a id='L126' name='L126'></a> 126 <em class='brace'>{</em>    .mfi
+<a id='L127' name='L127'></a> 127 (p9) mov           GR_N_as_int = r34     <em class='comment'>// Copy N if int is 64 bits</em>
+<a id='L128' name='L128'></a> 128      fclass.m      p9,p0 = FR_Floating_X, 0x0b <em class='comment'>// Test for x=unorm</em>
+<a id='L129' name='L129'></a> 129 (p8) sxt4          GR_N_as_int = r34     <em class='comment'>// Sign extend N if int is 32 bits</em>
+<a id='L130' name='L130'></a> 130 <em class='brace'>}</em>
+<a id='L131' name='L131'></a> 131 <em class='brace'>{</em> .mfi
+<a id='L132' name='L132'></a> 132      mov           GR_NBig = -35000    <em class='comment'>// If N this small then certain underflow</em>
+<a id='L133' name='L133'></a> 133      nop.f         0
+<a id='L134' name='L134'></a> 134      mov           GR_max_exp = 0x13ffe      <em class='comment'>// Exponent of maximum long double</em>
+<a id='L135' name='L135'></a> 135 <em class='brace'>}</em>
+<a id='L136' name='L136'></a> 136 ;;
+<a id='L137' name='L137'></a> 137 
+<a id='L138' name='L138'></a> 138 <em class='comment'>//   Create biased exponent for 2**N</em>
+<a id='L139' name='L139'></a> 139 <em class='brace'>{</em>    .mfi
+<a id='L140' name='L140'></a> 140      add           GR_N_Biased = GR_Bias,GR_N_as_int
+<a id='L141' name='L141'></a> 141      nop.f         0
+<a id='L142' name='L142'></a> 142      cmp.ge        p7, p0 = GR_N_as_int, GR_Big  <em class='comment'>// Certain overflow?</em>
+<a id='L143' name='L143'></a> 143 <em class='brace'>}</em>
+<a id='L144' name='L144'></a> 144 <em class='brace'>{</em>    .mib
+<a id='L145' name='L145'></a> 145      cmp.le        p8, p0 = GR_N_as_int, GR_NBig <em class='comment'>// Certain underflow?</em>
+<a id='L146' name='L146'></a> 146      mov           GR_min_exp = 0x0c001      <em class='comment'>// Exponent of minimum long double</em>
+<a id='L147' name='L147'></a> 147 (p9) br.cond.spnt  SCALBNL_UNORM              <em class='comment'>// Branch if x=unorm</em>
+<a id='L148' name='L148'></a> 148 <em class='brace'>}</em>
+<a id='L149' name='L149'></a> 149 ;;
+<a id='L150' name='L150'></a> 150 
+<a id='L151' name='L151'></a> 151 SCALBNL_COMMON:
+<a id='L152' name='L152'></a> 152 <em class='comment'>// Main path continues.  Also return here from x=unorm path.</em>
+<a id='L153' name='L153'></a> 153 <em class='comment'>//   Create 2**N</em>
+<a id='L154' name='L154'></a> 154 .pred.rel "mutex",p7,p8
+<a id='L155' name='L155'></a> 155 <em class='brace'>{</em>    .mfi
+<a id='L156' name='L156'></a> 156      setf.exp      FR_Two_N = GR_N_Biased
+<a id='L157' name='L157'></a> 157      nop.f         0
+<a id='L158' name='L158'></a> 158 (p7) mov           GR_N_as_int = GR_Big      <em class='comment'>// Limit max N</em>
+<a id='L159' name='L159'></a> 159 <em class='brace'>}</em>
+<a id='L160' name='L160'></a> 160 <em class='brace'>{</em>    .mfi
+<a id='L161' name='L161'></a> 161 (p8) mov           GR_N_as_int = GR_NBig     <em class='comment'>// Limit min N</em>
+<a id='L162' name='L162'></a> 162      nop.f         0
+<a id='L163' name='L163'></a> 163 (p8) cmp.eq        p7,p0 = r0,r0             <em class='comment'>// Set p7 if |N| big</em>
+<a id='L164' name='L164'></a> 164 <em class='brace'>}</em>
+<a id='L165' name='L165'></a> 165 ;;
+<a id='L166' name='L166'></a> 166 
+<a id='L167' name='L167'></a> 167 <em class='comment'>//</em>
+<a id='L168' name='L168'></a> 168 <em class='comment'>//   Create biased exponent for 2**N for N big</em>
+<a id='L169' name='L169'></a> 169 <em class='comment'>//   Is N zero?</em>
+<a id='L170' name='L170'></a> 170 <em class='comment'>//</em>
+<a id='L171' name='L171'></a> 171 <em class='brace'>{</em>    .mfi
+<a id='L172' name='L172'></a> 172 (p7) add           GR_N_Biased = GR_Bias,GR_N_as_int
+<a id='L173' name='L173'></a> 173      nop.f         0
+<a id='L174' name='L174'></a> 174      cmp.eq.or     p6,p0 = r34,r0
+<a id='L175' name='L175'></a> 175 <em class='brace'>}</em>
+<a id='L176' name='L176'></a> 176 <em class='brace'>{</em>    .mfi
+<a id='L177' name='L177'></a> 177      mov           GR_pos_ov_limit = 0x13fff <em class='comment'>// Exponent for positive overflow</em>
+<a id='L178' name='L178'></a> 178      nop.f         0
+<a id='L179' name='L179'></a> 179      mov           GR_exp_mask = 0x1ffff     <em class='comment'>// Exponent mask</em>
+<a id='L180' name='L180'></a> 180 <em class='brace'>}</em>
+<a id='L181' name='L181'></a> 181 ;;
+<a id='L182' name='L182'></a> 182 
+<a id='L183' name='L183'></a> 183 <em class='comment'>//</em>
+<a id='L184' name='L184'></a> 184 <em class='comment'>//   Create 2**N for N big</em>
+<a id='L185' name='L185'></a> 185 <em class='comment'>//   Return x when N = 0 or X = Nan, Inf, Zero</em>
+<a id='L186' name='L186'></a> 186 <em class='comment'>//</em>
+<a id='L187' name='L187'></a> 187 <em class='brace'>{</em>    .mfi
+<a id='L188' name='L188'></a> 188 (p7) setf.exp      FR_Two_N = GR_N_Biased
+<a id='L189' name='L189'></a> 189      nop.f         0
+<a id='L190' name='L190'></a> 190      mov           GR_min_den_exp = 0x0c001 - 63 <em class='comment'>// Exp of min denorm long dble</em>
+<a id='L191' name='L191'></a> 191 <em class='brace'>}</em>
+<a id='L192' name='L192'></a> 192 <em class='brace'>{</em>    .mfb
+<a id='L193' name='L193'></a> 193      and           GR_exp_X = GR_exp_mask, GR_signexp_X
+<a id='L194' name='L194'></a> 194 (p6) fma.s0        FR_Result = FR_Floating_X, f1, f0
+<a id='L195' name='L195'></a> 195 (p6) br.ret.spnt   b0
+<a id='L196' name='L196'></a> 196 <em class='brace'>}</em>
+<a id='L197' name='L197'></a> 197 ;;
+<a id='L198' name='L198'></a> 198 
+<a id='L199' name='L199'></a> 199 <em class='comment'>//</em>
+<a id='L200' name='L200'></a> 200 <em class='comment'>//   Raise Denormal operand flag with compare</em>
+<a id='L201' name='L201'></a> 201 <em class='comment'>//   Compute biased result exponent</em>
+<a id='L202' name='L202'></a> 202 <em class='comment'>//</em>
+<a id='L203' name='L203'></a> 203 <em class='brace'>{</em>    .mfi
+<a id='L204' name='L204'></a> 204      add           GR_exp_Result = GR_exp_X, GR_N_as_int
+<a id='L205' name='L205'></a> 205      fcmp.ge.s0    p0,p11 = FR_Floating_X,f0
+<a id='L206' name='L206'></a> 206      mov           GR_neg_ov_limit = 0x33fff <em class='comment'>// Exponent for negative overflow</em>
+<a id='L207' name='L207'></a> 207 <em class='brace'>}</em>
+<a id='L208' name='L208'></a> 208 ;;
+<a id='L209' name='L209'></a> 209 
+<a id='L210' name='L210'></a> 210 <em class='comment'>//</em>
+<a id='L211' name='L211'></a> 211 <em class='comment'>//   Do final operation</em>
+<a id='L212' name='L212'></a> 212 <em class='comment'>//</em>
+<a id='L213' name='L213'></a> 213 <em class='brace'>{</em>    .mfi
+<a id='L214' name='L214'></a> 214      cmp.lt        p7,p6 = GR_exp_Result, GR_max_exp  <em class='comment'>// Test no overflow</em>
+<a id='L215' name='L215'></a> 215      fma.s0        FR_Result = FR_Two_N,FR_Norm_X,f0
+<a id='L216' name='L216'></a> 216      cmp.lt        p9,p0 = GR_exp_Result, GR_min_den_exp <em class='comment'>// Test sure underflow</em>
+<a id='L217' name='L217'></a> 217 <em class='brace'>}</em>
+<a id='L218' name='L218'></a> 218 <em class='brace'>{</em>    .mfb
+<a id='L219' name='L219'></a> 219      nop.m         0
+<a id='L220' name='L220'></a> 220      nop.f         0
+<a id='L221' name='L221'></a> 221 (p9) br.cond.spnt  SCALBNL_UNDERFLOW           <em class='comment'>// Branch if certain underflow</em>
+<a id='L222' name='L222'></a> 222 <em class='brace'>}</em>
+<a id='L223' name='L223'></a> 223 ;;
+<a id='L224' name='L224'></a> 224 
+<a id='L225' name='L225'></a> 225 <em class='brace'>{</em>    .mib
+<a id='L226' name='L226'></a> 226 (p6) cmp.gt.unc    p6,p8 = GR_exp_Result, GR_max_exp  <em class='comment'>// Test sure overflow</em>
+<a id='L227' name='L227'></a> 227 (p7) cmp.ge.unc    p7,p9 = GR_exp_Result, GR_min_exp  <em class='comment'>// Test no over/underflow</em>
+<a id='L228' name='L228'></a> 228 (p7) br.ret.sptk   b0                         <em class='comment'>// Return from main path</em>
+<a id='L229' name='L229'></a> 229 <em class='brace'>}</em>
+<a id='L230' name='L230'></a> 230 ;;
+<a id='L231' name='L231'></a> 231 
+<a id='L232' name='L232'></a> 232 <em class='brace'>{</em>    .bbb
+<a id='L233' name='L233'></a> 233 (p6) br.cond.spnt  SCALBNL_OVERFLOW            <em class='comment'>// Branch if certain overflow</em>
+<a id='L234' name='L234'></a> 234 (p8) br.cond.spnt  SCALBNL_POSSIBLE_OVERFLOW   <em class='comment'>// Branch if possible overflow</em>
+<a id='L235' name='L235'></a> 235 (p9) br.cond.spnt  SCALBNL_POSSIBLE_UNDERFLOW  <em class='comment'>// Branch if possible underflow</em>
+<a id='L236' name='L236'></a> 236 <em class='brace'>}</em>
+<a id='L237' name='L237'></a> 237 ;;
+<a id='L238' name='L238'></a> 238 
+<a id='L239' name='L239'></a> 239 <em class='comment'>// Here if possible underflow.</em>
+<a id='L240' name='L240'></a> 240 <em class='comment'>// Resulting exponent: 0x0c001-63 &lt;= exp_Result &lt; 0x0c001</em>
+<a id='L241' name='L241'></a> 241 SCALBNL_POSSIBLE_UNDERFLOW:
+<a id='L242' name='L242'></a> 242 <em class='comment'>//</em>
+<a id='L243' name='L243'></a> 243 <em class='comment'>// Here if possible overflow.</em>
+<a id='L244' name='L244'></a> 244 <em class='comment'>// Resulting exponent: 0x13ffe = exp_Result</em>
+<a id='L245' name='L245'></a> 245 SCALBNL_POSSIBLE_OVERFLOW:
+<a id='L246' name='L246'></a> 246 
+<a id='L247' name='L247'></a> 247 <em class='comment'>//   Set up necessary status fields</em>
+<a id='L248' name='L248'></a> 248 <em class='comment'>//</em>
+<a id='L249' name='L249'></a> 249 <em class='comment'>//   S0 user supplied status</em>
+<a id='L250' name='L250'></a> 250 <em class='comment'>//   S2 user supplied status + WRE + TD  (Overflows)</em>
+<a id='L251' name='L251'></a> 251 <em class='comment'>//   S3 user supplied status + FZ + TD   (Underflows)</em>
+<a id='L252' name='L252'></a> 252 <em class='comment'>//</em>
+<a id='L253' name='L253'></a> 253 <em class='brace'>{</em>    .mfi
+<a id='L254' name='L254'></a> 254      nop.m         0
+<a id='L255' name='L255'></a> 255      fsetc.s3      0x7F,0x41
+<a id='L256' name='L256'></a> 256      nop.i         0
+<a id='L257' name='L257'></a> 257 <em class='brace'>}</em>
+<a id='L258' name='L258'></a> 258 <em class='brace'>{</em>    .mfi
+<a id='L259' name='L259'></a> 259      nop.m         0
+<a id='L260' name='L260'></a> 260      fsetc.s2      0x7F,0x42
+<a id='L261' name='L261'></a> 261      nop.i         0
+<a id='L262' name='L262'></a> 262 <em class='brace'>}</em>
+<a id='L263' name='L263'></a> 263 ;;
+<a id='L264' name='L264'></a> 264 
+<a id='L265' name='L265'></a> 265 <em class='comment'>//</em>
+<a id='L266' name='L266'></a> 266 <em class='comment'>//   Do final operation with s2 and s3</em>
+<a id='L267' name='L267'></a> 267 <em class='comment'>//</em>
+<a id='L268' name='L268'></a> 268 <em class='brace'>{</em>    .mfi
+<a id='L269' name='L269'></a> 269      setf.exp      FR_NBig = GR_neg_ov_limit
+<a id='L270' name='L270'></a> 270      fma.s3        FR_Result3 = FR_Two_N,FR_Norm_X,f0
+<a id='L271' name='L271'></a> 271      nop.i         0
+<a id='L272' name='L272'></a> 272 <em class='brace'>}</em>
+<a id='L273' name='L273'></a> 273 <em class='brace'>{</em>    .mfi
+<a id='L274' name='L274'></a> 274      setf.exp      FR_Big = GR_pos_ov_limit
+<a id='L275' name='L275'></a> 275      fma.s2        FR_Result2 = FR_Two_N,FR_Norm_X,f0
+<a id='L276' name='L276'></a> 276      nop.i         0
+<a id='L277' name='L277'></a> 277 <em class='brace'>}</em>
+<a id='L278' name='L278'></a> 278 ;;
+<a id='L279' name='L279'></a> 279 
+<a id='L280' name='L280'></a> 280 <em class='comment'>//   Check for overflow or underflow.</em>
+<a id='L281' name='L281'></a> 281 <em class='comment'>//   Restore s3</em>
+<a id='L282' name='L282'></a> 282 <em class='comment'>//   Restore s2</em>
+<a id='L283' name='L283'></a> 283 <em class='comment'>//</em>
+<a id='L284' name='L284'></a> 284 <em class='brace'>{</em>    .mfi
+<a id='L285' name='L285'></a> 285      nop.m         0
+<a id='L286' name='L286'></a> 286      fsetc.s3      0x7F,0x40
+<a id='L287' name='L287'></a> 287      nop.i         0
+<a id='L288' name='L288'></a> 288 <em class='brace'>}</em>
+<a id='L289' name='L289'></a> 289 <em class='brace'>{</em>    .mfi
+<a id='L290' name='L290'></a> 290      nop.m         0
+<a id='L291' name='L291'></a> 291      fsetc.s2      0x7F,0x40
+<a id='L292' name='L292'></a> 292      nop.i         0
+<a id='L293' name='L293'></a> 293 <em class='brace'>}</em>
+<a id='L294' name='L294'></a> 294 ;;
+<a id='L295' name='L295'></a> 295 
+<a id='L296' name='L296'></a> 296 <em class='comment'>//</em>
+<a id='L297' name='L297'></a> 297 <em class='comment'>//   Is the result zero?</em>
+<a id='L298' name='L298'></a> 298 <em class='comment'>//</em>
+<a id='L299' name='L299'></a> 299 <em class='brace'>{</em>    .mfi
+<a id='L300' name='L300'></a> 300      nop.m         0
+<a id='L301' name='L301'></a> 301      fclass.m      p6, p0 =  FR_Result3, 0x007
+<a id='L302' name='L302'></a> 302      nop.i         0
+<a id='L303' name='L303'></a> 303 <em class='brace'>}</em>
+<a id='L304' name='L304'></a> 304 <em class='brace'>{</em>    .mfi
+<a id='L305' name='L305'></a> 305      nop.m         0
+<a id='L306' name='L306'></a> 306      fcmp.ge.s1    p7, p8 = FR_Result2 , FR_Big
+<a id='L307' name='L307'></a> 307      nop.i         0
+<a id='L308' name='L308'></a> 308 <em class='brace'>}</em>
+<a id='L309' name='L309'></a> 309 ;;
+<a id='L310' name='L310'></a> 310 
+<a id='L311' name='L311'></a> 311 <em class='comment'>//</em>
+<a id='L312' name='L312'></a> 312 <em class='comment'>//   Detect masked underflow - Tiny + Inexact Only</em>
+<a id='L313' name='L313'></a> 313 <em class='comment'>//</em>
+<a id='L314' name='L314'></a> 314 <em class='brace'>{</em>    .mfi
+<a id='L315' name='L315'></a> 315      nop.m         0
+<a id='L316' name='L316'></a> 316 (p6) fcmp.neq.unc.s1 p6, p0 = FR_Result , FR_Result2
+<a id='L317' name='L317'></a> 317      nop.i         0
+<a id='L318' name='L318'></a> 318 <em class='brace'>}</em>
+<a id='L319' name='L319'></a> 319 ;;
+<a id='L320' name='L320'></a> 320 
+<a id='L321' name='L321'></a> 321 <em class='comment'>//</em>
+<a id='L322' name='L322'></a> 322 <em class='comment'>//   Is result bigger the allowed range?</em>
+<a id='L323' name='L323'></a> 323 <em class='comment'>//   Branch out for underflow</em>
+<a id='L324' name='L324'></a> 324 <em class='comment'>//</em>
+<a id='L325' name='L325'></a> 325 <em class='brace'>{</em>    .mfb
+<a id='L326' name='L326'></a> 326      nop.m          0
+<a id='L327' name='L327'></a> 327 (p8) fcmp.le.unc.s1 p9, p10 = FR_Result2 , FR_NBig
+<a id='L328' name='L328'></a> 328 (p6) br.cond.spnt   SCALBNL_UNDERFLOW
+<a id='L329' name='L329'></a> 329 <em class='brace'>}</em>
+<a id='L330' name='L330'></a> 330 ;;
+<a id='L331' name='L331'></a> 331 
+<a id='L332' name='L332'></a> 332 <em class='comment'>//</em>
+<a id='L333' name='L333'></a> 333 <em class='comment'>//   Branch out for overflow</em>
+<a id='L334' name='L334'></a> 334 <em class='comment'>//</em>
+<a id='L335' name='L335'></a> 335 <em class='brace'>{</em> .bbb
+<a id='L336' name='L336'></a> 336 (p7) br.cond.spnt   SCALBNL_OVERFLOW
+<a id='L337' name='L337'></a> 337 (p9) br.cond.spnt   SCALBNL_OVERFLOW
+<a id='L338' name='L338'></a> 338      br.ret.sptk    b0             <em class='comment'>//   Return from main path.</em>
+<a id='L339' name='L339'></a> 339 <em class='brace'>}</em>
+<a id='L340' name='L340'></a> 340 ;;
+<a id='L341' name='L341'></a> 341 
+<a id='L342' name='L342'></a> 342 <em class='comment'>// Here if result overflows</em>
+<a id='L343' name='L343'></a> 343 SCALBNL_OVERFLOW:
+<a id='L344' name='L344'></a> 344 <em class='brace'>{</em> .mib
+<a id='L345' name='L345'></a> 345      alloc         r32=ar.pfs,3,0,4,0
+<a id='L346' name='L346'></a> 346      addl          GR_Tag = 174, r0    <em class='comment'>// Set error tag for overflow</em>
+<a id='L347' name='L347'></a> 347      br.cond.sptk  __libm_error_region <em class='comment'>// Call error support for overflow</em>
+<a id='L348' name='L348'></a> 348 <em class='brace'>}</em>
+<a id='L349' name='L349'></a> 349 ;;
+<a id='L350' name='L350'></a> 350 
+<a id='L351' name='L351'></a> 351 <em class='comment'>// Here if result underflows</em>
+<a id='L352' name='L352'></a> 352 SCALBNL_UNDERFLOW:
+<a id='L353' name='L353'></a> 353 <em class='brace'>{</em> .mib
+<a id='L354' name='L354'></a> 354      alloc         r32=ar.pfs,3,0,4,0
+<a id='L355' name='L355'></a> 355      addl          GR_Tag = 175, r0    <em class='comment'>// Set error tag for underflow</em>
+<a id='L356' name='L356'></a> 356      br.cond.sptk  __libm_error_region <em class='comment'>// Call error support for underflow</em>
+<a id='L357' name='L357'></a> 357 <em class='brace'>}</em>
+<a id='L358' name='L358'></a> 358 ;;
+<a id='L359' name='L359'></a> 359 
+<a id='L360' name='L360'></a> 360 <em class='comment'>// Here if x=unorm</em>
+<a id='L361' name='L361'></a> 361 SCALBNL_UNORM:
+<a id='L362' name='L362'></a> 362 <em class='brace'>{</em> .mib
+<a id='L363' name='L363'></a> 363      getf.exp      GR_signexp_X = FR_Norm_X <em class='comment'>// Get signexp of normalized x</em>
+<a id='L364' name='L364'></a> 364      nop.i         0
+<a id='L365' name='L365'></a> 365      br.cond.sptk  SCALBNL_COMMON            <em class='comment'>// Return to main path</em>
+<a id='L366' name='L366'></a> 366 <em class='brace'>}</em>
+<a id='L367' name='L367'></a> 367 ;;
+<a id='L368' name='L368'></a> 368 
+<a id='L369' name='L369'></a> 369 
+<a id='L370' name='L370'></a> 370 GLOBAL_LIBM_END(__libm_scalbnl)
+<a id='L371' name='L371'></a> 371 LOCAL_LIBM_ENTRY(__libm_error_region)
+<a id='L372' name='L372'></a> 372 
+<a id='L373' name='L373'></a> 373 <em class='comment'>//</em>
+<a id='L374' name='L374'></a> 374 <em class='comment'>// Get stack address of N</em>
+<a id='L375' name='L375'></a> 375 <em class='comment'>//</em>
+<a id='L376' name='L376'></a> 376 .prologue
+<a id='L377' name='L377'></a> 377 <em class='brace'>{</em> .mfi
+<a id='L378' name='L378'></a> 378     add   GR_Parameter_Y=-32,sp
+<a id='L379' name='L379'></a> 379     nop.f 0
+<a id='L380' name='L380'></a> 380 .save   ar.pfs,GR_SAVE_PFS
+<a id='L381' name='L381'></a> 381     mov  GR_SAVE_PFS=ar.pfs
+<a id='L382' name='L382'></a> 382 <em class='brace'>}</em>
+<a id='L383' name='L383'></a> 383 <em class='comment'>//</em>
+<a id='L384' name='L384'></a> 384 <em class='comment'>// Adjust sp</em>
+<a id='L385' name='L385'></a> 385 <em class='comment'>//</em>
+<a id='L386' name='L386'></a> 386 <em class='brace'>{</em> .mfi
+<a id='L387' name='L387'></a> 387 .fframe 64
+<a id='L388' name='L388'></a> 388    add sp=-64,sp
+<a id='L389' name='L389'></a> 389    nop.f 0
+<a id='L390' name='L390'></a> 390    mov GR_SAVE_GP=gp
+<a id='L391' name='L391'></a> 391 <em class='brace'>}</em>;;
+<a id='L392' name='L392'></a> 392 
+<a id='L393' name='L393'></a> 393 <em class='comment'>//</em>
+<a id='L394' name='L394'></a> 394 <em class='comment'>//  Store N on stack in correct position</em>
+<a id='L395' name='L395'></a> 395 <em class='comment'>//  Locate the address of x on stack</em>
+<a id='L396' name='L396'></a> 396 <em class='comment'>//</em>
+<a id='L397' name='L397'></a> 397 <em class='brace'>{</em> .mmi
+<a id='L398' name='L398'></a> 398    st8 [GR_Parameter_Y] =  GR_N_as_int,16
+<a id='L399' name='L399'></a> 399    add GR_Parameter_X = 16,sp
+<a id='L400' name='L400'></a> 400 .save   b0, GR_SAVE_B0
+<a id='L401' name='L401'></a> 401    mov GR_SAVE_B0=b0
+<a id='L402' name='L402'></a> 402 <em class='brace'>}</em>;;
+<a id='L403' name='L403'></a> 403 
+<a id='L404' name='L404'></a> 404 <em class='comment'>//</em>
+<a id='L405' name='L405'></a> 405 <em class='comment'>// Store x on the stack.</em>
+<a id='L406' name='L406'></a> 406 <em class='comment'>// Get address for result on stack.</em>
+<a id='L407' name='L407'></a> 407 <em class='comment'>//</em>
+<a id='L408' name='L408'></a> 408 .body
+<a id='L409' name='L409'></a> 409 <em class='brace'>{</em> .mib
+<a id='L410' name='L410'></a> 410    stfe [GR_Parameter_X] = FR_Norm_X
+<a id='L411' name='L411'></a> 411    add   GR_Parameter_RESULT = 0,GR_Parameter_Y
+<a id='L412' name='L412'></a> 412    nop.b 0
+<a id='L413' name='L413'></a> 413 <em class='brace'>}</em>
+<a id='L414' name='L414'></a> 414 <em class='brace'>{</em> .mib
+<a id='L415' name='L415'></a> 415    stfe [GR_Parameter_Y] = FR_Result
+<a id='L416' name='L416'></a> 416    add   GR_Parameter_Y = -16,GR_Parameter_Y
+<a id='L417' name='L417'></a> 417    br.call.sptk b0=__libm_error_support#
+<a id='L418' name='L418'></a> 418 <em class='brace'>}</em>;;
+<a id='L419' name='L419'></a> 419 
+<a id='L420' name='L420'></a> 420 <em class='comment'>//</em>
+<a id='L421' name='L421'></a> 421 <em class='comment'>//  Get location of result on stack</em>
+<a id='L422' name='L422'></a> 422 <em class='comment'>//</em>
+<a id='L423' name='L423'></a> 423 <em class='brace'>{</em> .mmi
+<a id='L424' name='L424'></a> 424    add   GR_Parameter_RESULT = 48,sp
+<a id='L425' name='L425'></a> 425    nop.m 0
+<a id='L426' name='L426'></a> 426    nop.i 0
+<a id='L427' name='L427'></a> 427 <em class='brace'>}</em>;;
+<a id='L428' name='L428'></a> 428 
+<a id='L429' name='L429'></a> 429 <em class='comment'>//</em>
+<a id='L430' name='L430'></a> 430 <em class='comment'>//  Get the new result</em>
+<a id='L431' name='L431'></a> 431 <em class='comment'>//</em>
+<a id='L432' name='L432'></a> 432 <em class='brace'>{</em> .mmi
+<a id='L433' name='L433'></a> 433    ldfe  FR_Result = [GR_Parameter_RESULT]
+<a id='L434' name='L434'></a> 434 .restore sp
+<a id='L435' name='L435'></a> 435    add   sp = 64,sp
+<a id='L436' name='L436'></a> 436    mov   b0 = GR_SAVE_B0
+<a id='L437' name='L437'></a> 437 <em class='brace'>}</em>;;
+<a id='L438' name='L438'></a> 438 
+<a id='L439' name='L439'></a> 439 <em class='comment'>//</em>
+<a id='L440' name='L440'></a> 440 <em class='comment'>//  Restore gp, ar.pfs and return</em>
+<a id='L441' name='L441'></a> 441 <em class='comment'>//</em>
+<a id='L442' name='L442'></a> 442 <em class='brace'>{</em> .mib
+<a id='L443' name='L443'></a> 443    mov   gp = GR_SAVE_GP
+<a id='L444' name='L444'></a> 444    mov   ar.pfs = GR_SAVE_PFS
+<a id='L445' name='L445'></a> 445    br.ret.sptk     b0
+<a id='L446' name='L446'></a> 446 <em class='brace'>}</em>;;
+<a id='L447' name='L447'></a> 447 
+<a id='L448' name='L448'></a> 448 LOCAL_LIBM_END(__libm_error_region)
+<a id='L449' name='L449'></a> 449 
+<a id='L450' name='L450'></a> 450 .type   __libm_error_support#,@function
+<a id='L451' name='L451'></a> 451 .global __libm_error_support#
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;][^][v]<a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

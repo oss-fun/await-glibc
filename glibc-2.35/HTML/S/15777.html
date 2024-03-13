@@ -1,0 +1,344 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>sysdeps/x86_64/multiarch/memcmpeq-avx2.S</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18977.html'>sysdeps</a>/<a href='../files/19391.html'>x86_64</a>/<a href='../files/19394.html'>multiarch</a>/memcmpeq-avx2.S</h2>
+<em class='comment'>/* [&lt;][&gt;][^][v][top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* __memcmpeq optimized with AVX2.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   Copyright (C) 2017-2022 Free Software Foundation, Inc.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'></em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'></em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'></em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   License along with the GNU C Library; if not, see</em>
+<a id='L17' name='L17'></a>  17 <em class='comment'>   &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L18' name='L18'></a>  18 
+<a id='L19' name='L19'></a>  19 <em class='sharp'>#if</em> <a href='../D/6753.html' title='Multiple defined in 3 places.'>IS_IN</a> (<a href='../D/32623.html' title='Multiple defined in 2 places.'>libc</a>)
+<a id='L20' name='L20'></a>  20 
+<a id='L21' name='L21'></a>  21 <em class='comment'>/* __memcmpeq is implemented as:</em>
+<a id='L22' name='L22'></a>  22 <em class='comment'>   1. Use ymm vector compares when possible. The only case where</em>
+<a id='L23' name='L23'></a>  23 <em class='comment'>      vector compares is not possible for when size &lt; VEC_SIZE</em>
+<a id='L24' name='L24'></a>  24 <em class='comment'>      and loading from either s1 or s2 would cause a page cross.</em>
+<a id='L25' name='L25'></a>  25 <em class='comment'>   2. Use xmm vector compare when size &gt;= 8 bytes.</em>
+<a id='L26' name='L26'></a>  26 <em class='comment'>   3. Optimistically compare up to first 4 * VEC_SIZE one at a</em>
+<a id='L27' name='L27'></a>  27 <em class='comment'>      to check for early mismatches. Only do this if its guranteed the</em>
+<a id='L28' name='L28'></a>  28 <em class='comment'>      work is not wasted.</em>
+<a id='L29' name='L29'></a>  29 <em class='comment'>   4. If size is 8 * VEC_SIZE or less, unroll the loop.</em>
+<a id='L30' name='L30'></a>  30 <em class='comment'>   5. Compare 4 * VEC_SIZE at a time with the aligned first memory</em>
+<a id='L31' name='L31'></a>  31 <em class='comment'>      area.</em>
+<a id='L32' name='L32'></a>  32 <em class='comment'>   6. Use 2 vector compares when size is 2 * VEC_SIZE or less.</em>
+<a id='L33' name='L33'></a>  33 <em class='comment'>   7. Use 4 vector compares when size is 4 * VEC_SIZE or less.</em>
+<a id='L34' name='L34'></a>  34 <em class='comment'>   8. Use 8 vector compares when size is 8 * VEC_SIZE or less.  */</em>
+<a id='L35' name='L35'></a>  35 
+<a id='L36' name='L36'></a>  36 <em class='sharp'># include</em> &lt;<a href='../I/5967.html'>sysdep.h</a>&gt;
+<a id='L37' name='L37'></a>  37 
+<a id='L38' name='L38'></a>  38 <em class='sharp'># ifndef</em> <a href='../D/7868.html' title='Multiple defined in 3 places.'>MEMCMPEQ</a>
+<a id='L39' name='L39'></a>  39 <em class='sharp'>#  define</em> <a href='../R/4813.html' title='Multiple referred from 3 places.'>MEMCMPEQ</a>  __memcmpeq_avx2
+<a id='L40' name='L40'></a>  40 <em class='sharp'># endif</em>
+<a id='L41' name='L41'></a>  41 
+<a id='L42' name='L42'></a>  42 <em class='sharp'># define</em> VPCMPEQ    vpcmpeqb
+<a id='L43' name='L43'></a>  43 
+<a id='L44' name='L44'></a>  44 <em class='sharp'># ifndef</em> <a href='../D/17096.html' title='Multiple defined in 19 places.'>VZEROUPPER</a>
+<a id='L45' name='L45'></a>  45 <em class='sharp'>#  define</em> <a href='../R/9429.html' title='Multiple referred from 13 places.'>VZEROUPPER</a>    vzeroupper
+<a id='L46' name='L46'></a>  46 <em class='sharp'># endif</em>
+<a id='L47' name='L47'></a>  47 
+<a id='L48' name='L48'></a>  48 <em class='sharp'># ifndef</em> <a href='../D/13717.html' title='Multiple defined in 65 places.'>SECTION</a>
+<a id='L49' name='L49'></a>  49 <em class='sharp'>#  define</em> <a href='../R/7529.html' title='Multiple referred from 32 places.'>SECTION</a>(p)    p##.avx
+<a id='L50' name='L50'></a>  50 <em class='sharp'># endif</em>
+<a id='L51' name='L51'></a>  51 
+<a id='L52' name='L52'></a>  52 <em class='sharp'># define</em> <a href='../R/9390.html' title='Multiple referred from 47 places.'>VEC_SIZE</a> 32
+<a id='L53' name='L53'></a>  53 <em class='sharp'># define</em> <a href='../R/5915.html' title='Multiple referred from 22 places.'>PAGE_SIZE</a>  4096
+<a id='L54' name='L54'></a>  54 
+<a id='L55' name='L55'></a>  55     .section SECTION(.text), "ax", @progbits
+<a id='L56' name='L56'></a>  56 ENTRY_P2ALIGN (MEMCMPEQ, 6)
+<a id='L57' name='L57'></a>  57 <em class='sharp'># ifdef</em> <a href='../Y/3224.html' title='Multiple used in 72 places.'>__ILP32__</a>
+<a id='L58' name='L58'></a>  58     <em class='comment'>/* Clear the upper 32 bits.  */</em>
+<a id='L59' name='L59'></a>  59     movl    %edx, %edx
+<a id='L60' name='L60'></a>  60 <em class='sharp'># endif</em>
+<a id='L61' name='L61'></a>  61     cmp $VEC_SIZE, %RDX_LP
+<a id='L62' name='L62'></a>  62     jb  L(less_vec)
+<a id='L63' name='L63'></a>  63 
+<a id='L64' name='L64'></a>  64     <em class='comment'>/* From VEC to 2 * VEC.  No branch when size == VEC_SIZE.  */</em>
+<a id='L65' name='L65'></a>  65     vmovdqu (%rsi), %ymm1
+<a id='L66' name='L66'></a>  66     VPCMPEQ (%rdi), %ymm1, %ymm1
+<a id='L67' name='L67'></a>  67     vpmovmskb %ymm1, %eax
+<a id='L68' name='L68'></a>  68     incl    %eax
+<a id='L69' name='L69'></a>  69     jnz L(return_neq0)
+<a id='L70' name='L70'></a>  70     cmpq    $(VEC_SIZE * 2), %rdx
+<a id='L71' name='L71'></a>  71     jbe L(last_1x_vec)
+<a id='L72' name='L72'></a>  72 
+<a id='L73' name='L73'></a>  73     <em class='comment'>/* Check second VEC no matter what.  */</em>
+<a id='L74' name='L74'></a>  74     vmovdqu VEC_SIZE(%rsi), %ymm2
+<a id='L75' name='L75'></a>  75     VPCMPEQ VEC_SIZE(%rdi), %ymm2, %ymm2
+<a id='L76' name='L76'></a>  76     vpmovmskb %ymm2, %eax
+<a id='L77' name='L77'></a>  77     <em class='comment'>/* If all 4 VEC where equal eax will be all 1s so incl will overflow</em>
+<a id='L78' name='L78'></a>  78 <em class='comment'>       and set zero flag.  */</em>
+<a id='L79' name='L79'></a>  79     incl    %eax
+<a id='L80' name='L80'></a>  80     jnz L(return_neq0)
+<a id='L81' name='L81'></a>  81 
+<a id='L82' name='L82'></a>  82     <em class='comment'>/* Less than 4 * VEC.  */</em>
+<a id='L83' name='L83'></a>  83     cmpq    $(VEC_SIZE * 4), %rdx
+<a id='L84' name='L84'></a>  84     jbe L(last_2x_vec)
+<a id='L85' name='L85'></a>  85 
+<a id='L86' name='L86'></a>  86     <em class='comment'>/* Check third and fourth VEC no matter what.  */</em>
+<a id='L87' name='L87'></a>  87     vmovdqu (VEC_SIZE * 2)(%rsi), %ymm3
+<a id='L88' name='L88'></a>  88     VPCMPEQ (VEC_SIZE * 2)(%rdi), %ymm3, %ymm3
+<a id='L89' name='L89'></a>  89     vpmovmskb %ymm3, %eax
+<a id='L90' name='L90'></a>  90     incl    %eax
+<a id='L91' name='L91'></a>  91     jnz L(return_neq0)
+<a id='L92' name='L92'></a>  92 
+<a id='L93' name='L93'></a>  93     vmovdqu (VEC_SIZE * 3)(%rsi), %ymm4
+<a id='L94' name='L94'></a>  94     VPCMPEQ (VEC_SIZE * 3)(%rdi), %ymm4, %ymm4
+<a id='L95' name='L95'></a>  95     vpmovmskb %ymm4, %eax
+<a id='L96' name='L96'></a>  96     incl    %eax
+<a id='L97' name='L97'></a>  97     jnz L(return_neq0)
+<a id='L98' name='L98'></a>  98 
+<a id='L99' name='L99'></a>  99     <em class='comment'>/* Go to 4x VEC loop.  */</em>
+<a id='L100' name='L100'></a> 100     cmpq    $(VEC_SIZE * 8), %rdx
+<a id='L101' name='L101'></a> 101     ja  L(more_8x_vec)
+<a id='L102' name='L102'></a> 102 
+<a id='L103' name='L103'></a> 103     <em class='comment'>/* Handle remainder of size = 4 * VEC + 1 to 8 * VEC without any</em>
+<a id='L104' name='L104'></a> 104 <em class='comment'>       branches.  */</em>
+<a id='L105' name='L105'></a> 105 
+<a id='L106' name='L106'></a> 106     <em class='comment'>/* Adjust rsi and rdi to avoid indexed address mode. This end up</em>
+<a id='L107' name='L107'></a> 107 <em class='comment'>       saving a 16 bytes of code, prevents unlamination, and bottlenecks in</em>
+<a id='L108' name='L108'></a> 108 <em class='comment'>       the AGU.  */</em>
+<a id='L109' name='L109'></a> 109     addq    %rdx, %rsi
+<a id='L110' name='L110'></a> 110     vmovdqu -(VEC_SIZE * 4)(%rsi), %ymm1
+<a id='L111' name='L111'></a> 111     vmovdqu -(VEC_SIZE * 3)(%rsi), %ymm2
+<a id='L112' name='L112'></a> 112     addq    %rdx, %rdi
+<a id='L113' name='L113'></a> 113 
+<a id='L114' name='L114'></a> 114     VPCMPEQ -(VEC_SIZE * 4)(%rdi), %ymm1, %ymm1
+<a id='L115' name='L115'></a> 115     VPCMPEQ -(VEC_SIZE * 3)(%rdi), %ymm2, %ymm2
+<a id='L116' name='L116'></a> 116 
+<a id='L117' name='L117'></a> 117     vmovdqu -(VEC_SIZE * 2)(%rsi), %ymm3
+<a id='L118' name='L118'></a> 118     VPCMPEQ -(VEC_SIZE * 2)(%rdi), %ymm3, %ymm3
+<a id='L119' name='L119'></a> 119     vmovdqu -VEC_SIZE(%rsi), %ymm4
+<a id='L120' name='L120'></a> 120     VPCMPEQ -VEC_SIZE(%rdi), %ymm4, %ymm4
+<a id='L121' name='L121'></a> 121 
+<a id='L122' name='L122'></a> 122     <em class='comment'>/* Reduce VEC0 - VEC4.  */</em>
+<a id='L123' name='L123'></a> 123     vpand   %ymm1, %ymm2, %ymm2
+<a id='L124' name='L124'></a> 124     vpand   %ymm3, %ymm4, %ymm4
+<a id='L125' name='L125'></a> 125     vpand   %ymm2, %ymm4, %ymm4
+<a id='L126' name='L126'></a> 126     vpmovmskb %ymm4, %eax
+<a id='L127' name='L127'></a> 127     incl    %eax
+<a id='L128' name='L128'></a> 128 L(return_neq0):
+<a id='L129' name='L129'></a> 129 L(return_vzeroupper):
+<a id='L130' name='L130'></a> 130     ZERO_UPPER_VEC_REGISTERS_RETURN
+<a id='L131' name='L131'></a> 131 
+<a id='L132' name='L132'></a> 132     <em class='comment'>/* NB: p2align 5 here will ensure the L(loop_4x_vec) is also 32 byte</em>
+<a id='L133' name='L133'></a> 133 <em class='comment'>       aligned.  */</em>
+<a id='L134' name='L134'></a> 134     .p2align 5
+<a id='L135' name='L135'></a> 135 L(less_vec):
+<a id='L136' name='L136'></a> 136     <em class='comment'>/* Check if one or less char. This is necessary for size = 0 but is</em>
+<a id='L137' name='L137'></a> 137 <em class='comment'>       also faster for size = 1.  */</em>
+<a id='L138' name='L138'></a> 138     cmpl    $1, %edx
+<a id='L139' name='L139'></a> 139     jbe L(one_or_less)
+<a id='L140' name='L140'></a> 140 
+<a id='L141' name='L141'></a> 141     <em class='comment'>/* Check if loading one VEC from either s1 or s2 could cause a page</em>
+<a id='L142' name='L142'></a> 142 <em class='comment'>       cross. This can have false positives but is by far the fastest</em>
+<a id='L143' name='L143'></a> 143 <em class='comment'>       method.  */</em>
+<a id='L144' name='L144'></a> 144     movl    %edi, %eax
+<a id='L145' name='L145'></a> 145     orl %esi, %eax
+<a id='L146' name='L146'></a> 146     andl    $(PAGE_SIZE - 1), %eax
+<a id='L147' name='L147'></a> 147     cmpl    $(PAGE_SIZE - VEC_SIZE), %eax
+<a id='L148' name='L148'></a> 148     jg  L(page_cross_less_vec)
+<a id='L149' name='L149'></a> 149 
+<a id='L150' name='L150'></a> 150     <em class='comment'>/* No page cross possible.  */</em>
+<a id='L151' name='L151'></a> 151     vmovdqu (%rsi), %ymm2
+<a id='L152' name='L152'></a> 152     VPCMPEQ (%rdi), %ymm2, %ymm2
+<a id='L153' name='L153'></a> 153     vpmovmskb %ymm2, %eax
+<a id='L154' name='L154'></a> 154     incl    %eax
+<a id='L155' name='L155'></a> 155     <em class='comment'>/* Result will be zero if s1 and s2 match. Otherwise first set bit</em>
+<a id='L156' name='L156'></a> 156 <em class='comment'>       will be first mismatch.  */</em>
+<a id='L157' name='L157'></a> 157     bzhil   %edx, %eax, %eax
+<a id='L158' name='L158'></a> 158     VZEROUPPER_RETURN
+<a id='L159' name='L159'></a> 159 
+<a id='L160' name='L160'></a> 160     <em class='comment'>/* Relatively cold but placing close to L(less_vec) for 2 byte jump</em>
+<a id='L161' name='L161'></a> 161 <em class='comment'>       encoding.  */</em>
+<a id='L162' name='L162'></a> 162     .p2align 4
+<a id='L163' name='L163'></a> 163 L(one_or_less):
+<a id='L164' name='L164'></a> 164     jb  L(zero)
+<a id='L165' name='L165'></a> 165     movzbl  (%rsi), %ecx
+<a id='L166' name='L166'></a> 166     movzbl  (%rdi), %eax
+<a id='L167' name='L167'></a> 167     subl    %ecx, %eax
+<a id='L168' name='L168'></a> 168     <em class='comment'>/* No ymm register was touched.  */</em>
+<a id='L169' name='L169'></a> 169     ret
+<a id='L170' name='L170'></a> 170     <em class='comment'>/* Within the same 16 byte block is L(one_or_less).  */</em>
+<a id='L171' name='L171'></a> 171 L(zero):
+<a id='L172' name='L172'></a> 172     xorl    %eax, %eax
+<a id='L173' name='L173'></a> 173     ret
+<a id='L174' name='L174'></a> 174 
+<a id='L175' name='L175'></a> 175     .p2align 4
+<a id='L176' name='L176'></a> 176 L(last_1x_vec):
+<a id='L177' name='L177'></a> 177     vmovdqu -(VEC_SIZE * 1)(%rsi, %rdx), %ymm1
+<a id='L178' name='L178'></a> 178     VPCMPEQ -(VEC_SIZE * 1)(%rdi, %rdx), %ymm1, %ymm1
+<a id='L179' name='L179'></a> 179     vpmovmskb %ymm1, %eax
+<a id='L180' name='L180'></a> 180     incl    %eax
+<a id='L181' name='L181'></a> 181     VZEROUPPER_RETURN
+<a id='L182' name='L182'></a> 182 
+<a id='L183' name='L183'></a> 183     .p2align 4
+<a id='L184' name='L184'></a> 184 L(last_2x_vec):
+<a id='L185' name='L185'></a> 185     vmovdqu -(VEC_SIZE * 2)(%rsi, %rdx), %ymm1
+<a id='L186' name='L186'></a> 186     VPCMPEQ -(VEC_SIZE * 2)(%rdi, %rdx), %ymm1, %ymm1
+<a id='L187' name='L187'></a> 187     vmovdqu -(VEC_SIZE * 1)(%rsi, %rdx), %ymm2
+<a id='L188' name='L188'></a> 188     VPCMPEQ -(VEC_SIZE * 1)(%rdi, %rdx), %ymm2, %ymm2
+<a id='L189' name='L189'></a> 189     vpand   %ymm1, %ymm2, %ymm2
+<a id='L190' name='L190'></a> 190     vpmovmskb %ymm2, %eax
+<a id='L191' name='L191'></a> 191     incl    %eax
+<a id='L192' name='L192'></a> 192     VZEROUPPER_RETURN
+<a id='L193' name='L193'></a> 193 
+<a id='L194' name='L194'></a> 194     .p2align 4
+<a id='L195' name='L195'></a> 195 L(more_8x_vec):
+<a id='L196' name='L196'></a> 196     <em class='comment'>/* Set end of s1 in rdx.  */</em>
+<a id='L197' name='L197'></a> 197     leaq    -(VEC_SIZE * 4)(%rdi, %rdx), %rdx
+<a id='L198' name='L198'></a> 198     <em class='comment'>/* rsi stores s2 - s1. This allows loop to only update one pointer.</em>
+<a id='L199' name='L199'></a> 199 <em class='comment'>     */</em>
+<a id='L200' name='L200'></a> 200     subq    %rdi, %rsi
+<a id='L201' name='L201'></a> 201     <em class='comment'>/* Align s1 pointer.  */</em>
+<a id='L202' name='L202'></a> 202     andq    $-VEC_SIZE, %rdi
+<a id='L203' name='L203'></a> 203     <em class='comment'>/* Adjust because first 4x vec where check already.  */</em>
+<a id='L204' name='L204'></a> 204     subq    $-(VEC_SIZE * 4), %rdi
+<a id='L205' name='L205'></a> 205     .p2align 4
+<a id='L206' name='L206'></a> 206 L(loop_4x_vec):
+<a id='L207' name='L207'></a> 207     <em class='comment'>/* rsi has s2 - s1 so get correct address by adding s1 (in rdi).  */</em>
+<a id='L208' name='L208'></a> 208     vmovdqu (%rsi, %rdi), %ymm1
+<a id='L209' name='L209'></a> 209     VPCMPEQ (%rdi), %ymm1, %ymm1
+<a id='L210' name='L210'></a> 210 
+<a id='L211' name='L211'></a> 211     vmovdqu VEC_SIZE(%rsi, %rdi), %ymm2
+<a id='L212' name='L212'></a> 212     VPCMPEQ VEC_SIZE(%rdi), %ymm2, %ymm2
+<a id='L213' name='L213'></a> 213 
+<a id='L214' name='L214'></a> 214     vmovdqu (VEC_SIZE * 2)(%rsi, %rdi), %ymm3
+<a id='L215' name='L215'></a> 215     VPCMPEQ (VEC_SIZE * 2)(%rdi), %ymm3, %ymm3
+<a id='L216' name='L216'></a> 216 
+<a id='L217' name='L217'></a> 217     vmovdqu (VEC_SIZE * 3)(%rsi, %rdi), %ymm4
+<a id='L218' name='L218'></a> 218     VPCMPEQ (VEC_SIZE * 3)(%rdi), %ymm4, %ymm4
+<a id='L219' name='L219'></a> 219 
+<a id='L220' name='L220'></a> 220     vpand   %ymm1, %ymm2, %ymm2
+<a id='L221' name='L221'></a> 221     vpand   %ymm3, %ymm4, %ymm4
+<a id='L222' name='L222'></a> 222     vpand   %ymm2, %ymm4, %ymm4
+<a id='L223' name='L223'></a> 223     vpmovmskb %ymm4, %eax
+<a id='L224' name='L224'></a> 224     incl    %eax
+<a id='L225' name='L225'></a> 225     jnz L(return_neq1)
+<a id='L226' name='L226'></a> 226     subq    $-(VEC_SIZE * 4), %rdi
+<a id='L227' name='L227'></a> 227     <em class='comment'>/* Check if s1 pointer at end.  */</em>
+<a id='L228' name='L228'></a> 228     cmpq    %rdx, %rdi
+<a id='L229' name='L229'></a> 229     jb  L(loop_4x_vec)
+<a id='L230' name='L230'></a> 230 
+<a id='L231' name='L231'></a> 231     vmovdqu (VEC_SIZE * 3)(%rsi, %rdx), %ymm4
+<a id='L232' name='L232'></a> 232     VPCMPEQ (VEC_SIZE * 3)(%rdx), %ymm4, %ymm4
+<a id='L233' name='L233'></a> 233     subq    %rdx, %rdi
+<a id='L234' name='L234'></a> 234     <em class='comment'>/* rdi has 4 * VEC_SIZE - remaining length.  */</em>
+<a id='L235' name='L235'></a> 235     cmpl    $(VEC_SIZE * 3), %edi
+<a id='L236' name='L236'></a> 236     jae L(8x_last_1x_vec)
+<a id='L237' name='L237'></a> 237     <em class='comment'>/* Load regardless of branch.  */</em>
+<a id='L238' name='L238'></a> 238     vmovdqu (VEC_SIZE * 2)(%rsi, %rdx), %ymm3
+<a id='L239' name='L239'></a> 239     VPCMPEQ (VEC_SIZE * 2)(%rdx), %ymm3, %ymm3
+<a id='L240' name='L240'></a> 240     cmpl    $(VEC_SIZE * 2), %edi
+<a id='L241' name='L241'></a> 241     jae L(8x_last_2x_vec)
+<a id='L242' name='L242'></a> 242     <em class='comment'>/* Check last 4 VEC.  */</em>
+<a id='L243' name='L243'></a> 243     vmovdqu VEC_SIZE(%rsi, %rdx), %ymm1
+<a id='L244' name='L244'></a> 244     VPCMPEQ VEC_SIZE(%rdx), %ymm1, %ymm1
+<a id='L245' name='L245'></a> 245 
+<a id='L246' name='L246'></a> 246     vmovdqu (%rsi, %rdx), %ymm2
+<a id='L247' name='L247'></a> 247     VPCMPEQ (%rdx), %ymm2, %ymm2
+<a id='L248' name='L248'></a> 248 
+<a id='L249' name='L249'></a> 249     vpand   %ymm3, %ymm4, %ymm4
+<a id='L250' name='L250'></a> 250     vpand   %ymm1, %ymm2, %ymm3
+<a id='L251' name='L251'></a> 251 L(8x_last_2x_vec):
+<a id='L252' name='L252'></a> 252     vpand   %ymm3, %ymm4, %ymm4
+<a id='L253' name='L253'></a> 253 L(8x_last_1x_vec):
+<a id='L254' name='L254'></a> 254     vpmovmskb %ymm4, %eax
+<a id='L255' name='L255'></a> 255     <em class='comment'>/* Restore s1 pointer to rdi.  */</em>
+<a id='L256' name='L256'></a> 256     incl    %eax
+<a id='L257' name='L257'></a> 257 L(return_neq1):
+<a id='L258' name='L258'></a> 258     VZEROUPPER_RETURN
+<a id='L259' name='L259'></a> 259 
+<a id='L260' name='L260'></a> 260     <em class='comment'>/* Relatively cold case as page cross are unexpected.  */</em>
+<a id='L261' name='L261'></a> 261     .p2align 4
+<a id='L262' name='L262'></a> 262 L(page_cross_less_vec):
+<a id='L263' name='L263'></a> 263     cmpl    $16, %edx
+<a id='L264' name='L264'></a> 264     jae L(between_16_31)
+<a id='L265' name='L265'></a> 265     cmpl    $8, %edx
+<a id='L266' name='L266'></a> 266     ja  L(between_9_15)
+<a id='L267' name='L267'></a> 267     cmpl    $4, %edx
+<a id='L268' name='L268'></a> 268     jb  L(between_2_3)
+<a id='L269' name='L269'></a> 269     <em class='comment'>/* From 4 to 8 bytes.  No branch when size == 4.  */</em>
+<a id='L270' name='L270'></a> 270     movl    (%rdi), %eax
+<a id='L271' name='L271'></a> 271     subl    (%rsi), %eax
+<a id='L272' name='L272'></a> 272     movl    -4(%rdi, %rdx), %ecx
+<a id='L273' name='L273'></a> 273     movl    -4(%rsi, %rdx), %edi
+<a id='L274' name='L274'></a> 274     subl    %edi, %ecx
+<a id='L275' name='L275'></a> 275     orl %ecx, %eax
+<a id='L276' name='L276'></a> 276     ret
+<a id='L277' name='L277'></a> 277 
+<a id='L278' name='L278'></a> 278     .p2align 4,, 8
+<a id='L279' name='L279'></a> 279 L(between_16_31):
+<a id='L280' name='L280'></a> 280     <em class='comment'>/* From 16 to 31 bytes.  No branch when size == 16.  */</em>
+<a id='L281' name='L281'></a> 281 
+<a id='L282' name='L282'></a> 282     <em class='comment'>/* Safe to use xmm[0, 15] as no vzeroupper is needed so RTM safe.</em>
+<a id='L283' name='L283'></a> 283 <em class='comment'>     */</em>
+<a id='L284' name='L284'></a> 284     vmovdqu (%rsi), %xmm1
+<a id='L285' name='L285'></a> 285     vpcmpeqb (%rdi), %xmm1, %xmm1
+<a id='L286' name='L286'></a> 286     vmovdqu -16(%rsi, %rdx), %xmm2
+<a id='L287' name='L287'></a> 287     vpcmpeqb -16(%rdi, %rdx), %xmm2, %xmm2
+<a id='L288' name='L288'></a> 288     vpand   %xmm1, %xmm2, %xmm2
+<a id='L289' name='L289'></a> 289     vpmovmskb %xmm2, %eax
+<a id='L290' name='L290'></a> 290     notw    %ax
+<a id='L291' name='L291'></a> 291     <em class='comment'>/* No ymm register was touched.  */</em>
+<a id='L292' name='L292'></a> 292     ret
+<a id='L293' name='L293'></a> 293 
+<a id='L294' name='L294'></a> 294     .p2align 4,, 8
+<a id='L295' name='L295'></a> 295 L(between_9_15):
+<a id='L296' name='L296'></a> 296     <em class='comment'>/* From 9 to 15 bytes.  */</em>
+<a id='L297' name='L297'></a> 297     movq    (%rdi), %rax
+<a id='L298' name='L298'></a> 298     subq    (%rsi), %rax
+<a id='L299' name='L299'></a> 299     movq    -8(%rdi, %rdx), %rcx
+<a id='L300' name='L300'></a> 300     movq    -8(%rsi, %rdx), %rdi
+<a id='L301' name='L301'></a> 301     subq    %rdi, %rcx
+<a id='L302' name='L302'></a> 302     orq %rcx, %rax
+<a id='L303' name='L303'></a> 303     <em class='comment'>/* edx is guranteed to be a non-zero int.  */</em>
+<a id='L304' name='L304'></a> 304     cmovnz  %edx, %eax
+<a id='L305' name='L305'></a> 305     ret
+<a id='L306' name='L306'></a> 306 
+<a id='L307' name='L307'></a> 307     <em class='comment'>/* Don't align. This is cold and aligning here will cause code</em>
+<a id='L308' name='L308'></a> 308 <em class='comment'>       to spill into next cache line.  */</em>
+<a id='L309' name='L309'></a> 309 L(between_2_3):
+<a id='L310' name='L310'></a> 310     <em class='comment'>/* From 2 to 3 bytes.  No branch when size == 2.  */</em>
+<a id='L311' name='L311'></a> 311     movzwl  (%rdi), %eax
+<a id='L312' name='L312'></a> 312     movzwl  (%rsi), %ecx
+<a id='L313' name='L313'></a> 313     subl    %ecx, %eax
+<a id='L314' name='L314'></a> 314     movzbl  -1(%rdi, %rdx), %ecx
+<a id='L315' name='L315'></a> 315     <em class='comment'>/* All machines that support evex will insert a "merging uop"</em>
+<a id='L316' name='L316'></a> 316 <em class='comment'>       avoiding any serious partial register stalls.  */</em>
+<a id='L317' name='L317'></a> 317     subb    -1(%rsi, %rdx), %cl
+<a id='L318' name='L318'></a> 318     orl %ecx, %eax
+<a id='L319' name='L319'></a> 319     <em class='comment'>/* No ymm register was touched.  */</em>
+<a id='L320' name='L320'></a> 320     ret
+<a id='L321' name='L321'></a> 321 
+<a id='L322' name='L322'></a> 322     <em class='comment'>/* 2 Bytes from next cache line. */</em>
+<a id='L323' name='L323'></a> 323 END (MEMCMPEQ)
+<a id='L324' name='L324'></a> 324 <em class='sharp'>#endif</em>
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;][^][v]<a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

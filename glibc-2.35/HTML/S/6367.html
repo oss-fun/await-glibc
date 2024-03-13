@@ -1,0 +1,340 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>resolv/tst-resolv-network.c</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18942.html'>resolv</a>/tst-resolv-network.c</h2>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L29'>[^]</a><a href='#L221'>[v]</a>[top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<h2 class='header'>DEFINITIONS</h2>
+This source file includes following definitions.
+<ol>
+<li><a href='#L29' title='Defined at 29.'>send_ptr</a></li>
+<li><a href='#L42' title='Defined at 42.'>handle_code</a></li>
+<li><a href='#L161' title='Defined at 161.'>response</a></li>
+<li><a href='#L191' title='Defined at 191.'>check_reverse</a></li>
+<li><a href='#L200' title='Defined at 200.'>check_long_name</a></li>
+<li><a href='#L221' title='Defined at 221.'>do_test</a></li>
+</ol>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* Test getnetbyname and getnetbyaddr.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   Copyright (C) 2016-2022 Free Software Foundation, Inc.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'></em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'></em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'></em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   License along with the GNU C Library; if not, see</em>
+<a id='L17' name='L17'></a>  17 <em class='comment'>   &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L18' name='L18'></a>  18 
+<a id='L19' name='L19'></a>  19 <em class='sharp'>#include</em> &lt;<a href='../I/143.html'>netdb.h</a>&gt;
+<a id='L20' name='L20'></a>  20 <em class='sharp'>#include</em> &lt;<a href='../I/1780.html'>stdlib.h</a>&gt;
+<a id='L21' name='L21'></a>  21 <em class='sharp'>#include</em> &lt;<a href='../I/1973.html'>string.h</a>&gt;
+<a id='L22' name='L22'></a>  22 <em class='sharp'>#include</em> &lt;<a href='5739.html'>support/check.h</a>&gt;
+<a id='L23' name='L23'></a>  23 <em class='sharp'>#include</em> &lt;<a href='5828.html'>support/check_nss.h</a>&gt;
+<a id='L24' name='L24'></a>  24 <em class='sharp'>#include</em> &lt;<a href='5741.html'>support/resolv_test.h</a>&gt;
+<a id='L25' name='L25'></a>  25 <em class='sharp'>#include</em> &lt;<a href='5742.html'>support/support.h</a>&gt;
+<a id='L26' name='L26'></a>  26 <em class='sharp'>#include</em> &lt;<a href='5818.html'>support/xmemstream.h</a>&gt;
+<a id='L27' name='L27'></a>  27 
+<a id='L28' name='L28'></a>  28 <strong class='reserved'>static</strong> <strong class='reserved'>void</strong>
+<a id='L29' name='L29'></a>  29 <a href='../R/24191.html' title='Multiple referred from 5 places.'>send_ptr</a> (<strong class='reserved'>struct</strong> <a href='../S/5945.html#L139' title='Defined at 139 in support/resolv_test.c.'>resolv_response_builder</a> *<a href='../S/5162.html#L61' title='Defined at 61 in ctype/ctype-info.c.'>b</a>,
+<a id='L30' name='L30'></a>  30           <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../Y/23250.html' title='Multiple used in 248 places.'>qname</a>, <a href='../S/223.html#L25' title='Defined at 25 in bits/stdint-uintn.h.'>uint16_t</a> <a href='../Y/23235.html' title='Multiple used in 140 places.'>qclass</a>, <a href='../S/223.html#L25' title='Defined at 25 in bits/stdint-uintn.h.'>uint16_t</a> <a href='../Y/23276.html' title='Multiple used in 167 places.'>qtype</a>,
+<a id='L31' name='L31'></a>  31           <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../D/27632.html' title='Multiple defined in 2 places.'>alias</a>)
+<a id='L32' name='L32'></a>  32 <em class='brace'>{</em>
+<a id='L33' name='L33'></a>  33   <a href='../S/5945.html#L164' title='Defined at 164 in support/resolv_test.c.'>resolv_response_init</a> (<a href='../S/5162.html#L61' title='Defined at 61 in ctype/ctype-info.c.'>b</a>, (<strong class='reserved'>struct</strong> <a href='../S/5741.html#L140' title='Defined at 140 in support/resolv_test.h.'>resolv_response_flags</a>) <em class='brace'>{</em><em class='brace'>}</em>);
+<a id='L34' name='L34'></a>  34   <a href='../S/5945.html#L249' title='Defined at 249 in support/resolv_test.c.'>resolv_response_add_question</a> (<a href='../S/5162.html#L61' title='Defined at 61 in ctype/ctype-info.c.'>b</a>, <a href='../Y/23250.html' title='Multiple used in 248 places.'>qname</a>, <a href='../Y/23235.html' title='Multiple used in 140 places.'>qclass</a>, <a href='../Y/23276.html' title='Multiple used in 167 places.'>qtype</a>);
+<a id='L35' name='L35'></a>  35   <a href='../S/5945.html#L204' title='Defined at 204 in support/resolv_test.c.'>resolv_response_section</a> (<a href='../S/5162.html#L61' title='Defined at 61 in ctype/ctype-info.c.'>b</a>, <a href='../S/6372.html#L86' title='Defined at 86 in resolv/arpa/nameser.h.'>ns_s_an</a>);
+<a id='L36' name='L36'></a>  36   <a href='../S/5945.html#L355' title='Defined at 355 in support/resolv_test.c.'>resolv_response_open_record</a> (<a href='../S/5162.html#L61' title='Defined at 61 in ctype/ctype-info.c.'>b</a>, <a href='../Y/23250.html' title='Multiple used in 248 places.'>qname</a>, <a href='../Y/23235.html' title='Multiple used in 140 places.'>qclass</a>, <a href='../S/6371.html#L134' title='Defined at 134 in resolv/arpa/nameser_compat.h.'>T_PTR</a>, 0);
+<a id='L37' name='L37'></a>  37   <a href='../S/5945.html#L267' title='Defined at 267 in support/resolv_test.c.'>resolv_response_add_name</a> (<a href='../S/5162.html#L61' title='Defined at 61 in ctype/ctype-info.c.'>b</a>, <a href='../D/27632.html' title='Multiple defined in 2 places.'>alias</a>);
+<a id='L38' name='L38'></a>  38   <a href='../S/5945.html#L377' title='Defined at 377 in support/resolv_test.c.'>resolv_response_close_record</a> (<a href='../S/5162.html#L61' title='Defined at 61 in ctype/ctype-info.c.'>b</a>);
+<a id='L39' name='L39'></a>  39 <em class='brace'>}</em>
+<a id='L40' name='L40'></a>  40 
+<a id='L41' name='L41'></a>  41 <strong class='reserved'>static</strong> <strong class='reserved'>void</strong>
+<a id='L42' name='L42'></a>  42 <a href='../R/20244.html' title='Multiple referred from 2 places.'>handle_code</a> (<strong class='reserved'>const</strong> <strong class='reserved'>struct</strong> <a href='../S/5741.html#L44' title='Defined at 44 in support/resolv_test.h.'>resolv_response_context</a> *<a href='../Y/12249.html' title='Multiple used in 1209 places.'>ctx</a>,
+<a id='L43' name='L43'></a>  43              <strong class='reserved'>struct</strong> <a href='../S/5945.html#L139' title='Defined at 139 in support/resolv_test.c.'>resolv_response_builder</a> *<a href='../S/5162.html#L61' title='Defined at 61 in ctype/ctype-info.c.'>b</a>,
+<a id='L44' name='L44'></a>  44              <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../Y/23250.html' title='Multiple used in 248 places.'>qname</a>, <a href='../S/223.html#L25' title='Defined at 25 in bits/stdint-uintn.h.'>uint16_t</a> <a href='../Y/23235.html' title='Multiple used in 140 places.'>qclass</a>, <a href='../S/223.html#L25' title='Defined at 25 in bits/stdint-uintn.h.'>uint16_t</a> <a href='../Y/23276.html' title='Multiple used in 167 places.'>qtype</a>,
+<a id='L45' name='L45'></a>  45              <strong class='reserved'>int</strong> <a href='../Y/11807.html' title='Multiple used in 172 places.'>code</a>)
+<a id='L46' name='L46'></a>  46 <em class='brace'>{</em>
+<a id='L47' name='L47'></a>  47   <strong class='reserved'>switch</strong> (<a href='../Y/11807.html' title='Multiple used in 172 places.'>code</a>)
+<a id='L48' name='L48'></a>  48     <em class='brace'>{</em>
+<a id='L49' name='L49'></a>  49     <strong class='reserved'>case</strong> 1:
+<a id='L50' name='L50'></a>  50       <a href='../S/6367.html#L29' title='Defined at 29 in resolv/tst-resolv-network.c.'>send_ptr</a> (<a href='../S/5162.html#L61' title='Defined at 61 in ctype/ctype-info.c.'>b</a>, <a href='../Y/23250.html' title='Multiple used in 248 places.'>qname</a>, <a href='../Y/23235.html' title='Multiple used in 140 places.'>qclass</a>, <a href='../Y/23276.html' title='Multiple used in 167 places.'>qtype</a>, "1.in-addr.arpa");
+<a id='L51' name='L51'></a>  51       <strong class='reserved'>break</strong>;
+<a id='L52' name='L52'></a>  52     <strong class='reserved'>case</strong> 2:
+<a id='L53' name='L53'></a>  53       <a href='../S/6367.html#L29' title='Defined at 29 in resolv/tst-resolv-network.c.'>send_ptr</a> (<a href='../S/5162.html#L61' title='Defined at 61 in ctype/ctype-info.c.'>b</a>, <a href='../Y/23250.html' title='Multiple used in 248 places.'>qname</a>, <a href='../Y/23235.html' title='Multiple used in 140 places.'>qclass</a>, <a href='../Y/23276.html' title='Multiple used in 167 places.'>qtype</a>, "2.1.in-addr.arpa");
+<a id='L54' name='L54'></a>  54       <strong class='reserved'>break</strong>;
+<a id='L55' name='L55'></a>  55     <strong class='reserved'>case</strong> 3:
+<a id='L56' name='L56'></a>  56       <a href='../S/6367.html#L29' title='Defined at 29 in resolv/tst-resolv-network.c.'>send_ptr</a> (<a href='../S/5162.html#L61' title='Defined at 61 in ctype/ctype-info.c.'>b</a>, <a href='../Y/23250.html' title='Multiple used in 248 places.'>qname</a>, <a href='../Y/23235.html' title='Multiple used in 140 places.'>qclass</a>, <a href='../Y/23276.html' title='Multiple used in 167 places.'>qtype</a>, "3.2.1.in-addr.arpa");
+<a id='L57' name='L57'></a>  57       <strong class='reserved'>break</strong>;
+<a id='L58' name='L58'></a>  58     <strong class='reserved'>case</strong> 4:
+<a id='L59' name='L59'></a>  59       <a href='../S/6367.html#L29' title='Defined at 29 in resolv/tst-resolv-network.c.'>send_ptr</a> (<a href='../S/5162.html#L61' title='Defined at 61 in ctype/ctype-info.c.'>b</a>, <a href='../Y/23250.html' title='Multiple used in 248 places.'>qname</a>, <a href='../Y/23235.html' title='Multiple used in 140 places.'>qclass</a>, <a href='../Y/23276.html' title='Multiple used in 167 places.'>qtype</a>, "4.3.2.1.in-addr.arpa");
+<a id='L60' name='L60'></a>  60       <strong class='reserved'>break</strong>;
+<a id='L61' name='L61'></a>  61     <strong class='reserved'>case</strong> 5:
+<a id='L62' name='L62'></a>  62       <em class='comment'>/* Test multiple PTR records.  */</em>
+<a id='L63' name='L63'></a>  63       <a href='../S/5945.html#L164' title='Defined at 164 in support/resolv_test.c.'>resolv_response_init</a> (<a href='../S/5162.html#L61' title='Defined at 61 in ctype/ctype-info.c.'>b</a>, (<strong class='reserved'>struct</strong> <a href='../S/5741.html#L140' title='Defined at 140 in support/resolv_test.h.'>resolv_response_flags</a>) <em class='brace'>{</em><em class='brace'>}</em>);
+<a id='L64' name='L64'></a>  64       <a href='../S/5945.html#L249' title='Defined at 249 in support/resolv_test.c.'>resolv_response_add_question</a> (<a href='../S/5162.html#L61' title='Defined at 61 in ctype/ctype-info.c.'>b</a>, <a href='../Y/23250.html' title='Multiple used in 248 places.'>qname</a>, <a href='../Y/23235.html' title='Multiple used in 140 places.'>qclass</a>, <a href='../Y/23276.html' title='Multiple used in 167 places.'>qtype</a>);
+<a id='L65' name='L65'></a>  65       <a href='../S/5945.html#L204' title='Defined at 204 in support/resolv_test.c.'>resolv_response_section</a> (<a href='../S/5162.html#L61' title='Defined at 61 in ctype/ctype-info.c.'>b</a>, <a href='../S/6372.html#L86' title='Defined at 86 in resolv/arpa/nameser.h.'>ns_s_an</a>);
+<a id='L66' name='L66'></a>  66       <a href='../S/5945.html#L355' title='Defined at 355 in support/resolv_test.c.'>resolv_response_open_record</a> (<a href='../S/5162.html#L61' title='Defined at 61 in ctype/ctype-info.c.'>b</a>, <a href='../Y/23250.html' title='Multiple used in 248 places.'>qname</a>, <a href='../Y/23235.html' title='Multiple used in 140 places.'>qclass</a>, <a href='../S/6371.html#L134' title='Defined at 134 in resolv/arpa/nameser_compat.h.'>T_PTR</a>, 0);
+<a id='L67' name='L67'></a>  67       <a href='../S/5945.html#L267' title='Defined at 267 in support/resolv_test.c.'>resolv_response_add_name</a> (<a href='../S/5162.html#L61' title='Defined at 61 in ctype/ctype-info.c.'>b</a>, "127.in-addr.arpa");
+<a id='L68' name='L68'></a>  68       <a href='../S/5945.html#L377' title='Defined at 377 in support/resolv_test.c.'>resolv_response_close_record</a> (<a href='../S/5162.html#L61' title='Defined at 61 in ctype/ctype-info.c.'>b</a>);
+<a id='L69' name='L69'></a>  69       <a href='../S/5945.html#L355' title='Defined at 355 in support/resolv_test.c.'>resolv_response_open_record</a> (<a href='../S/5162.html#L61' title='Defined at 61 in ctype/ctype-info.c.'>b</a>, <a href='../Y/23250.html' title='Multiple used in 248 places.'>qname</a>, <a href='../Y/23235.html' title='Multiple used in 140 places.'>qclass</a>, <a href='../S/6371.html#L134' title='Defined at 134 in resolv/arpa/nameser_compat.h.'>T_PTR</a>, 0);
+<a id='L70' name='L70'></a>  70       <a href='../S/5945.html#L267' title='Defined at 267 in support/resolv_test.c.'>resolv_response_add_name</a> (<a href='../S/5162.html#L61' title='Defined at 61 in ctype/ctype-info.c.'>b</a>, "0.in-addr.arpa");
+<a id='L71' name='L71'></a>  71       <a href='../S/5945.html#L377' title='Defined at 377 in support/resolv_test.c.'>resolv_response_close_record</a> (<a href='../S/5162.html#L61' title='Defined at 61 in ctype/ctype-info.c.'>b</a>);
+<a id='L72' name='L72'></a>  72       <strong class='reserved'>break</strong>;
+<a id='L73' name='L73'></a>  73     <strong class='reserved'>case</strong> 6:
+<a id='L74' name='L74'></a>  74       <em class='comment'>/* Test skipping of RRSIG record.  */</em>
+<a id='L75' name='L75'></a>  75       <a href='../S/5945.html#L164' title='Defined at 164 in support/resolv_test.c.'>resolv_response_init</a> (<a href='../S/5162.html#L61' title='Defined at 61 in ctype/ctype-info.c.'>b</a>, (<strong class='reserved'>struct</strong> <a href='../S/5741.html#L140' title='Defined at 140 in support/resolv_test.h.'>resolv_response_flags</a>) <em class='brace'>{</em> <em class='brace'>}</em>);
+<a id='L76' name='L76'></a>  76       <a href='../S/5945.html#L249' title='Defined at 249 in support/resolv_test.c.'>resolv_response_add_question</a> (<a href='../S/5162.html#L61' title='Defined at 61 in ctype/ctype-info.c.'>b</a>, <a href='../Y/23250.html' title='Multiple used in 248 places.'>qname</a>, <a href='../Y/23235.html' title='Multiple used in 140 places.'>qclass</a>, <a href='../Y/23276.html' title='Multiple used in 167 places.'>qtype</a>);
+<a id='L77' name='L77'></a>  77       <a href='../S/5945.html#L204' title='Defined at 204 in support/resolv_test.c.'>resolv_response_section</a> (<a href='../S/5162.html#L61' title='Defined at 61 in ctype/ctype-info.c.'>b</a>, <a href='../S/6372.html#L86' title='Defined at 86 in resolv/arpa/nameser.h.'>ns_s_an</a>);
+<a id='L78' name='L78'></a>  78 
+<a id='L79' name='L79'></a>  79       <a href='../S/5945.html#L355' title='Defined at 355 in support/resolv_test.c.'>resolv_response_open_record</a> (<a href='../S/5162.html#L61' title='Defined at 61 in ctype/ctype-info.c.'>b</a>, <a href='../Y/23250.html' title='Multiple used in 248 places.'>qname</a>, <a href='../Y/23235.html' title='Multiple used in 140 places.'>qclass</a>, <a href='../S/6371.html#L134' title='Defined at 134 in resolv/arpa/nameser_compat.h.'>T_PTR</a>, 0);
+<a id='L80' name='L80'></a>  80       <a href='../S/5945.html#L267' title='Defined at 267 in support/resolv_test.c.'>resolv_response_add_name</a> (<a href='../S/5162.html#L61' title='Defined at 61 in ctype/ctype-info.c.'>b</a>, "127.in-addr.arpa");
+<a id='L81' name='L81'></a>  81       <a href='../S/5945.html#L377' title='Defined at 377 in support/resolv_test.c.'>resolv_response_close_record</a> (<a href='../S/5162.html#L61' title='Defined at 61 in ctype/ctype-info.c.'>b</a>);
+<a id='L82' name='L82'></a>  82 
+<a id='L83' name='L83'></a>  83       <a href='../S/5945.html#L355' title='Defined at 355 in support/resolv_test.c.'>resolv_response_open_record</a> (<a href='../S/5162.html#L61' title='Defined at 61 in ctype/ctype-info.c.'>b</a>, <a href='../Y/23250.html' title='Multiple used in 248 places.'>qname</a>, <a href='../Y/23235.html' title='Multiple used in 140 places.'>qclass</a>, 46 <em class='comment'>/* RRSIG */</em>, 0);
+<a id='L84' name='L84'></a>  84       <em class='brace'>{</em>
+<a id='L85' name='L85'></a>  85         <strong class='reserved'>char</strong> <a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>[500];
+<a id='L86' name='L86'></a>  86         <a href='../D/33462.html' title='Multiple defined in 30 places.'>memset</a> (<a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>, 0x3f, <strong class='reserved'>sizeof</strong> (<a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>));
+<a id='L87' name='L87'></a>  87         <a href='../S/5945.html#L392' title='Defined at 392 in support/resolv_test.c.'>resolv_response_add_data</a> (<a href='../S/5162.html#L61' title='Defined at 61 in ctype/ctype-info.c.'>b</a>, <a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>, <strong class='reserved'>sizeof</strong> (<a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>));
+<a id='L88' name='L88'></a>  88       <em class='brace'>}</em>
+<a id='L89' name='L89'></a>  89       <a href='../S/5945.html#L377' title='Defined at 377 in support/resolv_test.c.'>resolv_response_close_record</a> (<a href='../S/5162.html#L61' title='Defined at 61 in ctype/ctype-info.c.'>b</a>);
+<a id='L90' name='L90'></a>  90 
+<a id='L91' name='L91'></a>  91       <a href='../S/5945.html#L355' title='Defined at 355 in support/resolv_test.c.'>resolv_response_open_record</a> (<a href='../S/5162.html#L61' title='Defined at 61 in ctype/ctype-info.c.'>b</a>, <a href='../Y/23250.html' title='Multiple used in 248 places.'>qname</a>, <a href='../Y/23235.html' title='Multiple used in 140 places.'>qclass</a>, <a href='../S/6371.html#L134' title='Defined at 134 in resolv/arpa/nameser_compat.h.'>T_PTR</a>, 0);
+<a id='L92' name='L92'></a>  92       <a href='../S/5945.html#L267' title='Defined at 267 in support/resolv_test.c.'>resolv_response_add_name</a> (<a href='../S/5162.html#L61' title='Defined at 61 in ctype/ctype-info.c.'>b</a>, "0.in-addr.arpa");
+<a id='L93' name='L93'></a>  93       <a href='../S/5945.html#L377' title='Defined at 377 in support/resolv_test.c.'>resolv_response_close_record</a> (<a href='../S/5162.html#L61' title='Defined at 61 in ctype/ctype-info.c.'>b</a>);
+<a id='L94' name='L94'></a>  94       <strong class='reserved'>break</strong>;
+<a id='L95' name='L95'></a>  95     <strong class='reserved'>case</strong> 7:
+<a id='L96' name='L96'></a>  96       <em class='comment'>/* Test CNAME handling.  */</em>
+<a id='L97' name='L97'></a>  97       <a href='../S/5945.html#L164' title='Defined at 164 in support/resolv_test.c.'>resolv_response_init</a> (<a href='../S/5162.html#L61' title='Defined at 61 in ctype/ctype-info.c.'>b</a>, (<strong class='reserved'>struct</strong> <a href='../S/5741.html#L140' title='Defined at 140 in support/resolv_test.h.'>resolv_response_flags</a>) <em class='brace'>{</em> <em class='brace'>}</em>);
+<a id='L98' name='L98'></a>  98       <a href='../S/5945.html#L249' title='Defined at 249 in support/resolv_test.c.'>resolv_response_add_question</a> (<a href='../S/5162.html#L61' title='Defined at 61 in ctype/ctype-info.c.'>b</a>, <a href='../Y/23250.html' title='Multiple used in 248 places.'>qname</a>, <a href='../Y/23235.html' title='Multiple used in 140 places.'>qclass</a>, <a href='../Y/23276.html' title='Multiple used in 167 places.'>qtype</a>);
+<a id='L99' name='L99'></a>  99       <a href='../S/5945.html#L204' title='Defined at 204 in support/resolv_test.c.'>resolv_response_section</a> (<a href='../S/5162.html#L61' title='Defined at 61 in ctype/ctype-info.c.'>b</a>, <a href='../S/6372.html#L86' title='Defined at 86 in resolv/arpa/nameser.h.'>ns_s_an</a>);
+<a id='L100' name='L100'></a> 100       <a href='../S/5945.html#L355' title='Defined at 355 in support/resolv_test.c.'>resolv_response_open_record</a> (<a href='../S/5162.html#L61' title='Defined at 61 in ctype/ctype-info.c.'>b</a>, <a href='../Y/23250.html' title='Multiple used in 248 places.'>qname</a>, <a href='../Y/23235.html' title='Multiple used in 140 places.'>qclass</a>, <a href='../S/6371.html#L127' title='Defined at 127 in resolv/arpa/nameser_compat.h.'>T_CNAME</a>, 0);
+<a id='L101' name='L101'></a> 101       <a href='../S/5945.html#L267' title='Defined at 267 in support/resolv_test.c.'>resolv_response_add_name</a> (<a href='../S/5162.html#L61' title='Defined at 61 in ctype/ctype-info.c.'>b</a>, "cname.example");
+<a id='L102' name='L102'></a> 102       <a href='../S/5945.html#L377' title='Defined at 377 in support/resolv_test.c.'>resolv_response_close_record</a> (<a href='../S/5162.html#L61' title='Defined at 61 in ctype/ctype-info.c.'>b</a>);
+<a id='L103' name='L103'></a> 103       <a href='../S/5945.html#L355' title='Defined at 355 in support/resolv_test.c.'>resolv_response_open_record</a> (<a href='../S/5162.html#L61' title='Defined at 61 in ctype/ctype-info.c.'>b</a>, "cname.example", <a href='../Y/23235.html' title='Multiple used in 140 places.'>qclass</a>, <a href='../S/6371.html#L134' title='Defined at 134 in resolv/arpa/nameser_compat.h.'>T_PTR</a>, 0);
+<a id='L104' name='L104'></a> 104       <a href='../S/5945.html#L267' title='Defined at 267 in support/resolv_test.c.'>resolv_response_add_name</a> (<a href='../S/5162.html#L61' title='Defined at 61 in ctype/ctype-info.c.'>b</a>, "4.3.2.1.in-addr.arpa");
+<a id='L105' name='L105'></a> 105       <a href='../S/5945.html#L377' title='Defined at 377 in support/resolv_test.c.'>resolv_response_close_record</a> (<a href='../S/5162.html#L61' title='Defined at 61 in ctype/ctype-info.c.'>b</a>);
+<a id='L106' name='L106'></a> 106       <strong class='reserved'>break</strong>;
+<a id='L107' name='L107'></a> 107 
+<a id='L108' name='L108'></a> 108     <strong class='reserved'>case</strong> 100:
+<a id='L109' name='L109'></a> 109       <a href='../S/5945.html#L164' title='Defined at 164 in support/resolv_test.c.'>resolv_response_init</a> (<a href='../S/5162.html#L61' title='Defined at 61 in ctype/ctype-info.c.'>b</a>, (<strong class='reserved'>struct</strong> <a href='../S/5741.html#L140' title='Defined at 140 in support/resolv_test.h.'>resolv_response_flags</a>) <em class='brace'>{</em> .<a href='../Y/23480.html' title='Multiple used in 52 places.'>rcode</a> = 0, <em class='brace'>}</em>);
+<a id='L110' name='L110'></a> 110       <a href='../S/5945.html#L249' title='Defined at 249 in support/resolv_test.c.'>resolv_response_add_question</a> (<a href='../S/5162.html#L61' title='Defined at 61 in ctype/ctype-info.c.'>b</a>, <a href='../Y/23250.html' title='Multiple used in 248 places.'>qname</a>, <a href='../Y/23235.html' title='Multiple used in 140 places.'>qclass</a>, <a href='../Y/23276.html' title='Multiple used in 167 places.'>qtype</a>);
+<a id='L111' name='L111'></a> 111       <strong class='reserved'>break</strong>;
+<a id='L112' name='L112'></a> 112     <strong class='reserved'>case</strong> 101:
+<a id='L113' name='L113'></a> 113       <a href='../S/5945.html#L164' title='Defined at 164 in support/resolv_test.c.'>resolv_response_init</a> (<a href='../S/5162.html#L61' title='Defined at 61 in ctype/ctype-info.c.'>b</a>, (<strong class='reserved'>struct</strong> <a href='../S/5741.html#L140' title='Defined at 140 in support/resolv_test.h.'>resolv_response_flags</a>)
+<a id='L114' name='L114'></a> 114                             <em class='brace'>{</em> .<a href='../Y/23480.html' title='Multiple used in 52 places.'>rcode</a> = <a href='../S/6371.html#L107' title='Defined at 107 in resolv/arpa/nameser_compat.h.'>NXDOMAIN</a>, <em class='brace'>}</em>);
+<a id='L115' name='L115'></a> 115       <a href='../S/5945.html#L249' title='Defined at 249 in support/resolv_test.c.'>resolv_response_add_question</a> (<a href='../S/5162.html#L61' title='Defined at 61 in ctype/ctype-info.c.'>b</a>, <a href='../Y/23250.html' title='Multiple used in 248 places.'>qname</a>, <a href='../Y/23235.html' title='Multiple used in 140 places.'>qclass</a>, <a href='../Y/23276.html' title='Multiple used in 167 places.'>qtype</a>);
+<a id='L116' name='L116'></a> 116       <strong class='reserved'>break</strong>;
+<a id='L117' name='L117'></a> 117     <strong class='reserved'>case</strong> 102:
+<a id='L118' name='L118'></a> 118       <a href='../S/5945.html#L164' title='Defined at 164 in support/resolv_test.c.'>resolv_response_init</a> (<a href='../S/5162.html#L61' title='Defined at 61 in ctype/ctype-info.c.'>b</a>, (<strong class='reserved'>struct</strong> <a href='../S/5741.html#L140' title='Defined at 140 in support/resolv_test.h.'>resolv_response_flags</a>) <em class='brace'>{</em>.<a href='../Y/23480.html' title='Multiple used in 52 places.'>rcode</a> = <a href='../S/6371.html#L106' title='Defined at 106 in resolv/arpa/nameser_compat.h.'>SERVFAIL</a><em class='brace'>}</em>);
+<a id='L119' name='L119'></a> 119       <a href='../S/5945.html#L249' title='Defined at 249 in support/resolv_test.c.'>resolv_response_add_question</a> (<a href='../S/5162.html#L61' title='Defined at 61 in ctype/ctype-info.c.'>b</a>, <a href='../Y/23250.html' title='Multiple used in 248 places.'>qname</a>, <a href='../Y/23235.html' title='Multiple used in 140 places.'>qclass</a>, <a href='../Y/23276.html' title='Multiple used in 167 places.'>qtype</a>);
+<a id='L120' name='L120'></a> 120       <strong class='reserved'>break</strong>;
+<a id='L121' name='L121'></a> 121     <strong class='reserved'>case</strong> 103:
+<a id='L122' name='L122'></a> 122       <em class='comment'>/* Check response length matching.  */</em>
+<a id='L123' name='L123'></a> 123       <strong class='reserved'>if</strong> (!<a href='../Y/12249.html' title='Multiple used in 1209 places.'>ctx</a>-&gt;<a href='../Y/26880.html' title='Multiple used in 26 places.'>tcp</a>)
+<a id='L124' name='L124'></a> 124         <em class='brace'>{</em>
+<a id='L125' name='L125'></a> 125           <a href='../S/5945.html#L164' title='Defined at 164 in support/resolv_test.c.'>resolv_response_init</a> (<a href='../S/5162.html#L61' title='Defined at 61 in ctype/ctype-info.c.'>b</a>, (<strong class='reserved'>struct</strong> <a href='../S/5741.html#L140' title='Defined at 140 in support/resolv_test.h.'>resolv_response_flags</a>) <em class='brace'>{</em>.<a href='../Y/26836.html' title='Multiple used in 57 places.'>tc</a> = <a href='../D/38483.html' title='Multiple defined in 5 places.'>true</a><em class='brace'>}</em>);
+<a id='L126' name='L126'></a> 126           <a href='../S/5945.html#L249' title='Defined at 249 in support/resolv_test.c.'>resolv_response_add_question</a> (<a href='../S/5162.html#L61' title='Defined at 61 in ctype/ctype-info.c.'>b</a>, <a href='../Y/23250.html' title='Multiple used in 248 places.'>qname</a>, <a href='../Y/23235.html' title='Multiple used in 140 places.'>qclass</a>, <a href='../Y/23276.html' title='Multiple used in 167 places.'>qtype</a>);
+<a id='L127' name='L127'></a> 127         <em class='brace'>}</em>
+<a id='L128' name='L128'></a> 128       <strong class='reserved'>else</strong>
+<a id='L129' name='L129'></a> 129         <em class='brace'>{</em>
+<a id='L130' name='L130'></a> 130           <a href='../S/5945.html#L164' title='Defined at 164 in support/resolv_test.c.'>resolv_response_init</a> (<a href='../S/5162.html#L61' title='Defined at 61 in ctype/ctype-info.c.'>b</a>, (<strong class='reserved'>struct</strong> <a href='../S/5741.html#L140' title='Defined at 140 in support/resolv_test.h.'>resolv_response_flags</a>) <em class='brace'>{</em>.<a href='../Y/10227.html' title='Multiple used in 49 places.'>ancount</a> = 1<em class='brace'>}</em>);
+<a id='L131' name='L131'></a> 131           <a href='../S/5945.html#L249' title='Defined at 249 in support/resolv_test.c.'>resolv_response_add_question</a> (<a href='../S/5162.html#L61' title='Defined at 61 in ctype/ctype-info.c.'>b</a>, <a href='../Y/23250.html' title='Multiple used in 248 places.'>qname</a>, <a href='../Y/23235.html' title='Multiple used in 140 places.'>qclass</a>, <a href='../Y/23276.html' title='Multiple used in 167 places.'>qtype</a>);
+<a id='L132' name='L132'></a> 132           <a href='../S/5945.html#L204' title='Defined at 204 in support/resolv_test.c.'>resolv_response_section</a> (<a href='../S/5162.html#L61' title='Defined at 61 in ctype/ctype-info.c.'>b</a>, <a href='../S/6372.html#L86' title='Defined at 86 in resolv/arpa/nameser.h.'>ns_s_an</a>);
+<a id='L133' name='L133'></a> 133           <a href='../S/5945.html#L355' title='Defined at 355 in support/resolv_test.c.'>resolv_response_open_record</a> (<a href='../S/5162.html#L61' title='Defined at 61 in ctype/ctype-info.c.'>b</a>, <a href='../Y/23250.html' title='Multiple used in 248 places.'>qname</a>, <a href='../Y/23235.html' title='Multiple used in 140 places.'>qclass</a>, <a href='../S/6371.html#L134' title='Defined at 134 in resolv/arpa/nameser_compat.h.'>T_PTR</a>, 0);
+<a id='L134' name='L134'></a> 134           <a href='../S/5945.html#L267' title='Defined at 267 in support/resolv_test.c.'>resolv_response_add_name</a> (<a href='../S/5162.html#L61' title='Defined at 61 in ctype/ctype-info.c.'>b</a>, "127.in-addr.arpa");
+<a id='L135' name='L135'></a> 135           <a href='../S/5945.html#L377' title='Defined at 377 in support/resolv_test.c.'>resolv_response_close_record</a> (<a href='../S/5162.html#L61' title='Defined at 61 in ctype/ctype-info.c.'>b</a>);
+<a id='L136' name='L136'></a> 136           <a href='../S/5945.html#L355' title='Defined at 355 in support/resolv_test.c.'>resolv_response_open_record</a> (<a href='../S/5162.html#L61' title='Defined at 61 in ctype/ctype-info.c.'>b</a>, <a href='../Y/23250.html' title='Multiple used in 248 places.'>qname</a>, <a href='../Y/23235.html' title='Multiple used in 140 places.'>qclass</a>, <a href='../S/6371.html#L134' title='Defined at 134 in resolv/arpa/nameser_compat.h.'>T_PTR</a>, 0);
+<a id='L137' name='L137'></a> 137           <a href='../S/5945.html#L267' title='Defined at 267 in support/resolv_test.c.'>resolv_response_add_name</a> (<a href='../S/5162.html#L61' title='Defined at 61 in ctype/ctype-info.c.'>b</a>, "example");
+<a id='L138' name='L138'></a> 138           <a href='../S/5945.html#L377' title='Defined at 377 in support/resolv_test.c.'>resolv_response_close_record</a> (<a href='../S/5162.html#L61' title='Defined at 61 in ctype/ctype-info.c.'>b</a>);
+<a id='L139' name='L139'></a> 139 
+<a id='L140' name='L140'></a> 140           <a href='../S/5945.html#L355' title='Defined at 355 in support/resolv_test.c.'>resolv_response_open_record</a> (<a href='../S/5162.html#L61' title='Defined at 61 in ctype/ctype-info.c.'>b</a>, <a href='../Y/23250.html' title='Multiple used in 248 places.'>qname</a>, <a href='../Y/23235.html' title='Multiple used in 140 places.'>qclass</a>, <a href='../S/6371.html#L134' title='Defined at 134 in resolv/arpa/nameser_compat.h.'>T_PTR</a>, 0);
+<a id='L141' name='L141'></a> 141           <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/27512.html' title='Multiple used in 8 places.'>to_fill</a> = 65535 - <a href='../S/5945.html#L426' title='Defined at 426 in support/resolv_test.c.'>resolv_response_length</a> (<a href='../S/5162.html#L61' title='Defined at 61 in ctype/ctype-info.c.'>b</a>)
+<a id='L142' name='L142'></a> 142             - 2 <em class='comment'>/* length, "n" */</em> - 2 <em class='comment'>/* compression reference */</em>
+<a id='L143' name='L143'></a> 143             - 2 <em class='comment'>/* RR type */</em>;
+<a id='L144' name='L144'></a> 144           <strong class='reserved'>for</strong> (<a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> = 0; <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> &lt; <a href='../Y/27512.html' title='Multiple used in 8 places.'>to_fill</a>; ++<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>)
+<a id='L145' name='L145'></a> 145             <a href='../S/5945.html#L392' title='Defined at 392 in support/resolv_test.c.'>resolv_response_add_data</a> (<a href='../S/5162.html#L61' title='Defined at 61 in ctype/ctype-info.c.'>b</a>, "", 1);
+<a id='L146' name='L146'></a> 146           <a href='../S/5945.html#L377' title='Defined at 377 in support/resolv_test.c.'>resolv_response_close_record</a> (<a href='../S/5162.html#L61' title='Defined at 61 in ctype/ctype-info.c.'>b</a>);
+<a id='L147' name='L147'></a> 147           <a href='../S/5945.html#L267' title='Defined at 267 in support/resolv_test.c.'>resolv_response_add_name</a> (<a href='../S/5162.html#L61' title='Defined at 61 in ctype/ctype-info.c.'>b</a>, "n.example");
+<a id='L148' name='L148'></a> 148           <a href='../S/223.html#L25' title='Defined at 25 in bits/stdint-uintn.h.'>uint16_t</a> <a href='../Y/24261.html' title='Multiple used in 4 places.'>rrtype</a> = <a href='../D/31575.html' title='Multiple defined in 7 places.'>htons</a> (<a href='../S/6371.html#L134' title='Defined at 134 in resolv/arpa/nameser_compat.h.'>T_PTR</a>);
+<a id='L149' name='L149'></a> 149           <a href='../S/5945.html#L392' title='Defined at 392 in support/resolv_test.c.'>resolv_response_add_data</a> (<a href='../S/5162.html#L61' title='Defined at 61 in ctype/ctype-info.c.'>b</a>, &amp;<a href='../Y/24261.html' title='Multiple used in 4 places.'>rrtype</a>, <strong class='reserved'>sizeof</strong> (<a href='../Y/24261.html' title='Multiple used in 4 places.'>rrtype</a>));
+<a id='L150' name='L150'></a> 150         <em class='brace'>}</em>
+<a id='L151' name='L151'></a> 151       <strong class='reserved'>break</strong>;
+<a id='L152' name='L152'></a> 152     <strong class='reserved'>case</strong> 104:
+<a id='L153' name='L153'></a> 153       <a href='../S/6367.html#L29' title='Defined at 29 in resolv/tst-resolv-network.c.'>send_ptr</a> (<a href='../S/5162.html#L61' title='Defined at 61 in ctype/ctype-info.c.'>b</a>, <a href='../Y/23250.html' title='Multiple used in 248 places.'>qname</a>, <a href='../Y/23235.html' title='Multiple used in 140 places.'>qclass</a>, <a href='../Y/23276.html' title='Multiple used in 167 places.'>qtype</a>, "host.example");
+<a id='L154' name='L154'></a> 154       <strong class='reserved'>break</strong>;
+<a id='L155' name='L155'></a> 155     <strong class='reserved'>default</strong>:
+<a id='L156' name='L156'></a> 156       <a href='../S/5739.html#L40' title='Defined at 40 in support/check.h.'>FAIL_EXIT1</a> ("invalid QNAME: %s (code %d)", <a href='../Y/23250.html' title='Multiple used in 248 places.'>qname</a>, <a href='../Y/11807.html' title='Multiple used in 172 places.'>code</a>);
+<a id='L157' name='L157'></a> 157     <em class='brace'>}</em>
+<a id='L158' name='L158'></a> 158 <em class='brace'>}</em>
+<a id='L159' name='L159'></a> 159 
+<a id='L160' name='L160'></a> 160 <strong class='reserved'>static</strong> <strong class='reserved'>void</strong>
+<a id='L161' name='L161'></a> 161 <a href='../R/23851.html' title='Multiple referred from 71 places.'>response</a> (<strong class='reserved'>const</strong> <strong class='reserved'>struct</strong> <a href='../S/5741.html#L44' title='Defined at 44 in support/resolv_test.h.'>resolv_response_context</a> *<a href='../Y/12249.html' title='Multiple used in 1209 places.'>ctx</a>,
+<a id='L162' name='L162'></a> 162           <strong class='reserved'>struct</strong> <a href='../S/5945.html#L139' title='Defined at 139 in support/resolv_test.c.'>resolv_response_builder</a> *<a href='../S/5162.html#L61' title='Defined at 61 in ctype/ctype-info.c.'>b</a>,
+<a id='L163' name='L163'></a> 163           <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../Y/23250.html' title='Multiple used in 248 places.'>qname</a>, <a href='../S/223.html#L25' title='Defined at 25 in bits/stdint-uintn.h.'>uint16_t</a> <a href='../Y/23235.html' title='Multiple used in 140 places.'>qclass</a>, <a href='../S/223.html#L25' title='Defined at 25 in bits/stdint-uintn.h.'>uint16_t</a> <a href='../Y/23276.html' title='Multiple used in 167 places.'>qtype</a>)
+<a id='L164' name='L164'></a> 164 <em class='brace'>{</em>
+<a id='L165' name='L165'></a> 165   <strong class='reserved'>int</strong> <a href='../Y/11807.html' title='Multiple used in 172 places.'>code</a>;
+<a id='L166' name='L166'></a> 166   <strong class='reserved'>if</strong> (<a href='../D/37133.html' title='Multiple defined in 7 places.'>strstr</a> (<a href='../Y/23250.html' title='Multiple used in 248 places.'>qname</a>, "in-addr.arpa") == <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>)
+<a id='L167' name='L167'></a> 167     <em class='brace'>{</em>
+<a id='L168' name='L168'></a> 168       <strong class='reserved'>char</strong> *<a href='../Y/26787.html' title='Multiple used in 53 places.'>tail</a>;
+<a id='L169' name='L169'></a> 169       <strong class='reserved'>if</strong> (<a href='../D/36967.html' title='Multiple defined in 3 places.'>sscanf</a> (<a href='../Y/23250.html' title='Multiple used in 248 places.'>qname</a>, "code%d.%ms", &amp;<a href='../Y/11807.html' title='Multiple used in 172 places.'>code</a>, &amp;<a href='../Y/26787.html' title='Multiple used in 53 places.'>tail</a>) != 2
+<a id='L170' name='L170'></a> 170           || <a href='../D/37067.html' title='Multiple defined in 17 places.'>strcmp</a> (<a href='../Y/26787.html' title='Multiple used in 53 places.'>tail</a>, "example") != 0)
+<a id='L171' name='L171'></a> 171         <a href='../S/5739.html#L40' title='Defined at 40 in support/check.h.'>FAIL_EXIT1</a> ("invalid QNAME: %s", <a href='../Y/23250.html' title='Multiple used in 248 places.'>qname</a>);
+<a id='L172' name='L172'></a> 172       <a href='../D/30785.html' title='Multiple defined in 5 places.'>free</a> (<a href='../Y/26787.html' title='Multiple used in 53 places.'>tail</a>);
+<a id='L173' name='L173'></a> 173       <a href='../S/6367.html#L42' title='Defined at 42 in resolv/tst-resolv-network.c.'>handle_code</a> (<a href='../Y/12249.html' title='Multiple used in 1209 places.'>ctx</a>, <a href='../S/5162.html#L61' title='Defined at 61 in ctype/ctype-info.c.'>b</a>, <a href='../Y/23250.html' title='Multiple used in 248 places.'>qname</a>, <a href='../Y/23235.html' title='Multiple used in 140 places.'>qclass</a>, <a href='../Y/23276.html' title='Multiple used in 167 places.'>qtype</a>, <a href='../Y/11807.html' title='Multiple used in 172 places.'>code</a>);
+<a id='L174' name='L174'></a> 174     <em class='brace'>}</em>
+<a id='L175' name='L175'></a> 175   <strong class='reserved'>else</strong>
+<a id='L176' name='L176'></a> 176     <em class='brace'>{</em>
+<a id='L177' name='L177'></a> 177       <em class='comment'>/* Reverse lookup.  */</em>
+<a id='L178' name='L178'></a> 178       <strong class='reserved'>int</strong> <a href='../Y/11896.html' title='Multiple used in 3 places.'>components</a>[4];
+<a id='L179' name='L179'></a> 179       <strong class='reserved'>char</strong> *<a href='../Y/26787.html' title='Multiple used in 53 places.'>tail</a>;
+<a id='L180' name='L180'></a> 180       <strong class='reserved'>if</strong> (<a href='../D/36967.html' title='Multiple defined in 3 places.'>sscanf</a> (<a href='../Y/23250.html' title='Multiple used in 248 places.'>qname</a>, "%d.%d.%d.%d.%ms",
+<a id='L181' name='L181'></a> 181                   <a href='../Y/11896.html' title='Multiple used in 3 places.'>components</a>, <a href='../Y/11896.html' title='Multiple used in 3 places.'>components</a> + 1, <a href='../Y/11896.html' title='Multiple used in 3 places.'>components</a> + 2, <a href='../Y/11896.html' title='Multiple used in 3 places.'>components</a> + 3,
+<a id='L182' name='L182'></a> 182                   &amp;<a href='../Y/26787.html' title='Multiple used in 53 places.'>tail</a>) != 5
+<a id='L183' name='L183'></a> 183           || <a href='../D/37067.html' title='Multiple defined in 17 places.'>strcmp</a> (<a href='../Y/26787.html' title='Multiple used in 53 places.'>tail</a>, "in-addr.arpa") != 0)
+<a id='L184' name='L184'></a> 184         <a href='../S/5739.html#L40' title='Defined at 40 in support/check.h.'>FAIL_EXIT1</a> ("invalid QNAME: %s", <a href='../Y/23250.html' title='Multiple used in 248 places.'>qname</a>);
+<a id='L185' name='L185'></a> 185       <a href='../D/30785.html' title='Multiple defined in 5 places.'>free</a> (<a href='../Y/26787.html' title='Multiple used in 53 places.'>tail</a>);
+<a id='L186' name='L186'></a> 186       <a href='../S/6367.html#L42' title='Defined at 42 in resolv/tst-resolv-network.c.'>handle_code</a> (<a href='../Y/12249.html' title='Multiple used in 1209 places.'>ctx</a>, <a href='../S/5162.html#L61' title='Defined at 61 in ctype/ctype-info.c.'>b</a>, <a href='../Y/23250.html' title='Multiple used in 248 places.'>qname</a>, <a href='../Y/23235.html' title='Multiple used in 140 places.'>qclass</a>, <a href='../Y/23276.html' title='Multiple used in 167 places.'>qtype</a>, <a href='../Y/11896.html' title='Multiple used in 3 places.'>components</a>[3]);
+<a id='L187' name='L187'></a> 187     <em class='brace'>}</em>
+<a id='L188' name='L188'></a> 188 <em class='brace'>}</em>
+<a id='L189' name='L189'></a> 189 
+<a id='L190' name='L190'></a> 190 <strong class='reserved'>static</strong> <strong class='reserved'>void</strong>
+<a id='L191' name='L191'></a> 191 <a href='../R/18000.html' title='Multiple referred from 11 places.'>check_reverse</a> (<strong class='reserved'>int</strong> <a href='../Y/11807.html' title='Multiple used in 172 places.'>code</a>, <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../Y/14144.html' title='Multiple used in 879 places.'>expected</a>)
+<a id='L192' name='L192'></a> 192 <em class='brace'>{</em>
+<a id='L193' name='L193'></a> 193   <strong class='reserved'>char</strong> *<a href='../Y/23287.html' title='Multiple used in 101 places.'>query</a> = <a href='../D/39420.html' title='Multiple defined in 2 places.'>xasprintf</a> ("code=%d", <a href='../Y/11807.html' title='Multiple used in 172 places.'>code</a>);
+<a id='L194' name='L194'></a> 194   <a href='../S/5831.html#L29' title='Defined at 29 in support/check_netent.c.'>check_netent</a> (<a href='../Y/23287.html' title='Multiple used in 101 places.'>query</a>, <a href='../Y/15528.html' title='Multiple used in 6 places.'>getnetbyaddr</a> (<a href='../Y/11807.html' title='Multiple used in 172 places.'>code</a>, <a href='../D/130.html' title='Multiple defined in 3 places.'>AF_INET</a>), <a href='../Y/14144.html' title='Multiple used in 879 places.'>expected</a>);
+<a id='L195' name='L195'></a> 195   <a href='../D/30785.html' title='Multiple defined in 5 places.'>free</a> (<a href='../Y/23287.html' title='Multiple used in 101 places.'>query</a>);
+<a id='L196' name='L196'></a> 196 <em class='brace'>}</em>
+<a id='L197' name='L197'></a> 197 
+<a id='L198' name='L198'></a> 198 <em class='comment'>/* Test for CVE-2016-3075.  */</em>
+<a id='L199' name='L199'></a> 199 <strong class='reserved'>static</strong> <strong class='reserved'>void</strong>
+<a id='L200' name='L200'></a> 200 <a href='../S/6367.html#L302' title='Referred from 302 in resolv/tst-resolv-network.c.'>check_long_name</a> (<strong class='reserved'>void</strong>)
+<a id='L201' name='L201'></a> 201 <em class='brace'>{</em>
+<a id='L202' name='L202'></a> 202   <strong class='reserved'>struct</strong> <a href='../S/5818.html#L28' title='Defined at 28 in support/xmemstream.h.'>xmemstream</a> <a href='../Y/19219.html' title='Multiple used in 1858 places.'>mem</a>;
+<a id='L203' name='L203'></a> 203   <a href='../S/5958.html#L27' title='Defined at 27 in support/xmemstream.c.'>xopen_memstream</a> (&amp;<a href='../Y/19219.html' title='Multiple used in 1858 places.'>mem</a>);
+<a id='L204' name='L204'></a> 204 
+<a id='L205' name='L205'></a> 205   <strong class='reserved'>char</strong> <a href='../Y/17718.html' title='Multiple used in 76 places.'>label</a>[65];
+<a id='L206' name='L206'></a> 206   <a href='../D/33462.html' title='Multiple defined in 30 places.'>memset</a> (<a href='../Y/17718.html' title='Multiple used in 76 places.'>label</a>, 'x', 63);
+<a id='L207' name='L207'></a> 207   <a href='../Y/17718.html' title='Multiple used in 76 places.'>label</a>[63] = '.';
+<a id='L208' name='L208'></a> 208   <a href='../Y/17718.html' title='Multiple used in 76 places.'>label</a>[64] = '\0';
+<a id='L209' name='L209'></a> 209   <strong class='reserved'>for</strong> (<strong class='reserved'>unsigned</strong> <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> = 0; <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> &lt; 64 * 1024 * 1024 / <a href='../D/37108.html' title='Multiple defined in 42 places.'>strlen</a> (<a href='../Y/17718.html' title='Multiple used in 76 places.'>label</a>); ++<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>)
+<a id='L210' name='L210'></a> 210     <a href='../D/30767.html' title='Multiple defined in 4 places.'>fprintf</a> (<a href='../Y/19219.html' title='Multiple used in 1858 places.'>mem</a>.<a href='../S/1663.html#L112' title='Defined at 112 in nscd/initgrcache.c.'>out</a>, "%s", <a href='../Y/17718.html' title='Multiple used in 76 places.'>label</a>);
+<a id='L211' name='L211'></a> 211 
+<a id='L212' name='L212'></a> 212   <a href='../S/5958.html#L38' title='Defined at 38 in support/xmemstream.c.'>xfclose_memstream</a> (&amp;<a href='../Y/19219.html' title='Multiple used in 1858 places.'>mem</a>);
+<a id='L213' name='L213'></a> 213 
+<a id='L214' name='L214'></a> 214   <a href='../S/5831.html#L29' title='Defined at 29 in support/check_netent.c.'>check_netent</a> ("long name", <a href='../Y/15530.html' title='Multiple used in 19 places.'>getnetbyname</a> (<a href='../Y/19219.html' title='Multiple used in 1858 places.'>mem</a>.<a href='../D/28321.html' title='Multiple defined in 7 places.'>buffer</a>),
+<a id='L215' name='L215'></a> 215                 "error: NO_RECOVERY\n");
+<a id='L216' name='L216'></a> 216 
+<a id='L217' name='L217'></a> 217   <a href='../D/30785.html' title='Multiple defined in 5 places.'>free</a> (<a href='../Y/19219.html' title='Multiple used in 1858 places.'>mem</a>.<a href='../D/28321.html' title='Multiple defined in 7 places.'>buffer</a>);
+<a id='L218' name='L218'></a> 218 <em class='brace'>}</em>
+<a id='L219' name='L219'></a> 219 
+<a id='L220' name='L220'></a> 220 <strong class='reserved'>static</strong> <strong class='reserved'>int</strong>
+<a id='L221' name='L221'></a> 221 <a href='../R/18782.html' title='Multiple referred from 1850 places.'>do_test</a> (<strong class='reserved'>void</strong>)
+<a id='L222' name='L222'></a> 222 <em class='brace'>{</em>
+<a id='L223' name='L223'></a> 223   <strong class='reserved'>struct</strong> <a href='../S/5945.html#L572' title='Defined at 572 in support/resolv_test.c.'>resolv_test</a> *<a href='../Y/21448.html' title='Multiple used in 370 places.'>obj</a> = <a href='../S/5945.html#L1123' title='Defined at 1123 in support/resolv_test.c.'>resolv_test_start</a>
+<a id='L224' name='L224'></a> 224     ((<strong class='reserved'>struct</strong> <a href='../S/5741.html#L82' title='Defined at 82 in support/resolv_test.h.'>resolv_redirect_config</a>)
+<a id='L225' name='L225'></a> 225      <em class='brace'>{</em>
+<a id='L226' name='L226'></a> 226        .<a href='../Y/23913.html' title='Multiple used in 21 places.'>response_callback</a> = <a href='../D/36041.html' title='Multiple defined in 16 places.'>response</a>
+<a id='L227' name='L227'></a> 227      <em class='brace'>}</em>);
+<a id='L228' name='L228'></a> 228 
+<a id='L229' name='L229'></a> 229   <em class='comment'>/* Lookup by name, success cases.  */</em>
+<a id='L230' name='L230'></a> 230   <a href='../S/5831.html#L29' title='Defined at 29 in support/check_netent.c.'>check_netent</a> ("code1.example", <a href='../Y/15530.html' title='Multiple used in 19 places.'>getnetbyname</a> ("code1.example"),
+<a id='L231' name='L231'></a> 231                 "alias: 1.in-addr.arpa\n"
+<a id='L232' name='L232'></a> 232                 "net: 0x00000001\n");
+<a id='L233' name='L233'></a> 233   <a href='../S/5831.html#L29' title='Defined at 29 in support/check_netent.c.'>check_netent</a> ("code2.example", <a href='../Y/15530.html' title='Multiple used in 19 places.'>getnetbyname</a> ("code2.example"),
+<a id='L234' name='L234'></a> 234                 "alias: 2.1.in-addr.arpa\n"
+<a id='L235' name='L235'></a> 235                 "net: 0x00000102\n");
+<a id='L236' name='L236'></a> 236   <a href='../S/5831.html#L29' title='Defined at 29 in support/check_netent.c.'>check_netent</a> ("code3.example", <a href='../Y/15530.html' title='Multiple used in 19 places.'>getnetbyname</a> ("code3.example"),
+<a id='L237' name='L237'></a> 237                 "alias: 3.2.1.in-addr.arpa\n"
+<a id='L238' name='L238'></a> 238                 "net: 0x00010203\n");
+<a id='L239' name='L239'></a> 239   <a href='../S/5831.html#L29' title='Defined at 29 in support/check_netent.c.'>check_netent</a> ("code4.example", <a href='../Y/15530.html' title='Multiple used in 19 places.'>getnetbyname</a> ("code4.example"),
+<a id='L240' name='L240'></a> 240                 "alias: 4.3.2.1.in-addr.arpa\n"
+<a id='L241' name='L241'></a> 241                 "net: 0x01020304\n");
+<a id='L242' name='L242'></a> 242   <a href='../S/5831.html#L29' title='Defined at 29 in support/check_netent.c.'>check_netent</a> ("code5.example", <a href='../Y/15530.html' title='Multiple used in 19 places.'>getnetbyname</a> ("code5.example"),
+<a id='L243' name='L243'></a> 243                 "alias: 127.in-addr.arpa\n"
+<a id='L244' name='L244'></a> 244                 "alias: 0.in-addr.arpa\n"
+<a id='L245' name='L245'></a> 245                 "net: 0x0000007f\n");
+<a id='L246' name='L246'></a> 246   <a href='../S/5831.html#L29' title='Defined at 29 in support/check_netent.c.'>check_netent</a> ("code6.example", <a href='../Y/15530.html' title='Multiple used in 19 places.'>getnetbyname</a> ("code6.example"),
+<a id='L247' name='L247'></a> 247                 "alias: 127.in-addr.arpa\n"
+<a id='L248' name='L248'></a> 248                 "alias: 0.in-addr.arpa\n"
+<a id='L249' name='L249'></a> 249                 "net: 0x0000007f\n");
+<a id='L250' name='L250'></a> 250   <a href='../S/5831.html#L29' title='Defined at 29 in support/check_netent.c.'>check_netent</a> ("code7.example", <a href='../Y/15530.html' title='Multiple used in 19 places.'>getnetbyname</a> ("code7.example"),
+<a id='L251' name='L251'></a> 251                 "alias: 4.3.2.1.in-addr.arpa\n"
+<a id='L252' name='L252'></a> 252                 "net: 0x01020304\n");
+<a id='L253' name='L253'></a> 253 
+<a id='L254' name='L254'></a> 254   <em class='comment'>/* Lookup by name, failure cases.  */</em>
+<a id='L255' name='L255'></a> 255   <a href='../S/5831.html#L29' title='Defined at 29 in support/check_netent.c.'>check_netent</a> ("code100.example", <a href='../Y/15530.html' title='Multiple used in 19 places.'>getnetbyname</a> ("code100.example"),
+<a id='L256' name='L256'></a> 256                 "error: NO_ADDRESS\n");
+<a id='L257' name='L257'></a> 257   <a href='../S/5831.html#L29' title='Defined at 29 in support/check_netent.c.'>check_netent</a> ("code101.example", <a href='../Y/15530.html' title='Multiple used in 19 places.'>getnetbyname</a> ("code101.example"),
+<a id='L258' name='L258'></a> 258                 "error: HOST_NOT_FOUND\n");
+<a id='L259' name='L259'></a> 259   <a href='../S/5831.html#L29' title='Defined at 29 in support/check_netent.c.'>check_netent</a> ("code102.example", <a href='../Y/15530.html' title='Multiple used in 19 places.'>getnetbyname</a> ("code102.example"),
+<a id='L260' name='L260'></a> 260                 "error: TRY_AGAIN\n");
+<a id='L261' name='L261'></a> 261   <a href='../S/5831.html#L29' title='Defined at 29 in support/check_netent.c.'>check_netent</a> ("code103.example", <a href='../Y/15530.html' title='Multiple used in 19 places.'>getnetbyname</a> ("code103.example"),
+<a id='L262' name='L262'></a> 262                 "error: NO_RECOVERY\n");
+<a id='L263' name='L263'></a> 263   <em class='comment'>/* Test bug #17630.  */</em>
+<a id='L264' name='L264'></a> 264   <a href='../S/5831.html#L29' title='Defined at 29 in support/check_netent.c.'>check_netent</a> ("code104.example", <a href='../Y/15530.html' title='Multiple used in 19 places.'>getnetbyname</a> ("code104.example"),
+<a id='L265' name='L265'></a> 265                 "error: TRY_AGAIN\n");
+<a id='L266' name='L266'></a> 266 
+<a id='L267' name='L267'></a> 267   <em class='comment'>/* Lookup by address, success cases.  */</em>
+<a id='L268' name='L268'></a> 268   <a href='../S/6367.html#L191' title='Defined at 191 in resolv/tst-resolv-network.c.'>check_reverse</a> (1,
+<a id='L269' name='L269'></a> 269                  "name: 1.in-addr.arpa\n"
+<a id='L270' name='L270'></a> 270                  "net: 0x00000001\n");
+<a id='L271' name='L271'></a> 271   <a href='../S/6367.html#L191' title='Defined at 191 in resolv/tst-resolv-network.c.'>check_reverse</a> (2,
+<a id='L272' name='L272'></a> 272                  "name: 2.1.in-addr.arpa\n"
+<a id='L273' name='L273'></a> 273                  "net: 0x00000002\n");
+<a id='L274' name='L274'></a> 274   <a href='../S/6367.html#L191' title='Defined at 191 in resolv/tst-resolv-network.c.'>check_reverse</a> (3,
+<a id='L275' name='L275'></a> 275                  "name: 3.2.1.in-addr.arpa\n"
+<a id='L276' name='L276'></a> 276                  "net: 0x00000003\n");
+<a id='L277' name='L277'></a> 277   <a href='../S/6367.html#L191' title='Defined at 191 in resolv/tst-resolv-network.c.'>check_reverse</a> (4,
+<a id='L278' name='L278'></a> 278                  "name: 4.3.2.1.in-addr.arpa\n"
+<a id='L279' name='L279'></a> 279                  "net: 0x00000004\n");
+<a id='L280' name='L280'></a> 280   <a href='../S/6367.html#L191' title='Defined at 191 in resolv/tst-resolv-network.c.'>check_reverse</a> (5,
+<a id='L281' name='L281'></a> 281                  "name: 127.in-addr.arpa\n"
+<a id='L282' name='L282'></a> 282                  "alias: 0.in-addr.arpa\n"
+<a id='L283' name='L283'></a> 283                  "net: 0x00000005\n");
+<a id='L284' name='L284'></a> 284   <a href='../S/6367.html#L191' title='Defined at 191 in resolv/tst-resolv-network.c.'>check_reverse</a> (6,
+<a id='L285' name='L285'></a> 285                  "name: 127.in-addr.arpa\n"
+<a id='L286' name='L286'></a> 286                  "alias: 0.in-addr.arpa\n"
+<a id='L287' name='L287'></a> 287                  "net: 0x00000006\n");
+<a id='L288' name='L288'></a> 288   <a href='../S/6367.html#L191' title='Defined at 191 in resolv/tst-resolv-network.c.'>check_reverse</a> (7,
+<a id='L289' name='L289'></a> 289                  "name: 4.3.2.1.in-addr.arpa\n"
+<a id='L290' name='L290'></a> 290                  "net: 0x00000007\n");
+<a id='L291' name='L291'></a> 291 
+<a id='L292' name='L292'></a> 292   <em class='comment'>/* Lookup by address, failure cases.  */</em>
+<a id='L293' name='L293'></a> 293   <a href='../S/6367.html#L191' title='Defined at 191 in resolv/tst-resolv-network.c.'>check_reverse</a> (100,
+<a id='L294' name='L294'></a> 294                  "error: NO_ADDRESS\n");
+<a id='L295' name='L295'></a> 295   <a href='../S/6367.html#L191' title='Defined at 191 in resolv/tst-resolv-network.c.'>check_reverse</a> (101,
+<a id='L296' name='L296'></a> 296                  "error: HOST_NOT_FOUND\n");
+<a id='L297' name='L297'></a> 297   <a href='../S/6367.html#L191' title='Defined at 191 in resolv/tst-resolv-network.c.'>check_reverse</a> (102,
+<a id='L298' name='L298'></a> 298                  "error: TRY_AGAIN\n");
+<a id='L299' name='L299'></a> 299   <a href='../S/6367.html#L191' title='Defined at 191 in resolv/tst-resolv-network.c.'>check_reverse</a> (103,
+<a id='L300' name='L300'></a> 300                  "error: NO_RECOVERY\n");
+<a id='L301' name='L301'></a> 301 
+<a id='L302' name='L302'></a> 302   <a href='../S/6367.html#L200' title='Defined at 200 in resolv/tst-resolv-network.c.'>check_long_name</a> ();
+<a id='L303' name='L303'></a> 303 
+<a id='L304' name='L304'></a> 304   <a href='../S/5945.html#L1229' title='Defined at 1229 in support/resolv_test.c.'>resolv_test_end</a> (<a href='../Y/21448.html' title='Multiple used in 370 places.'>obj</a>);
+<a id='L305' name='L305'></a> 305 
+<a id='L306' name='L306'></a> 306   <strong class='reserved'>return</strong> 0;
+<a id='L307' name='L307'></a> 307 <em class='brace'>}</em>
+<a id='L308' name='L308'></a> 308 
+<a id='L309' name='L309'></a> 309 <em class='sharp'>#include</em> &lt;support/test-driver.c&gt;
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L29'>[^]</a><a href='#L221'>[v]</a><a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

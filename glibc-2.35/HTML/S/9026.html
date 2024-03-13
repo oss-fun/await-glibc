@@ -1,0 +1,216 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>sysdeps/ieee754/dbl-64/e_exp_data.c</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18977.html'>sysdeps</a>/<a href='../files/19058.html'>ieee754</a>/<a href='../files/19059.html'>dbl-64</a>/e_exp_data.c</h2>
+<em class='comment'>/* [&lt;][&gt;][^][v][top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* Shared data between exp, exp2 and pow.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   Copyright (C) 2018-2022 Free Software Foundation, Inc.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'></em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'></em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'></em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   License along with the GNU C Library; if not, see</em>
+<a id='L17' name='L17'></a>  17 <em class='comment'>   &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L18' name='L18'></a>  18 
+<a id='L19' name='L19'></a>  19 <em class='sharp'>#include</em> "<a href='../I/7787.html'>math_config.h</a>"
+<a id='L20' name='L20'></a>  20 
+<a id='L21' name='L21'></a>  21 <em class='sharp'>#define</em> <a href='../R/5184.html' title='Multiple referred from 526 places.'>N</a> (1 &lt;&lt; <a href='../S/9017.html#L131' title='Defined at 131 in sysdeps/ieee754/dbl-64/math_config.h.'>EXP_TABLE_BITS</a>)
+<a id='L22' name='L22'></a>  22 
+<a id='L23' name='L23'></a>  23 <strong class='reserved'>const</strong> <strong class='reserved'>struct</strong> <a href='../S/9017.html#L134' title='Defined at 134 in sysdeps/ieee754/dbl-64/math_config.h.'>exp_data</a> <a href='../Y/4379.html' title='Multiple used in 28 places.'>__exp_data</a> = <em class='brace'>{</em>
+<a id='L24' name='L24'></a>  24 <em class='comment'>// N/ln2</em>
+<a id='L25' name='L25'></a>  25 .<a href='../Y/17045.html' title='Multiple used in 4 places.'>invln2N</a> = 0x1.71547652b82fep0 * <a href='../D/8607.html' title='Multiple defined in 98 places.'>N</a>,
+<a id='L26' name='L26'></a>  26 <em class='comment'>// -ln2/N</em>
+<a id='L27' name='L27'></a>  27 <em class='sharp'>#if</em> <a href='../D/8607.html' title='Multiple defined in 98 places.'>N</a> == 128
+<a id='L28' name='L28'></a>  28 .<a href='../Y/20384.html' title='Multiple used in 4 places.'>negln2hiN</a> = -0x1.62e42fefa0000p-8,
+<a id='L29' name='L29'></a>  29 .<a href='../Y/20385.html' title='Multiple used in 4 places.'>negln2loN</a> = -0x1.cf79abc9e3b3ap-47,
+<a id='L30' name='L30'></a>  30 <em class='sharp'>#endif</em>
+<a id='L31' name='L31'></a>  31 <em class='comment'>// Used for rounding when !TOINT_INTRINSICS</em>
+<a id='L32' name='L32'></a>  32 .<a href='../D/36653.html' title='Multiple defined in 8 places.'>shift</a> = 0x1.8p52,
+<a id='L33' name='L33'></a>  33 <em class='comment'>// exp polynomial coefficients.</em>
+<a id='L34' name='L34'></a>  34 .<a href='../Y/22524.html' title='Multiple used in 39 places.'>poly</a> = <em class='brace'>{</em>
+<a id='L35' name='L35'></a>  35 <em class='sharp'>#if</em> <a href='../D/8607.html' title='Multiple defined in 98 places.'>N</a> == 128 &amp;&amp; <a href='../S/9017.html#L132' title='Defined at 132 in sysdeps/ieee754/dbl-64/math_config.h.'>EXP_POLY_ORDER</a> == 5
+<a id='L36' name='L36'></a>  36 <em class='comment'>// abs error: 1.555*2^-66</em>
+<a id='L37' name='L37'></a>  37 <em class='comment'>// ulp error: 0.509 (0.511 without fma)</em>
+<a id='L38' name='L38'></a>  38 <em class='comment'>// if |x| &lt; ln2/256+eps</em>
+<a id='L39' name='L39'></a>  39 <em class='comment'>// abs error if |x| &lt; ln2/128: 1.7145*2^-56</em>
+<a id='L40' name='L40'></a>  40 0x1.ffffffffffdbdp-2,
+<a id='L41' name='L41'></a>  41 0x1.555555555543cp-3,
+<a id='L42' name='L42'></a>  42 0x1.55555cf172b91p-5,
+<a id='L43' name='L43'></a>  43 0x1.1111167a4d017p-7,
+<a id='L44' name='L44'></a>  44 <em class='sharp'>#endif</em>
+<a id='L45' name='L45'></a>  45 <em class='brace'>}</em>,
+<a id='L46' name='L46'></a>  46 .<a href='../Y/14093.html' title='Multiple used in 3 places.'>exp2_shift</a> = 0x1.8p52 / <a href='../D/8607.html' title='Multiple defined in 98 places.'>N</a>,
+<a id='L47' name='L47'></a>  47 <em class='comment'>// exp2 polynomial coefficients.</em>
+<a id='L48' name='L48'></a>  48 .<a href='../Y/14092.html' title='Multiple used in 7 places.'>exp2_poly</a> = <em class='brace'>{</em>
+<a id='L49' name='L49'></a>  49 <em class='sharp'>#if</em> <a href='../D/8607.html' title='Multiple defined in 98 places.'>N</a> == 128 &amp;&amp; <a href='../S/9017.html#L133' title='Defined at 133 in sysdeps/ieee754/dbl-64/math_config.h.'>EXP2_POLY_ORDER</a> == 5
+<a id='L50' name='L50'></a>  50 <em class='comment'>// abs error: 1.2195*2^-65</em>
+<a id='L51' name='L51'></a>  51 <em class='comment'>// ulp error: 0.507 (0.511 without fma)</em>
+<a id='L52' name='L52'></a>  52 <em class='comment'>// if |x| &lt; 1/256</em>
+<a id='L53' name='L53'></a>  53 <em class='comment'>// abs error if |x| &lt; 1/128: 1.9941*2^-56</em>
+<a id='L54' name='L54'></a>  54 0x1.62e42fefa39efp-1,
+<a id='L55' name='L55'></a>  55 0x1.ebfbdff82c424p-3,
+<a id='L56' name='L56'></a>  56 0x1.c6b08d70cf4b5p-5,
+<a id='L57' name='L57'></a>  57 0x1.3b2abd24650ccp-7,
+<a id='L58' name='L58'></a>  58 0x1.5d7e09b4e3a84p-10,
+<a id='L59' name='L59'></a>  59 <em class='sharp'>#endif</em>
+<a id='L60' name='L60'></a>  60 <em class='brace'>}</em>,
+<a id='L61' name='L61'></a>  61 <em class='comment'>// 2^(k/N) ~= H[k]*(1 + T[k]) for int k in [0,N)</em>
+<a id='L62' name='L62'></a>  62 <em class='comment'>// tab[2*k] = asuint64(T[k])</em>
+<a id='L63' name='L63'></a>  63 <em class='comment'>// tab[2*k+1] = asuint64(H[k]) - (k &lt;&lt; 52)/N</em>
+<a id='L64' name='L64'></a>  64 .<a href='../Y/26759.html' title='Multiple used in 52 places.'>tab</a> = <em class='brace'>{</em>
+<a id='L65' name='L65'></a>  65 <em class='sharp'>#if</em> <a href='../D/8607.html' title='Multiple defined in 98 places.'>N</a> == 128
+<a id='L66' name='L66'></a>  66 0x0, 0x3ff0000000000000,
+<a id='L67' name='L67'></a>  67 0x3c9b3b4f1a88bf6e, 0x3feff63da9fb3335,
+<a id='L68' name='L68'></a>  68 0xbc7160139cd8dc5d, 0x3fefec9a3e778061,
+<a id='L69' name='L69'></a>  69 0xbc905e7a108766d1, 0x3fefe315e86e7f85,
+<a id='L70' name='L70'></a>  70 0x3c8cd2523567f613, 0x3fefd9b0d3158574,
+<a id='L71' name='L71'></a>  71 0xbc8bce8023f98efa, 0x3fefd06b29ddf6de,
+<a id='L72' name='L72'></a>  72 0x3c60f74e61e6c861, 0x3fefc74518759bc8,
+<a id='L73' name='L73'></a>  73 0x3c90a3e45b33d399, 0x3fefbe3ecac6f383,
+<a id='L74' name='L74'></a>  74 0x3c979aa65d837b6d, 0x3fefb5586cf9890f,
+<a id='L75' name='L75'></a>  75 0x3c8eb51a92fdeffc, 0x3fefac922b7247f7,
+<a id='L76' name='L76'></a>  76 0x3c3ebe3d702f9cd1, 0x3fefa3ec32d3d1a2,
+<a id='L77' name='L77'></a>  77 0xbc6a033489906e0b, 0x3fef9b66affed31b,
+<a id='L78' name='L78'></a>  78 0xbc9556522a2fbd0e, 0x3fef9301d0125b51,
+<a id='L79' name='L79'></a>  79 0xbc5080ef8c4eea55, 0x3fef8abdc06c31cc,
+<a id='L80' name='L80'></a>  80 0xbc91c923b9d5f416, 0x3fef829aaea92de0,
+<a id='L81' name='L81'></a>  81 0x3c80d3e3e95c55af, 0x3fef7a98c8a58e51,
+<a id='L82' name='L82'></a>  82 0xbc801b15eaa59348, 0x3fef72b83c7d517b,
+<a id='L83' name='L83'></a>  83 0xbc8f1ff055de323d, 0x3fef6af9388c8dea,
+<a id='L84' name='L84'></a>  84 0x3c8b898c3f1353bf, 0x3fef635beb6fcb75,
+<a id='L85' name='L85'></a>  85 0xbc96d99c7611eb26, 0x3fef5be084045cd4,
+<a id='L86' name='L86'></a>  86 0x3c9aecf73e3a2f60, 0x3fef54873168b9aa,
+<a id='L87' name='L87'></a>  87 0xbc8fe782cb86389d, 0x3fef4d5022fcd91d,
+<a id='L88' name='L88'></a>  88 0x3c8a6f4144a6c38d, 0x3fef463b88628cd6,
+<a id='L89' name='L89'></a>  89 0x3c807a05b0e4047d, 0x3fef3f49917ddc96,
+<a id='L90' name='L90'></a>  90 0x3c968efde3a8a894, 0x3fef387a6e756238,
+<a id='L91' name='L91'></a>  91 0x3c875e18f274487d, 0x3fef31ce4fb2a63f,
+<a id='L92' name='L92'></a>  92 0x3c80472b981fe7f2, 0x3fef2b4565e27cdd,
+<a id='L93' name='L93'></a>  93 0xbc96b87b3f71085e, 0x3fef24dfe1f56381,
+<a id='L94' name='L94'></a>  94 0x3c82f7e16d09ab31, 0x3fef1e9df51fdee1,
+<a id='L95' name='L95'></a>  95 0xbc3d219b1a6fbffa, 0x3fef187fd0dad990,
+<a id='L96' name='L96'></a>  96 0x3c8b3782720c0ab4, 0x3fef1285a6e4030b,
+<a id='L97' name='L97'></a>  97 0x3c6e149289cecb8f, 0x3fef0cafa93e2f56,
+<a id='L98' name='L98'></a>  98 0x3c834d754db0abb6, 0x3fef06fe0a31b715,
+<a id='L99' name='L99'></a>  99 0x3c864201e2ac744c, 0x3fef0170fc4cd831,
+<a id='L100' name='L100'></a> 100 0x3c8fdd395dd3f84a, 0x3feefc08b26416ff,
+<a id='L101' name='L101'></a> 101 0xbc86a3803b8e5b04, 0x3feef6c55f929ff1,
+<a id='L102' name='L102'></a> 102 0xbc924aedcc4b5068, 0x3feef1a7373aa9cb,
+<a id='L103' name='L103'></a> 103 0xbc9907f81b512d8e, 0x3feeecae6d05d866,
+<a id='L104' name='L104'></a> 104 0xbc71d1e83e9436d2, 0x3feee7db34e59ff7,
+<a id='L105' name='L105'></a> 105 0xbc991919b3ce1b15, 0x3feee32dc313a8e5,
+<a id='L106' name='L106'></a> 106 0x3c859f48a72a4c6d, 0x3feedea64c123422,
+<a id='L107' name='L107'></a> 107 0xbc9312607a28698a, 0x3feeda4504ac801c,
+<a id='L108' name='L108'></a> 108 0xbc58a78f4817895b, 0x3feed60a21f72e2a,
+<a id='L109' name='L109'></a> 109 0xbc7c2c9b67499a1b, 0x3feed1f5d950a897,
+<a id='L110' name='L110'></a> 110 0x3c4363ed60c2ac11, 0x3feece086061892d,
+<a id='L111' name='L111'></a> 111 0x3c9666093b0664ef, 0x3feeca41ed1d0057,
+<a id='L112' name='L112'></a> 112 0x3c6ecce1daa10379, 0x3feec6a2b5c13cd0,
+<a id='L113' name='L113'></a> 113 0x3c93ff8e3f0f1230, 0x3feec32af0d7d3de,
+<a id='L114' name='L114'></a> 114 0x3c7690cebb7aafb0, 0x3feebfdad5362a27,
+<a id='L115' name='L115'></a> 115 0x3c931dbdeb54e077, 0x3feebcb299fddd0d,
+<a id='L116' name='L116'></a> 116 0xbc8f94340071a38e, 0x3feeb9b2769d2ca7,
+<a id='L117' name='L117'></a> 117 0xbc87deccdc93a349, 0x3feeb6daa2cf6642,
+<a id='L118' name='L118'></a> 118 0xbc78dec6bd0f385f, 0x3feeb42b569d4f82,
+<a id='L119' name='L119'></a> 119 0xbc861246ec7b5cf6, 0x3feeb1a4ca5d920f,
+<a id='L120' name='L120'></a> 120 0x3c93350518fdd78e, 0x3feeaf4736b527da,
+<a id='L121' name='L121'></a> 121 0x3c7b98b72f8a9b05, 0x3feead12d497c7fd,
+<a id='L122' name='L122'></a> 122 0x3c9063e1e21c5409, 0x3feeab07dd485429,
+<a id='L123' name='L123'></a> 123 0x3c34c7855019c6ea, 0x3feea9268a5946b7,
+<a id='L124' name='L124'></a> 124 0x3c9432e62b64c035, 0x3feea76f15ad2148,
+<a id='L125' name='L125'></a> 125 0xbc8ce44a6199769f, 0x3feea5e1b976dc09,
+<a id='L126' name='L126'></a> 126 0xbc8c33c53bef4da8, 0x3feea47eb03a5585,
+<a id='L127' name='L127'></a> 127 0xbc845378892be9ae, 0x3feea34634ccc320,
+<a id='L128' name='L128'></a> 128 0xbc93cedd78565858, 0x3feea23882552225,
+<a id='L129' name='L129'></a> 129 0x3c5710aa807e1964, 0x3feea155d44ca973,
+<a id='L130' name='L130'></a> 130 0xbc93b3efbf5e2228, 0x3feea09e667f3bcd,
+<a id='L131' name='L131'></a> 131 0xbc6a12ad8734b982, 0x3feea012750bdabf,
+<a id='L132' name='L132'></a> 132 0xbc6367efb86da9ee, 0x3fee9fb23c651a2f,
+<a id='L133' name='L133'></a> 133 0xbc80dc3d54e08851, 0x3fee9f7df9519484,
+<a id='L134' name='L134'></a> 134 0xbc781f647e5a3ecf, 0x3fee9f75e8ec5f74,
+<a id='L135' name='L135'></a> 135 0xbc86ee4ac08b7db0, 0x3fee9f9a48a58174,
+<a id='L136' name='L136'></a> 136 0xbc8619321e55e68a, 0x3fee9feb564267c9,
+<a id='L137' name='L137'></a> 137 0x3c909ccb5e09d4d3, 0x3feea0694fde5d3f,
+<a id='L138' name='L138'></a> 138 0xbc7b32dcb94da51d, 0x3feea11473eb0187,
+<a id='L139' name='L139'></a> 139 0x3c94ecfd5467c06b, 0x3feea1ed0130c132,
+<a id='L140' name='L140'></a> 140 0x3c65ebe1abd66c55, 0x3feea2f336cf4e62,
+<a id='L141' name='L141'></a> 141 0xbc88a1c52fb3cf42, 0x3feea427543e1a12,
+<a id='L142' name='L142'></a> 142 0xbc9369b6f13b3734, 0x3feea589994cce13,
+<a id='L143' name='L143'></a> 143 0xbc805e843a19ff1e, 0x3feea71a4623c7ad,
+<a id='L144' name='L144'></a> 144 0xbc94d450d872576e, 0x3feea8d99b4492ed,
+<a id='L145' name='L145'></a> 145 0x3c90ad675b0e8a00, 0x3feeaac7d98a6699,
+<a id='L146' name='L146'></a> 146 0x3c8db72fc1f0eab4, 0x3feeace5422aa0db,
+<a id='L147' name='L147'></a> 147 0xbc65b6609cc5e7ff, 0x3feeaf3216b5448c,
+<a id='L148' name='L148'></a> 148 0x3c7bf68359f35f44, 0x3feeb1ae99157736,
+<a id='L149' name='L149'></a> 149 0xbc93091fa71e3d83, 0x3feeb45b0b91ffc6,
+<a id='L150' name='L150'></a> 150 0xbc5da9b88b6c1e29, 0x3feeb737b0cdc5e5,
+<a id='L151' name='L151'></a> 151 0xbc6c23f97c90b959, 0x3feeba44cbc8520f,
+<a id='L152' name='L152'></a> 152 0xbc92434322f4f9aa, 0x3feebd829fde4e50,
+<a id='L153' name='L153'></a> 153 0xbc85ca6cd7668e4b, 0x3feec0f170ca07ba,
+<a id='L154' name='L154'></a> 154 0x3c71affc2b91ce27, 0x3feec49182a3f090,
+<a id='L155' name='L155'></a> 155 0x3c6dd235e10a73bb, 0x3feec86319e32323,
+<a id='L156' name='L156'></a> 156 0xbc87c50422622263, 0x3feecc667b5de565,
+<a id='L157' name='L157'></a> 157 0x3c8b1c86e3e231d5, 0x3feed09bec4a2d33,
+<a id='L158' name='L158'></a> 158 0xbc91bbd1d3bcbb15, 0x3feed503b23e255d,
+<a id='L159' name='L159'></a> 159 0x3c90cc319cee31d2, 0x3feed99e1330b358,
+<a id='L160' name='L160'></a> 160 0x3c8469846e735ab3, 0x3feede6b5579fdbf,
+<a id='L161' name='L161'></a> 161 0xbc82dfcd978e9db4, 0x3feee36bbfd3f37a,
+<a id='L162' name='L162'></a> 162 0x3c8c1a7792cb3387, 0x3feee89f995ad3ad,
+<a id='L163' name='L163'></a> 163 0xbc907b8f4ad1d9fa, 0x3feeee07298db666,
+<a id='L164' name='L164'></a> 164 0xbc55c3d956dcaeba, 0x3feef3a2b84f15fb,
+<a id='L165' name='L165'></a> 165 0xbc90a40e3da6f640, 0x3feef9728de5593a,
+<a id='L166' name='L166'></a> 166 0xbc68d6f438ad9334, 0x3feeff76f2fb5e47,
+<a id='L167' name='L167'></a> 167 0xbc91eee26b588a35, 0x3fef05b030a1064a,
+<a id='L168' name='L168'></a> 168 0x3c74ffd70a5fddcd, 0x3fef0c1e904bc1d2,
+<a id='L169' name='L169'></a> 169 0xbc91bdfbfa9298ac, 0x3fef12c25bd71e09,
+<a id='L170' name='L170'></a> 170 0x3c736eae30af0cb3, 0x3fef199bdd85529c,
+<a id='L171' name='L171'></a> 171 0x3c8ee3325c9ffd94, 0x3fef20ab5fffd07a,
+<a id='L172' name='L172'></a> 172 0x3c84e08fd10959ac, 0x3fef27f12e57d14b,
+<a id='L173' name='L173'></a> 173 0x3c63cdaf384e1a67, 0x3fef2f6d9406e7b5,
+<a id='L174' name='L174'></a> 174 0x3c676b2c6c921968, 0x3fef3720dcef9069,
+<a id='L175' name='L175'></a> 175 0xbc808a1883ccb5d2, 0x3fef3f0b555dc3fa,
+<a id='L176' name='L176'></a> 176 0xbc8fad5d3ffffa6f, 0x3fef472d4a07897c,
+<a id='L177' name='L177'></a> 177 0xbc900dae3875a949, 0x3fef4f87080d89f2,
+<a id='L178' name='L178'></a> 178 0x3c74a385a63d07a7, 0x3fef5818dcfba487,
+<a id='L179' name='L179'></a> 179 0xbc82919e2040220f, 0x3fef60e316c98398,
+<a id='L180' name='L180'></a> 180 0x3c8e5a50d5c192ac, 0x3fef69e603db3285,
+<a id='L181' name='L181'></a> 181 0x3c843a59ac016b4b, 0x3fef7321f301b460,
+<a id='L182' name='L182'></a> 182 0xbc82d52107b43e1f, 0x3fef7c97337b9b5f,
+<a id='L183' name='L183'></a> 183 0xbc892ab93b470dc9, 0x3fef864614f5a129,
+<a id='L184' name='L184'></a> 184 0x3c74b604603a88d3, 0x3fef902ee78b3ff6,
+<a id='L185' name='L185'></a> 185 0x3c83c5ec519d7271, 0x3fef9a51fbc74c83,
+<a id='L186' name='L186'></a> 186 0xbc8ff7128fd391f0, 0x3fefa4afa2a490da,
+<a id='L187' name='L187'></a> 187 0xbc8dae98e223747d, 0x3fefaf482d8e67f1,
+<a id='L188' name='L188'></a> 188 0x3c8ec3bc41aa2008, 0x3fefba1bee615a27,
+<a id='L189' name='L189'></a> 189 0x3c842b94c3a9eb32, 0x3fefc52b376bba97,
+<a id='L190' name='L190'></a> 190 0x3c8a64a931d185ee, 0x3fefd0765b6e4540,
+<a id='L191' name='L191'></a> 191 0xbc8e37bae43be3ed, 0x3fefdbfdad9cbe14,
+<a id='L192' name='L192'></a> 192 0x3c77893b4d91cd9d, 0x3fefe7c1819e90d8,
+<a id='L193' name='L193'></a> 193 0x3c5305c14160cc89, 0x3feff3c22b8f71f1,
+<a id='L194' name='L194'></a> 194 <em class='sharp'>#endif</em>
+<a id='L195' name='L195'></a> 195 <em class='brace'>}</em>,
+<a id='L196' name='L196'></a> 196 <em class='brace'>}</em>;
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;][^][v]<a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

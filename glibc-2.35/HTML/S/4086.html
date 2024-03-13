@@ -1,0 +1,173 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>wcsmbs/wcsnrtombs.c</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/19407.html'>wcsmbs</a>/wcsnrtombs.c</h2>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L39'>[^]</a>[v][top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<h2 class='header'>DEFINITIONS</h2>
+This source file includes following definitions.
+<ol>
+<li><a href='#L39' title='Defined at 39.'>__wcsnrtombs</a></li>
+</ol>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* Copyright (C) 1996-2022 Free Software Foundation, Inc.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'></em>
+<a id='L4' name='L4'></a>   4 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'></em>
+<a id='L9' name='L9'></a>   9 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'></em>
+<a id='L14' name='L14'></a>  14 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   License along with the GNU C Library; if not, see</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L17' name='L17'></a>  17 
+<a id='L18' name='L18'></a>  18 <em class='sharp'>#include</em> &lt;<a href='../I/23.html'>assert.h</a>&gt;
+<a id='L19' name='L19'></a>  19 <em class='sharp'>#include</em> &lt;<a href='../I/112.html'>dlfcn.h</a>&gt;
+<a id='L20' name='L20'></a>  20 <em class='sharp'>#include</em> &lt;<a href='../I/116.html'>errno.h</a>&gt;
+<a id='L21' name='L21'></a>  21 <em class='sharp'>#include</em> &lt;<a href='../I/1328.html'>gconv.h</a>&gt;
+<a id='L22' name='L22'></a>  22 <em class='sharp'>#include</em> &lt;<a href='../I/194.html'>wchar.h</a>&gt;
+<a id='L23' name='L23'></a>  23 <em class='sharp'>#include</em> &lt;<a href='4089.html'>wcsmbsload.h</a>&gt;
+<a id='L24' name='L24'></a>  24 
+<a id='L25' name='L25'></a>  25 <em class='sharp'>#include</em> &lt;<a href='../I/5967.html'>sysdep.h</a>&gt;
+<a id='L26' name='L26'></a>  26 
+<a id='L27' name='L27'></a>  27 <em class='sharp'>#ifndef</em> <a href='../D/3153.html' title='Multiple defined in 10 places.'>EILSEQ</a>
+<a id='L28' name='L28'></a>  28 <em class='sharp'># define</em> <a href='../R/1927.html' title='Multiple referred from 124 places.'>EILSEQ</a> <a href='../D/3156.html' title='Multiple defined in 3 places.'>EINVAL</a>
+<a id='L29' name='L29'></a>  29 <em class='sharp'>#endif</em>
+<a id='L30' name='L30'></a>  30 
+<a id='L31' name='L31'></a>  31 
+<a id='L32' name='L32'></a>  32 <em class='comment'>/* This is the private state used if PS is NULL.  */</em>
+<a id='L33' name='L33'></a>  33 <strong class='reserved'>static</strong> <a href='../D/33400.html' title='Multiple defined in 2 places.'>mbstate_t</a> <a href='../S/735.html#L29' title='Defined at 29 in iconvdata/tst-loading.c.'>state</a>;
+<a id='L34' name='L34'></a>  34 
+<a id='L35' name='L35'></a>  35 <em class='comment'>/* This is a non-standard function but it is very useful in the</em>
+<a id='L36' name='L36'></a>  36 <em class='comment'>   implementation of stdio because we have to deal with unterminated</em>
+<a id='L37' name='L37'></a>  37 <em class='comment'>   buffers.  At most NWC wide character will be converted.  */</em>
+<a id='L38' name='L38'></a>  38 <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a>
+<a id='L39' name='L39'></a>  39 <a href='../R/16400.html' title='Multiple referred from 3 places.'>__wcsnrtombs</a> (<strong class='reserved'>char</strong> *<a href='../D/29810.html' title='Multiple defined in 12 places.'>dst</a>, <strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> **<a href='../D/36956.html' title='Multiple defined in 26 places.'>src</a>, <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/21393.html' title='Multiple used in 5 places.'>nwc</a>, <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../D/32598.html' title='Multiple defined in 10 places.'>len</a>,
+<a id='L40' name='L40'></a>  40           <a href='../D/33400.html' title='Multiple defined in 2 places.'>mbstate_t</a> *<a href='../Y/22900.html' title='Multiple used in 200 places.'>ps</a>)
+<a id='L41' name='L41'></a>  41 <em class='brace'>{</em>
+<a id='L42' name='L42'></a>  42   <strong class='reserved'>struct</strong> <a href='../S/7047.html#L116' title='Defined at 116 in iconv/gconv.h.'>__gconv_step_data</a> <a href='../D/29309.html' title='Multiple defined in 3 places.'>data</a>;
+<a id='L43' name='L43'></a>  43   <strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<a href='../D/36962.html' title='Multiple defined in 7 places.'>srcend</a>;
+<a id='L44' name='L44'></a>  44   <strong class='reserved'>int</strong> <a href='../D/37029.html' title='Multiple defined in 7 places.'>status</a>;
+<a id='L45' name='L45'></a>  45   <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a>;
+<a id='L46' name='L46'></a>  46   <strong class='reserved'>struct</strong> <a href='../S/7047.html#L84' title='Defined at 84 in iconv/gconv.h.'>__gconv_step</a> *<a href='../Y/27626.html' title='Multiple used in 32 places.'>tomb</a>;
+<a id='L47' name='L47'></a>  47   <strong class='reserved'>const</strong> <strong class='reserved'>struct</strong> <a href='../S/4089.html#L27' title='Defined at 27 in wcsmbs/wcsmbsload.h.'>gconv_fcts</a> *<a href='../Y/14412.html' title='Multiple used in 80 places.'>fcts</a>;
+<a id='L48' name='L48'></a>  48 
+<a id='L49' name='L49'></a>  49   <em class='comment'>/* Tell where we want the result.  */</em>
+<a id='L50' name='L50'></a>  50   <a href='../D/29309.html' title='Multiple defined in 3 places.'>data</a>.<a href='../Y/5182.html' title='Multiple used in 28 places.'>__invocation_counter</a> = 0;
+<a id='L51' name='L51'></a>  51   <a href='../D/29309.html' title='Multiple defined in 3 places.'>data</a>.<a href='../Y/5176.html' title='Multiple used in 22 places.'>__internal_use</a> = 1;
+<a id='L52' name='L52'></a>  52   <a href='../D/29309.html' title='Multiple defined in 3 places.'>data</a>.<a href='../Y/4502.html' title='Multiple used in 335 places.'>__flags</a> = <a href='../S/7047.html#L57' title='Defined at 57 in iconv/gconv.h.'>__GCONV_IS_LAST</a>;
+<a id='L53' name='L53'></a>  53   <a href='../D/29309.html' title='Multiple defined in 3 places.'>data</a>.<a href='../Y/7591.html' title='Multiple used in 152 places.'>__statep</a> = <a href='../Y/22900.html' title='Multiple used in 200 places.'>ps</a> ?: &amp;<a href='../S/735.html#L29' title='Defined at 29 in iconvdata/tst-loading.c.'>state</a>;
+<a id='L54' name='L54'></a>  54 
+<a id='L55' name='L55'></a>  55   <strong class='reserved'>if</strong> (<a href='../Y/21393.html' title='Multiple used in 5 places.'>nwc</a> == 0)
+<a id='L56' name='L56'></a>  56     <strong class='reserved'>return</strong> 0;
+<a id='L57' name='L57'></a>  57   <a href='../D/36962.html' title='Multiple defined in 7 places.'>srcend</a> = *<a href='../D/36956.html' title='Multiple defined in 26 places.'>src</a> + <a href='../D/26498.html' title='Multiple defined in 4 places.'>__wcsnlen</a> (*<a href='../D/36956.html' title='Multiple defined in 26 places.'>src</a>, <a href='../Y/21393.html' title='Multiple used in 5 places.'>nwc</a> - 1) + 1;
+<a id='L58' name='L58'></a>  58 
+<a id='L59' name='L59'></a>  59   <em class='comment'>/* Get the conversion functions.  */</em>
+<a id='L60' name='L60'></a>  60   <a href='../Y/14412.html' title='Multiple used in 80 places.'>fcts</a> = <a href='../Y/15444.html' title='Multiple used in 14 places.'>get_gconv_fcts</a> (<a href='../D/19512.html' title='Multiple defined in 2 places.'>_NL_CURRENT_DATA</a> (<a href='../S/2285.html#L35' title='Defined at 35 in locale/locale.h.'>LC_CTYPE</a>));
+<a id='L61' name='L61'></a>  61 
+<a id='L62' name='L62'></a>  62   <em class='comment'>/* Get the structure with the function pointers.  */</em>
+<a id='L63' name='L63'></a>  63   <a href='../Y/27626.html' title='Multiple used in 32 places.'>tomb</a> = <a href='../Y/14412.html' title='Multiple used in 80 places.'>fcts</a>-&gt;<a href='../Y/27626.html' title='Multiple used in 32 places.'>tomb</a>;
+<a id='L64' name='L64'></a>  64   <a href='../Y/4695.html' title='Multiple used in 19 places.'>__gconv_fct</a> <a href='../D/30376.html' title='Multiple defined in 7 places.'>fct</a> = <a href='../Y/27626.html' title='Multiple used in 32 places.'>tomb</a>-&gt;<a href='../Y/4425.html' title='Multiple used in 28 places.'>__fct</a>;
+<a id='L65' name='L65'></a>  65 <em class='sharp'>#ifdef</em> <a href='../D/10558.html' title='Multiple defined in 44 places.'>PTR_DEMANGLE</a>
+<a id='L66' name='L66'></a>  66   <strong class='reserved'>if</strong> (<a href='../Y/27626.html' title='Multiple used in 32 places.'>tomb</a>-&gt;<a href='../Y/7425.html' title='Multiple used in 38 places.'>__shlib_handle</a> != <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>)
+<a id='L67' name='L67'></a>  67     <a href='../D/10558.html' title='Multiple defined in 44 places.'>PTR_DEMANGLE</a> (<a href='../D/30376.html' title='Multiple defined in 7 places.'>fct</a>);
+<a id='L68' name='L68'></a>  68 <em class='sharp'>#endif</em>
+<a id='L69' name='L69'></a>  69 
+<a id='L70' name='L70'></a>  70   <em class='comment'>/* We have to handle DST == NULL special.  */</em>
+<a id='L71' name='L71'></a>  71   <strong class='reserved'>if</strong> (<a href='../D/29810.html' title='Multiple defined in 12 places.'>dst</a> == <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>)
+<a id='L72' name='L72'></a>  72     <em class='brace'>{</em>
+<a id='L73' name='L73'></a>  73       <a href='../D/33400.html' title='Multiple defined in 2 places.'>mbstate_t</a> <a href='../Y/26968.html' title='Multiple used in 12 places.'>temp_state</a>;
+<a id='L74' name='L74'></a>  74       <strong class='reserved'>unsigned</strong> <strong class='reserved'>char</strong> <a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>[256];       <em class='comment'>/* Just an arbitrary value.  */</em>
+<a id='L75' name='L75'></a>  75       <strong class='reserved'>const</strong> <strong class='reserved'>unsigned</strong> <strong class='reserved'>char</strong> *<a href='../Y/16711.html' title='Multiple used in 150 places.'>inbuf</a> = (<strong class='reserved'>const</strong> <strong class='reserved'>unsigned</strong> <strong class='reserved'>char</strong> *) *<a href='../D/36956.html' title='Multiple defined in 26 places.'>src</a>;
+<a id='L76' name='L76'></a>  76       <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../D/29823.html' title='Multiple defined in 3 places.'>dummy</a>;
+<a id='L77' name='L77'></a>  77 
+<a id='L78' name='L78'></a>  78       <a href='../Y/26968.html' title='Multiple used in 12 places.'>temp_state</a> = *<a href='../D/29309.html' title='Multiple defined in 3 places.'>data</a>.<a href='../Y/7591.html' title='Multiple used in 152 places.'>__statep</a>;
+<a id='L79' name='L79'></a>  79       <a href='../D/29309.html' title='Multiple defined in 3 places.'>data</a>.<a href='../Y/7591.html' title='Multiple used in 152 places.'>__statep</a> = &amp;<a href='../Y/26968.html' title='Multiple used in 12 places.'>temp_state</a>;
+<a id='L80' name='L80'></a>  80 
+<a id='L81' name='L81'></a>  81       <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a> = 0;
+<a id='L82' name='L82'></a>  82       <a href='../D/29309.html' title='Multiple defined in 3 places.'>data</a>.<a href='../Y/6435.html' title='Multiple used in 22 places.'>__outbufend</a> = <a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a> + <strong class='reserved'>sizeof</strong> (<a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>);
+<a id='L83' name='L83'></a>  83 
+<a id='L84' name='L84'></a>  84       <strong class='reserved'>do</strong>
+<a id='L85' name='L85'></a>  85     <em class='brace'>{</em>
+<a id='L86' name='L86'></a>  86       <a href='../D/29309.html' title='Multiple defined in 3 places.'>data</a>.<a href='../Y/6434.html' title='Multiple used in 61 places.'>__outbuf</a> = <a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>;
+<a id='L87' name='L87'></a>  87 
+<a id='L88' name='L88'></a>  88       <a href='../D/37029.html' title='Multiple defined in 7 places.'>status</a> = <a href='../D/2102.html' title='Multiple defined in 3 places.'>DL_CALL_FCT</a> (<a href='../D/30376.html' title='Multiple defined in 7 places.'>fct</a>, (<a href='../Y/27626.html' title='Multiple used in 32 places.'>tomb</a>, &amp;<a href='../D/29309.html' title='Multiple defined in 3 places.'>data</a>, &amp;<a href='../Y/16711.html' title='Multiple used in 150 places.'>inbuf</a>,
+<a id='L89' name='L89'></a>  89                       (<strong class='reserved'>const</strong> <strong class='reserved'>unsigned</strong> <strong class='reserved'>char</strong> *) <a href='../D/36962.html' title='Multiple defined in 7 places.'>srcend</a>, <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>,
+<a id='L90' name='L90'></a>  90                       &amp;<a href='../D/29823.html' title='Multiple defined in 3 places.'>dummy</a>, 0, 1));
+<a id='L91' name='L91'></a>  91 
+<a id='L92' name='L92'></a>  92       <em class='comment'>/* Count the number of bytes.  */</em>
+<a id='L93' name='L93'></a>  93       <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a> += <a href='../D/29309.html' title='Multiple defined in 3 places.'>data</a>.<a href='../Y/6434.html' title='Multiple used in 61 places.'>__outbuf</a> - <a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>;
+<a id='L94' name='L94'></a>  94     <em class='brace'>}</em>
+<a id='L95' name='L95'></a>  95       <strong class='reserved'>while</strong> (<a href='../D/37029.html' title='Multiple defined in 7 places.'>status</a> == <a href='../S/7047.html#L45' title='Defined at 45 in iconv/gconv.h.'>__GCONV_FULL_OUTPUT</a>);
+<a id='L96' name='L96'></a>  96 
+<a id='L97' name='L97'></a>  97       <strong class='reserved'>if</strong> ((<a href='../D/37029.html' title='Multiple defined in 7 places.'>status</a> == <a href='../S/7047.html#L39' title='Defined at 39 in iconv/gconv.h.'>__GCONV_OK</a> || <a href='../D/37029.html' title='Multiple defined in 7 places.'>status</a> == <a href='../S/7047.html#L44' title='Defined at 44 in iconv/gconv.h.'>__GCONV_EMPTY_INPUT</a>)
+<a id='L98' name='L98'></a>  98       &amp;&amp; <a href='../D/29309.html' title='Multiple defined in 3 places.'>data</a>.<a href='../Y/6434.html' title='Multiple used in 61 places.'>__outbuf</a>[-1] == '\0')
+<a id='L99' name='L99'></a>  99     <em class='comment'>/* Don't count the NUL character in.  */</em>
+<a id='L100' name='L100'></a> 100     --<a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a>;
+<a id='L101' name='L101'></a> 101     <em class='brace'>}</em>
+<a id='L102' name='L102'></a> 102   <strong class='reserved'>else</strong>
+<a id='L103' name='L103'></a> 103     <em class='brace'>{</em>
+<a id='L104' name='L104'></a> 104       <em class='comment'>/* This code is based on the safe assumption that all internal</em>
+<a id='L105' name='L105'></a> 105 <em class='comment'>     multi-byte encodings use the NUL byte only to mark the end</em>
+<a id='L106' name='L106'></a> 106 <em class='comment'>     of the string.  */</em>
+<a id='L107' name='L107'></a> 107       <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../D/29823.html' title='Multiple defined in 3 places.'>dummy</a>;
+<a id='L108' name='L108'></a> 108 
+<a id='L109' name='L109'></a> 109       <a href='../D/29309.html' title='Multiple defined in 3 places.'>data</a>.<a href='../Y/6434.html' title='Multiple used in 61 places.'>__outbuf</a> = (<strong class='reserved'>unsigned</strong> <strong class='reserved'>char</strong> *) <a href='../D/29810.html' title='Multiple defined in 12 places.'>dst</a>;
+<a id='L110' name='L110'></a> 110       <a href='../D/29309.html' title='Multiple defined in 3 places.'>data</a>.<a href='../Y/6435.html' title='Multiple used in 22 places.'>__outbufend</a> = (<strong class='reserved'>unsigned</strong> <strong class='reserved'>char</strong> *) <a href='../D/29810.html' title='Multiple defined in 12 places.'>dst</a> + <a href='../D/32598.html' title='Multiple defined in 10 places.'>len</a>;
+<a id='L111' name='L111'></a> 111 
+<a id='L112' name='L112'></a> 112       <a href='../D/37029.html' title='Multiple defined in 7 places.'>status</a> = <a href='../D/2102.html' title='Multiple defined in 3 places.'>DL_CALL_FCT</a> (<a href='../D/30376.html' title='Multiple defined in 7 places.'>fct</a>, (<a href='../Y/27626.html' title='Multiple used in 32 places.'>tomb</a>, &amp;<a href='../D/29309.html' title='Multiple defined in 3 places.'>data</a>, (<strong class='reserved'>const</strong> <strong class='reserved'>unsigned</strong> <strong class='reserved'>char</strong> **) <a href='../D/36956.html' title='Multiple defined in 26 places.'>src</a>,
+<a id='L113' name='L113'></a> 113                   (<strong class='reserved'>const</strong> <strong class='reserved'>unsigned</strong> <strong class='reserved'>char</strong> *) <a href='../D/36962.html' title='Multiple defined in 7 places.'>srcend</a>, <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>,
+<a id='L114' name='L114'></a> 114                   &amp;<a href='../D/29823.html' title='Multiple defined in 3 places.'>dummy</a>, 0, 1));
+<a id='L115' name='L115'></a> 115 
+<a id='L116' name='L116'></a> 116       <em class='comment'>/* Count the number of bytes.  */</em>
+<a id='L117' name='L117'></a> 117       <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a> = <a href='../D/29309.html' title='Multiple defined in 3 places.'>data</a>.<a href='../Y/6434.html' title='Multiple used in 61 places.'>__outbuf</a> - (<strong class='reserved'>unsigned</strong> <strong class='reserved'>char</strong> *) <a href='../D/29810.html' title='Multiple defined in 12 places.'>dst</a>;
+<a id='L118' name='L118'></a> 118 
+<a id='L119' name='L119'></a> 119       <em class='comment'>/* We have to determine whether the last character converted</em>
+<a id='L120' name='L120'></a> 120 <em class='comment'>     is the NUL character.  */</em>
+<a id='L121' name='L121'></a> 121       <strong class='reserved'>if</strong> ((<a href='../D/37029.html' title='Multiple defined in 7 places.'>status</a> == <a href='../S/7047.html#L39' title='Defined at 39 in iconv/gconv.h.'>__GCONV_OK</a> || <a href='../D/37029.html' title='Multiple defined in 7 places.'>status</a> == <a href='../S/7047.html#L44' title='Defined at 44 in iconv/gconv.h.'>__GCONV_EMPTY_INPUT</a>)
+<a id='L122' name='L122'></a> 122       &amp;&amp; <a href='../D/29309.html' title='Multiple defined in 3 places.'>data</a>.<a href='../Y/6434.html' title='Multiple used in 61 places.'>__outbuf</a>[-1] == '\0')
+<a id='L123' name='L123'></a> 123     <em class='brace'>{</em>
+<a id='L124' name='L124'></a> 124       <a href='../D/27838.html' title='Multiple defined in 9 places.'>assert</a> (<a href='../D/29309.html' title='Multiple defined in 3 places.'>data</a>.<a href='../Y/6434.html' title='Multiple used in 61 places.'>__outbuf</a> != (<strong class='reserved'>unsigned</strong> <strong class='reserved'>char</strong> *) <a href='../D/29810.html' title='Multiple defined in 12 places.'>dst</a>);
+<a id='L125' name='L125'></a> 125       <a href='../D/27838.html' title='Multiple defined in 9 places.'>assert</a> (<a href='../D/24874.html' title='Multiple defined in 3 places.'>__mbsinit</a> (<a href='../D/29309.html' title='Multiple defined in 3 places.'>data</a>.<a href='../Y/7591.html' title='Multiple used in 152 places.'>__statep</a>));
+<a id='L126' name='L126'></a> 126       *<a href='../D/36956.html' title='Multiple defined in 26 places.'>src</a> = <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>;
+<a id='L127' name='L127'></a> 127       --<a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a>;
+<a id='L128' name='L128'></a> 128     <em class='brace'>}</em>
+<a id='L129' name='L129'></a> 129     <em class='brace'>}</em>
+<a id='L130' name='L130'></a> 130 
+<a id='L131' name='L131'></a> 131   <em class='comment'>/* There must not be any problems with the conversion but illegal input</em>
+<a id='L132' name='L132'></a> 132 <em class='comment'>     characters.  */</em>
+<a id='L133' name='L133'></a> 133   <a href='../D/27838.html' title='Multiple defined in 9 places.'>assert</a> (<a href='../D/37029.html' title='Multiple defined in 7 places.'>status</a> == <a href='../S/7047.html#L39' title='Defined at 39 in iconv/gconv.h.'>__GCONV_OK</a> || <a href='../D/37029.html' title='Multiple defined in 7 places.'>status</a> == <a href='../S/7047.html#L44' title='Defined at 44 in iconv/gconv.h.'>__GCONV_EMPTY_INPUT</a>
+<a id='L134' name='L134'></a> 134       || <a href='../D/37029.html' title='Multiple defined in 7 places.'>status</a> == <a href='../S/7047.html#L46' title='Defined at 46 in iconv/gconv.h.'>__GCONV_ILLEGAL_INPUT</a>
+<a id='L135' name='L135'></a> 135       || <a href='../D/37029.html' title='Multiple defined in 7 places.'>status</a> == <a href='../S/7047.html#L47' title='Defined at 47 in iconv/gconv.h.'>__GCONV_INCOMPLETE_INPUT</a>
+<a id='L136' name='L136'></a> 136       || <a href='../D/37029.html' title='Multiple defined in 7 places.'>status</a> == <a href='../S/7047.html#L45' title='Defined at 45 in iconv/gconv.h.'>__GCONV_FULL_OUTPUT</a>);
+<a id='L137' name='L137'></a> 137 
+<a id='L138' name='L138'></a> 138   <strong class='reserved'>if</strong> (<a href='../D/37029.html' title='Multiple defined in 7 places.'>status</a> != <a href='../S/7047.html#L39' title='Defined at 39 in iconv/gconv.h.'>__GCONV_OK</a> &amp;&amp; <a href='../D/37029.html' title='Multiple defined in 7 places.'>status</a> != <a href='../S/7047.html#L45' title='Defined at 45 in iconv/gconv.h.'>__GCONV_FULL_OUTPUT</a>
+<a id='L139' name='L139'></a> 139       &amp;&amp; <a href='../D/37029.html' title='Multiple defined in 7 places.'>status</a> != <a href='../S/7047.html#L44' title='Defined at 44 in iconv/gconv.h.'>__GCONV_EMPTY_INPUT</a>)
+<a id='L140' name='L140'></a> 140     <em class='brace'>{</em>
+<a id='L141' name='L141'></a> 141       <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a> = (<a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a>) -1;
+<a id='L142' name='L142'></a> 142       <a href='../D/25959.html' title='Multiple defined in 8 places.'>__set_errno</a> (<a href='../D/3153.html' title='Multiple defined in 10 places.'>EILSEQ</a>);
+<a id='L143' name='L143'></a> 143     <em class='brace'>}</em>
+<a id='L144' name='L144'></a> 144 
+<a id='L145' name='L145'></a> 145   <strong class='reserved'>return</strong> <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a>;
+<a id='L146' name='L146'></a> 146 <em class='brace'>}</em>
+<a id='L147' name='L147'></a> 147 <a href='../D/39088.html' title='Multiple defined in 375 places.'>weak_alias</a> (<a href='../S/4086.html#L39' title='Defined at 39 in wcsmbs/wcsnrtombs.c.'>__wcsnrtombs</a>, <a href='../Y/28950.html' title='Multiple used in 8 places.'>wcsnrtombs</a>)
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;][^]<a href='#L39'>[v]</a><a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

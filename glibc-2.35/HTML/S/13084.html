@@ -1,0 +1,1828 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>sysdeps/i386/i686/multiarch/memcpy-ssse3-rep.S</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18977.html'>sysdeps</a>/<a href='../files/19041.html'>i386</a>/<a href='../files/19046.html'>i686</a>/<a href='../files/19049.html'>multiarch</a>/memcpy-ssse3-rep.S</h2>
+<em class='comment'>/* [&lt;][&gt;][^][v][top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* memcpy with SSSE3 and REP string.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   Copyright (C) 2010-2022 Free Software Foundation, Inc.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'></em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'></em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'></em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   License along with the GNU C Library; if not, see</em>
+<a id='L17' name='L17'></a>  17 <em class='comment'>   &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L18' name='L18'></a>  18 
+<a id='L19' name='L19'></a>  19 <em class='sharp'>#include</em> &lt;<a href='../I/5967.html'>sysdep.h</a>&gt;
+<a id='L20' name='L20'></a>  20 
+<a id='L21' name='L21'></a>  21 <em class='sharp'>#if</em> <a href='../D/6753.html' title='Multiple defined in 3 places.'>IS_IN</a> (<a href='../D/32623.html' title='Multiple defined in 2 places.'>libc</a>) \
+<a id='L22' name='L22'></a>  22     &amp;&amp; (<strong class='reserved'>defined</strong> <a href='../D/13935.html' title='Multiple defined in 2 places.'>SHARED</a> \
+<a id='L23' name='L23'></a>  23     || <strong class='reserved'>defined</strong> <a href='../D/16767.html' title='Multiple defined in 10 places.'>USE_AS_MEMMOVE</a> \
+<a id='L24' name='L24'></a>  24     || !<strong class='reserved'>defined</strong> <a href='../Y/2095.html' title='Multiple used in 182 places.'>USE_MULTIARCH</a>)
+<a id='L25' name='L25'></a>  25 
+<a id='L26' name='L26'></a>  26 <em class='sharp'>#include</em> "<a href='../I/6421.html'>asm-syntax.h</a>"
+<a id='L27' name='L27'></a>  27 
+<a id='L28' name='L28'></a>  28 <em class='sharp'>#ifndef</em> <a href='../D/7873.html' title='Multiple defined in 73 places.'>MEMCPY</a>
+<a id='L29' name='L29'></a>  29 <em class='sharp'># define</em> <a href='../R/4818.html' title='Multiple referred from 32 places.'>MEMCPY</a>     __memcpy_ssse3_rep
+<a id='L30' name='L30'></a>  30 <em class='sharp'># define</em> MEMCPY_CHK __memcpy_chk_ssse3_rep
+<a id='L31' name='L31'></a>  31 <em class='sharp'>#endif</em>
+<a id='L32' name='L32'></a>  32 
+<a id='L33' name='L33'></a>  33 <em class='sharp'>#ifdef</em> <a href='../D/16761.html' title='Multiple defined in 5 places.'>USE_AS_BCOPY</a>
+<a id='L34' name='L34'></a>  34 <em class='sharp'># define</em> <a href='../R/7957.html' title='Multiple referred from 12 places.'>SRC</a>        PARMS
+<a id='L35' name='L35'></a>  35 <em class='sharp'># define</em> DEST       SRC+4
+<a id='L36' name='L36'></a>  36 <em class='sharp'># define</em> <a href='../R/4270.html' title='Multiple referred from 8 places.'>LEN</a>        DEST+4
+<a id='L37' name='L37'></a>  37 <em class='sharp'>#else</em>
+<a id='L38' name='L38'></a>  38 <em class='sharp'># define</em> DEST       PARMS
+<a id='L39' name='L39'></a>  39 <em class='sharp'># define</em> <a href='../R/7957.html' title='Multiple referred from 12 places.'>SRC</a>        DEST+4
+<a id='L40' name='L40'></a>  40 <em class='sharp'># define</em> <a href='../R/4270.html' title='Multiple referred from 8 places.'>LEN</a>        SRC+4
+<a id='L41' name='L41'></a>  41 <em class='sharp'>#endif</em>
+<a id='L42' name='L42'></a>  42 
+<a id='L43' name='L43'></a>  43 <em class='sharp'>#define</em> CFI_PUSH(REG)                       \
+<a id='L44' name='L44'></a>  44   cfi_adjust_cfa_offset (4);                    \
+<a id='L45' name='L45'></a>  45   cfi_rel_offset (REG, 0)
+<a id='L46' name='L46'></a>  46 
+<a id='L47' name='L47'></a>  47 <em class='sharp'>#define</em> CFI_POP(REG)                        \
+<a id='L48' name='L48'></a>  48   cfi_adjust_cfa_offset (-4);                   \
+<a id='L49' name='L49'></a>  49   cfi_restore (REG)
+<a id='L50' name='L50'></a>  50 
+<a id='L51' name='L51'></a>  51 <em class='sharp'>#define</em> <a href='../R/6543.html' title='Multiple referred from 6 places.'>PUSH</a>(REG)   pushl REG; CFI_PUSH (REG)
+<a id='L52' name='L52'></a>  52 <em class='sharp'>#define</em> <a href='../S/6755.html#L173' title='Referred from 173 in stdlib/qsort.c.'>POP</a>(REG)    popl REG; CFI_POP (REG)
+<a id='L53' name='L53'></a>  53 
+<a id='L54' name='L54'></a>  54 <em class='sharp'>#ifdef</em> <a href='../Y/1408.html' title='Multiple used in 370 places.'>PIC</a>
+<a id='L55' name='L55'></a>  55 <em class='sharp'># define</em> PARMS      8       <em class='comment'>/* Preserve EBX.  */</em>
+<a id='L56' name='L56'></a>  56 <em class='sharp'># define</em> ENTRANCE   PUSH (%ebx);
+<a id='L57' name='L57'></a>  57 <em class='sharp'># define</em> RETURN_END POP (%ebx); ret
+<a id='L58' name='L58'></a>  58 <em class='sharp'># define</em> <a href='../R/6819.html' title='Multiple referred from 15 places.'>RETURN</a>     RETURN_END; CFI_PUSH (%ebx)
+<a id='L59' name='L59'></a>  59 <em class='sharp'># define</em> JMPTBL(I, B)   I - B
+<a id='L60' name='L60'></a>  60 
+<a id='L61' name='L61'></a>  61 <em class='comment'>/* Load an entry in a jump table into EBX and branch to it.  TABLE is a</em>
+<a id='L62' name='L62'></a>  62 <em class='comment'>   jump table with relative offsets.  INDEX is a register contains the</em>
+<a id='L63' name='L63'></a>  63 <em class='comment'>   index into the jump table.   SCALE is the scale of INDEX. */</em>
+<a id='L64' name='L64'></a>  64 <em class='sharp'># define</em> BRANCH_TO_JMPTBL_ENTRY(TABLE, INDEX, SCALE)        \
+<a id='L65' name='L65'></a>  65     <em class='comment'>/* We first load PC into EBX.  */</em>               \
+<a id='L66' name='L66'></a>  66     SETUP_PIC_REG(bx);                      \
+<a id='L67' name='L67'></a>  67     <em class='comment'>/* Get the address of the jump table.  */</em>           \
+<a id='L68' name='L68'></a>  68     addl    $(TABLE - .), %ebx;             \
+<a id='L69' name='L69'></a>  69     <em class='comment'>/* Get the entry and convert the relative offset to the \</em>
+<a id='L70' name='L70'></a>  70 <em class='comment'>       absolute address.  */</em>                    \
+<a id='L71' name='L71'></a>  71     addl    (%ebx,INDEX,SCALE), %ebx;           \
+<a id='L72' name='L72'></a>  72     <em class='comment'>/* We loaded the jump table.  Go.  */</em>           \
+<a id='L73' name='L73'></a>  73     _CET_NOTRACK jmp *%ebx
+<a id='L74' name='L74'></a>  74 
+<a id='L75' name='L75'></a>  75 <em class='sharp'># define</em> BRANCH_TO_JMPTBL_ENTRY_VALUE(TABLE)            \
+<a id='L76' name='L76'></a>  76     addl    $(TABLE - .), %ebx
+<a id='L77' name='L77'></a>  77 
+<a id='L78' name='L78'></a>  78 <em class='sharp'># define</em> BRANCH_TO_JMPTBL_ENTRY_TAIL(TABLE, INDEX, SCALE)   \
+<a id='L79' name='L79'></a>  79     addl    (%ebx,INDEX,SCALE), %ebx;           \
+<a id='L80' name='L80'></a>  80     <em class='comment'>/* We loaded the jump table.  Go.  */</em>           \
+<a id='L81' name='L81'></a>  81     _CET_NOTRACK jmp *%ebx
+<a id='L82' name='L82'></a>  82 <em class='sharp'>#else</em>
+<a id='L83' name='L83'></a>  83 <em class='sharp'># define</em> PARMS      4
+<a id='L84' name='L84'></a>  84 <em class='sharp'># define</em> ENTRANCE
+<a id='L85' name='L85'></a>  85 <em class='sharp'># define</em> RETURN_END ret
+<a id='L86' name='L86'></a>  86 <em class='sharp'># define</em> <a href='../R/6819.html' title='Multiple referred from 15 places.'>RETURN</a>     RETURN_END
+<a id='L87' name='L87'></a>  87 <em class='sharp'># define</em> JMPTBL(I, B)   I
+<a id='L88' name='L88'></a>  88 
+<a id='L89' name='L89'></a>  89 <em class='comment'>/* Branch to an entry in a jump table.  TABLE is a jump table with</em>
+<a id='L90' name='L90'></a>  90 <em class='comment'>   absolute offsets.  INDEX is a register contains the index into the</em>
+<a id='L91' name='L91'></a>  91 <em class='comment'>   jump table.  SCALE is the scale of INDEX. */</em>
+<a id='L92' name='L92'></a>  92 <em class='sharp'># define</em> BRANCH_TO_JMPTBL_ENTRY(TABLE, INDEX, SCALE)        \
+<a id='L93' name='L93'></a>  93     _CET_NOTRACK jmp *TABLE(,INDEX,SCALE)
+<a id='L94' name='L94'></a>  94 
+<a id='L95' name='L95'></a>  95 <em class='sharp'># define</em> BRANCH_TO_JMPTBL_ENTRY_VALUE(TABLE)
+<a id='L96' name='L96'></a>  96 
+<a id='L97' name='L97'></a>  97 <em class='sharp'># define</em> BRANCH_TO_JMPTBL_ENTRY_TAIL(TABLE, INDEX, SCALE)       \
+<a id='L98' name='L98'></a>  98     _CET_NOTRACK jmp *TABLE(,INDEX,SCALE)
+<a id='L99' name='L99'></a>  99 <em class='sharp'>#endif</em>
+<a id='L100' name='L100'></a> 100 
+<a id='L101' name='L101'></a> 101     .section .text.ssse3,"ax",@progbits
+<a id='L102' name='L102'></a> 102 <em class='sharp'>#if</em> !<strong class='reserved'>defined</strong> <a href='../D/16761.html' title='Multiple defined in 5 places.'>USE_AS_BCOPY</a> &amp;&amp; <strong class='reserved'>defined</strong> <a href='../D/13935.html' title='Multiple defined in 2 places.'>SHARED</a>
+<a id='L103' name='L103'></a> 103 <a href='../D/3651.html' title='Multiple defined in 54 places.'>ENTRY</a> (MEMCPY_CHK)
+<a id='L104' name='L104'></a> 104     movl    12(%esp), %eax
+<a id='L105' name='L105'></a> 105     cmpl    %eax, 16(%esp)
+<a id='L106' name='L106'></a> 106     jb  HIDDEN_JUMPTARGET (__chk_fail)
+<a id='L107' name='L107'></a> 107 END (MEMCPY_CHK)
+<a id='L108' name='L108'></a> 108 <em class='sharp'>#endif</em>
+<a id='L109' name='L109'></a> 109 <a href='../D/3651.html' title='Multiple defined in 54 places.'>ENTRY</a> (<a href='../R/4818.html' title='Multiple referred from 32 places.'>MEMCPY</a>)
+<a id='L110' name='L110'></a> 110     ENTRANCE
+<a id='L111' name='L111'></a> 111     movl    LEN(%esp), %ecx
+<a id='L112' name='L112'></a> 112     movl    SRC(%esp), %eax
+<a id='L113' name='L113'></a> 113     movl    DEST(%esp), %edx
+<a id='L114' name='L114'></a> 114 
+<a id='L115' name='L115'></a> 115 <em class='sharp'>#ifdef</em> <a href='../D/16767.html' title='Multiple defined in 10 places.'>USE_AS_MEMMOVE</a>
+<a id='L116' name='L116'></a> 116     cmp %eax, %edx
+<a id='L117' name='L117'></a> 117     jb  L(copy_forward)
+<a id='L118' name='L118'></a> 118     je  L(fwd_write_0bytes)
+<a id='L119' name='L119'></a> 119     cmp $48, %ecx
+<a id='L120' name='L120'></a> 120     jb  L(bk_write_less48bytes)
+<a id='L121' name='L121'></a> 121     add %ecx, %eax
+<a id='L122' name='L122'></a> 122     cmp %eax, %edx
+<a id='L123' name='L123'></a> 123     movl    SRC(%esp), %eax
+<a id='L124' name='L124'></a> 124     jb  L(copy_backward)
+<a id='L125' name='L125'></a> 125 
+<a id='L126' name='L126'></a> 126 L(copy_forward):
+<a id='L127' name='L127'></a> 127 <em class='sharp'>#endif</em>
+<a id='L128' name='L128'></a> 128     cmp $48, %ecx
+<a id='L129' name='L129'></a> 129     jae L(48bytesormore)
+<a id='L130' name='L130'></a> 130 
+<a id='L131' name='L131'></a> 131 L(fwd_write_less32bytes):
+<a id='L132' name='L132'></a> 132 <em class='sharp'>#ifndef</em> <a href='../D/16767.html' title='Multiple defined in 10 places.'>USE_AS_MEMMOVE</a>
+<a id='L133' name='L133'></a> 133     cmp %dl, %al
+<a id='L134' name='L134'></a> 134     jb  L(bk_write)
+<a id='L135' name='L135'></a> 135 <em class='sharp'>#endif</em>
+<a id='L136' name='L136'></a> 136     add %ecx, %edx
+<a id='L137' name='L137'></a> 137     add %ecx, %eax
+<a id='L138' name='L138'></a> 138     BRANCH_TO_JMPTBL_ENTRY (L(table_48bytes_fwd), %ecx, 4)
+<a id='L139' name='L139'></a> 139 <em class='sharp'>#ifndef</em> <a href='../D/16767.html' title='Multiple defined in 10 places.'>USE_AS_MEMMOVE</a>
+<a id='L140' name='L140'></a> 140 L(bk_write):
+<a id='L141' name='L141'></a> 141     BRANCH_TO_JMPTBL_ENTRY (L(table_48_bytes_bwd), %ecx, 4)
+<a id='L142' name='L142'></a> 142 <em class='sharp'>#endif</em>
+<a id='L143' name='L143'></a> 143 
+<a id='L144' name='L144'></a> 144     ALIGN (4)
+<a id='L145' name='L145'></a> 145 <em class='comment'>/* ECX &gt; 32 and EDX is 4 byte aligned.  */</em>
+<a id='L146' name='L146'></a> 146 L(48bytesormore):
+<a id='L147' name='L147'></a> 147     movdqu  (%eax), %xmm0
+<a id='L148' name='L148'></a> 148     PUSH (%edi)
+<a id='L149' name='L149'></a> 149     movl    %edx, %edi
+<a id='L150' name='L150'></a> 150     and $-16, %edx
+<a id='L151' name='L151'></a> 151     PUSH (%esi)
+<a id='L152' name='L152'></a> 152     cfi_remember_state
+<a id='L153' name='L153'></a> 153     add $16, %edx
+<a id='L154' name='L154'></a> 154     movl    %edi, %esi
+<a id='L155' name='L155'></a> 155     sub %edx, %edi
+<a id='L156' name='L156'></a> 156     add %edi, %ecx
+<a id='L157' name='L157'></a> 157     sub %edi, %eax
+<a id='L158' name='L158'></a> 158 
+<a id='L159' name='L159'></a> 159 <em class='sharp'>#ifdef</em> <a href='../Y/1762.html' title='Multiple used in 10 places.'>SHARED_CACHE_SIZE_HALF</a>
+<a id='L160' name='L160'></a> 160     cmp $SHARED_CACHE_SIZE_HALF, %ecx
+<a id='L161' name='L161'></a> 161 <em class='sharp'>#else</em>
+<a id='L162' name='L162'></a> 162 <em class='sharp'># ifdef</em> <a href='../Y/1408.html' title='Multiple used in 370 places.'>PIC</a>
+<a id='L163' name='L163'></a> 163     SETUP_PIC_REG(bx)
+<a id='L164' name='L164'></a> 164     add $_GLOBAL_OFFSET_TABLE_, %ebx
+<a id='L165' name='L165'></a> 165     cmp __x86_shared_cache_size_half@GOTOFF(%ebx), %ecx
+<a id='L166' name='L166'></a> 166 <em class='sharp'># else</em>
+<a id='L167' name='L167'></a> 167     cmp __x86_shared_cache_size_half, %ecx
+<a id='L168' name='L168'></a> 168 <em class='sharp'># endif</em>
+<a id='L169' name='L169'></a> 169 <em class='sharp'>#endif</em>
+<a id='L170' name='L170'></a> 170 
+<a id='L171' name='L171'></a> 171     mov %eax, %edi
+<a id='L172' name='L172'></a> 172     jae L(large_page)
+<a id='L173' name='L173'></a> 173     and $0xf, %edi
+<a id='L174' name='L174'></a> 174     jz  L(shl_0)
+<a id='L175' name='L175'></a> 175 
+<a id='L176' name='L176'></a> 176     BRANCH_TO_JMPTBL_ENTRY (L(shl_table), %edi, 4)
+<a id='L177' name='L177'></a> 177 
+<a id='L178' name='L178'></a> 178     ALIGN (4)
+<a id='L179' name='L179'></a> 179 L(shl_0):
+<a id='L180' name='L180'></a> 180     movdqu  %xmm0, (%esi)
+<a id='L181' name='L181'></a> 181     xor %edi, %edi
+<a id='L182' name='L182'></a> 182     cmp $127, %ecx
+<a id='L183' name='L183'></a> 183     ja  L(shl_0_gobble)
+<a id='L184' name='L184'></a> 184     lea -32(%ecx), %ecx
+<a id='L185' name='L185'></a> 185 L(shl_0_loop):
+<a id='L186' name='L186'></a> 186     movdqa  (%eax, %edi), %xmm0
+<a id='L187' name='L187'></a> 187     movdqa  16(%eax, %edi), %xmm1
+<a id='L188' name='L188'></a> 188     sub $32, %ecx
+<a id='L189' name='L189'></a> 189     movdqa  %xmm0, (%edx, %edi)
+<a id='L190' name='L190'></a> 190     movdqa  %xmm1, 16(%edx, %edi)
+<a id='L191' name='L191'></a> 191     lea 32(%edi), %edi
+<a id='L192' name='L192'></a> 192     jb  L(shl_0_end)
+<a id='L193' name='L193'></a> 193 
+<a id='L194' name='L194'></a> 194     movdqa  (%eax, %edi), %xmm0
+<a id='L195' name='L195'></a> 195     movdqa  16(%eax, %edi), %xmm1
+<a id='L196' name='L196'></a> 196     sub $32, %ecx
+<a id='L197' name='L197'></a> 197     movdqa  %xmm0, (%edx, %edi)
+<a id='L198' name='L198'></a> 198     movdqa  %xmm1, 16(%edx, %edi)
+<a id='L199' name='L199'></a> 199     lea 32(%edi), %edi
+<a id='L200' name='L200'></a> 200     jb  L(shl_0_end)
+<a id='L201' name='L201'></a> 201 
+<a id='L202' name='L202'></a> 202     movdqa  (%eax, %edi), %xmm0
+<a id='L203' name='L203'></a> 203     movdqa  16(%eax, %edi), %xmm1
+<a id='L204' name='L204'></a> 204     sub $32, %ecx
+<a id='L205' name='L205'></a> 205     movdqa  %xmm0, (%edx, %edi)
+<a id='L206' name='L206'></a> 206     movdqa  %xmm1, 16(%edx, %edi)
+<a id='L207' name='L207'></a> 207     lea 32(%edi), %edi
+<a id='L208' name='L208'></a> 208     jb  L(shl_0_end)
+<a id='L209' name='L209'></a> 209 
+<a id='L210' name='L210'></a> 210     movdqa  (%eax, %edi), %xmm0
+<a id='L211' name='L211'></a> 211     movdqa  16(%eax, %edi), %xmm1
+<a id='L212' name='L212'></a> 212     sub $32, %ecx
+<a id='L213' name='L213'></a> 213     movdqa  %xmm0, (%edx, %edi)
+<a id='L214' name='L214'></a> 214     movdqa  %xmm1, 16(%edx, %edi)
+<a id='L215' name='L215'></a> 215     lea 32(%edi), %edi
+<a id='L216' name='L216'></a> 216 L(shl_0_end):
+<a id='L217' name='L217'></a> 217     lea 32(%ecx), %ecx
+<a id='L218' name='L218'></a> 218     add %ecx, %edi
+<a id='L219' name='L219'></a> 219     add %edi, %edx
+<a id='L220' name='L220'></a> 220     add %edi, %eax
+<a id='L221' name='L221'></a> 221     POP (%esi)
+<a id='L222' name='L222'></a> 222     POP (%edi)
+<a id='L223' name='L223'></a> 223     BRANCH_TO_JMPTBL_ENTRY (L(table_48bytes_fwd), %ecx, 4)
+<a id='L224' name='L224'></a> 224 
+<a id='L225' name='L225'></a> 225     cfi_restore_state
+<a id='L226' name='L226'></a> 226     cfi_remember_state
+<a id='L227' name='L227'></a> 227 L(shl_0_gobble):
+<a id='L228' name='L228'></a> 228 
+<a id='L229' name='L229'></a> 229 <em class='sharp'>#ifdef</em> <a href='../Y/251.html' title='Multiple used in 23 places.'>DATA_CACHE_SIZE_HALF</a>
+<a id='L230' name='L230'></a> 230     cmp $DATA_CACHE_SIZE_HALF, %ecx
+<a id='L231' name='L231'></a> 231 <em class='sharp'>#else</em>
+<a id='L232' name='L232'></a> 232 <em class='sharp'># ifdef</em> <a href='../Y/1408.html' title='Multiple used in 370 places.'>PIC</a>
+<a id='L233' name='L233'></a> 233     SETUP_PIC_REG(bx)
+<a id='L234' name='L234'></a> 234     add $_GLOBAL_OFFSET_TABLE_, %ebx
+<a id='L235' name='L235'></a> 235     mov __x86_data_cache_size_half@GOTOFF(%ebx), %edi
+<a id='L236' name='L236'></a> 236 <em class='sharp'># else</em>
+<a id='L237' name='L237'></a> 237     mov __x86_data_cache_size_half, %edi
+<a id='L238' name='L238'></a> 238 <em class='sharp'># endif</em>
+<a id='L239' name='L239'></a> 239 <em class='sharp'>#endif</em>
+<a id='L240' name='L240'></a> 240     mov %edi, %esi
+<a id='L241' name='L241'></a> 241     shr $3, %esi
+<a id='L242' name='L242'></a> 242     sub %esi, %edi
+<a id='L243' name='L243'></a> 243     cmp %edi, %ecx
+<a id='L244' name='L244'></a> 244     jae L(shl_0_gobble_mem_start)
+<a id='L245' name='L245'></a> 245     sub $128, %ecx
+<a id='L246' name='L246'></a> 246     ALIGN (4)
+<a id='L247' name='L247'></a> 247 L(shl_0_gobble_cache_loop):
+<a id='L248' name='L248'></a> 248     movdqa  (%eax), %xmm0
+<a id='L249' name='L249'></a> 249     movaps  0x10(%eax), %xmm1
+<a id='L250' name='L250'></a> 250     movaps  0x20(%eax), %xmm2
+<a id='L251' name='L251'></a> 251     movaps  0x30(%eax), %xmm3
+<a id='L252' name='L252'></a> 252     movaps  0x40(%eax), %xmm4
+<a id='L253' name='L253'></a> 253     movaps  0x50(%eax), %xmm5
+<a id='L254' name='L254'></a> 254     movaps  0x60(%eax), %xmm6
+<a id='L255' name='L255'></a> 255     movaps  0x70(%eax), %xmm7
+<a id='L256' name='L256'></a> 256     lea 0x80(%eax), %eax
+<a id='L257' name='L257'></a> 257     sub $128, %ecx
+<a id='L258' name='L258'></a> 258     movdqa  %xmm0, (%edx)
+<a id='L259' name='L259'></a> 259     movaps  %xmm1, 0x10(%edx)
+<a id='L260' name='L260'></a> 260     movaps  %xmm2, 0x20(%edx)
+<a id='L261' name='L261'></a> 261     movaps  %xmm3, 0x30(%edx)
+<a id='L262' name='L262'></a> 262     movaps  %xmm4, 0x40(%edx)
+<a id='L263' name='L263'></a> 263     movaps  %xmm5, 0x50(%edx)
+<a id='L264' name='L264'></a> 264     movaps  %xmm6, 0x60(%edx)
+<a id='L265' name='L265'></a> 265     movaps  %xmm7, 0x70(%edx)
+<a id='L266' name='L266'></a> 266     lea 0x80(%edx), %edx
+<a id='L267' name='L267'></a> 267 
+<a id='L268' name='L268'></a> 268     jae L(shl_0_gobble_cache_loop)
+<a id='L269' name='L269'></a> 269     add $0x80, %ecx
+<a id='L270' name='L270'></a> 270     cmp $0x40, %ecx
+<a id='L271' name='L271'></a> 271     jb  L(shl_0_cache_less_64bytes)
+<a id='L272' name='L272'></a> 272 
+<a id='L273' name='L273'></a> 273     movdqa  (%eax), %xmm0
+<a id='L274' name='L274'></a> 274     sub $0x40, %ecx
+<a id='L275' name='L275'></a> 275     movdqa  0x10(%eax), %xmm1
+<a id='L276' name='L276'></a> 276 
+<a id='L277' name='L277'></a> 277     movdqa  %xmm0, (%edx)
+<a id='L278' name='L278'></a> 278     movdqa  %xmm1, 0x10(%edx)
+<a id='L279' name='L279'></a> 279 
+<a id='L280' name='L280'></a> 280     movdqa  0x20(%eax), %xmm0
+<a id='L281' name='L281'></a> 281     movdqa  0x30(%eax), %xmm1
+<a id='L282' name='L282'></a> 282     add $0x40, %eax
+<a id='L283' name='L283'></a> 283 
+<a id='L284' name='L284'></a> 284     movdqa  %xmm0, 0x20(%edx)
+<a id='L285' name='L285'></a> 285     movdqa  %xmm1, 0x30(%edx)
+<a id='L286' name='L286'></a> 286     add $0x40, %edx
+<a id='L287' name='L287'></a> 287 L(shl_0_cache_less_64bytes):
+<a id='L288' name='L288'></a> 288     cmp $0x20, %ecx
+<a id='L289' name='L289'></a> 289     jb  L(shl_0_cache_less_32bytes)
+<a id='L290' name='L290'></a> 290     movdqa  (%eax), %xmm0
+<a id='L291' name='L291'></a> 291     sub $0x20, %ecx
+<a id='L292' name='L292'></a> 292     movdqa  0x10(%eax), %xmm1
+<a id='L293' name='L293'></a> 293     add $0x20, %eax
+<a id='L294' name='L294'></a> 294     movdqa  %xmm0, (%edx)
+<a id='L295' name='L295'></a> 295     movdqa  %xmm1, 0x10(%edx)
+<a id='L296' name='L296'></a> 296     add $0x20, %edx
+<a id='L297' name='L297'></a> 297 L(shl_0_cache_less_32bytes):
+<a id='L298' name='L298'></a> 298     cmp $0x10, %ecx
+<a id='L299' name='L299'></a> 299     jb  L(shl_0_cache_less_16bytes)
+<a id='L300' name='L300'></a> 300     sub $0x10, %ecx
+<a id='L301' name='L301'></a> 301     movdqa  (%eax), %xmm0
+<a id='L302' name='L302'></a> 302     add $0x10, %eax
+<a id='L303' name='L303'></a> 303     movdqa  %xmm0, (%edx)
+<a id='L304' name='L304'></a> 304     add $0x10, %edx
+<a id='L305' name='L305'></a> 305 L(shl_0_cache_less_16bytes):
+<a id='L306' name='L306'></a> 306     add %ecx, %edx
+<a id='L307' name='L307'></a> 307     add %ecx, %eax
+<a id='L308' name='L308'></a> 308     POP (%esi)
+<a id='L309' name='L309'></a> 309     POP (%edi)
+<a id='L310' name='L310'></a> 310     BRANCH_TO_JMPTBL_ENTRY (L(table_48bytes_fwd), %ecx, 4)
+<a id='L311' name='L311'></a> 311 
+<a id='L312' name='L312'></a> 312     cfi_restore_state
+<a id='L313' name='L313'></a> 313     cfi_remember_state
+<a id='L314' name='L314'></a> 314     ALIGN (4)
+<a id='L315' name='L315'></a> 315 L(shl_0_gobble_mem_start):
+<a id='L316' name='L316'></a> 316     cmp %al, %dl
+<a id='L317' name='L317'></a> 317     je  L(copy_page_by_rep)
+<a id='L318' name='L318'></a> 318     sub $128, %ecx
+<a id='L319' name='L319'></a> 319 L(shl_0_gobble_mem_loop):
+<a id='L320' name='L320'></a> 320     prefetchnta 0x1c0(%eax)
+<a id='L321' name='L321'></a> 321     prefetchnta 0x280(%eax)
+<a id='L322' name='L322'></a> 322     prefetchnta 0x1c0(%edx)
+<a id='L323' name='L323'></a> 323     prefetchnta 0x280(%edx)
+<a id='L324' name='L324'></a> 324 
+<a id='L325' name='L325'></a> 325     movdqa  (%eax), %xmm0
+<a id='L326' name='L326'></a> 326     movaps  0x10(%eax), %xmm1
+<a id='L327' name='L327'></a> 327     movaps  0x20(%eax), %xmm2
+<a id='L328' name='L328'></a> 328     movaps  0x30(%eax), %xmm3
+<a id='L329' name='L329'></a> 329     movaps  0x40(%eax), %xmm4
+<a id='L330' name='L330'></a> 330     movaps  0x50(%eax), %xmm5
+<a id='L331' name='L331'></a> 331     movaps  0x60(%eax), %xmm6
+<a id='L332' name='L332'></a> 332     movaps  0x70(%eax), %xmm7
+<a id='L333' name='L333'></a> 333     lea 0x80(%eax), %eax
+<a id='L334' name='L334'></a> 334     sub $0x80, %ecx
+<a id='L335' name='L335'></a> 335     movdqa  %xmm0, (%edx)
+<a id='L336' name='L336'></a> 336     movaps  %xmm1, 0x10(%edx)
+<a id='L337' name='L337'></a> 337     movaps  %xmm2, 0x20(%edx)
+<a id='L338' name='L338'></a> 338     movaps  %xmm3, 0x30(%edx)
+<a id='L339' name='L339'></a> 339     movaps  %xmm4, 0x40(%edx)
+<a id='L340' name='L340'></a> 340     movaps  %xmm5, 0x50(%edx)
+<a id='L341' name='L341'></a> 341     movaps  %xmm6, 0x60(%edx)
+<a id='L342' name='L342'></a> 342     movaps  %xmm7, 0x70(%edx)
+<a id='L343' name='L343'></a> 343     lea 0x80(%edx), %edx
+<a id='L344' name='L344'></a> 344 
+<a id='L345' name='L345'></a> 345     jae L(shl_0_gobble_mem_loop)
+<a id='L346' name='L346'></a> 346     add $0x80, %ecx
+<a id='L347' name='L347'></a> 347     cmp $0x40, %ecx
+<a id='L348' name='L348'></a> 348     jb  L(shl_0_mem_less_64bytes)
+<a id='L349' name='L349'></a> 349 
+<a id='L350' name='L350'></a> 350     movdqa  (%eax), %xmm0
+<a id='L351' name='L351'></a> 351     sub $0x40, %ecx
+<a id='L352' name='L352'></a> 352     movdqa  0x10(%eax), %xmm1
+<a id='L353' name='L353'></a> 353 
+<a id='L354' name='L354'></a> 354     movdqa  %xmm0, (%edx)
+<a id='L355' name='L355'></a> 355     movdqa  %xmm1, 0x10(%edx)
+<a id='L356' name='L356'></a> 356 
+<a id='L357' name='L357'></a> 357     movdqa  0x20(%eax), %xmm0
+<a id='L358' name='L358'></a> 358     movdqa  0x30(%eax), %xmm1
+<a id='L359' name='L359'></a> 359     add $0x40, %eax
+<a id='L360' name='L360'></a> 360 
+<a id='L361' name='L361'></a> 361     movdqa  %xmm0, 0x20(%edx)
+<a id='L362' name='L362'></a> 362     movdqa  %xmm1, 0x30(%edx)
+<a id='L363' name='L363'></a> 363     add $0x40, %edx
+<a id='L364' name='L364'></a> 364 L(shl_0_mem_less_64bytes):
+<a id='L365' name='L365'></a> 365     cmp $0x20, %ecx
+<a id='L366' name='L366'></a> 366     jb  L(shl_0_mem_less_32bytes)
+<a id='L367' name='L367'></a> 367     movdqa  (%eax), %xmm0
+<a id='L368' name='L368'></a> 368     sub $0x20, %ecx
+<a id='L369' name='L369'></a> 369     movdqa  0x10(%eax), %xmm1
+<a id='L370' name='L370'></a> 370     add $0x20, %eax
+<a id='L371' name='L371'></a> 371     movdqa  %xmm0, (%edx)
+<a id='L372' name='L372'></a> 372     movdqa  %xmm1, 0x10(%edx)
+<a id='L373' name='L373'></a> 373     add $0x20, %edx
+<a id='L374' name='L374'></a> 374 L(shl_0_mem_less_32bytes):
+<a id='L375' name='L375'></a> 375     cmp $0x10, %ecx
+<a id='L376' name='L376'></a> 376     jb  L(shl_0_mem_less_16bytes)
+<a id='L377' name='L377'></a> 377     sub $0x10, %ecx
+<a id='L378' name='L378'></a> 378     movdqa  (%eax), %xmm0
+<a id='L379' name='L379'></a> 379     add $0x10, %eax
+<a id='L380' name='L380'></a> 380     movdqa  %xmm0, (%edx)
+<a id='L381' name='L381'></a> 381     add $0x10, %edx
+<a id='L382' name='L382'></a> 382 L(shl_0_mem_less_16bytes):
+<a id='L383' name='L383'></a> 383     add %ecx, %edx
+<a id='L384' name='L384'></a> 384     add %ecx, %eax
+<a id='L385' name='L385'></a> 385     POP (%esi)
+<a id='L386' name='L386'></a> 386     POP (%edi)
+<a id='L387' name='L387'></a> 387     BRANCH_TO_JMPTBL_ENTRY (L(table_48bytes_fwd), %ecx, 4)
+<a id='L388' name='L388'></a> 388 
+<a id='L389' name='L389'></a> 389     cfi_restore_state
+<a id='L390' name='L390'></a> 390     cfi_remember_state
+<a id='L391' name='L391'></a> 391     ALIGN (4)
+<a id='L392' name='L392'></a> 392 L(shl_1):
+<a id='L393' name='L393'></a> 393     BRANCH_TO_JMPTBL_ENTRY_VALUE(L(table_48bytes_fwd))
+<a id='L394' name='L394'></a> 394     sub $1, %eax
+<a id='L395' name='L395'></a> 395     movaps  (%eax), %xmm1
+<a id='L396' name='L396'></a> 396     xor %edi, %edi
+<a id='L397' name='L397'></a> 397     sub $32, %ecx
+<a id='L398' name='L398'></a> 398     movdqu  %xmm0, (%esi)
+<a id='L399' name='L399'></a> 399     POP (%esi)
+<a id='L400' name='L400'></a> 400 L(shl_1_loop):
+<a id='L401' name='L401'></a> 401 
+<a id='L402' name='L402'></a> 402     movdqa  16(%eax, %edi), %xmm2
+<a id='L403' name='L403'></a> 403     sub $32, %ecx
+<a id='L404' name='L404'></a> 404     movdqa  32(%eax, %edi), %xmm3
+<a id='L405' name='L405'></a> 405     movdqa  %xmm3, %xmm4
+<a id='L406' name='L406'></a> 406     palignr $1, %xmm2, %xmm3
+<a id='L407' name='L407'></a> 407     palignr $1, %xmm1, %xmm2
+<a id='L408' name='L408'></a> 408     lea 32(%edi), %edi
+<a id='L409' name='L409'></a> 409     movdqa  %xmm2, -32(%edx, %edi)
+<a id='L410' name='L410'></a> 410     movdqa  %xmm3, -16(%edx, %edi)
+<a id='L411' name='L411'></a> 411 
+<a id='L412' name='L412'></a> 412     jb  L(shl_1_end)
+<a id='L413' name='L413'></a> 413 
+<a id='L414' name='L414'></a> 414     movdqa  16(%eax, %edi), %xmm2
+<a id='L415' name='L415'></a> 415     sub $32, %ecx
+<a id='L416' name='L416'></a> 416     movdqa  32(%eax, %edi), %xmm3
+<a id='L417' name='L417'></a> 417     movdqa  %xmm3, %xmm1
+<a id='L418' name='L418'></a> 418     palignr $1, %xmm2, %xmm3
+<a id='L419' name='L419'></a> 419     palignr $1, %xmm4, %xmm2
+<a id='L420' name='L420'></a> 420     lea 32(%edi), %edi
+<a id='L421' name='L421'></a> 421     movdqa  %xmm2, -32(%edx, %edi)
+<a id='L422' name='L422'></a> 422     movdqa  %xmm3, -16(%edx, %edi)
+<a id='L423' name='L423'></a> 423 
+<a id='L424' name='L424'></a> 424     jae L(shl_1_loop)
+<a id='L425' name='L425'></a> 425 
+<a id='L426' name='L426'></a> 426 L(shl_1_end):
+<a id='L427' name='L427'></a> 427     add $32, %ecx
+<a id='L428' name='L428'></a> 428     add %ecx, %edi
+<a id='L429' name='L429'></a> 429     add %edi, %edx
+<a id='L430' name='L430'></a> 430     lea 1(%edi, %eax), %eax
+<a id='L431' name='L431'></a> 431     POP (%edi)
+<a id='L432' name='L432'></a> 432     BRANCH_TO_JMPTBL_ENTRY_TAIL(L(table_48bytes_fwd), %ecx, 4)
+<a id='L433' name='L433'></a> 433 
+<a id='L434' name='L434'></a> 434     cfi_restore_state
+<a id='L435' name='L435'></a> 435     cfi_remember_state
+<a id='L436' name='L436'></a> 436     ALIGN (4)
+<a id='L437' name='L437'></a> 437 L(shl_2):
+<a id='L438' name='L438'></a> 438     BRANCH_TO_JMPTBL_ENTRY_VALUE(L(table_48bytes_fwd))
+<a id='L439' name='L439'></a> 439     sub $2, %eax
+<a id='L440' name='L440'></a> 440     movaps  (%eax), %xmm1
+<a id='L441' name='L441'></a> 441     xor %edi, %edi
+<a id='L442' name='L442'></a> 442     sub $32, %ecx
+<a id='L443' name='L443'></a> 443     movdqu  %xmm0, (%esi)
+<a id='L444' name='L444'></a> 444     POP (%esi)
+<a id='L445' name='L445'></a> 445 L(shl_2_loop):
+<a id='L446' name='L446'></a> 446 
+<a id='L447' name='L447'></a> 447     movdqa  16(%eax, %edi), %xmm2
+<a id='L448' name='L448'></a> 448     sub $32, %ecx
+<a id='L449' name='L449'></a> 449     movdqa  32(%eax, %edi), %xmm3
+<a id='L450' name='L450'></a> 450     movdqa  %xmm3, %xmm4
+<a id='L451' name='L451'></a> 451     palignr $2, %xmm2, %xmm3
+<a id='L452' name='L452'></a> 452     palignr $2, %xmm1, %xmm2
+<a id='L453' name='L453'></a> 453     lea 32(%edi), %edi
+<a id='L454' name='L454'></a> 454     movdqa  %xmm2, -32(%edx, %edi)
+<a id='L455' name='L455'></a> 455     movdqa  %xmm3, -16(%edx, %edi)
+<a id='L456' name='L456'></a> 456 
+<a id='L457' name='L457'></a> 457     jb  L(shl_2_end)
+<a id='L458' name='L458'></a> 458 
+<a id='L459' name='L459'></a> 459     movdqa  16(%eax, %edi), %xmm2
+<a id='L460' name='L460'></a> 460     sub $32, %ecx
+<a id='L461' name='L461'></a> 461     movdqa  32(%eax, %edi), %xmm3
+<a id='L462' name='L462'></a> 462     movdqa  %xmm3, %xmm1
+<a id='L463' name='L463'></a> 463     palignr $2, %xmm2, %xmm3
+<a id='L464' name='L464'></a> 464     palignr $2, %xmm4, %xmm2
+<a id='L465' name='L465'></a> 465     lea 32(%edi), %edi
+<a id='L466' name='L466'></a> 466     movdqa  %xmm2, -32(%edx, %edi)
+<a id='L467' name='L467'></a> 467     movdqa  %xmm3, -16(%edx, %edi)
+<a id='L468' name='L468'></a> 468 
+<a id='L469' name='L469'></a> 469     jae L(shl_2_loop)
+<a id='L470' name='L470'></a> 470 
+<a id='L471' name='L471'></a> 471 L(shl_2_end):
+<a id='L472' name='L472'></a> 472     add $32, %ecx
+<a id='L473' name='L473'></a> 473     add %ecx, %edi
+<a id='L474' name='L474'></a> 474     add %edi, %edx
+<a id='L475' name='L475'></a> 475     lea 2(%edi, %eax), %eax
+<a id='L476' name='L476'></a> 476     POP (%edi)
+<a id='L477' name='L477'></a> 477     BRANCH_TO_JMPTBL_ENTRY_TAIL(L(table_48bytes_fwd), %ecx, 4)
+<a id='L478' name='L478'></a> 478 
+<a id='L479' name='L479'></a> 479     cfi_restore_state
+<a id='L480' name='L480'></a> 480     cfi_remember_state
+<a id='L481' name='L481'></a> 481     ALIGN (4)
+<a id='L482' name='L482'></a> 482 L(shl_3):
+<a id='L483' name='L483'></a> 483     BRANCH_TO_JMPTBL_ENTRY_VALUE(L(table_48bytes_fwd))
+<a id='L484' name='L484'></a> 484     sub $3, %eax
+<a id='L485' name='L485'></a> 485     movaps  (%eax), %xmm1
+<a id='L486' name='L486'></a> 486     xor %edi, %edi
+<a id='L487' name='L487'></a> 487     sub $32, %ecx
+<a id='L488' name='L488'></a> 488     movdqu  %xmm0, (%esi)
+<a id='L489' name='L489'></a> 489     POP (%esi)
+<a id='L490' name='L490'></a> 490 L(shl_3_loop):
+<a id='L491' name='L491'></a> 491 
+<a id='L492' name='L492'></a> 492     movdqa  16(%eax, %edi), %xmm2
+<a id='L493' name='L493'></a> 493     sub $32, %ecx
+<a id='L494' name='L494'></a> 494     movdqa  32(%eax, %edi), %xmm3
+<a id='L495' name='L495'></a> 495     movdqa  %xmm3, %xmm4
+<a id='L496' name='L496'></a> 496     palignr $3, %xmm2, %xmm3
+<a id='L497' name='L497'></a> 497     palignr $3, %xmm1, %xmm2
+<a id='L498' name='L498'></a> 498     lea 32(%edi), %edi
+<a id='L499' name='L499'></a> 499     movdqa  %xmm2, -32(%edx, %edi)
+<a id='L500' name='L500'></a> 500     movdqa  %xmm3, -16(%edx, %edi)
+<a id='L501' name='L501'></a> 501 
+<a id='L502' name='L502'></a> 502     jb  L(shl_3_end)
+<a id='L503' name='L503'></a> 503 
+<a id='L504' name='L504'></a> 504     movdqa  16(%eax, %edi), %xmm2
+<a id='L505' name='L505'></a> 505     sub $32, %ecx
+<a id='L506' name='L506'></a> 506     movdqa  32(%eax, %edi), %xmm3
+<a id='L507' name='L507'></a> 507     movdqa  %xmm3, %xmm1
+<a id='L508' name='L508'></a> 508     palignr $3, %xmm2, %xmm3
+<a id='L509' name='L509'></a> 509     palignr $3, %xmm4, %xmm2
+<a id='L510' name='L510'></a> 510     lea 32(%edi), %edi
+<a id='L511' name='L511'></a> 511     movdqa  %xmm2, -32(%edx, %edi)
+<a id='L512' name='L512'></a> 512     movdqa  %xmm3, -16(%edx, %edi)
+<a id='L513' name='L513'></a> 513 
+<a id='L514' name='L514'></a> 514     jae L(shl_3_loop)
+<a id='L515' name='L515'></a> 515 
+<a id='L516' name='L516'></a> 516 L(shl_3_end):
+<a id='L517' name='L517'></a> 517     add $32, %ecx
+<a id='L518' name='L518'></a> 518     add %ecx, %edi
+<a id='L519' name='L519'></a> 519     add %edi, %edx
+<a id='L520' name='L520'></a> 520     lea 3(%edi, %eax), %eax
+<a id='L521' name='L521'></a> 521     POP (%edi)
+<a id='L522' name='L522'></a> 522     BRANCH_TO_JMPTBL_ENTRY_TAIL(L(table_48bytes_fwd), %ecx, 4)
+<a id='L523' name='L523'></a> 523 
+<a id='L524' name='L524'></a> 524     cfi_restore_state
+<a id='L525' name='L525'></a> 525     cfi_remember_state
+<a id='L526' name='L526'></a> 526     ALIGN (4)
+<a id='L527' name='L527'></a> 527 L(shl_4):
+<a id='L528' name='L528'></a> 528     BRANCH_TO_JMPTBL_ENTRY_VALUE(L(table_48bytes_fwd))
+<a id='L529' name='L529'></a> 529     sub $4, %eax
+<a id='L530' name='L530'></a> 530     movaps  (%eax), %xmm1
+<a id='L531' name='L531'></a> 531     xor %edi, %edi
+<a id='L532' name='L532'></a> 532     sub $32, %ecx
+<a id='L533' name='L533'></a> 533     movdqu  %xmm0, (%esi)
+<a id='L534' name='L534'></a> 534     POP (%esi)
+<a id='L535' name='L535'></a> 535 L(shl_4_loop):
+<a id='L536' name='L536'></a> 536 
+<a id='L537' name='L537'></a> 537     movdqa  16(%eax, %edi), %xmm2
+<a id='L538' name='L538'></a> 538     sub $32, %ecx
+<a id='L539' name='L539'></a> 539     movdqa  32(%eax, %edi), %xmm3
+<a id='L540' name='L540'></a> 540     movdqa  %xmm3, %xmm4
+<a id='L541' name='L541'></a> 541     palignr $4, %xmm2, %xmm3
+<a id='L542' name='L542'></a> 542     palignr $4, %xmm1, %xmm2
+<a id='L543' name='L543'></a> 543     lea 32(%edi), %edi
+<a id='L544' name='L544'></a> 544     movdqa  %xmm2, -32(%edx, %edi)
+<a id='L545' name='L545'></a> 545     movdqa  %xmm3, -16(%edx, %edi)
+<a id='L546' name='L546'></a> 546 
+<a id='L547' name='L547'></a> 547     jb  L(shl_4_end)
+<a id='L548' name='L548'></a> 548 
+<a id='L549' name='L549'></a> 549     movdqa  16(%eax, %edi), %xmm2
+<a id='L550' name='L550'></a> 550     sub $32, %ecx
+<a id='L551' name='L551'></a> 551     movdqa  32(%eax, %edi), %xmm3
+<a id='L552' name='L552'></a> 552     movdqa  %xmm3, %xmm1
+<a id='L553' name='L553'></a> 553     palignr $4, %xmm2, %xmm3
+<a id='L554' name='L554'></a> 554     palignr $4, %xmm4, %xmm2
+<a id='L555' name='L555'></a> 555     lea 32(%edi), %edi
+<a id='L556' name='L556'></a> 556     movdqa  %xmm2, -32(%edx, %edi)
+<a id='L557' name='L557'></a> 557     movdqa  %xmm3, -16(%edx, %edi)
+<a id='L558' name='L558'></a> 558 
+<a id='L559' name='L559'></a> 559     jae L(shl_4_loop)
+<a id='L560' name='L560'></a> 560 
+<a id='L561' name='L561'></a> 561 L(shl_4_end):
+<a id='L562' name='L562'></a> 562     add $32, %ecx
+<a id='L563' name='L563'></a> 563     add %ecx, %edi
+<a id='L564' name='L564'></a> 564     add %edi, %edx
+<a id='L565' name='L565'></a> 565     lea 4(%edi, %eax), %eax
+<a id='L566' name='L566'></a> 566     POP (%edi)
+<a id='L567' name='L567'></a> 567     BRANCH_TO_JMPTBL_ENTRY_TAIL(L(table_48bytes_fwd), %ecx, 4)
+<a id='L568' name='L568'></a> 568 
+<a id='L569' name='L569'></a> 569     cfi_restore_state
+<a id='L570' name='L570'></a> 570     cfi_remember_state
+<a id='L571' name='L571'></a> 571     ALIGN (4)
+<a id='L572' name='L572'></a> 572 L(shl_5):
+<a id='L573' name='L573'></a> 573     BRANCH_TO_JMPTBL_ENTRY_VALUE(L(table_48bytes_fwd))
+<a id='L574' name='L574'></a> 574     sub $5, %eax
+<a id='L575' name='L575'></a> 575     movaps  (%eax), %xmm1
+<a id='L576' name='L576'></a> 576     xor %edi, %edi
+<a id='L577' name='L577'></a> 577     sub $32, %ecx
+<a id='L578' name='L578'></a> 578     movdqu  %xmm0, (%esi)
+<a id='L579' name='L579'></a> 579     POP (%esi)
+<a id='L580' name='L580'></a> 580 L(shl_5_loop):
+<a id='L581' name='L581'></a> 581 
+<a id='L582' name='L582'></a> 582     movdqa  16(%eax, %edi), %xmm2
+<a id='L583' name='L583'></a> 583     sub $32, %ecx
+<a id='L584' name='L584'></a> 584     movdqa  32(%eax, %edi), %xmm3
+<a id='L585' name='L585'></a> 585     movdqa  %xmm3, %xmm4
+<a id='L586' name='L586'></a> 586     palignr $5, %xmm2, %xmm3
+<a id='L587' name='L587'></a> 587     palignr $5, %xmm1, %xmm2
+<a id='L588' name='L588'></a> 588     lea 32(%edi), %edi
+<a id='L589' name='L589'></a> 589     movdqa  %xmm2, -32(%edx, %edi)
+<a id='L590' name='L590'></a> 590     movdqa  %xmm3, -16(%edx, %edi)
+<a id='L591' name='L591'></a> 591 
+<a id='L592' name='L592'></a> 592     jb  L(shl_5_end)
+<a id='L593' name='L593'></a> 593 
+<a id='L594' name='L594'></a> 594     movdqa  16(%eax, %edi), %xmm2
+<a id='L595' name='L595'></a> 595     sub $32, %ecx
+<a id='L596' name='L596'></a> 596     movdqa  32(%eax, %edi), %xmm3
+<a id='L597' name='L597'></a> 597     movdqa  %xmm3, %xmm1
+<a id='L598' name='L598'></a> 598     palignr $5, %xmm2, %xmm3
+<a id='L599' name='L599'></a> 599     palignr $5, %xmm4, %xmm2
+<a id='L600' name='L600'></a> 600     lea 32(%edi), %edi
+<a id='L601' name='L601'></a> 601     movdqa  %xmm2, -32(%edx, %edi)
+<a id='L602' name='L602'></a> 602     movdqa  %xmm3, -16(%edx, %edi)
+<a id='L603' name='L603'></a> 603 
+<a id='L604' name='L604'></a> 604     jae L(shl_5_loop)
+<a id='L605' name='L605'></a> 605 
+<a id='L606' name='L606'></a> 606 L(shl_5_end):
+<a id='L607' name='L607'></a> 607     add $32, %ecx
+<a id='L608' name='L608'></a> 608     add %ecx, %edi
+<a id='L609' name='L609'></a> 609     add %edi, %edx
+<a id='L610' name='L610'></a> 610     lea 5(%edi, %eax), %eax
+<a id='L611' name='L611'></a> 611     POP (%edi)
+<a id='L612' name='L612'></a> 612     BRANCH_TO_JMPTBL_ENTRY_TAIL(L(table_48bytes_fwd), %ecx, 4)
+<a id='L613' name='L613'></a> 613 
+<a id='L614' name='L614'></a> 614     cfi_restore_state
+<a id='L615' name='L615'></a> 615     cfi_remember_state
+<a id='L616' name='L616'></a> 616     ALIGN (4)
+<a id='L617' name='L617'></a> 617 L(shl_6):
+<a id='L618' name='L618'></a> 618     BRANCH_TO_JMPTBL_ENTRY_VALUE(L(table_48bytes_fwd))
+<a id='L619' name='L619'></a> 619     sub $6, %eax
+<a id='L620' name='L620'></a> 620     movaps  (%eax), %xmm1
+<a id='L621' name='L621'></a> 621     xor %edi, %edi
+<a id='L622' name='L622'></a> 622     sub $32, %ecx
+<a id='L623' name='L623'></a> 623     movdqu  %xmm0, (%esi)
+<a id='L624' name='L624'></a> 624     POP (%esi)
+<a id='L625' name='L625'></a> 625 L(shl_6_loop):
+<a id='L626' name='L626'></a> 626 
+<a id='L627' name='L627'></a> 627     movdqa  16(%eax, %edi), %xmm2
+<a id='L628' name='L628'></a> 628     sub $32, %ecx
+<a id='L629' name='L629'></a> 629     movdqa  32(%eax, %edi), %xmm3
+<a id='L630' name='L630'></a> 630     movdqa  %xmm3, %xmm4
+<a id='L631' name='L631'></a> 631     palignr $6, %xmm2, %xmm3
+<a id='L632' name='L632'></a> 632     palignr $6, %xmm1, %xmm2
+<a id='L633' name='L633'></a> 633     lea 32(%edi), %edi
+<a id='L634' name='L634'></a> 634     movdqa  %xmm2, -32(%edx, %edi)
+<a id='L635' name='L635'></a> 635     movdqa  %xmm3, -16(%edx, %edi)
+<a id='L636' name='L636'></a> 636 
+<a id='L637' name='L637'></a> 637     jb  L(shl_6_end)
+<a id='L638' name='L638'></a> 638 
+<a id='L639' name='L639'></a> 639     movdqa  16(%eax, %edi), %xmm2
+<a id='L640' name='L640'></a> 640     sub $32, %ecx
+<a id='L641' name='L641'></a> 641     movdqa  32(%eax, %edi), %xmm3
+<a id='L642' name='L642'></a> 642     movdqa  %xmm3, %xmm1
+<a id='L643' name='L643'></a> 643     palignr $6, %xmm2, %xmm3
+<a id='L644' name='L644'></a> 644     palignr $6, %xmm4, %xmm2
+<a id='L645' name='L645'></a> 645     lea 32(%edi), %edi
+<a id='L646' name='L646'></a> 646     movdqa  %xmm2, -32(%edx, %edi)
+<a id='L647' name='L647'></a> 647     movdqa  %xmm3, -16(%edx, %edi)
+<a id='L648' name='L648'></a> 648 
+<a id='L649' name='L649'></a> 649     jae L(shl_6_loop)
+<a id='L650' name='L650'></a> 650 
+<a id='L651' name='L651'></a> 651 L(shl_6_end):
+<a id='L652' name='L652'></a> 652     add $32, %ecx
+<a id='L653' name='L653'></a> 653     add %ecx, %edi
+<a id='L654' name='L654'></a> 654     add %edi, %edx
+<a id='L655' name='L655'></a> 655     lea 6(%edi, %eax), %eax
+<a id='L656' name='L656'></a> 656     POP (%edi)
+<a id='L657' name='L657'></a> 657     BRANCH_TO_JMPTBL_ENTRY_TAIL(L(table_48bytes_fwd), %ecx, 4)
+<a id='L658' name='L658'></a> 658 
+<a id='L659' name='L659'></a> 659     cfi_restore_state
+<a id='L660' name='L660'></a> 660     cfi_remember_state
+<a id='L661' name='L661'></a> 661     ALIGN (4)
+<a id='L662' name='L662'></a> 662 L(shl_7):
+<a id='L663' name='L663'></a> 663     BRANCH_TO_JMPTBL_ENTRY_VALUE(L(table_48bytes_fwd))
+<a id='L664' name='L664'></a> 664     sub $7, %eax
+<a id='L665' name='L665'></a> 665     movaps  (%eax), %xmm1
+<a id='L666' name='L666'></a> 666     xor %edi, %edi
+<a id='L667' name='L667'></a> 667     sub $32, %ecx
+<a id='L668' name='L668'></a> 668     movdqu  %xmm0, (%esi)
+<a id='L669' name='L669'></a> 669     POP (%esi)
+<a id='L670' name='L670'></a> 670 L(shl_7_loop):
+<a id='L671' name='L671'></a> 671 
+<a id='L672' name='L672'></a> 672     movdqa  16(%eax, %edi), %xmm2
+<a id='L673' name='L673'></a> 673     sub $32, %ecx
+<a id='L674' name='L674'></a> 674     movdqa  32(%eax, %edi), %xmm3
+<a id='L675' name='L675'></a> 675     movdqa  %xmm3, %xmm4
+<a id='L676' name='L676'></a> 676     palignr $7, %xmm2, %xmm3
+<a id='L677' name='L677'></a> 677     palignr $7, %xmm1, %xmm2
+<a id='L678' name='L678'></a> 678     lea 32(%edi), %edi
+<a id='L679' name='L679'></a> 679     movdqa  %xmm2, -32(%edx, %edi)
+<a id='L680' name='L680'></a> 680     movdqa  %xmm3, -16(%edx, %edi)
+<a id='L681' name='L681'></a> 681 
+<a id='L682' name='L682'></a> 682     jb  L(shl_7_end)
+<a id='L683' name='L683'></a> 683 
+<a id='L684' name='L684'></a> 684     movdqa  16(%eax, %edi), %xmm2
+<a id='L685' name='L685'></a> 685     sub $32, %ecx
+<a id='L686' name='L686'></a> 686     movdqa  32(%eax, %edi), %xmm3
+<a id='L687' name='L687'></a> 687     movdqa  %xmm3, %xmm1
+<a id='L688' name='L688'></a> 688     palignr $7, %xmm2, %xmm3
+<a id='L689' name='L689'></a> 689     palignr $7, %xmm4, %xmm2
+<a id='L690' name='L690'></a> 690     lea 32(%edi), %edi
+<a id='L691' name='L691'></a> 691     movdqa  %xmm2, -32(%edx, %edi)
+<a id='L692' name='L692'></a> 692     movdqa  %xmm3, -16(%edx, %edi)
+<a id='L693' name='L693'></a> 693 
+<a id='L694' name='L694'></a> 694     jae L(shl_7_loop)
+<a id='L695' name='L695'></a> 695 
+<a id='L696' name='L696'></a> 696 L(shl_7_end):
+<a id='L697' name='L697'></a> 697     add $32, %ecx
+<a id='L698' name='L698'></a> 698     add %ecx, %edi
+<a id='L699' name='L699'></a> 699     add %edi, %edx
+<a id='L700' name='L700'></a> 700     lea 7(%edi, %eax), %eax
+<a id='L701' name='L701'></a> 701     POP (%edi)
+<a id='L702' name='L702'></a> 702     BRANCH_TO_JMPTBL_ENTRY_TAIL(L(table_48bytes_fwd), %ecx, 4)
+<a id='L703' name='L703'></a> 703 
+<a id='L704' name='L704'></a> 704     cfi_restore_state
+<a id='L705' name='L705'></a> 705     cfi_remember_state
+<a id='L706' name='L706'></a> 706     ALIGN (4)
+<a id='L707' name='L707'></a> 707 L(shl_8):
+<a id='L708' name='L708'></a> 708     BRANCH_TO_JMPTBL_ENTRY_VALUE(L(table_48bytes_fwd))
+<a id='L709' name='L709'></a> 709     sub $8, %eax
+<a id='L710' name='L710'></a> 710     movaps  (%eax), %xmm1
+<a id='L711' name='L711'></a> 711     xor %edi, %edi
+<a id='L712' name='L712'></a> 712     sub $32, %ecx
+<a id='L713' name='L713'></a> 713     movdqu  %xmm0, (%esi)
+<a id='L714' name='L714'></a> 714     POP (%esi)
+<a id='L715' name='L715'></a> 715 L(shl_8_loop):
+<a id='L716' name='L716'></a> 716 
+<a id='L717' name='L717'></a> 717     movdqa  16(%eax, %edi), %xmm2
+<a id='L718' name='L718'></a> 718     sub $32, %ecx
+<a id='L719' name='L719'></a> 719     movdqa  32(%eax, %edi), %xmm3
+<a id='L720' name='L720'></a> 720     movdqa  %xmm3, %xmm4
+<a id='L721' name='L721'></a> 721     palignr $8, %xmm2, %xmm3
+<a id='L722' name='L722'></a> 722     palignr $8, %xmm1, %xmm2
+<a id='L723' name='L723'></a> 723     lea 32(%edi), %edi
+<a id='L724' name='L724'></a> 724     movdqa  %xmm2, -32(%edx, %edi)
+<a id='L725' name='L725'></a> 725     movdqa  %xmm3, -16(%edx, %edi)
+<a id='L726' name='L726'></a> 726 
+<a id='L727' name='L727'></a> 727     jb  L(shl_8_end)
+<a id='L728' name='L728'></a> 728 
+<a id='L729' name='L729'></a> 729     movdqa  16(%eax, %edi), %xmm2
+<a id='L730' name='L730'></a> 730     sub $32, %ecx
+<a id='L731' name='L731'></a> 731     movdqa  32(%eax, %edi), %xmm3
+<a id='L732' name='L732'></a> 732     movdqa  %xmm3, %xmm1
+<a id='L733' name='L733'></a> 733     palignr $8, %xmm2, %xmm3
+<a id='L734' name='L734'></a> 734     palignr $8, %xmm4, %xmm2
+<a id='L735' name='L735'></a> 735     lea 32(%edi), %edi
+<a id='L736' name='L736'></a> 736     movdqa  %xmm2, -32(%edx, %edi)
+<a id='L737' name='L737'></a> 737     movdqa  %xmm3, -16(%edx, %edi)
+<a id='L738' name='L738'></a> 738 
+<a id='L739' name='L739'></a> 739     jae L(shl_8_loop)
+<a id='L740' name='L740'></a> 740 
+<a id='L741' name='L741'></a> 741 L(shl_8_end):
+<a id='L742' name='L742'></a> 742     add $32, %ecx
+<a id='L743' name='L743'></a> 743     add %ecx, %edi
+<a id='L744' name='L744'></a> 744     add %edi, %edx
+<a id='L745' name='L745'></a> 745     lea 8(%edi, %eax), %eax
+<a id='L746' name='L746'></a> 746     POP (%edi)
+<a id='L747' name='L747'></a> 747     BRANCH_TO_JMPTBL_ENTRY_TAIL(L(table_48bytes_fwd), %ecx, 4)
+<a id='L748' name='L748'></a> 748 
+<a id='L749' name='L749'></a> 749     cfi_restore_state
+<a id='L750' name='L750'></a> 750     cfi_remember_state
+<a id='L751' name='L751'></a> 751     ALIGN (4)
+<a id='L752' name='L752'></a> 752 L(shl_9):
+<a id='L753' name='L753'></a> 753     BRANCH_TO_JMPTBL_ENTRY_VALUE(L(table_48bytes_fwd))
+<a id='L754' name='L754'></a> 754     sub $9, %eax
+<a id='L755' name='L755'></a> 755     movaps  (%eax), %xmm1
+<a id='L756' name='L756'></a> 756     xor %edi, %edi
+<a id='L757' name='L757'></a> 757     sub $32, %ecx
+<a id='L758' name='L758'></a> 758     movdqu  %xmm0, (%esi)
+<a id='L759' name='L759'></a> 759     POP (%esi)
+<a id='L760' name='L760'></a> 760 L(shl_9_loop):
+<a id='L761' name='L761'></a> 761 
+<a id='L762' name='L762'></a> 762     movdqa  16(%eax, %edi), %xmm2
+<a id='L763' name='L763'></a> 763     sub $32, %ecx
+<a id='L764' name='L764'></a> 764     movdqa  32(%eax, %edi), %xmm3
+<a id='L765' name='L765'></a> 765     movdqa  %xmm3, %xmm4
+<a id='L766' name='L766'></a> 766     palignr $9, %xmm2, %xmm3
+<a id='L767' name='L767'></a> 767     palignr $9, %xmm1, %xmm2
+<a id='L768' name='L768'></a> 768     lea 32(%edi), %edi
+<a id='L769' name='L769'></a> 769     movdqa  %xmm2, -32(%edx, %edi)
+<a id='L770' name='L770'></a> 770     movdqa  %xmm3, -16(%edx, %edi)
+<a id='L771' name='L771'></a> 771 
+<a id='L772' name='L772'></a> 772     jb  L(shl_9_end)
+<a id='L773' name='L773'></a> 773 
+<a id='L774' name='L774'></a> 774     movdqa  16(%eax, %edi), %xmm2
+<a id='L775' name='L775'></a> 775     sub $32, %ecx
+<a id='L776' name='L776'></a> 776     movdqa  32(%eax, %edi), %xmm3
+<a id='L777' name='L777'></a> 777     movdqa  %xmm3, %xmm1
+<a id='L778' name='L778'></a> 778     palignr $9, %xmm2, %xmm3
+<a id='L779' name='L779'></a> 779     palignr $9, %xmm4, %xmm2
+<a id='L780' name='L780'></a> 780     lea 32(%edi), %edi
+<a id='L781' name='L781'></a> 781     movdqa  %xmm2, -32(%edx, %edi)
+<a id='L782' name='L782'></a> 782     movdqa  %xmm3, -16(%edx, %edi)
+<a id='L783' name='L783'></a> 783 
+<a id='L784' name='L784'></a> 784     jae L(shl_9_loop)
+<a id='L785' name='L785'></a> 785 
+<a id='L786' name='L786'></a> 786 L(shl_9_end):
+<a id='L787' name='L787'></a> 787     add $32, %ecx
+<a id='L788' name='L788'></a> 788     add %ecx, %edi
+<a id='L789' name='L789'></a> 789     add %edi, %edx
+<a id='L790' name='L790'></a> 790     lea 9(%edi, %eax), %eax
+<a id='L791' name='L791'></a> 791     POP (%edi)
+<a id='L792' name='L792'></a> 792     BRANCH_TO_JMPTBL_ENTRY_TAIL(L(table_48bytes_fwd), %ecx, 4)
+<a id='L793' name='L793'></a> 793 
+<a id='L794' name='L794'></a> 794     cfi_restore_state
+<a id='L795' name='L795'></a> 795     cfi_remember_state
+<a id='L796' name='L796'></a> 796     ALIGN (4)
+<a id='L797' name='L797'></a> 797 L(shl_10):
+<a id='L798' name='L798'></a> 798     BRANCH_TO_JMPTBL_ENTRY_VALUE(L(table_48bytes_fwd))
+<a id='L799' name='L799'></a> 799     sub $10, %eax
+<a id='L800' name='L800'></a> 800     movaps  (%eax), %xmm1
+<a id='L801' name='L801'></a> 801     xor %edi, %edi
+<a id='L802' name='L802'></a> 802     sub $32, %ecx
+<a id='L803' name='L803'></a> 803     movdqu  %xmm0, (%esi)
+<a id='L804' name='L804'></a> 804     POP (%esi)
+<a id='L805' name='L805'></a> 805 L(shl_10_loop):
+<a id='L806' name='L806'></a> 806 
+<a id='L807' name='L807'></a> 807     movdqa  16(%eax, %edi), %xmm2
+<a id='L808' name='L808'></a> 808     sub $32, %ecx
+<a id='L809' name='L809'></a> 809     movdqa  32(%eax, %edi), %xmm3
+<a id='L810' name='L810'></a> 810     movdqa  %xmm3, %xmm4
+<a id='L811' name='L811'></a> 811     palignr $10, %xmm2, %xmm3
+<a id='L812' name='L812'></a> 812     palignr $10, %xmm1, %xmm2
+<a id='L813' name='L813'></a> 813     lea 32(%edi), %edi
+<a id='L814' name='L814'></a> 814     movdqa  %xmm2, -32(%edx, %edi)
+<a id='L815' name='L815'></a> 815     movdqa  %xmm3, -16(%edx, %edi)
+<a id='L816' name='L816'></a> 816 
+<a id='L817' name='L817'></a> 817     jb  L(shl_10_end)
+<a id='L818' name='L818'></a> 818 
+<a id='L819' name='L819'></a> 819     movdqa  16(%eax, %edi), %xmm2
+<a id='L820' name='L820'></a> 820     sub $32, %ecx
+<a id='L821' name='L821'></a> 821     movdqa  32(%eax, %edi), %xmm3
+<a id='L822' name='L822'></a> 822     movdqa  %xmm3, %xmm1
+<a id='L823' name='L823'></a> 823     palignr $10, %xmm2, %xmm3
+<a id='L824' name='L824'></a> 824     palignr $10, %xmm4, %xmm2
+<a id='L825' name='L825'></a> 825     lea 32(%edi), %edi
+<a id='L826' name='L826'></a> 826     movdqa  %xmm2, -32(%edx, %edi)
+<a id='L827' name='L827'></a> 827     movdqa  %xmm3, -16(%edx, %edi)
+<a id='L828' name='L828'></a> 828 
+<a id='L829' name='L829'></a> 829     jae L(shl_10_loop)
+<a id='L830' name='L830'></a> 830 
+<a id='L831' name='L831'></a> 831 L(shl_10_end):
+<a id='L832' name='L832'></a> 832     add $32, %ecx
+<a id='L833' name='L833'></a> 833     add %ecx, %edi
+<a id='L834' name='L834'></a> 834     add %edi, %edx
+<a id='L835' name='L835'></a> 835     lea 10(%edi, %eax), %eax
+<a id='L836' name='L836'></a> 836     POP (%edi)
+<a id='L837' name='L837'></a> 837     BRANCH_TO_JMPTBL_ENTRY_TAIL(L(table_48bytes_fwd), %ecx, 4)
+<a id='L838' name='L838'></a> 838 
+<a id='L839' name='L839'></a> 839     cfi_restore_state
+<a id='L840' name='L840'></a> 840     cfi_remember_state
+<a id='L841' name='L841'></a> 841     ALIGN (4)
+<a id='L842' name='L842'></a> 842 L(shl_11):
+<a id='L843' name='L843'></a> 843     BRANCH_TO_JMPTBL_ENTRY_VALUE(L(table_48bytes_fwd))
+<a id='L844' name='L844'></a> 844     sub $11, %eax
+<a id='L845' name='L845'></a> 845     movaps  (%eax), %xmm1
+<a id='L846' name='L846'></a> 846     xor %edi, %edi
+<a id='L847' name='L847'></a> 847     sub $32, %ecx
+<a id='L848' name='L848'></a> 848     movdqu  %xmm0, (%esi)
+<a id='L849' name='L849'></a> 849     POP (%esi)
+<a id='L850' name='L850'></a> 850 L(shl_11_loop):
+<a id='L851' name='L851'></a> 851 
+<a id='L852' name='L852'></a> 852     movdqa  16(%eax, %edi), %xmm2
+<a id='L853' name='L853'></a> 853     sub $32, %ecx
+<a id='L854' name='L854'></a> 854     movdqa  32(%eax, %edi), %xmm3
+<a id='L855' name='L855'></a> 855     movdqa  %xmm3, %xmm4
+<a id='L856' name='L856'></a> 856     palignr $11, %xmm2, %xmm3
+<a id='L857' name='L857'></a> 857     palignr $11, %xmm1, %xmm2
+<a id='L858' name='L858'></a> 858     lea 32(%edi), %edi
+<a id='L859' name='L859'></a> 859     movdqa  %xmm2, -32(%edx, %edi)
+<a id='L860' name='L860'></a> 860     movdqa  %xmm3, -16(%edx, %edi)
+<a id='L861' name='L861'></a> 861 
+<a id='L862' name='L862'></a> 862     jb  L(shl_11_end)
+<a id='L863' name='L863'></a> 863 
+<a id='L864' name='L864'></a> 864     movdqa  16(%eax, %edi), %xmm2
+<a id='L865' name='L865'></a> 865     sub $32, %ecx
+<a id='L866' name='L866'></a> 866     movdqa  32(%eax, %edi), %xmm3
+<a id='L867' name='L867'></a> 867     movdqa  %xmm3, %xmm1
+<a id='L868' name='L868'></a> 868     palignr $11, %xmm2, %xmm3
+<a id='L869' name='L869'></a> 869     palignr $11, %xmm4, %xmm2
+<a id='L870' name='L870'></a> 870     lea 32(%edi), %edi
+<a id='L871' name='L871'></a> 871     movdqa  %xmm2, -32(%edx, %edi)
+<a id='L872' name='L872'></a> 872     movdqa  %xmm3, -16(%edx, %edi)
+<a id='L873' name='L873'></a> 873 
+<a id='L874' name='L874'></a> 874     jae L(shl_11_loop)
+<a id='L875' name='L875'></a> 875 
+<a id='L876' name='L876'></a> 876 L(shl_11_end):
+<a id='L877' name='L877'></a> 877     add $32, %ecx
+<a id='L878' name='L878'></a> 878     add %ecx, %edi
+<a id='L879' name='L879'></a> 879     add %edi, %edx
+<a id='L880' name='L880'></a> 880     lea 11(%edi, %eax), %eax
+<a id='L881' name='L881'></a> 881     POP (%edi)
+<a id='L882' name='L882'></a> 882     BRANCH_TO_JMPTBL_ENTRY_TAIL(L(table_48bytes_fwd), %ecx, 4)
+<a id='L883' name='L883'></a> 883 
+<a id='L884' name='L884'></a> 884     cfi_restore_state
+<a id='L885' name='L885'></a> 885     cfi_remember_state
+<a id='L886' name='L886'></a> 886     ALIGN (4)
+<a id='L887' name='L887'></a> 887 L(shl_12):
+<a id='L888' name='L888'></a> 888     BRANCH_TO_JMPTBL_ENTRY_VALUE(L(table_48bytes_fwd))
+<a id='L889' name='L889'></a> 889     sub $12, %eax
+<a id='L890' name='L890'></a> 890     movaps  (%eax), %xmm1
+<a id='L891' name='L891'></a> 891     xor %edi, %edi
+<a id='L892' name='L892'></a> 892     sub $32, %ecx
+<a id='L893' name='L893'></a> 893     movdqu  %xmm0, (%esi)
+<a id='L894' name='L894'></a> 894     POP (%esi)
+<a id='L895' name='L895'></a> 895 L(shl_12_loop):
+<a id='L896' name='L896'></a> 896 
+<a id='L897' name='L897'></a> 897     movdqa  16(%eax, %edi), %xmm2
+<a id='L898' name='L898'></a> 898     sub $32, %ecx
+<a id='L899' name='L899'></a> 899     movdqa  32(%eax, %edi), %xmm3
+<a id='L900' name='L900'></a> 900     movdqa  %xmm3, %xmm4
+<a id='L901' name='L901'></a> 901     palignr $12, %xmm2, %xmm3
+<a id='L902' name='L902'></a> 902     palignr $12, %xmm1, %xmm2
+<a id='L903' name='L903'></a> 903     lea 32(%edi), %edi
+<a id='L904' name='L904'></a> 904     movdqa  %xmm2, -32(%edx, %edi)
+<a id='L905' name='L905'></a> 905     movdqa  %xmm3, -16(%edx, %edi)
+<a id='L906' name='L906'></a> 906 
+<a id='L907' name='L907'></a> 907     jb  L(shl_12_end)
+<a id='L908' name='L908'></a> 908 
+<a id='L909' name='L909'></a> 909     movdqa  16(%eax, %edi), %xmm2
+<a id='L910' name='L910'></a> 910     sub $32, %ecx
+<a id='L911' name='L911'></a> 911     movdqa  32(%eax, %edi), %xmm3
+<a id='L912' name='L912'></a> 912     movdqa  %xmm3, %xmm1
+<a id='L913' name='L913'></a> 913     palignr $12, %xmm2, %xmm3
+<a id='L914' name='L914'></a> 914     palignr $12, %xmm4, %xmm2
+<a id='L915' name='L915'></a> 915     lea 32(%edi), %edi
+<a id='L916' name='L916'></a> 916     movdqa  %xmm2, -32(%edx, %edi)
+<a id='L917' name='L917'></a> 917     movdqa  %xmm3, -16(%edx, %edi)
+<a id='L918' name='L918'></a> 918 
+<a id='L919' name='L919'></a> 919     jae L(shl_12_loop)
+<a id='L920' name='L920'></a> 920 
+<a id='L921' name='L921'></a> 921 L(shl_12_end):
+<a id='L922' name='L922'></a> 922     add $32, %ecx
+<a id='L923' name='L923'></a> 923     add %ecx, %edi
+<a id='L924' name='L924'></a> 924     add %edi, %edx
+<a id='L925' name='L925'></a> 925     lea 12(%edi, %eax), %eax
+<a id='L926' name='L926'></a> 926     POP (%edi)
+<a id='L927' name='L927'></a> 927     BRANCH_TO_JMPTBL_ENTRY_TAIL(L(table_48bytes_fwd), %ecx, 4)
+<a id='L928' name='L928'></a> 928 
+<a id='L929' name='L929'></a> 929     cfi_restore_state
+<a id='L930' name='L930'></a> 930     cfi_remember_state
+<a id='L931' name='L931'></a> 931     ALIGN (4)
+<a id='L932' name='L932'></a> 932 L(shl_13):
+<a id='L933' name='L933'></a> 933     BRANCH_TO_JMPTBL_ENTRY_VALUE(L(table_48bytes_fwd))
+<a id='L934' name='L934'></a> 934     sub $13, %eax
+<a id='L935' name='L935'></a> 935     movaps  (%eax), %xmm1
+<a id='L936' name='L936'></a> 936     xor %edi, %edi
+<a id='L937' name='L937'></a> 937     sub $32, %ecx
+<a id='L938' name='L938'></a> 938     movdqu  %xmm0, (%esi)
+<a id='L939' name='L939'></a> 939     POP (%esi)
+<a id='L940' name='L940'></a> 940 L(shl_13_loop):
+<a id='L941' name='L941'></a> 941 
+<a id='L942' name='L942'></a> 942     movdqa  16(%eax, %edi), %xmm2
+<a id='L943' name='L943'></a> 943     sub $32, %ecx
+<a id='L944' name='L944'></a> 944     movdqa  32(%eax, %edi), %xmm3
+<a id='L945' name='L945'></a> 945     movdqa  %xmm3, %xmm4
+<a id='L946' name='L946'></a> 946     palignr $13, %xmm2, %xmm3
+<a id='L947' name='L947'></a> 947     palignr $13, %xmm1, %xmm2
+<a id='L948' name='L948'></a> 948     lea 32(%edi), %edi
+<a id='L949' name='L949'></a> 949     movdqa  %xmm2, -32(%edx, %edi)
+<a id='L950' name='L950'></a> 950     movdqa  %xmm3, -16(%edx, %edi)
+<a id='L951' name='L951'></a> 951 
+<a id='L952' name='L952'></a> 952     jb  L(shl_13_end)
+<a id='L953' name='L953'></a> 953 
+<a id='L954' name='L954'></a> 954     movdqa  16(%eax, %edi), %xmm2
+<a id='L955' name='L955'></a> 955     sub $32, %ecx
+<a id='L956' name='L956'></a> 956     movdqa  32(%eax, %edi), %xmm3
+<a id='L957' name='L957'></a> 957     movdqa  %xmm3, %xmm1
+<a id='L958' name='L958'></a> 958     palignr $13, %xmm2, %xmm3
+<a id='L959' name='L959'></a> 959     palignr $13, %xmm4, %xmm2
+<a id='L960' name='L960'></a> 960     lea 32(%edi), %edi
+<a id='L961' name='L961'></a> 961     movdqa  %xmm2, -32(%edx, %edi)
+<a id='L962' name='L962'></a> 962     movdqa  %xmm3, -16(%edx, %edi)
+<a id='L963' name='L963'></a> 963 
+<a id='L964' name='L964'></a> 964     jae L(shl_13_loop)
+<a id='L965' name='L965'></a> 965 
+<a id='L966' name='L966'></a> 966 L(shl_13_end):
+<a id='L967' name='L967'></a> 967     add $32, %ecx
+<a id='L968' name='L968'></a> 968     add %ecx, %edi
+<a id='L969' name='L969'></a> 969     add %edi, %edx
+<a id='L970' name='L970'></a> 970     lea 13(%edi, %eax), %eax
+<a id='L971' name='L971'></a> 971     POP (%edi)
+<a id='L972' name='L972'></a> 972     BRANCH_TO_JMPTBL_ENTRY_TAIL(L(table_48bytes_fwd), %ecx, 4)
+<a id='L973' name='L973'></a> 973 
+<a id='L974' name='L974'></a> 974     cfi_restore_state
+<a id='L975' name='L975'></a> 975     cfi_remember_state
+<a id='L976' name='L976'></a> 976     ALIGN (4)
+<a id='L977' name='L977'></a> 977 L(shl_14):
+<a id='L978' name='L978'></a> 978     BRANCH_TO_JMPTBL_ENTRY_VALUE(L(table_48bytes_fwd))
+<a id='L979' name='L979'></a> 979     sub $14, %eax
+<a id='L980' name='L980'></a> 980     movaps  (%eax), %xmm1
+<a id='L981' name='L981'></a> 981     xor %edi, %edi
+<a id='L982' name='L982'></a> 982     sub $32, %ecx
+<a id='L983' name='L983'></a> 983     movdqu  %xmm0, (%esi)
+<a id='L984' name='L984'></a> 984     POP (%esi)
+<a id='L985' name='L985'></a> 985 L(shl_14_loop):
+<a id='L986' name='L986'></a> 986 
+<a id='L987' name='L987'></a> 987     movdqa  16(%eax, %edi), %xmm2
+<a id='L988' name='L988'></a> 988     sub $32, %ecx
+<a id='L989' name='L989'></a> 989     movdqa  32(%eax, %edi), %xmm3
+<a id='L990' name='L990'></a> 990     movdqa  %xmm3, %xmm4
+<a id='L991' name='L991'></a> 991     palignr $14, %xmm2, %xmm3
+<a id='L992' name='L992'></a> 992     palignr $14, %xmm1, %xmm2
+<a id='L993' name='L993'></a> 993     lea 32(%edi), %edi
+<a id='L994' name='L994'></a> 994     movdqa  %xmm2, -32(%edx, %edi)
+<a id='L995' name='L995'></a> 995     movdqa  %xmm3, -16(%edx, %edi)
+<a id='L996' name='L996'></a> 996 
+<a id='L997' name='L997'></a> 997     jb  L(shl_14_end)
+<a id='L998' name='L998'></a> 998 
+<a id='L999' name='L999'></a> 999     movdqa  16(%eax, %edi), %xmm2
+<a id='L1000' name='L1000'></a>1000     sub $32, %ecx
+<a id='L1001' name='L1001'></a>1001     movdqa  32(%eax, %edi), %xmm3
+<a id='L1002' name='L1002'></a>1002     movdqa  %xmm3, %xmm1
+<a id='L1003' name='L1003'></a>1003     palignr $14, %xmm2, %xmm3
+<a id='L1004' name='L1004'></a>1004     palignr $14, %xmm4, %xmm2
+<a id='L1005' name='L1005'></a>1005     lea 32(%edi), %edi
+<a id='L1006' name='L1006'></a>1006     movdqa  %xmm2, -32(%edx, %edi)
+<a id='L1007' name='L1007'></a>1007     movdqa  %xmm3, -16(%edx, %edi)
+<a id='L1008' name='L1008'></a>1008 
+<a id='L1009' name='L1009'></a>1009     jae L(shl_14_loop)
+<a id='L1010' name='L1010'></a>1010 
+<a id='L1011' name='L1011'></a>1011 L(shl_14_end):
+<a id='L1012' name='L1012'></a>1012     add $32, %ecx
+<a id='L1013' name='L1013'></a>1013     add %ecx, %edi
+<a id='L1014' name='L1014'></a>1014     add %edi, %edx
+<a id='L1015' name='L1015'></a>1015     lea 14(%edi, %eax), %eax
+<a id='L1016' name='L1016'></a>1016     POP (%edi)
+<a id='L1017' name='L1017'></a>1017     BRANCH_TO_JMPTBL_ENTRY_TAIL(L(table_48bytes_fwd), %ecx, 4)
+<a id='L1018' name='L1018'></a>1018 
+<a id='L1019' name='L1019'></a>1019     cfi_restore_state
+<a id='L1020' name='L1020'></a>1020     cfi_remember_state
+<a id='L1021' name='L1021'></a>1021     ALIGN (4)
+<a id='L1022' name='L1022'></a>1022 L(shl_15):
+<a id='L1023' name='L1023'></a>1023     BRANCH_TO_JMPTBL_ENTRY_VALUE(L(table_48bytes_fwd))
+<a id='L1024' name='L1024'></a>1024     sub $15, %eax
+<a id='L1025' name='L1025'></a>1025     movaps  (%eax), %xmm1
+<a id='L1026' name='L1026'></a>1026     xor %edi, %edi
+<a id='L1027' name='L1027'></a>1027     sub $32, %ecx
+<a id='L1028' name='L1028'></a>1028     movdqu  %xmm0, (%esi)
+<a id='L1029' name='L1029'></a>1029     POP (%esi)
+<a id='L1030' name='L1030'></a>1030 L(shl_15_loop):
+<a id='L1031' name='L1031'></a>1031 
+<a id='L1032' name='L1032'></a>1032     movdqa  16(%eax, %edi), %xmm2
+<a id='L1033' name='L1033'></a>1033     sub $32, %ecx
+<a id='L1034' name='L1034'></a>1034     movdqa  32(%eax, %edi), %xmm3
+<a id='L1035' name='L1035'></a>1035     movdqa  %xmm3, %xmm4
+<a id='L1036' name='L1036'></a>1036     palignr $15, %xmm2, %xmm3
+<a id='L1037' name='L1037'></a>1037     palignr $15, %xmm1, %xmm2
+<a id='L1038' name='L1038'></a>1038     lea 32(%edi), %edi
+<a id='L1039' name='L1039'></a>1039     movdqa  %xmm2, -32(%edx, %edi)
+<a id='L1040' name='L1040'></a>1040     movdqa  %xmm3, -16(%edx, %edi)
+<a id='L1041' name='L1041'></a>1041 
+<a id='L1042' name='L1042'></a>1042     jb  L(shl_15_end)
+<a id='L1043' name='L1043'></a>1043 
+<a id='L1044' name='L1044'></a>1044     movdqa  16(%eax, %edi), %xmm2
+<a id='L1045' name='L1045'></a>1045     sub $32, %ecx
+<a id='L1046' name='L1046'></a>1046     movdqa  32(%eax, %edi), %xmm3
+<a id='L1047' name='L1047'></a>1047     movdqa  %xmm3, %xmm1
+<a id='L1048' name='L1048'></a>1048     palignr $15, %xmm2, %xmm3
+<a id='L1049' name='L1049'></a>1049     palignr $15, %xmm4, %xmm2
+<a id='L1050' name='L1050'></a>1050     lea 32(%edi), %edi
+<a id='L1051' name='L1051'></a>1051     movdqa  %xmm2, -32(%edx, %edi)
+<a id='L1052' name='L1052'></a>1052     movdqa  %xmm3, -16(%edx, %edi)
+<a id='L1053' name='L1053'></a>1053 
+<a id='L1054' name='L1054'></a>1054     jae L(shl_15_loop)
+<a id='L1055' name='L1055'></a>1055 
+<a id='L1056' name='L1056'></a>1056 L(shl_15_end):
+<a id='L1057' name='L1057'></a>1057     add $32, %ecx
+<a id='L1058' name='L1058'></a>1058     add %ecx, %edi
+<a id='L1059' name='L1059'></a>1059     add %edi, %edx
+<a id='L1060' name='L1060'></a>1060     lea 15(%edi, %eax), %eax
+<a id='L1061' name='L1061'></a>1061     POP (%edi)
+<a id='L1062' name='L1062'></a>1062     BRANCH_TO_JMPTBL_ENTRY_TAIL(L(table_48bytes_fwd), %ecx, 4)
+<a id='L1063' name='L1063'></a>1063 
+<a id='L1064' name='L1064'></a>1064 
+<a id='L1065' name='L1065'></a>1065     ALIGN (4)
+<a id='L1066' name='L1066'></a>1066 L(fwd_write_44bytes):
+<a id='L1067' name='L1067'></a>1067     movl    -44(%eax), %ecx
+<a id='L1068' name='L1068'></a>1068     movl    %ecx, -44(%edx)
+<a id='L1069' name='L1069'></a>1069 L(fwd_write_40bytes):
+<a id='L1070' name='L1070'></a>1070     movl    -40(%eax), %ecx
+<a id='L1071' name='L1071'></a>1071     movl    %ecx, -40(%edx)
+<a id='L1072' name='L1072'></a>1072 L(fwd_write_36bytes):
+<a id='L1073' name='L1073'></a>1073     movl    -36(%eax), %ecx
+<a id='L1074' name='L1074'></a>1074     movl    %ecx, -36(%edx)
+<a id='L1075' name='L1075'></a>1075 L(fwd_write_32bytes):
+<a id='L1076' name='L1076'></a>1076     movl    -32(%eax), %ecx
+<a id='L1077' name='L1077'></a>1077     movl    %ecx, -32(%edx)
+<a id='L1078' name='L1078'></a>1078 L(fwd_write_28bytes):
+<a id='L1079' name='L1079'></a>1079     movl    -28(%eax), %ecx
+<a id='L1080' name='L1080'></a>1080     movl    %ecx, -28(%edx)
+<a id='L1081' name='L1081'></a>1081 L(fwd_write_24bytes):
+<a id='L1082' name='L1082'></a>1082     movl    -24(%eax), %ecx
+<a id='L1083' name='L1083'></a>1083     movl    %ecx, -24(%edx)
+<a id='L1084' name='L1084'></a>1084 L(fwd_write_20bytes):
+<a id='L1085' name='L1085'></a>1085     movl    -20(%eax), %ecx
+<a id='L1086' name='L1086'></a>1086     movl    %ecx, -20(%edx)
+<a id='L1087' name='L1087'></a>1087 L(fwd_write_16bytes):
+<a id='L1088' name='L1088'></a>1088     movl    -16(%eax), %ecx
+<a id='L1089' name='L1089'></a>1089     movl    %ecx, -16(%edx)
+<a id='L1090' name='L1090'></a>1090 L(fwd_write_12bytes):
+<a id='L1091' name='L1091'></a>1091     movl    -12(%eax), %ecx
+<a id='L1092' name='L1092'></a>1092     movl    %ecx, -12(%edx)
+<a id='L1093' name='L1093'></a>1093 L(fwd_write_8bytes):
+<a id='L1094' name='L1094'></a>1094     movl    -8(%eax), %ecx
+<a id='L1095' name='L1095'></a>1095     movl    %ecx, -8(%edx)
+<a id='L1096' name='L1096'></a>1096 L(fwd_write_4bytes):
+<a id='L1097' name='L1097'></a>1097     movl    -4(%eax), %ecx
+<a id='L1098' name='L1098'></a>1098     movl    %ecx, -4(%edx)
+<a id='L1099' name='L1099'></a>1099 L(fwd_write_0bytes):
+<a id='L1100' name='L1100'></a>1100 <em class='sharp'>#ifndef</em> <a href='../D/16761.html' title='Multiple defined in 5 places.'>USE_AS_BCOPY</a>
+<a id='L1101' name='L1101'></a>1101 <em class='sharp'># ifdef</em> <a href='../D/16768.html' title='Multiple defined in 5 places.'>USE_AS_MEMPCPY</a>
+<a id='L1102' name='L1102'></a>1102     movl    %edx, %eax
+<a id='L1103' name='L1103'></a>1103 <em class='sharp'># else</em>
+<a id='L1104' name='L1104'></a>1104     movl    DEST(%esp), %eax
+<a id='L1105' name='L1105'></a>1105 <em class='sharp'># endif</em>
+<a id='L1106' name='L1106'></a>1106 <em class='sharp'>#endif</em>
+<a id='L1107' name='L1107'></a>1107     RETURN
+<a id='L1108' name='L1108'></a>1108 
+<a id='L1109' name='L1109'></a>1109     ALIGN (4)
+<a id='L1110' name='L1110'></a>1110 L(fwd_write_5bytes):
+<a id='L1111' name='L1111'></a>1111     movl    -5(%eax), %ecx
+<a id='L1112' name='L1112'></a>1112     movl    -4(%eax), %eax
+<a id='L1113' name='L1113'></a>1113     movl    %ecx, -5(%edx)
+<a id='L1114' name='L1114'></a>1114     movl    %eax, -4(%edx)
+<a id='L1115' name='L1115'></a>1115 <em class='sharp'>#ifndef</em> <a href='../D/16761.html' title='Multiple defined in 5 places.'>USE_AS_BCOPY</a>
+<a id='L1116' name='L1116'></a>1116 <em class='sharp'># ifdef</em> <a href='../D/16768.html' title='Multiple defined in 5 places.'>USE_AS_MEMPCPY</a>
+<a id='L1117' name='L1117'></a>1117     movl    %edx, %eax
+<a id='L1118' name='L1118'></a>1118 <em class='sharp'># else</em>
+<a id='L1119' name='L1119'></a>1119     movl    DEST(%esp), %eax
+<a id='L1120' name='L1120'></a>1120 <em class='sharp'># endif</em>
+<a id='L1121' name='L1121'></a>1121 <em class='sharp'>#endif</em>
+<a id='L1122' name='L1122'></a>1122     RETURN
+<a id='L1123' name='L1123'></a>1123 
+<a id='L1124' name='L1124'></a>1124     ALIGN (4)
+<a id='L1125' name='L1125'></a>1125 L(fwd_write_45bytes):
+<a id='L1126' name='L1126'></a>1126     movl    -45(%eax), %ecx
+<a id='L1127' name='L1127'></a>1127     movl    %ecx, -45(%edx)
+<a id='L1128' name='L1128'></a>1128 L(fwd_write_41bytes):
+<a id='L1129' name='L1129'></a>1129     movl    -41(%eax), %ecx
+<a id='L1130' name='L1130'></a>1130     movl    %ecx, -41(%edx)
+<a id='L1131' name='L1131'></a>1131 L(fwd_write_37bytes):
+<a id='L1132' name='L1132'></a>1132     movl    -37(%eax), %ecx
+<a id='L1133' name='L1133'></a>1133     movl    %ecx, -37(%edx)
+<a id='L1134' name='L1134'></a>1134 L(fwd_write_33bytes):
+<a id='L1135' name='L1135'></a>1135     movl    -33(%eax), %ecx
+<a id='L1136' name='L1136'></a>1136     movl    %ecx, -33(%edx)
+<a id='L1137' name='L1137'></a>1137 L(fwd_write_29bytes):
+<a id='L1138' name='L1138'></a>1138     movl    -29(%eax), %ecx
+<a id='L1139' name='L1139'></a>1139     movl    %ecx, -29(%edx)
+<a id='L1140' name='L1140'></a>1140 L(fwd_write_25bytes):
+<a id='L1141' name='L1141'></a>1141     movl    -25(%eax), %ecx
+<a id='L1142' name='L1142'></a>1142     movl    %ecx, -25(%edx)
+<a id='L1143' name='L1143'></a>1143 L(fwd_write_21bytes):
+<a id='L1144' name='L1144'></a>1144     movl    -21(%eax), %ecx
+<a id='L1145' name='L1145'></a>1145     movl    %ecx, -21(%edx)
+<a id='L1146' name='L1146'></a>1146 L(fwd_write_17bytes):
+<a id='L1147' name='L1147'></a>1147     movl    -17(%eax), %ecx
+<a id='L1148' name='L1148'></a>1148     movl    %ecx, -17(%edx)
+<a id='L1149' name='L1149'></a>1149 L(fwd_write_13bytes):
+<a id='L1150' name='L1150'></a>1150     movl    -13(%eax), %ecx
+<a id='L1151' name='L1151'></a>1151     movl    %ecx, -13(%edx)
+<a id='L1152' name='L1152'></a>1152 L(fwd_write_9bytes):
+<a id='L1153' name='L1153'></a>1153     movl    -9(%eax), %ecx
+<a id='L1154' name='L1154'></a>1154     movl    %ecx, -9(%edx)
+<a id='L1155' name='L1155'></a>1155     movl    -5(%eax), %ecx
+<a id='L1156' name='L1156'></a>1156     movl    %ecx, -5(%edx)
+<a id='L1157' name='L1157'></a>1157 L(fwd_write_1bytes):
+<a id='L1158' name='L1158'></a>1158     movzbl  -1(%eax), %ecx
+<a id='L1159' name='L1159'></a>1159     movb    %cl, -1(%edx)
+<a id='L1160' name='L1160'></a>1160 <em class='sharp'>#ifndef</em> <a href='../D/16761.html' title='Multiple defined in 5 places.'>USE_AS_BCOPY</a>
+<a id='L1161' name='L1161'></a>1161 <em class='sharp'># ifdef</em> <a href='../D/16768.html' title='Multiple defined in 5 places.'>USE_AS_MEMPCPY</a>
+<a id='L1162' name='L1162'></a>1162     movl    %edx, %eax
+<a id='L1163' name='L1163'></a>1163 <em class='sharp'># else</em>
+<a id='L1164' name='L1164'></a>1164     movl    DEST(%esp), %eax
+<a id='L1165' name='L1165'></a>1165 <em class='sharp'># endif</em>
+<a id='L1166' name='L1166'></a>1166 <em class='sharp'>#endif</em>
+<a id='L1167' name='L1167'></a>1167     RETURN
+<a id='L1168' name='L1168'></a>1168 
+<a id='L1169' name='L1169'></a>1169     ALIGN (4)
+<a id='L1170' name='L1170'></a>1170 L(fwd_write_46bytes):
+<a id='L1171' name='L1171'></a>1171     movl    -46(%eax), %ecx
+<a id='L1172' name='L1172'></a>1172     movl    %ecx, -46(%edx)
+<a id='L1173' name='L1173'></a>1173 L(fwd_write_42bytes):
+<a id='L1174' name='L1174'></a>1174     movl    -42(%eax), %ecx
+<a id='L1175' name='L1175'></a>1175     movl    %ecx, -42(%edx)
+<a id='L1176' name='L1176'></a>1176 L(fwd_write_38bytes):
+<a id='L1177' name='L1177'></a>1177     movl    -38(%eax), %ecx
+<a id='L1178' name='L1178'></a>1178     movl    %ecx, -38(%edx)
+<a id='L1179' name='L1179'></a>1179 L(fwd_write_34bytes):
+<a id='L1180' name='L1180'></a>1180     movl    -34(%eax), %ecx
+<a id='L1181' name='L1181'></a>1181     movl    %ecx, -34(%edx)
+<a id='L1182' name='L1182'></a>1182 L(fwd_write_30bytes):
+<a id='L1183' name='L1183'></a>1183     movl    -30(%eax), %ecx
+<a id='L1184' name='L1184'></a>1184     movl    %ecx, -30(%edx)
+<a id='L1185' name='L1185'></a>1185 L(fwd_write_26bytes):
+<a id='L1186' name='L1186'></a>1186     movl    -26(%eax), %ecx
+<a id='L1187' name='L1187'></a>1187     movl    %ecx, -26(%edx)
+<a id='L1188' name='L1188'></a>1188 L(fwd_write_22bytes):
+<a id='L1189' name='L1189'></a>1189     movl    -22(%eax), %ecx
+<a id='L1190' name='L1190'></a>1190     movl    %ecx, -22(%edx)
+<a id='L1191' name='L1191'></a>1191 L(fwd_write_18bytes):
+<a id='L1192' name='L1192'></a>1192     movl    -18(%eax), %ecx
+<a id='L1193' name='L1193'></a>1193     movl    %ecx, -18(%edx)
+<a id='L1194' name='L1194'></a>1194 L(fwd_write_14bytes):
+<a id='L1195' name='L1195'></a>1195     movl    -14(%eax), %ecx
+<a id='L1196' name='L1196'></a>1196     movl    %ecx, -14(%edx)
+<a id='L1197' name='L1197'></a>1197 L(fwd_write_10bytes):
+<a id='L1198' name='L1198'></a>1198     movl    -10(%eax), %ecx
+<a id='L1199' name='L1199'></a>1199     movl    %ecx, -10(%edx)
+<a id='L1200' name='L1200'></a>1200 L(fwd_write_6bytes):
+<a id='L1201' name='L1201'></a>1201     movl    -6(%eax), %ecx
+<a id='L1202' name='L1202'></a>1202     movl    %ecx, -6(%edx)
+<a id='L1203' name='L1203'></a>1203 L(fwd_write_2bytes):
+<a id='L1204' name='L1204'></a>1204     movzwl  -2(%eax), %ecx
+<a id='L1205' name='L1205'></a>1205     movw    %cx, -2(%edx)
+<a id='L1206' name='L1206'></a>1206 <em class='sharp'>#ifndef</em> <a href='../D/16761.html' title='Multiple defined in 5 places.'>USE_AS_BCOPY</a>
+<a id='L1207' name='L1207'></a>1207 <em class='sharp'># ifdef</em> <a href='../D/16768.html' title='Multiple defined in 5 places.'>USE_AS_MEMPCPY</a>
+<a id='L1208' name='L1208'></a>1208     movl    %edx, %eax
+<a id='L1209' name='L1209'></a>1209 <em class='sharp'># else</em>
+<a id='L1210' name='L1210'></a>1210     movl    DEST(%esp), %eax
+<a id='L1211' name='L1211'></a>1211 <em class='sharp'># endif</em>
+<a id='L1212' name='L1212'></a>1212 <em class='sharp'>#endif</em>
+<a id='L1213' name='L1213'></a>1213     RETURN
+<a id='L1214' name='L1214'></a>1214 
+<a id='L1215' name='L1215'></a>1215     ALIGN (4)
+<a id='L1216' name='L1216'></a>1216 L(fwd_write_47bytes):
+<a id='L1217' name='L1217'></a>1217     movl    -47(%eax), %ecx
+<a id='L1218' name='L1218'></a>1218     movl    %ecx, -47(%edx)
+<a id='L1219' name='L1219'></a>1219 L(fwd_write_43bytes):
+<a id='L1220' name='L1220'></a>1220     movl    -43(%eax), %ecx
+<a id='L1221' name='L1221'></a>1221     movl    %ecx, -43(%edx)
+<a id='L1222' name='L1222'></a>1222 L(fwd_write_39bytes):
+<a id='L1223' name='L1223'></a>1223     movl    -39(%eax), %ecx
+<a id='L1224' name='L1224'></a>1224     movl    %ecx, -39(%edx)
+<a id='L1225' name='L1225'></a>1225 L(fwd_write_35bytes):
+<a id='L1226' name='L1226'></a>1226     movl    -35(%eax), %ecx
+<a id='L1227' name='L1227'></a>1227     movl    %ecx, -35(%edx)
+<a id='L1228' name='L1228'></a>1228 L(fwd_write_31bytes):
+<a id='L1229' name='L1229'></a>1229     movl    -31(%eax), %ecx
+<a id='L1230' name='L1230'></a>1230     movl    %ecx, -31(%edx)
+<a id='L1231' name='L1231'></a>1231 L(fwd_write_27bytes):
+<a id='L1232' name='L1232'></a>1232     movl    -27(%eax), %ecx
+<a id='L1233' name='L1233'></a>1233     movl    %ecx, -27(%edx)
+<a id='L1234' name='L1234'></a>1234 L(fwd_write_23bytes):
+<a id='L1235' name='L1235'></a>1235     movl    -23(%eax), %ecx
+<a id='L1236' name='L1236'></a>1236     movl    %ecx, -23(%edx)
+<a id='L1237' name='L1237'></a>1237 L(fwd_write_19bytes):
+<a id='L1238' name='L1238'></a>1238     movl    -19(%eax), %ecx
+<a id='L1239' name='L1239'></a>1239     movl    %ecx, -19(%edx)
+<a id='L1240' name='L1240'></a>1240 L(fwd_write_15bytes):
+<a id='L1241' name='L1241'></a>1241     movl    -15(%eax), %ecx
+<a id='L1242' name='L1242'></a>1242     movl    %ecx, -15(%edx)
+<a id='L1243' name='L1243'></a>1243 L(fwd_write_11bytes):
+<a id='L1244' name='L1244'></a>1244     movl    -11(%eax), %ecx
+<a id='L1245' name='L1245'></a>1245     movl    %ecx, -11(%edx)
+<a id='L1246' name='L1246'></a>1246 L(fwd_write_7bytes):
+<a id='L1247' name='L1247'></a>1247     movl    -7(%eax), %ecx
+<a id='L1248' name='L1248'></a>1248     movl    %ecx, -7(%edx)
+<a id='L1249' name='L1249'></a>1249 L(fwd_write_3bytes):
+<a id='L1250' name='L1250'></a>1250     movzwl  -3(%eax), %ecx
+<a id='L1251' name='L1251'></a>1251     movzbl  -1(%eax), %eax
+<a id='L1252' name='L1252'></a>1252     movw    %cx, -3(%edx)
+<a id='L1253' name='L1253'></a>1253     movb    %al, -1(%edx)
+<a id='L1254' name='L1254'></a>1254 <em class='sharp'>#ifndef</em> <a href='../D/16761.html' title='Multiple defined in 5 places.'>USE_AS_BCOPY</a>
+<a id='L1255' name='L1255'></a>1255 <em class='sharp'># ifdef</em> <a href='../D/16768.html' title='Multiple defined in 5 places.'>USE_AS_MEMPCPY</a>
+<a id='L1256' name='L1256'></a>1256     movl    %edx, %eax
+<a id='L1257' name='L1257'></a>1257 <em class='sharp'># else</em>
+<a id='L1258' name='L1258'></a>1258     movl    DEST(%esp), %eax
+<a id='L1259' name='L1259'></a>1259 <em class='sharp'># endif</em>
+<a id='L1260' name='L1260'></a>1260 <em class='sharp'>#endif</em>
+<a id='L1261' name='L1261'></a>1261     RETURN_END
+<a id='L1262' name='L1262'></a>1262 
+<a id='L1263' name='L1263'></a>1263     cfi_restore_state
+<a id='L1264' name='L1264'></a>1264     cfi_remember_state
+<a id='L1265' name='L1265'></a>1265     ALIGN (4)
+<a id='L1266' name='L1266'></a>1266 L(large_page):
+<a id='L1267' name='L1267'></a>1267     movdqu  (%eax), %xmm1
+<a id='L1268' name='L1268'></a>1268     movdqu  %xmm0, (%esi)
+<a id='L1269' name='L1269'></a>1269     movntdq %xmm1, (%edx)
+<a id='L1270' name='L1270'></a>1270     add $0x10, %eax
+<a id='L1271' name='L1271'></a>1271     add $0x10, %edx
+<a id='L1272' name='L1272'></a>1272     sub $0x10, %ecx
+<a id='L1273' name='L1273'></a>1273     cmp %al, %dl
+<a id='L1274' name='L1274'></a>1274     je  L(copy_page_by_rep)
+<a id='L1275' name='L1275'></a>1275 L(large_page_loop_init):
+<a id='L1276' name='L1276'></a>1276     POP (%esi)
+<a id='L1277' name='L1277'></a>1277     sub $0x80, %ecx
+<a id='L1278' name='L1278'></a>1278     POP (%edi)
+<a id='L1279' name='L1279'></a>1279 L(large_page_loop):
+<a id='L1280' name='L1280'></a>1280     prefetchnta 0x1c0(%eax)
+<a id='L1281' name='L1281'></a>1281     prefetchnta 0x280(%eax)
+<a id='L1282' name='L1282'></a>1282     movdqu  (%eax), %xmm0
+<a id='L1283' name='L1283'></a>1283     movdqu  0x10(%eax), %xmm1
+<a id='L1284' name='L1284'></a>1284     movdqu  0x20(%eax), %xmm2
+<a id='L1285' name='L1285'></a>1285     movdqu  0x30(%eax), %xmm3
+<a id='L1286' name='L1286'></a>1286     movdqu  0x40(%eax), %xmm4
+<a id='L1287' name='L1287'></a>1287     movdqu  0x50(%eax), %xmm5
+<a id='L1288' name='L1288'></a>1288     movdqu  0x60(%eax), %xmm6
+<a id='L1289' name='L1289'></a>1289     movdqu  0x70(%eax), %xmm7
+<a id='L1290' name='L1290'></a>1290     lea 0x80(%eax), %eax
+<a id='L1291' name='L1291'></a>1291     lfence
+<a id='L1292' name='L1292'></a>1292     sub $0x80, %ecx
+<a id='L1293' name='L1293'></a>1293     movntdq %xmm0, (%edx)
+<a id='L1294' name='L1294'></a>1294     movntdq %xmm1, 0x10(%edx)
+<a id='L1295' name='L1295'></a>1295     movntdq %xmm2, 0x20(%edx)
+<a id='L1296' name='L1296'></a>1296     movntdq %xmm3, 0x30(%edx)
+<a id='L1297' name='L1297'></a>1297     movntdq %xmm4, 0x40(%edx)
+<a id='L1298' name='L1298'></a>1298     movntdq %xmm5, 0x50(%edx)
+<a id='L1299' name='L1299'></a>1299     movntdq %xmm6, 0x60(%edx)
+<a id='L1300' name='L1300'></a>1300     movntdq %xmm7, 0x70(%edx)
+<a id='L1301' name='L1301'></a>1301     lea 0x80(%edx), %edx
+<a id='L1302' name='L1302'></a>1302     jae L(large_page_loop)
+<a id='L1303' name='L1303'></a>1303     add $0x80, %ecx
+<a id='L1304' name='L1304'></a>1304     cmp $0x40, %ecx
+<a id='L1305' name='L1305'></a>1305     jb  L(large_page_less_64bytes)
+<a id='L1306' name='L1306'></a>1306 
+<a id='L1307' name='L1307'></a>1307     movdqu  (%eax), %xmm0
+<a id='L1308' name='L1308'></a>1308     movdqu  0x10(%eax), %xmm1
+<a id='L1309' name='L1309'></a>1309     movdqu  0x20(%eax), %xmm2
+<a id='L1310' name='L1310'></a>1310     movdqu  0x30(%eax), %xmm3
+<a id='L1311' name='L1311'></a>1311     lea 0x40(%eax), %eax
+<a id='L1312' name='L1312'></a>1312 
+<a id='L1313' name='L1313'></a>1313     movntdq %xmm0, (%edx)
+<a id='L1314' name='L1314'></a>1314     movntdq %xmm1, 0x10(%edx)
+<a id='L1315' name='L1315'></a>1315     movntdq %xmm2, 0x20(%edx)
+<a id='L1316' name='L1316'></a>1316     movntdq %xmm3, 0x30(%edx)
+<a id='L1317' name='L1317'></a>1317     lea 0x40(%edx), %edx
+<a id='L1318' name='L1318'></a>1318     sub $0x40, %ecx
+<a id='L1319' name='L1319'></a>1319 L(large_page_less_64bytes):
+<a id='L1320' name='L1320'></a>1320     cmp $32, %ecx
+<a id='L1321' name='L1321'></a>1321     jb  L(large_page_less_32bytes)
+<a id='L1322' name='L1322'></a>1322     movdqu  (%eax), %xmm0
+<a id='L1323' name='L1323'></a>1323     movdqu  0x10(%eax), %xmm1
+<a id='L1324' name='L1324'></a>1324     lea 0x20(%eax), %eax
+<a id='L1325' name='L1325'></a>1325     movntdq %xmm0, (%edx)
+<a id='L1326' name='L1326'></a>1326     movntdq %xmm1, 0x10(%edx)
+<a id='L1327' name='L1327'></a>1327     lea 0x20(%edx), %edx
+<a id='L1328' name='L1328'></a>1328     sub $0x20, %ecx
+<a id='L1329' name='L1329'></a>1329 L(large_page_less_32bytes):
+<a id='L1330' name='L1330'></a>1330     add %ecx, %edx
+<a id='L1331' name='L1331'></a>1331     add %ecx, %eax
+<a id='L1332' name='L1332'></a>1332     sfence
+<a id='L1333' name='L1333'></a>1333     BRANCH_TO_JMPTBL_ENTRY (L(table_48bytes_fwd), %ecx, 4)
+<a id='L1334' name='L1334'></a>1334 
+<a id='L1335' name='L1335'></a>1335     cfi_restore_state
+<a id='L1336' name='L1336'></a>1336     cfi_remember_state
+<a id='L1337' name='L1337'></a>1337     ALIGN (4)
+<a id='L1338' name='L1338'></a>1338 L(copy_page_by_rep):
+<a id='L1339' name='L1339'></a>1339     mov %eax, %esi
+<a id='L1340' name='L1340'></a>1340     mov %edx, %edi
+<a id='L1341' name='L1341'></a>1341     mov %ecx, %edx
+<a id='L1342' name='L1342'></a>1342     shr $2, %ecx
+<a id='L1343' name='L1343'></a>1343     and $3, %edx
+<a id='L1344' name='L1344'></a>1344     rep movsl
+<a id='L1345' name='L1345'></a>1345     jz  L(copy_page_by_rep_exit)
+<a id='L1346' name='L1346'></a>1346     cmp $2, %edx
+<a id='L1347' name='L1347'></a>1347     jb  L(copy_page_by_rep_left_1)
+<a id='L1348' name='L1348'></a>1348     movzwl  (%esi), %eax
+<a id='L1349' name='L1349'></a>1349     movw    %ax, (%edi)
+<a id='L1350' name='L1350'></a>1350     add $2, %esi
+<a id='L1351' name='L1351'></a>1351     add $2, %edi
+<a id='L1352' name='L1352'></a>1352     sub $2, %edx
+<a id='L1353' name='L1353'></a>1353     jz  L(copy_page_by_rep_exit)
+<a id='L1354' name='L1354'></a>1354 L(copy_page_by_rep_left_1):
+<a id='L1355' name='L1355'></a>1355     movzbl  (%esi), %eax
+<a id='L1356' name='L1356'></a>1356     movb    %al, (%edi)
+<a id='L1357' name='L1357'></a>1357 L(copy_page_by_rep_exit):
+<a id='L1358' name='L1358'></a>1358     POP (%esi)
+<a id='L1359' name='L1359'></a>1359     POP (%edi)
+<a id='L1360' name='L1360'></a>1360 <em class='sharp'>#ifndef</em> <a href='../D/16761.html' title='Multiple defined in 5 places.'>USE_AS_BCOPY</a>
+<a id='L1361' name='L1361'></a>1361     movl    DEST(%esp), %eax
+<a id='L1362' name='L1362'></a>1362 <em class='sharp'># ifdef</em> <a href='../D/16768.html' title='Multiple defined in 5 places.'>USE_AS_MEMPCPY</a>
+<a id='L1363' name='L1363'></a>1363     movl    LEN(%esp), %ecx
+<a id='L1364' name='L1364'></a>1364     add %ecx, %eax
+<a id='L1365' name='L1365'></a>1365 <em class='sharp'># endif</em>
+<a id='L1366' name='L1366'></a>1366 <em class='sharp'>#endif</em>
+<a id='L1367' name='L1367'></a>1367     RETURN
+<a id='L1368' name='L1368'></a>1368 
+<a id='L1369' name='L1369'></a>1369     ALIGN (4)
+<a id='L1370' name='L1370'></a>1370 L(bk_write_44bytes):
+<a id='L1371' name='L1371'></a>1371     movl    40(%eax), %ecx
+<a id='L1372' name='L1372'></a>1372     movl    %ecx, 40(%edx)
+<a id='L1373' name='L1373'></a>1373 L(bk_write_40bytes):
+<a id='L1374' name='L1374'></a>1374     movl    36(%eax), %ecx
+<a id='L1375' name='L1375'></a>1375     movl    %ecx, 36(%edx)
+<a id='L1376' name='L1376'></a>1376 L(bk_write_36bytes):
+<a id='L1377' name='L1377'></a>1377     movl    32(%eax), %ecx
+<a id='L1378' name='L1378'></a>1378     movl    %ecx, 32(%edx)
+<a id='L1379' name='L1379'></a>1379 L(bk_write_32bytes):
+<a id='L1380' name='L1380'></a>1380     movl    28(%eax), %ecx
+<a id='L1381' name='L1381'></a>1381     movl    %ecx, 28(%edx)
+<a id='L1382' name='L1382'></a>1382 L(bk_write_28bytes):
+<a id='L1383' name='L1383'></a>1383     movl    24(%eax), %ecx
+<a id='L1384' name='L1384'></a>1384     movl    %ecx, 24(%edx)
+<a id='L1385' name='L1385'></a>1385 L(bk_write_24bytes):
+<a id='L1386' name='L1386'></a>1386     movl    20(%eax), %ecx
+<a id='L1387' name='L1387'></a>1387     movl    %ecx, 20(%edx)
+<a id='L1388' name='L1388'></a>1388 L(bk_write_20bytes):
+<a id='L1389' name='L1389'></a>1389     movl    16(%eax), %ecx
+<a id='L1390' name='L1390'></a>1390     movl    %ecx, 16(%edx)
+<a id='L1391' name='L1391'></a>1391 L(bk_write_16bytes):
+<a id='L1392' name='L1392'></a>1392     movl    12(%eax), %ecx
+<a id='L1393' name='L1393'></a>1393     movl    %ecx, 12(%edx)
+<a id='L1394' name='L1394'></a>1394 L(bk_write_12bytes):
+<a id='L1395' name='L1395'></a>1395     movl    8(%eax), %ecx
+<a id='L1396' name='L1396'></a>1396     movl    %ecx, 8(%edx)
+<a id='L1397' name='L1397'></a>1397 L(bk_write_8bytes):
+<a id='L1398' name='L1398'></a>1398     movl    4(%eax), %ecx
+<a id='L1399' name='L1399'></a>1399     movl    %ecx, 4(%edx)
+<a id='L1400' name='L1400'></a>1400 L(bk_write_4bytes):
+<a id='L1401' name='L1401'></a>1401     movl    (%eax), %ecx
+<a id='L1402' name='L1402'></a>1402     movl    %ecx, (%edx)
+<a id='L1403' name='L1403'></a>1403 L(bk_write_0bytes):
+<a id='L1404' name='L1404'></a>1404 <em class='sharp'>#ifndef</em> <a href='../D/16761.html' title='Multiple defined in 5 places.'>USE_AS_BCOPY</a>
+<a id='L1405' name='L1405'></a>1405     movl    DEST(%esp), %eax
+<a id='L1406' name='L1406'></a>1406 <em class='sharp'># ifdef</em> <a href='../D/16768.html' title='Multiple defined in 5 places.'>USE_AS_MEMPCPY</a>
+<a id='L1407' name='L1407'></a>1407     movl    LEN(%esp), %ecx
+<a id='L1408' name='L1408'></a>1408     add %ecx, %eax
+<a id='L1409' name='L1409'></a>1409 <em class='sharp'># endif</em>
+<a id='L1410' name='L1410'></a>1410 <em class='sharp'>#endif</em>
+<a id='L1411' name='L1411'></a>1411     RETURN
+<a id='L1412' name='L1412'></a>1412 
+<a id='L1413' name='L1413'></a>1413     ALIGN (4)
+<a id='L1414' name='L1414'></a>1414 L(bk_write_45bytes):
+<a id='L1415' name='L1415'></a>1415     movl    41(%eax), %ecx
+<a id='L1416' name='L1416'></a>1416     movl    %ecx, 41(%edx)
+<a id='L1417' name='L1417'></a>1417 L(bk_write_41bytes):
+<a id='L1418' name='L1418'></a>1418     movl    37(%eax), %ecx
+<a id='L1419' name='L1419'></a>1419     movl    %ecx, 37(%edx)
+<a id='L1420' name='L1420'></a>1420 L(bk_write_37bytes):
+<a id='L1421' name='L1421'></a>1421     movl    33(%eax), %ecx
+<a id='L1422' name='L1422'></a>1422     movl    %ecx, 33(%edx)
+<a id='L1423' name='L1423'></a>1423 L(bk_write_33bytes):
+<a id='L1424' name='L1424'></a>1424     movl    29(%eax), %ecx
+<a id='L1425' name='L1425'></a>1425     movl    %ecx, 29(%edx)
+<a id='L1426' name='L1426'></a>1426 L(bk_write_29bytes):
+<a id='L1427' name='L1427'></a>1427     movl    25(%eax), %ecx
+<a id='L1428' name='L1428'></a>1428     movl    %ecx, 25(%edx)
+<a id='L1429' name='L1429'></a>1429 L(bk_write_25bytes):
+<a id='L1430' name='L1430'></a>1430     movl    21(%eax), %ecx
+<a id='L1431' name='L1431'></a>1431     movl    %ecx, 21(%edx)
+<a id='L1432' name='L1432'></a>1432 L(bk_write_21bytes):
+<a id='L1433' name='L1433'></a>1433     movl    17(%eax), %ecx
+<a id='L1434' name='L1434'></a>1434     movl    %ecx, 17(%edx)
+<a id='L1435' name='L1435'></a>1435 L(bk_write_17bytes):
+<a id='L1436' name='L1436'></a>1436     movl    13(%eax), %ecx
+<a id='L1437' name='L1437'></a>1437     movl    %ecx, 13(%edx)
+<a id='L1438' name='L1438'></a>1438 L(bk_write_13bytes):
+<a id='L1439' name='L1439'></a>1439     movl    9(%eax), %ecx
+<a id='L1440' name='L1440'></a>1440     movl    %ecx, 9(%edx)
+<a id='L1441' name='L1441'></a>1441 L(bk_write_9bytes):
+<a id='L1442' name='L1442'></a>1442     movl    5(%eax), %ecx
+<a id='L1443' name='L1443'></a>1443     movl    %ecx, 5(%edx)
+<a id='L1444' name='L1444'></a>1444 L(bk_write_5bytes):
+<a id='L1445' name='L1445'></a>1445     movl    1(%eax), %ecx
+<a id='L1446' name='L1446'></a>1446     movl    %ecx, 1(%edx)
+<a id='L1447' name='L1447'></a>1447 L(bk_write_1bytes):
+<a id='L1448' name='L1448'></a>1448     movzbl  (%eax), %ecx
+<a id='L1449' name='L1449'></a>1449     movb    %cl, (%edx)
+<a id='L1450' name='L1450'></a>1450 <em class='sharp'>#ifndef</em> <a href='../D/16761.html' title='Multiple defined in 5 places.'>USE_AS_BCOPY</a>
+<a id='L1451' name='L1451'></a>1451     movl    DEST(%esp), %eax
+<a id='L1452' name='L1452'></a>1452 <em class='sharp'># ifdef</em> <a href='../D/16768.html' title='Multiple defined in 5 places.'>USE_AS_MEMPCPY</a>
+<a id='L1453' name='L1453'></a>1453     movl    LEN(%esp), %ecx
+<a id='L1454' name='L1454'></a>1454     add %ecx, %eax
+<a id='L1455' name='L1455'></a>1455 <em class='sharp'># endif</em>
+<a id='L1456' name='L1456'></a>1456 <em class='sharp'>#endif</em>
+<a id='L1457' name='L1457'></a>1457     RETURN
+<a id='L1458' name='L1458'></a>1458 
+<a id='L1459' name='L1459'></a>1459     ALIGN (4)
+<a id='L1460' name='L1460'></a>1460 L(bk_write_46bytes):
+<a id='L1461' name='L1461'></a>1461     movl    42(%eax), %ecx
+<a id='L1462' name='L1462'></a>1462     movl    %ecx, 42(%edx)
+<a id='L1463' name='L1463'></a>1463 L(bk_write_42bytes):
+<a id='L1464' name='L1464'></a>1464     movl    38(%eax), %ecx
+<a id='L1465' name='L1465'></a>1465     movl    %ecx, 38(%edx)
+<a id='L1466' name='L1466'></a>1466 L(bk_write_38bytes):
+<a id='L1467' name='L1467'></a>1467     movl    34(%eax), %ecx
+<a id='L1468' name='L1468'></a>1468     movl    %ecx, 34(%edx)
+<a id='L1469' name='L1469'></a>1469 L(bk_write_34bytes):
+<a id='L1470' name='L1470'></a>1470     movl    30(%eax), %ecx
+<a id='L1471' name='L1471'></a>1471     movl    %ecx, 30(%edx)
+<a id='L1472' name='L1472'></a>1472 L(bk_write_30bytes):
+<a id='L1473' name='L1473'></a>1473     movl    26(%eax), %ecx
+<a id='L1474' name='L1474'></a>1474     movl    %ecx, 26(%edx)
+<a id='L1475' name='L1475'></a>1475 L(bk_write_26bytes):
+<a id='L1476' name='L1476'></a>1476     movl    22(%eax), %ecx
+<a id='L1477' name='L1477'></a>1477     movl    %ecx, 22(%edx)
+<a id='L1478' name='L1478'></a>1478 L(bk_write_22bytes):
+<a id='L1479' name='L1479'></a>1479     movl    18(%eax), %ecx
+<a id='L1480' name='L1480'></a>1480     movl    %ecx, 18(%edx)
+<a id='L1481' name='L1481'></a>1481 L(bk_write_18bytes):
+<a id='L1482' name='L1482'></a>1482     movl    14(%eax), %ecx
+<a id='L1483' name='L1483'></a>1483     movl    %ecx, 14(%edx)
+<a id='L1484' name='L1484'></a>1484 L(bk_write_14bytes):
+<a id='L1485' name='L1485'></a>1485     movl    10(%eax), %ecx
+<a id='L1486' name='L1486'></a>1486     movl    %ecx, 10(%edx)
+<a id='L1487' name='L1487'></a>1487 L(bk_write_10bytes):
+<a id='L1488' name='L1488'></a>1488     movl    6(%eax), %ecx
+<a id='L1489' name='L1489'></a>1489     movl    %ecx, 6(%edx)
+<a id='L1490' name='L1490'></a>1490 L(bk_write_6bytes):
+<a id='L1491' name='L1491'></a>1491     movl    2(%eax), %ecx
+<a id='L1492' name='L1492'></a>1492     movl    %ecx, 2(%edx)
+<a id='L1493' name='L1493'></a>1493 L(bk_write_2bytes):
+<a id='L1494' name='L1494'></a>1494     movzwl  (%eax), %ecx
+<a id='L1495' name='L1495'></a>1495     movw    %cx, (%edx)
+<a id='L1496' name='L1496'></a>1496 <em class='sharp'>#ifndef</em> <a href='../D/16761.html' title='Multiple defined in 5 places.'>USE_AS_BCOPY</a>
+<a id='L1497' name='L1497'></a>1497     movl    DEST(%esp), %eax
+<a id='L1498' name='L1498'></a>1498 <em class='sharp'># ifdef</em> <a href='../D/16768.html' title='Multiple defined in 5 places.'>USE_AS_MEMPCPY</a>
+<a id='L1499' name='L1499'></a>1499     movl    LEN(%esp), %ecx
+<a id='L1500' name='L1500'></a>1500     add %ecx, %eax
+<a id='L1501' name='L1501'></a>1501 <em class='sharp'># endif</em>
+<a id='L1502' name='L1502'></a>1502 <em class='sharp'>#endif</em>
+<a id='L1503' name='L1503'></a>1503     RETURN
+<a id='L1504' name='L1504'></a>1504 
+<a id='L1505' name='L1505'></a>1505     ALIGN (4)
+<a id='L1506' name='L1506'></a>1506 L(bk_write_47bytes):
+<a id='L1507' name='L1507'></a>1507     movl    43(%eax), %ecx
+<a id='L1508' name='L1508'></a>1508     movl    %ecx, 43(%edx)
+<a id='L1509' name='L1509'></a>1509 L(bk_write_43bytes):
+<a id='L1510' name='L1510'></a>1510     movl    39(%eax), %ecx
+<a id='L1511' name='L1511'></a>1511     movl    %ecx, 39(%edx)
+<a id='L1512' name='L1512'></a>1512 L(bk_write_39bytes):
+<a id='L1513' name='L1513'></a>1513     movl    35(%eax), %ecx
+<a id='L1514' name='L1514'></a>1514     movl    %ecx, 35(%edx)
+<a id='L1515' name='L1515'></a>1515 L(bk_write_35bytes):
+<a id='L1516' name='L1516'></a>1516     movl    31(%eax), %ecx
+<a id='L1517' name='L1517'></a>1517     movl    %ecx, 31(%edx)
+<a id='L1518' name='L1518'></a>1518 L(bk_write_31bytes):
+<a id='L1519' name='L1519'></a>1519     movl    27(%eax), %ecx
+<a id='L1520' name='L1520'></a>1520     movl    %ecx, 27(%edx)
+<a id='L1521' name='L1521'></a>1521 L(bk_write_27bytes):
+<a id='L1522' name='L1522'></a>1522     movl    23(%eax), %ecx
+<a id='L1523' name='L1523'></a>1523     movl    %ecx, 23(%edx)
+<a id='L1524' name='L1524'></a>1524 L(bk_write_23bytes):
+<a id='L1525' name='L1525'></a>1525     movl    19(%eax), %ecx
+<a id='L1526' name='L1526'></a>1526     movl    %ecx, 19(%edx)
+<a id='L1527' name='L1527'></a>1527 L(bk_write_19bytes):
+<a id='L1528' name='L1528'></a>1528     movl    15(%eax), %ecx
+<a id='L1529' name='L1529'></a>1529     movl    %ecx, 15(%edx)
+<a id='L1530' name='L1530'></a>1530 L(bk_write_15bytes):
+<a id='L1531' name='L1531'></a>1531     movl    11(%eax), %ecx
+<a id='L1532' name='L1532'></a>1532     movl    %ecx, 11(%edx)
+<a id='L1533' name='L1533'></a>1533 L(bk_write_11bytes):
+<a id='L1534' name='L1534'></a>1534     movl    7(%eax), %ecx
+<a id='L1535' name='L1535'></a>1535     movl    %ecx, 7(%edx)
+<a id='L1536' name='L1536'></a>1536 L(bk_write_7bytes):
+<a id='L1537' name='L1537'></a>1537     movl    3(%eax), %ecx
+<a id='L1538' name='L1538'></a>1538     movl    %ecx, 3(%edx)
+<a id='L1539' name='L1539'></a>1539 L(bk_write_3bytes):
+<a id='L1540' name='L1540'></a>1540     movzwl  1(%eax), %ecx
+<a id='L1541' name='L1541'></a>1541     movw    %cx, 1(%edx)
+<a id='L1542' name='L1542'></a>1542     movzbl  (%eax), %eax
+<a id='L1543' name='L1543'></a>1543     movb    %al, (%edx)
+<a id='L1544' name='L1544'></a>1544 <em class='sharp'>#ifndef</em> <a href='../D/16761.html' title='Multiple defined in 5 places.'>USE_AS_BCOPY</a>
+<a id='L1545' name='L1545'></a>1545     movl    DEST(%esp), %eax
+<a id='L1546' name='L1546'></a>1546 <em class='sharp'># ifdef</em> <a href='../D/16768.html' title='Multiple defined in 5 places.'>USE_AS_MEMPCPY</a>
+<a id='L1547' name='L1547'></a>1547     movl    LEN(%esp), %ecx
+<a id='L1548' name='L1548'></a>1548     add %ecx, %eax
+<a id='L1549' name='L1549'></a>1549 <em class='sharp'># endif</em>
+<a id='L1550' name='L1550'></a>1550 <em class='sharp'>#endif</em>
+<a id='L1551' name='L1551'></a>1551     RETURN_END
+<a id='L1552' name='L1552'></a>1552 
+<a id='L1553' name='L1553'></a>1553 
+<a id='L1554' name='L1554'></a>1554     .pushsection .rodata.ssse3,"a",@progbits
+<a id='L1555' name='L1555'></a>1555     ALIGN (2)
+<a id='L1556' name='L1556'></a>1556 L(table_48bytes_fwd):
+<a id='L1557' name='L1557'></a>1557     .int    JMPTBL (L(fwd_write_0bytes), L(table_48bytes_fwd))
+<a id='L1558' name='L1558'></a>1558     .int    JMPTBL (L(fwd_write_1bytes), L(table_48bytes_fwd))
+<a id='L1559' name='L1559'></a>1559     .int    JMPTBL (L(fwd_write_2bytes), L(table_48bytes_fwd))
+<a id='L1560' name='L1560'></a>1560     .int    JMPTBL (L(fwd_write_3bytes), L(table_48bytes_fwd))
+<a id='L1561' name='L1561'></a>1561     .int    JMPTBL (L(fwd_write_4bytes), L(table_48bytes_fwd))
+<a id='L1562' name='L1562'></a>1562     .int    JMPTBL (L(fwd_write_5bytes), L(table_48bytes_fwd))
+<a id='L1563' name='L1563'></a>1563     .int    JMPTBL (L(fwd_write_6bytes), L(table_48bytes_fwd))
+<a id='L1564' name='L1564'></a>1564     .int    JMPTBL (L(fwd_write_7bytes), L(table_48bytes_fwd))
+<a id='L1565' name='L1565'></a>1565     .int    JMPTBL (L(fwd_write_8bytes), L(table_48bytes_fwd))
+<a id='L1566' name='L1566'></a>1566     .int    JMPTBL (L(fwd_write_9bytes), L(table_48bytes_fwd))
+<a id='L1567' name='L1567'></a>1567     .int    JMPTBL (L(fwd_write_10bytes), L(table_48bytes_fwd))
+<a id='L1568' name='L1568'></a>1568     .int    JMPTBL (L(fwd_write_11bytes), L(table_48bytes_fwd))
+<a id='L1569' name='L1569'></a>1569     .int    JMPTBL (L(fwd_write_12bytes), L(table_48bytes_fwd))
+<a id='L1570' name='L1570'></a>1570     .int    JMPTBL (L(fwd_write_13bytes), L(table_48bytes_fwd))
+<a id='L1571' name='L1571'></a>1571     .int    JMPTBL (L(fwd_write_14bytes), L(table_48bytes_fwd))
+<a id='L1572' name='L1572'></a>1572     .int    JMPTBL (L(fwd_write_15bytes), L(table_48bytes_fwd))
+<a id='L1573' name='L1573'></a>1573     .int    JMPTBL (L(fwd_write_16bytes), L(table_48bytes_fwd))
+<a id='L1574' name='L1574'></a>1574     .int    JMPTBL (L(fwd_write_17bytes), L(table_48bytes_fwd))
+<a id='L1575' name='L1575'></a>1575     .int    JMPTBL (L(fwd_write_18bytes), L(table_48bytes_fwd))
+<a id='L1576' name='L1576'></a>1576     .int    JMPTBL (L(fwd_write_19bytes), L(table_48bytes_fwd))
+<a id='L1577' name='L1577'></a>1577     .int    JMPTBL (L(fwd_write_20bytes), L(table_48bytes_fwd))
+<a id='L1578' name='L1578'></a>1578     .int    JMPTBL (L(fwd_write_21bytes), L(table_48bytes_fwd))
+<a id='L1579' name='L1579'></a>1579     .int    JMPTBL (L(fwd_write_22bytes), L(table_48bytes_fwd))
+<a id='L1580' name='L1580'></a>1580     .int    JMPTBL (L(fwd_write_23bytes), L(table_48bytes_fwd))
+<a id='L1581' name='L1581'></a>1581     .int    JMPTBL (L(fwd_write_24bytes), L(table_48bytes_fwd))
+<a id='L1582' name='L1582'></a>1582     .int    JMPTBL (L(fwd_write_25bytes), L(table_48bytes_fwd))
+<a id='L1583' name='L1583'></a>1583     .int    JMPTBL (L(fwd_write_26bytes), L(table_48bytes_fwd))
+<a id='L1584' name='L1584'></a>1584     .int    JMPTBL (L(fwd_write_27bytes), L(table_48bytes_fwd))
+<a id='L1585' name='L1585'></a>1585     .int    JMPTBL (L(fwd_write_28bytes), L(table_48bytes_fwd))
+<a id='L1586' name='L1586'></a>1586     .int    JMPTBL (L(fwd_write_29bytes), L(table_48bytes_fwd))
+<a id='L1587' name='L1587'></a>1587     .int    JMPTBL (L(fwd_write_30bytes), L(table_48bytes_fwd))
+<a id='L1588' name='L1588'></a>1588     .int    JMPTBL (L(fwd_write_31bytes), L(table_48bytes_fwd))
+<a id='L1589' name='L1589'></a>1589     .int    JMPTBL (L(fwd_write_32bytes), L(table_48bytes_fwd))
+<a id='L1590' name='L1590'></a>1590     .int    JMPTBL (L(fwd_write_33bytes), L(table_48bytes_fwd))
+<a id='L1591' name='L1591'></a>1591     .int    JMPTBL (L(fwd_write_34bytes), L(table_48bytes_fwd))
+<a id='L1592' name='L1592'></a>1592     .int    JMPTBL (L(fwd_write_35bytes), L(table_48bytes_fwd))
+<a id='L1593' name='L1593'></a>1593     .int    JMPTBL (L(fwd_write_36bytes), L(table_48bytes_fwd))
+<a id='L1594' name='L1594'></a>1594     .int    JMPTBL (L(fwd_write_37bytes), L(table_48bytes_fwd))
+<a id='L1595' name='L1595'></a>1595     .int    JMPTBL (L(fwd_write_38bytes), L(table_48bytes_fwd))
+<a id='L1596' name='L1596'></a>1596     .int    JMPTBL (L(fwd_write_39bytes), L(table_48bytes_fwd))
+<a id='L1597' name='L1597'></a>1597     .int    JMPTBL (L(fwd_write_40bytes), L(table_48bytes_fwd))
+<a id='L1598' name='L1598'></a>1598     .int    JMPTBL (L(fwd_write_41bytes), L(table_48bytes_fwd))
+<a id='L1599' name='L1599'></a>1599     .int    JMPTBL (L(fwd_write_42bytes), L(table_48bytes_fwd))
+<a id='L1600' name='L1600'></a>1600     .int    JMPTBL (L(fwd_write_43bytes), L(table_48bytes_fwd))
+<a id='L1601' name='L1601'></a>1601     .int    JMPTBL (L(fwd_write_44bytes), L(table_48bytes_fwd))
+<a id='L1602' name='L1602'></a>1602     .int    JMPTBL (L(fwd_write_45bytes), L(table_48bytes_fwd))
+<a id='L1603' name='L1603'></a>1603     .int    JMPTBL (L(fwd_write_46bytes), L(table_48bytes_fwd))
+<a id='L1604' name='L1604'></a>1604     .int    JMPTBL (L(fwd_write_47bytes), L(table_48bytes_fwd))
+<a id='L1605' name='L1605'></a>1605 
+<a id='L1606' name='L1606'></a>1606     ALIGN (2)
+<a id='L1607' name='L1607'></a>1607 L(shl_table):
+<a id='L1608' name='L1608'></a>1608     .int    JMPTBL (L(shl_0), L(shl_table))
+<a id='L1609' name='L1609'></a>1609     .int    JMPTBL (L(shl_1), L(shl_table))
+<a id='L1610' name='L1610'></a>1610     .int    JMPTBL (L(shl_2), L(shl_table))
+<a id='L1611' name='L1611'></a>1611     .int    JMPTBL (L(shl_3), L(shl_table))
+<a id='L1612' name='L1612'></a>1612     .int    JMPTBL (L(shl_4), L(shl_table))
+<a id='L1613' name='L1613'></a>1613     .int    JMPTBL (L(shl_5), L(shl_table))
+<a id='L1614' name='L1614'></a>1614     .int    JMPTBL (L(shl_6), L(shl_table))
+<a id='L1615' name='L1615'></a>1615     .int    JMPTBL (L(shl_7), L(shl_table))
+<a id='L1616' name='L1616'></a>1616     .int    JMPTBL (L(shl_8), L(shl_table))
+<a id='L1617' name='L1617'></a>1617     .int    JMPTBL (L(shl_9), L(shl_table))
+<a id='L1618' name='L1618'></a>1618     .int    JMPTBL (L(shl_10), L(shl_table))
+<a id='L1619' name='L1619'></a>1619     .int    JMPTBL (L(shl_11), L(shl_table))
+<a id='L1620' name='L1620'></a>1620     .int    JMPTBL (L(shl_12), L(shl_table))
+<a id='L1621' name='L1621'></a>1621     .int    JMPTBL (L(shl_13), L(shl_table))
+<a id='L1622' name='L1622'></a>1622     .int    JMPTBL (L(shl_14), L(shl_table))
+<a id='L1623' name='L1623'></a>1623     .int    JMPTBL (L(shl_15), L(shl_table))
+<a id='L1624' name='L1624'></a>1624 
+<a id='L1625' name='L1625'></a>1625     ALIGN (2)
+<a id='L1626' name='L1626'></a>1626 L(table_48_bytes_bwd):
+<a id='L1627' name='L1627'></a>1627     .int    JMPTBL (L(bk_write_0bytes), L(table_48_bytes_bwd))
+<a id='L1628' name='L1628'></a>1628     .int    JMPTBL (L(bk_write_1bytes), L(table_48_bytes_bwd))
+<a id='L1629' name='L1629'></a>1629     .int    JMPTBL (L(bk_write_2bytes), L(table_48_bytes_bwd))
+<a id='L1630' name='L1630'></a>1630     .int    JMPTBL (L(bk_write_3bytes), L(table_48_bytes_bwd))
+<a id='L1631' name='L1631'></a>1631     .int    JMPTBL (L(bk_write_4bytes), L(table_48_bytes_bwd))
+<a id='L1632' name='L1632'></a>1632     .int    JMPTBL (L(bk_write_5bytes), L(table_48_bytes_bwd))
+<a id='L1633' name='L1633'></a>1633     .int    JMPTBL (L(bk_write_6bytes), L(table_48_bytes_bwd))
+<a id='L1634' name='L1634'></a>1634     .int    JMPTBL (L(bk_write_7bytes), L(table_48_bytes_bwd))
+<a id='L1635' name='L1635'></a>1635     .int    JMPTBL (L(bk_write_8bytes), L(table_48_bytes_bwd))
+<a id='L1636' name='L1636'></a>1636     .int    JMPTBL (L(bk_write_9bytes), L(table_48_bytes_bwd))
+<a id='L1637' name='L1637'></a>1637     .int    JMPTBL (L(bk_write_10bytes), L(table_48_bytes_bwd))
+<a id='L1638' name='L1638'></a>1638     .int    JMPTBL (L(bk_write_11bytes), L(table_48_bytes_bwd))
+<a id='L1639' name='L1639'></a>1639     .int    JMPTBL (L(bk_write_12bytes), L(table_48_bytes_bwd))
+<a id='L1640' name='L1640'></a>1640     .int    JMPTBL (L(bk_write_13bytes), L(table_48_bytes_bwd))
+<a id='L1641' name='L1641'></a>1641     .int    JMPTBL (L(bk_write_14bytes), L(table_48_bytes_bwd))
+<a id='L1642' name='L1642'></a>1642     .int    JMPTBL (L(bk_write_15bytes), L(table_48_bytes_bwd))
+<a id='L1643' name='L1643'></a>1643     .int    JMPTBL (L(bk_write_16bytes), L(table_48_bytes_bwd))
+<a id='L1644' name='L1644'></a>1644     .int    JMPTBL (L(bk_write_17bytes), L(table_48_bytes_bwd))
+<a id='L1645' name='L1645'></a>1645     .int    JMPTBL (L(bk_write_18bytes), L(table_48_bytes_bwd))
+<a id='L1646' name='L1646'></a>1646     .int    JMPTBL (L(bk_write_19bytes), L(table_48_bytes_bwd))
+<a id='L1647' name='L1647'></a>1647     .int    JMPTBL (L(bk_write_20bytes), L(table_48_bytes_bwd))
+<a id='L1648' name='L1648'></a>1648     .int    JMPTBL (L(bk_write_21bytes), L(table_48_bytes_bwd))
+<a id='L1649' name='L1649'></a>1649     .int    JMPTBL (L(bk_write_22bytes), L(table_48_bytes_bwd))
+<a id='L1650' name='L1650'></a>1650     .int    JMPTBL (L(bk_write_23bytes), L(table_48_bytes_bwd))
+<a id='L1651' name='L1651'></a>1651     .int    JMPTBL (L(bk_write_24bytes), L(table_48_bytes_bwd))
+<a id='L1652' name='L1652'></a>1652     .int    JMPTBL (L(bk_write_25bytes), L(table_48_bytes_bwd))
+<a id='L1653' name='L1653'></a>1653     .int    JMPTBL (L(bk_write_26bytes), L(table_48_bytes_bwd))
+<a id='L1654' name='L1654'></a>1654     .int    JMPTBL (L(bk_write_27bytes), L(table_48_bytes_bwd))
+<a id='L1655' name='L1655'></a>1655     .int    JMPTBL (L(bk_write_28bytes), L(table_48_bytes_bwd))
+<a id='L1656' name='L1656'></a>1656     .int    JMPTBL (L(bk_write_29bytes), L(table_48_bytes_bwd))
+<a id='L1657' name='L1657'></a>1657     .int    JMPTBL (L(bk_write_30bytes), L(table_48_bytes_bwd))
+<a id='L1658' name='L1658'></a>1658     .int    JMPTBL (L(bk_write_31bytes), L(table_48_bytes_bwd))
+<a id='L1659' name='L1659'></a>1659     .int    JMPTBL (L(bk_write_32bytes), L(table_48_bytes_bwd))
+<a id='L1660' name='L1660'></a>1660     .int    JMPTBL (L(bk_write_33bytes), L(table_48_bytes_bwd))
+<a id='L1661' name='L1661'></a>1661     .int    JMPTBL (L(bk_write_34bytes), L(table_48_bytes_bwd))
+<a id='L1662' name='L1662'></a>1662     .int    JMPTBL (L(bk_write_35bytes), L(table_48_bytes_bwd))
+<a id='L1663' name='L1663'></a>1663     .int    JMPTBL (L(bk_write_36bytes), L(table_48_bytes_bwd))
+<a id='L1664' name='L1664'></a>1664     .int    JMPTBL (L(bk_write_37bytes), L(table_48_bytes_bwd))
+<a id='L1665' name='L1665'></a>1665     .int    JMPTBL (L(bk_write_38bytes), L(table_48_bytes_bwd))
+<a id='L1666' name='L1666'></a>1666     .int    JMPTBL (L(bk_write_39bytes), L(table_48_bytes_bwd))
+<a id='L1667' name='L1667'></a>1667     .int    JMPTBL (L(bk_write_40bytes), L(table_48_bytes_bwd))
+<a id='L1668' name='L1668'></a>1668     .int    JMPTBL (L(bk_write_41bytes), L(table_48_bytes_bwd))
+<a id='L1669' name='L1669'></a>1669     .int    JMPTBL (L(bk_write_42bytes), L(table_48_bytes_bwd))
+<a id='L1670' name='L1670'></a>1670     .int    JMPTBL (L(bk_write_43bytes), L(table_48_bytes_bwd))
+<a id='L1671' name='L1671'></a>1671     .int    JMPTBL (L(bk_write_44bytes), L(table_48_bytes_bwd))
+<a id='L1672' name='L1672'></a>1672     .int    JMPTBL (L(bk_write_45bytes), L(table_48_bytes_bwd))
+<a id='L1673' name='L1673'></a>1673     .int    JMPTBL (L(bk_write_46bytes), L(table_48_bytes_bwd))
+<a id='L1674' name='L1674'></a>1674     .int    JMPTBL (L(bk_write_47bytes), L(table_48_bytes_bwd))
+<a id='L1675' name='L1675'></a>1675 
+<a id='L1676' name='L1676'></a>1676     .popsection
+<a id='L1677' name='L1677'></a>1677 
+<a id='L1678' name='L1678'></a>1678 <em class='sharp'>#ifdef</em> <a href='../D/16767.html' title='Multiple defined in 10 places.'>USE_AS_MEMMOVE</a>
+<a id='L1679' name='L1679'></a>1679     ALIGN (4)
+<a id='L1680' name='L1680'></a>1680 L(copy_backward):
+<a id='L1681' name='L1681'></a>1681     PUSH (%esi)
+<a id='L1682' name='L1682'></a>1682     movl    %eax, %esi
+<a id='L1683' name='L1683'></a>1683     add %ecx, %edx
+<a id='L1684' name='L1684'></a>1684     add %ecx, %esi
+<a id='L1685' name='L1685'></a>1685     testl   $0x3, %edx
+<a id='L1686' name='L1686'></a>1686     jnz L(bk_align)
+<a id='L1687' name='L1687'></a>1687 
+<a id='L1688' name='L1688'></a>1688 L(bk_aligned_4):
+<a id='L1689' name='L1689'></a>1689     cmp $64, %ecx
+<a id='L1690' name='L1690'></a>1690     jae L(bk_write_more64bytes)
+<a id='L1691' name='L1691'></a>1691 
+<a id='L1692' name='L1692'></a>1692 L(bk_write_64bytesless):
+<a id='L1693' name='L1693'></a>1693     cmp $32, %ecx
+<a id='L1694' name='L1694'></a>1694     jb  L(bk_write_less32bytes)
+<a id='L1695' name='L1695'></a>1695 
+<a id='L1696' name='L1696'></a>1696 L(bk_write_more32bytes):
+<a id='L1697' name='L1697'></a>1697     <em class='comment'>/* Copy 32 bytes at a time.  */</em>
+<a id='L1698' name='L1698'></a>1698     sub $32, %ecx
+<a id='L1699' name='L1699'></a>1699     movl    -4(%esi), %eax
+<a id='L1700' name='L1700'></a>1700     movl    %eax, -4(%edx)
+<a id='L1701' name='L1701'></a>1701     movl    -8(%esi), %eax
+<a id='L1702' name='L1702'></a>1702     movl    %eax, -8(%edx)
+<a id='L1703' name='L1703'></a>1703     movl    -12(%esi), %eax
+<a id='L1704' name='L1704'></a>1704     movl    %eax, -12(%edx)
+<a id='L1705' name='L1705'></a>1705     movl    -16(%esi), %eax
+<a id='L1706' name='L1706'></a>1706     movl    %eax, -16(%edx)
+<a id='L1707' name='L1707'></a>1707     movl    -20(%esi), %eax
+<a id='L1708' name='L1708'></a>1708     movl    %eax, -20(%edx)
+<a id='L1709' name='L1709'></a>1709     movl    -24(%esi), %eax
+<a id='L1710' name='L1710'></a>1710     movl    %eax, -24(%edx)
+<a id='L1711' name='L1711'></a>1711     movl    -28(%esi), %eax
+<a id='L1712' name='L1712'></a>1712     movl    %eax, -28(%edx)
+<a id='L1713' name='L1713'></a>1713     movl    -32(%esi), %eax
+<a id='L1714' name='L1714'></a>1714     movl    %eax, -32(%edx)
+<a id='L1715' name='L1715'></a>1715     sub $32, %edx
+<a id='L1716' name='L1716'></a>1716     sub $32, %esi
+<a id='L1717' name='L1717'></a>1717 
+<a id='L1718' name='L1718'></a>1718 L(bk_write_less32bytes):
+<a id='L1719' name='L1719'></a>1719     movl    %esi, %eax
+<a id='L1720' name='L1720'></a>1720     sub %ecx, %edx
+<a id='L1721' name='L1721'></a>1721     sub %ecx, %eax
+<a id='L1722' name='L1722'></a>1722     POP (%esi)
+<a id='L1723' name='L1723'></a>1723 L(bk_write_less48bytes):
+<a id='L1724' name='L1724'></a>1724     BRANCH_TO_JMPTBL_ENTRY (L(table_48_bytes_bwd), %ecx, 4)
+<a id='L1725' name='L1725'></a>1725 
+<a id='L1726' name='L1726'></a>1726     CFI_PUSH (%esi)
+<a id='L1727' name='L1727'></a>1727     ALIGN (4)
+<a id='L1728' name='L1728'></a>1728 L(bk_align):
+<a id='L1729' name='L1729'></a>1729     cmp $8, %ecx
+<a id='L1730' name='L1730'></a>1730     jbe L(bk_write_less32bytes)
+<a id='L1731' name='L1731'></a>1731     testl   $1, %edx
+<a id='L1732' name='L1732'></a>1732     <em class='comment'>/* We get here only if (EDX &amp; 3 ) != 0 so if (EDX &amp; 1) ==0,</em>
+<a id='L1733' name='L1733'></a>1733 <em class='comment'>       then (EDX &amp; 2) must be != 0.  */</em>
+<a id='L1734' name='L1734'></a>1734     jz  L(bk_got2)
+<a id='L1735' name='L1735'></a>1735     sub $1, %esi
+<a id='L1736' name='L1736'></a>1736     sub $1, %ecx
+<a id='L1737' name='L1737'></a>1737     sub $1, %edx
+<a id='L1738' name='L1738'></a>1738     movzbl  (%esi), %eax
+<a id='L1739' name='L1739'></a>1739     movb    %al, (%edx)
+<a id='L1740' name='L1740'></a>1740 
+<a id='L1741' name='L1741'></a>1741     testl   $2, %edx
+<a id='L1742' name='L1742'></a>1742     jz  L(bk_aligned_4)
+<a id='L1743' name='L1743'></a>1743 
+<a id='L1744' name='L1744'></a>1744 L(bk_got2):
+<a id='L1745' name='L1745'></a>1745     sub $2, %esi
+<a id='L1746' name='L1746'></a>1746     sub $2, %ecx
+<a id='L1747' name='L1747'></a>1747     sub $2, %edx
+<a id='L1748' name='L1748'></a>1748     movzwl  (%esi), %eax
+<a id='L1749' name='L1749'></a>1749     movw    %ax, (%edx)
+<a id='L1750' name='L1750'></a>1750     jmp L(bk_aligned_4)
+<a id='L1751' name='L1751'></a>1751 
+<a id='L1752' name='L1752'></a>1752     ALIGN (4)
+<a id='L1753' name='L1753'></a>1753 L(bk_write_more64bytes):
+<a id='L1754' name='L1754'></a>1754     <em class='comment'>/* Check alignment of last byte.  */</em>
+<a id='L1755' name='L1755'></a>1755     testl   $15, %edx
+<a id='L1756' name='L1756'></a>1756     jz  L(bk_ssse3_cpy_pre)
+<a id='L1757' name='L1757'></a>1757 
+<a id='L1758' name='L1758'></a>1758 <em class='comment'>/* EDX is aligned 4 bytes, but not 16 bytes.  */</em>
+<a id='L1759' name='L1759'></a>1759 L(bk_ssse3_align):
+<a id='L1760' name='L1760'></a>1760     sub $4, %esi
+<a id='L1761' name='L1761'></a>1761     sub $4, %ecx
+<a id='L1762' name='L1762'></a>1762     sub $4, %edx
+<a id='L1763' name='L1763'></a>1763     movl    (%esi), %eax
+<a id='L1764' name='L1764'></a>1764     movl    %eax, (%edx)
+<a id='L1765' name='L1765'></a>1765 
+<a id='L1766' name='L1766'></a>1766     testl   $15, %edx
+<a id='L1767' name='L1767'></a>1767     jz  L(bk_ssse3_cpy_pre)
+<a id='L1768' name='L1768'></a>1768 
+<a id='L1769' name='L1769'></a>1769     sub $4, %esi
+<a id='L1770' name='L1770'></a>1770     sub $4, %ecx
+<a id='L1771' name='L1771'></a>1771     sub $4, %edx
+<a id='L1772' name='L1772'></a>1772     movl    (%esi), %eax
+<a id='L1773' name='L1773'></a>1773     movl    %eax, (%edx)
+<a id='L1774' name='L1774'></a>1774 
+<a id='L1775' name='L1775'></a>1775     testl   $15, %edx
+<a id='L1776' name='L1776'></a>1776     jz  L(bk_ssse3_cpy_pre)
+<a id='L1777' name='L1777'></a>1777 
+<a id='L1778' name='L1778'></a>1778     sub $4, %esi
+<a id='L1779' name='L1779'></a>1779     sub $4, %ecx
+<a id='L1780' name='L1780'></a>1780     sub $4, %edx
+<a id='L1781' name='L1781'></a>1781     movl    (%esi), %eax
+<a id='L1782' name='L1782'></a>1782     movl    %eax, (%edx)
+<a id='L1783' name='L1783'></a>1783 
+<a id='L1784' name='L1784'></a>1784 L(bk_ssse3_cpy_pre):
+<a id='L1785' name='L1785'></a>1785     cmp $64, %ecx
+<a id='L1786' name='L1786'></a>1786     jb  L(bk_write_more32bytes)
+<a id='L1787' name='L1787'></a>1787 
+<a id='L1788' name='L1788'></a>1788 L(bk_ssse3_cpy):
+<a id='L1789' name='L1789'></a>1789     sub $64, %esi
+<a id='L1790' name='L1790'></a>1790     sub $64, %ecx
+<a id='L1791' name='L1791'></a>1791     sub $64, %edx
+<a id='L1792' name='L1792'></a>1792     movdqu  0x30(%esi), %xmm3
+<a id='L1793' name='L1793'></a>1793     movdqa  %xmm3, 0x30(%edx)
+<a id='L1794' name='L1794'></a>1794     movdqu  0x20(%esi), %xmm2
+<a id='L1795' name='L1795'></a>1795     movdqa  %xmm2, 0x20(%edx)
+<a id='L1796' name='L1796'></a>1796     movdqu  0x10(%esi), %xmm1
+<a id='L1797' name='L1797'></a>1797     movdqa  %xmm1, 0x10(%edx)
+<a id='L1798' name='L1798'></a>1798     movdqu  (%esi), %xmm0
+<a id='L1799' name='L1799'></a>1799     movdqa  %xmm0, (%edx)
+<a id='L1800' name='L1800'></a>1800     cmp $64, %ecx
+<a id='L1801' name='L1801'></a>1801     jae L(bk_ssse3_cpy)
+<a id='L1802' name='L1802'></a>1802     jmp L(bk_write_64bytesless)
+<a id='L1803' name='L1803'></a>1803 
+<a id='L1804' name='L1804'></a>1804 <em class='sharp'>#endif</em>
+<a id='L1805' name='L1805'></a>1805 
+<a id='L1806' name='L1806'></a>1806 END (MEMCPY)
+<a id='L1807' name='L1807'></a>1807 
+<a id='L1808' name='L1808'></a>1808 <em class='sharp'>#endif</em>
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;][^][v]<a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

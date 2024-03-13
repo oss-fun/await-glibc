@@ -1,0 +1,158 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>sysdeps/unix/sysv/linux/tst-gettid-kill.c</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18977.html'>sysdeps</a>/<a href='../files/19246.html'>unix</a>/<a href='../files/19257.html'>sysv</a>/<a href='../files/19258.html'>linux</a>/tst-gettid-kill.c</h2>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L48'>[^]</a><a href='#L100'>[v]</a>[top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<h2 class='header'>DEFINITIONS</h2>
+This source file includes following definitions.
+<ol>
+<li><a href='#L48' title='Defined at 48.'>sigusr1_handler</a></li>
+<li><a href='#L64' title='Defined at 64.'>thread_pause_noreturn</a></li>
+<li><a href='#L76' title='Defined at 76.'>thread_read_signal</a></li>
+<li><a href='#L100' title='Defined at 100.'>do_test</a></li>
+</ol>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* Verify the interaction of kill and thread groups.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   Copyright (C) 2019-2022 Free Software Foundation, Inc.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'></em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'></em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'></em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   License along with the GNU C Library; if not, see</em>
+<a id='L17' name='L17'></a>  17 <em class='comment'>   &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L18' name='L18'></a>  18 
+<a id='L19' name='L19'></a>  19 <em class='comment'>/* This test demonstrates that a signal which is sent to a specified</em>
+<a id='L20' name='L20'></a>  20 <em class='comment'>   thread ID using the kill function is delivered to the entire thread</em>
+<a id='L21' name='L21'></a>  21 <em class='comment'>   group (as if it had been sent to the process group).  */</em>
+<a id='L22' name='L22'></a>  22 
+<a id='L23' name='L23'></a>  23 <em class='sharp'>#include</em> &lt;<a href='../I/116.html'>errno.h</a>&gt;
+<a id='L24' name='L24'></a>  24 <em class='sharp'>#include</em> &lt;<a href='../I/1264.html'>signal.h</a>&gt;
+<a id='L25' name='L25'></a>  25 <em class='sharp'>#include</em> &lt;<a href='5739.html'>support/check.h</a>&gt;
+<a id='L26' name='L26'></a>  26 <em class='sharp'>#include</em> &lt;<a href='5820.html'>support/xsignal.h</a>&gt;
+<a id='L27' name='L27'></a>  27 <em class='sharp'>#include</em> &lt;<a href='5859.html'>support/xthread.h</a>&gt;
+<a id='L28' name='L28'></a>  28 <em class='sharp'>#include</em> &lt;<a href='5899.html'>support/xunistd.h</a>&gt;
+<a id='L29' name='L29'></a>  29 
+<a id='L30' name='L30'></a>  30 <em class='comment'>/* Signal set containing SIGUSR1.  */</em>
+<a id='L31' name='L31'></a>  31 <strong class='reserved'>static</strong> <a href='../S/28.html#L7' title='Defined at 7 in signal/bits/types/sigset_t.h.'>sigset_t</a> <a href='../Y/25460.html' title='Multiple used in 5 places.'>sigusr1_set</a>;
+<a id='L32' name='L32'></a>  32 
+<a id='L33' name='L33'></a>  33 <em class='comment'>/* Used to synchronize the threads.  */</em>
+<a id='L34' name='L34'></a>  34 <strong class='reserved'>static</strong> <a href='../D/35094.html' title='Multiple defined in 2 places.'>pthread_barrier_t</a> <a href='../Y/10757.html' title='Multiple used in 153 places.'>barrier</a>;
+<a id='L35' name='L35'></a>  35 
+<a id='L36' name='L36'></a>  36 <em class='comment'>/* TID of the thread to which the signal is sent.  */</em>
+<a id='L37' name='L37'></a>  37 <strong class='reserved'>static</strong> <a href='../D/34727.html' title='Multiple defined in 11 places.'>pid_t</a> <a href='../Y/26806.html' title='Multiple used in 6 places.'>target_tid</a>;
+<a id='L38' name='L38'></a>  38 
+<a id='L39' name='L39'></a>  39 <em class='comment'>/* Thread which is expected to receive the SIGUSR1 signal.  */</em>
+<a id='L40' name='L40'></a>  40 <strong class='reserved'>static</strong> <a href='../D/35174.html' title='Multiple defined in 2 places.'>pthread_t</a> <a href='../Y/25413.html' title='Multiple used in 9 places.'>signal_thread</a>;
+<a id='L41' name='L41'></a>  41 
+<a id='L42' name='L42'></a>  42 <em class='comment'>/* Pipe used to block and terminate the signal thread.  */</em>
+<a id='L43' name='L43'></a>  43 <strong class='reserved'>static</strong> <strong class='reserved'>int</strong> <a href='../Y/22442.html' title='Multiple used in 4 places.'>pipe_signal</a>[2];
+<a id='L44' name='L44'></a>  44 
+<a id='L45' name='L45'></a>  45 <strong class='reserved'>static</strong> <strong class='reserved'>volatile</strong> <a href='../S/30.html#L8' title='Defined at 8 in signal/bits/types/sig_atomic_t.h.'>sig_atomic_t</a> <a href='../Y/15929.html' title='Multiple used in 5 places.'>handler_tid</a>;
+<a id='L46' name='L46'></a>  46 
+<a id='L47' name='L47'></a>  47 <strong class='reserved'>static</strong> <strong class='reserved'>void</strong>
+<a id='L48' name='L48'></a>  48 <a href='../R/24465.html' title='Multiple referred from 8 places.'>sigusr1_handler</a> (<strong class='reserved'>int</strong> <a href='../Y/25430.html' title='Multiple used in 204 places.'>signo</a>)
+<a id='L49' name='L49'></a>  49 <em class='brace'>{</em>
+<a id='L50' name='L50'></a>  50   <a href='../S/5739.html#L101' title='Defined at 101 in support/check.h.'>TEST_COMPARE</a> (<a href='../Y/25430.html' title='Multiple used in 204 places.'>signo</a>, <a href='../D/14211.html' title='Multiple defined in 7 places.'>SIGUSR1</a>);
+<a id='L51' name='L51'></a>  51   <a href='../S/5739.html#L50' title='Defined at 50 in support/check.h.'>TEST_VERIFY</a> (<a href='../Y/23020.html' title='Multiple used in 91 places.'>pthread_self</a> () == <a href='../Y/25413.html' title='Multiple used in 9 places.'>signal_thread</a>);
+<a id='L52' name='L52'></a>  52   <a href='../S/5739.html#L101' title='Defined at 101 in support/check.h.'>TEST_COMPARE</a> (<a href='../Y/15929.html' title='Multiple used in 5 places.'>handler_tid</a>, 0);
+<a id='L53' name='L53'></a>  53   <a href='../Y/15929.html' title='Multiple used in 5 places.'>handler_tid</a> = <a href='../Y/15593.html' title='Multiple used in 31 places.'>gettid</a> ();
+<a id='L54' name='L54'></a>  54   <a href='../S/5739.html#L50' title='Defined at 50 in support/check.h.'>TEST_VERIFY</a> (<a href='../Y/15929.html' title='Multiple used in 5 places.'>handler_tid</a> &gt; 0);
+<a id='L55' name='L55'></a>  55   <em class='comment'>/* Ensure that the read system call in thread_read exits if the</em>
+<a id='L56' name='L56'></a>  56 <em class='comment'>     signal is delivered before the system call is invoked.  */</em>
+<a id='L57' name='L57'></a>  57   <strong class='reserved'>char</strong> <a href='../D/28608.html' title='Multiple defined in 4 places.'>ch</a> = 'X';
+<a id='L58' name='L58'></a>  58   <a href='../S/5830.html#L24' title='Defined at 24 in support/xwrite.c.'>xwrite</a> (<a href='../Y/22442.html' title='Multiple used in 4 places.'>pipe_signal</a>[1], &amp;<a href='../D/28608.html' title='Multiple defined in 4 places.'>ch</a>, 1);
+<a id='L59' name='L59'></a>  59 <em class='brace'>}</em>
+<a id='L60' name='L60'></a>  60 
+<a id='L61' name='L61'></a>  61 <em class='comment'>/* Thread which calls pause without expecting it to return.  The TID</em>
+<a id='L62' name='L62'></a>  62 <em class='comment'>   of this thread is used as the target in the kill function call.  */</em>
+<a id='L63' name='L63'></a>  63 <strong class='reserved'>static</strong> <strong class='reserved'>void</strong> *
+<a id='L64' name='L64'></a>  64 <a href='../S/11326.html#L113' title='Referred from 113 in sysdeps/unix/sysv/linux/tst-gettid-kill.c.'>thread_pause_noreturn</a> (<strong class='reserved'>void</strong> *<a href='../S/16196.html#L39' title='Defined at 39 in sysdeps/pthread/tst-memstream.c.'>closure</a>)
+<a id='L65' name='L65'></a>  65 <em class='brace'>{</em>
+<a id='L66' name='L66'></a>  66   <a href='../Y/26806.html' title='Multiple used in 6 places.'>target_tid</a> = <a href='../Y/15593.html' title='Multiple used in 31 places.'>gettid</a> ();
+<a id='L67' name='L67'></a>  67   <a href='../S/5739.html#L50' title='Defined at 50 in support/check.h.'>TEST_VERIFY</a> (<a href='../Y/26806.html' title='Multiple used in 6 places.'>target_tid</a> &gt; 0);
+<a id='L68' name='L68'></a>  68   <a href='../S/5856.html#L22' title='Defined at 22 in support/xpthread_barrier_wait.c.'>xpthread_barrier_wait</a> (&amp;<a href='../Y/10757.html' title='Multiple used in 153 places.'>barrier</a>);
+<a id='L69' name='L69'></a>  69   <a href='../S/1145.html#L26' title='Defined at 26 in posix/pause.c.'>pause</a> ();
+<a id='L70' name='L70'></a>  70   <a href='../S/5739.html#L40' title='Defined at 40 in support/check.h.'>FAIL_EXIT1</a> ("The pause function returned");
+<a id='L71' name='L71'></a>  71   <strong class='reserved'>return</strong> <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>;
+<a id='L72' name='L72'></a>  72 <em class='brace'>}</em>
+<a id='L73' name='L73'></a>  73 
+<a id='L74' name='L74'></a>  74 <em class='comment'>/* Thread which is expected to receive the signal.  */</em>
+<a id='L75' name='L75'></a>  75 <strong class='reserved'>static</strong> <strong class='reserved'>void</strong> *
+<a id='L76' name='L76'></a>  76 <a href='../S/11326.html#L114' title='Referred from 114 in sysdeps/unix/sysv/linux/tst-gettid-kill.c.'>thread_read_signal</a> (<strong class='reserved'>void</strong> *<a href='../S/16196.html#L39' title='Defined at 39 in sysdeps/pthread/tst-memstream.c.'>closure</a>)
+<a id='L77' name='L77'></a>  77 <em class='brace'>{</em>
+<a id='L78' name='L78'></a>  78   <a href='../S/5776.html#L25' title='Defined at 25 in support/xpthread_sigmask.c.'>xpthread_sigmask</a> (<a href='../D/14229.html' title='Multiple defined in 9 places.'>SIG_UNBLOCK</a>, &amp;<a href='../Y/25460.html' title='Multiple used in 5 places.'>sigusr1_set</a>, <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>);
+<a id='L79' name='L79'></a>  79   <a href='../S/5856.html#L22' title='Defined at 22 in support/xpthread_barrier_wait.c.'>xpthread_barrier_wait</a> (&amp;<a href='../Y/10757.html' title='Multiple used in 153 places.'>barrier</a>);
+<a id='L80' name='L80'></a>  80   <a href='../S/5739.html#L50' title='Defined at 50 in support/check.h.'>TEST_VERIFY</a> (<a href='../Y/26806.html' title='Multiple used in 6 places.'>target_tid</a> &gt; 0);
+<a id='L81' name='L81'></a>  81   <a href='../S/5739.html#L50' title='Defined at 50 in support/check.h.'>TEST_VERIFY</a> (<a href='../Y/15593.html' title='Multiple used in 31 places.'>gettid</a> () != <a href='../Y/26806.html' title='Multiple used in 6 places.'>target_tid</a>);
+<a id='L82' name='L82'></a>  82   <strong class='reserved'>char</strong> <a href='../D/28608.html' title='Multiple defined in 4 places.'>ch</a>;
+<a id='L83' name='L83'></a>  83   <a href='../D/36972.html' title='Multiple defined in 5 places.'>ssize_t</a> <a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a> = <a href='../S/284.html#L450' title='Defined at 450 in intl/loadmsgcat.c.'>read</a> (<a href='../Y/22442.html' title='Multiple used in 4 places.'>pipe_signal</a>[0], &amp;<a href='../D/28608.html' title='Multiple defined in 4 places.'>ch</a>, 1);
+<a id='L84' name='L84'></a>  84   <strong class='reserved'>if</strong> (<a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a> == 1)
+<a id='L85' name='L85'></a>  85     <em class='comment'>/* The signal was delivered before we entered the read system</em>
+<a id='L86' name='L86'></a>  86 <em class='comment'>       call.  */</em>
+<a id='L87' name='L87'></a>  87     <a href='../S/5739.html#L101' title='Defined at 101 in support/check.h.'>TEST_COMPARE</a> (<a href='../D/28608.html' title='Multiple defined in 4 places.'>ch</a>, 'X');
+<a id='L88' name='L88'></a>  88   <strong class='reserved'>else</strong>
+<a id='L89' name='L89'></a>  89     <em class='brace'>{</em>
+<a id='L90' name='L90'></a>  90       <em class='comment'>/* The signal was delivered while blocked in the read system</em>
+<a id='L91' name='L91'></a>  91 <em class='comment'>         call.  */</em>
+<a id='L92' name='L92'></a>  92       <a href='../S/5739.html#L101' title='Defined at 101 in support/check.h.'>TEST_COMPARE</a> (<a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a>, -1);
+<a id='L93' name='L93'></a>  93       <a href='../S/5739.html#L101' title='Defined at 101 in support/check.h.'>TEST_COMPARE</a> (<a href='../D/30023.html' title='Multiple defined in 13 places.'>errno</a>, <a href='../D/3155.html' title='Multiple defined in 2 places.'>EINTR</a>);
+<a id='L94' name='L94'></a>  94     <em class='brace'>}</em>
+<a id='L95' name='L95'></a>  95   <a href='../S/5739.html#L101' title='Defined at 101 in support/check.h.'>TEST_COMPARE</a> (<a href='../Y/15929.html' title='Multiple used in 5 places.'>handler_tid</a>, <a href='../Y/15593.html' title='Multiple used in 31 places.'>gettid</a> ());
+<a id='L96' name='L96'></a>  96   <strong class='reserved'>return</strong> <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>;
+<a id='L97' name='L97'></a>  97 <em class='brace'>}</em>
+<a id='L98' name='L98'></a>  98 
+<a id='L99' name='L99'></a>  99 <strong class='reserved'>static</strong> <strong class='reserved'>int</strong>
+<a id='L100' name='L100'></a> 100 <a href='../R/18782.html' title='Multiple referred from 1850 places.'>do_test</a> (<strong class='reserved'>void</strong>)
+<a id='L101' name='L101'></a> 101 <em class='brace'>{</em>
+<a id='L102' name='L102'></a> 102   <em class='comment'>/* Block the SIGUSR1 signal in all threads.  */</em>
+<a id='L103' name='L103'></a> 103   <a href='../S/77.html#L25' title='Defined at 25 in signal/sigempty.c.'>sigemptyset</a> (&amp;<a href='../Y/25460.html' title='Multiple used in 5 places.'>sigusr1_set</a>);
+<a id='L104' name='L104'></a> 104   <a href='../S/66.html#L25' title='Defined at 25 in signal/sigaddset.c.'>sigaddset</a> (&amp;<a href='../Y/25460.html' title='Multiple used in 5 places.'>sigusr1_set</a>, <a href='../D/14211.html' title='Multiple defined in 7 places.'>SIGUSR1</a>);
+<a id='L105' name='L105'></a> 105   <a href='../S/5776.html#L25' title='Defined at 25 in support/xpthread_sigmask.c.'>xpthread_sigmask</a> (<a href='../D/14220.html' title='Multiple defined in 10 places.'>SIG_BLOCK</a>, &amp;<a href='../Y/25460.html' title='Multiple used in 5 places.'>sigusr1_set</a>, <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>);
+<a id='L106' name='L106'></a> 106 
+<a id='L107' name='L107'></a> 107   <a href='../S/5869.html#L23' title='Defined at 23 in support/xsignal.c.'>xsignal</a> (<a href='../D/14211.html' title='Multiple defined in 7 places.'>SIGUSR1</a>, <a href='../D/36777.html' title='Multiple defined in 7 places.'>sigusr1_handler</a>);
+<a id='L108' name='L108'></a> 108   <a href='../S/5912.html#L24' title='Defined at 24 in support/xpipe.c.'>xpipe</a> (<a href='../Y/22442.html' title='Multiple used in 4 places.'>pipe_signal</a>);
+<a id='L109' name='L109'></a> 109 
+<a id='L110' name='L110'></a> 110   <a href='../S/5862.html#L22' title='Defined at 22 in support/xpthread_barrier_init.c.'>xpthread_barrier_init</a> (&amp;<a href='../Y/10757.html' title='Multiple used in 153 places.'>barrier</a>, <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>, 3);
+<a id='L111' name='L111'></a> 111 
+<a id='L112' name='L112'></a> 112   <a href='../D/35174.html' title='Multiple defined in 2 places.'>pthread_t</a> <a href='../Y/26805.html' title='Multiple used in 11 places.'>target_thread</a>
+<a id='L113' name='L113'></a> 113     = <a href='../S/5797.html#L22' title='Defined at 22 in support/xpthread_create.c.'>xpthread_create</a> (<a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>, <a href='../S/11326.html#L64' title='Defined at 64 in sysdeps/unix/sysv/linux/tst-gettid-kill.c.'>thread_pause_noreturn</a>, <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>);
+<a id='L114' name='L114'></a> 114   <a href='../Y/25413.html' title='Multiple used in 9 places.'>signal_thread</a> = <a href='../S/5797.html#L22' title='Defined at 22 in support/xpthread_create.c.'>xpthread_create</a> (<a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>, <a href='../S/11326.html#L76' title='Defined at 76 in sysdeps/unix/sysv/linux/tst-gettid-kill.c.'>thread_read_signal</a>, <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>);
+<a id='L115' name='L115'></a> 115   <a href='../S/5856.html#L22' title='Defined at 22 in support/xpthread_barrier_wait.c.'>xpthread_barrier_wait</a> (&amp;<a href='../Y/10757.html' title='Multiple used in 153 places.'>barrier</a>);
+<a id='L116' name='L116'></a> 116 
+<a id='L117' name='L117'></a> 117   <em class='comment'>/* Send the SIGUSR1 signal to the thread which has it blocked, and</em>
+<a id='L118' name='L118'></a> 118 <em class='comment'>     expect it to be delivered to the other thread.  */</em>
+<a id='L119' name='L119'></a> 119   <a href='../S/5739.html#L101' title='Defined at 101 in support/check.h.'>TEST_COMPARE</a> (<a href='../Y/17525.html' title='Multiple used in 101 places.'>kill</a> (<a href='../Y/26806.html' title='Multiple used in 6 places.'>target_tid</a>, <a href='../D/14211.html' title='Multiple defined in 7 places.'>SIGUSR1</a>), 0);
+<a id='L120' name='L120'></a> 120 
+<a id='L121' name='L121'></a> 121   <a href='../S/5816.html#L22' title='Defined at 22 in support/xpthread_join.c.'>xpthread_join</a> (<a href='../Y/25413.html' title='Multiple used in 9 places.'>signal_thread</a>);
+<a id='L122' name='L122'></a> 122   <a href='../S/5898.html#L22' title='Defined at 22 in support/xpthread_cancel.c.'>xpthread_cancel</a> (<a href='../Y/26805.html' title='Multiple used in 11 places.'>target_thread</a>);
+<a id='L123' name='L123'></a> 123   <a href='../S/5816.html#L22' title='Defined at 22 in support/xpthread_join.c.'>xpthread_join</a> (<a href='../Y/26805.html' title='Multiple used in 11 places.'>target_thread</a>);
+<a id='L124' name='L124'></a> 124 
+<a id='L125' name='L125'></a> 125   <a href='../S/5833.html#L22' title='Defined at 22 in support/xpthread_barrier_destroy.c.'>xpthread_barrier_destroy</a> (&amp;<a href='../Y/10757.html' title='Multiple used in 153 places.'>barrier</a>);
+<a id='L126' name='L126'></a> 126   <strong class='reserved'>return</strong> 0;
+<a id='L127' name='L127'></a> 127 <em class='brace'>}</em>
+<a id='L128' name='L128'></a> 128 
+<a id='L129' name='L129'></a> 129 <em class='sharp'>#include</em> &lt;support/test-driver.c&gt;
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L48'>[^]</a><a href='#L100'>[v]</a><a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

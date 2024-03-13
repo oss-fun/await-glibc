@@ -1,0 +1,501 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>sysdeps/powerpc/powerpc32/power7/mempcpy.S</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18977.html'>sysdeps</a>/<a href='../files/19149.html'>powerpc</a>/<a href='../files/19157.html'>powerpc32</a>/<a href='../files/19171.html'>power7</a>/mempcpy.S</h2>
+<em class='comment'>/* [&lt;][&gt;][^][v][top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* Optimized mempcpy implementation for POWER7.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   Copyright (C) 2010-2022 Free Software Foundation, Inc.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'></em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'></em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'></em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   License along with the GNU C Library; if not, see</em>
+<a id='L17' name='L17'></a>  17 <em class='comment'>   &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L18' name='L18'></a>  18 
+<a id='L19' name='L19'></a>  19 <em class='sharp'>#include</em> &lt;<a href='../I/5967.html'>sysdep.h</a>&gt;
+<a id='L20' name='L20'></a>  20 
+<a id='L21' name='L21'></a>  21 <em class='comment'>/* void * [r3] __mempcpy (void *dst [r3], void *src [r4], size_t len [r5]);</em>
+<a id='L22' name='L22'></a>  22 <em class='comment'>    Returns 'dst' + 'len'.  */</em>
+<a id='L23' name='L23'></a>  23 
+<a id='L24' name='L24'></a>  24     .machine  power7
+<a id='L25' name='L25'></a>  25 EALIGN (__mempcpy, 5, 0)
+<a id='L26' name='L26'></a>  26     CALL_MCOUNT
+<a id='L27' name='L27'></a>  27 
+<a id='L28' name='L28'></a>  28     stwu    1,-32(1)
+<a id='L29' name='L29'></a>  29     cfi_adjust_cfa_offset(32)
+<a id='L30' name='L30'></a>  30     stw 30,20(1)
+<a id='L31' name='L31'></a>  31     cfi_offset(30,(20-32))
+<a id='L32' name='L32'></a>  32     stw 31,24(1)
+<a id='L33' name='L33'></a>  33     mr  30,3
+<a id='L34' name='L34'></a>  34     cmplwi  cr1,5,31
+<a id='L35' name='L35'></a>  35     neg 0,3
+<a id='L36' name='L36'></a>  36     cfi_offset(31,-8)
+<a id='L37' name='L37'></a>  37     ble cr1,L(copy_LT_32)  <em class='comment'>/* If move &lt; 32 bytes use short move</em>
+<a id='L38' name='L38'></a>  38 <em class='comment'>                    code.  */</em>
+<a id='L39' name='L39'></a>  39 
+<a id='L40' name='L40'></a>  40     andi.   11,3,7        <em class='comment'>/* Check alignment of DST.  */</em>
+<a id='L41' name='L41'></a>  41     clrlwi  10,4,29       <em class='comment'>/* Check alignment of SRC.  */</em>
+<a id='L42' name='L42'></a>  42     cmplw   cr6,10,11     <em class='comment'>/* SRC and DST alignments match?  */</em>
+<a id='L43' name='L43'></a>  43     mr  12,4
+<a id='L44' name='L44'></a>  44     mr  31,5
+<a id='L45' name='L45'></a>  45     bne cr6,L(copy_GE_32_unaligned)
+<a id='L46' name='L46'></a>  46 
+<a id='L47' name='L47'></a>  47     srwi    9,5,3         <em class='comment'>/* Number of full quadwords remaining.  */</em>
+<a id='L48' name='L48'></a>  48 
+<a id='L49' name='L49'></a>  49     beq L(copy_GE_32_aligned_cont)
+<a id='L50' name='L50'></a>  50 
+<a id='L51' name='L51'></a>  51     clrlwi  0,0,29
+<a id='L52' name='L52'></a>  52     mtcrf   0x01,0
+<a id='L53' name='L53'></a>  53     subf    31,0,5
+<a id='L54' name='L54'></a>  54 
+<a id='L55' name='L55'></a>  55     <em class='comment'>/* Get the SRC aligned to 8 bytes.  */</em>
+<a id='L56' name='L56'></a>  56 
+<a id='L57' name='L57'></a>  57 1:  bf  31,2f
+<a id='L58' name='L58'></a>  58     lbz 6,0(12)
+<a id='L59' name='L59'></a>  59     addi    12,12,1
+<a id='L60' name='L60'></a>  60     stb 6,0(3)
+<a id='L61' name='L61'></a>  61     addi    3,3,1
+<a id='L62' name='L62'></a>  62 2:  bf  30,4f
+<a id='L63' name='L63'></a>  63     lhz 6,0(12)
+<a id='L64' name='L64'></a>  64     addi    12,12,2
+<a id='L65' name='L65'></a>  65     sth 6,0(3)
+<a id='L66' name='L66'></a>  66     addi    3,3,2
+<a id='L67' name='L67'></a>  67 4:  bf  29,0f
+<a id='L68' name='L68'></a>  68     lwz 6,0(12)
+<a id='L69' name='L69'></a>  69     addi    12,12,4
+<a id='L70' name='L70'></a>  70     stw 6,0(3)
+<a id='L71' name='L71'></a>  71     addi    3,3,4
+<a id='L72' name='L72'></a>  72 0:
+<a id='L73' name='L73'></a>  73     clrlwi  10,12,29      <em class='comment'>/* Check alignment of SRC again.  */</em>
+<a id='L74' name='L74'></a>  74     srwi    9,31,3        <em class='comment'>/* Number of full doublewords remaining.  */</em>
+<a id='L75' name='L75'></a>  75 
+<a id='L76' name='L76'></a>  76 L(copy_GE_32_aligned_cont):
+<a id='L77' name='L77'></a>  77 
+<a id='L78' name='L78'></a>  78     clrlwi  11,31,29
+<a id='L79' name='L79'></a>  79     mtcrf   0x01,9
+<a id='L80' name='L80'></a>  80 
+<a id='L81' name='L81'></a>  81     srwi    8,31,5
+<a id='L82' name='L82'></a>  82     cmplwi  cr1,9,4
+<a id='L83' name='L83'></a>  83     cmplwi  cr6,11,0
+<a id='L84' name='L84'></a>  84     mr  11,12
+<a id='L85' name='L85'></a>  85 
+<a id='L86' name='L86'></a>  86     <em class='comment'>/* Copy 1~3 doublewords so the main loop starts</em>
+<a id='L87' name='L87'></a>  87 <em class='comment'>    at a multiple of 32 bytes.  */</em>
+<a id='L88' name='L88'></a>  88 
+<a id='L89' name='L89'></a>  89     bf  30,1f
+<a id='L90' name='L90'></a>  90     lfd 6,0(12)
+<a id='L91' name='L91'></a>  91     lfd 7,8(12)
+<a id='L92' name='L92'></a>  92     addi    11,12,16
+<a id='L93' name='L93'></a>  93     mtctr   8
+<a id='L94' name='L94'></a>  94     stfd    6,0(3)
+<a id='L95' name='L95'></a>  95     stfd    7,8(3)
+<a id='L96' name='L96'></a>  96     addi    10,3,16
+<a id='L97' name='L97'></a>  97     bf  31,4f
+<a id='L98' name='L98'></a>  98     lfd 0,16(12)
+<a id='L99' name='L99'></a>  99     stfd    0,16(3)
+<a id='L100' name='L100'></a> 100     blt cr1,3f
+<a id='L101' name='L101'></a> 101     addi    11,12,24
+<a id='L102' name='L102'></a> 102     addi    10,3,24
+<a id='L103' name='L103'></a> 103     b   4f
+<a id='L104' name='L104'></a> 104 
+<a id='L105' name='L105'></a> 105     .align  4
+<a id='L106' name='L106'></a> 106 1:  <em class='comment'>/* Copy 1 doubleword and set the counter.  */</em>
+<a id='L107' name='L107'></a> 107     mr  10,3
+<a id='L108' name='L108'></a> 108     mtctr   8
+<a id='L109' name='L109'></a> 109     bf  31,4f
+<a id='L110' name='L110'></a> 110     lfd 6,0(12)
+<a id='L111' name='L111'></a> 111     addi    11,12,8
+<a id='L112' name='L112'></a> 112     stfd    6,0(3)
+<a id='L113' name='L113'></a> 113     addi    10,3,8
+<a id='L114' name='L114'></a> 114 
+<a id='L115' name='L115'></a> 115     .align  4
+<a id='L116' name='L116'></a> 116 4:  <em class='comment'>/* Main aligned copy loop. Copies 32-bytes at a time.  */</em>
+<a id='L117' name='L117'></a> 117     lfd 6,0(11)
+<a id='L118' name='L118'></a> 118     lfd 7,8(11)
+<a id='L119' name='L119'></a> 119     lfd 8,16(11)
+<a id='L120' name='L120'></a> 120     lfd 0,24(11)
+<a id='L121' name='L121'></a> 121     addi    11,11,32
+<a id='L122' name='L122'></a> 122 
+<a id='L123' name='L123'></a> 123     stfd    6,0(10)
+<a id='L124' name='L124'></a> 124     stfd    7,8(10)
+<a id='L125' name='L125'></a> 125     stfd    8,16(10)
+<a id='L126' name='L126'></a> 126     stfd    0,24(10)
+<a id='L127' name='L127'></a> 127     addi    10,10,32
+<a id='L128' name='L128'></a> 128     bdnz    4b
+<a id='L129' name='L129'></a> 129 3:
+<a id='L130' name='L130'></a> 130 
+<a id='L131' name='L131'></a> 131     <em class='comment'>/* Check for tail bytes.  */</em>
+<a id='L132' name='L132'></a> 132 
+<a id='L133' name='L133'></a> 133     clrrwi  0,31,3
+<a id='L134' name='L134'></a> 134     mtcrf   0x01,31
+<a id='L135' name='L135'></a> 135     beq cr6,0f
+<a id='L136' name='L136'></a> 136 
+<a id='L137' name='L137'></a> 137 .L9:
+<a id='L138' name='L138'></a> 138     add 3,3,0
+<a id='L139' name='L139'></a> 139     add 12,12,0
+<a id='L140' name='L140'></a> 140 
+<a id='L141' name='L141'></a> 141     <em class='comment'>/*  At this point we have a tail of 0-7 bytes and we know that the</em>
+<a id='L142' name='L142'></a> 142 <em class='comment'>    destination is doubleword-aligned.  */</em>
+<a id='L143' name='L143'></a> 143 4:  <em class='comment'>/* Copy 4 bytes.  */</em>
+<a id='L144' name='L144'></a> 144     bf  29,2f
+<a id='L145' name='L145'></a> 145 
+<a id='L146' name='L146'></a> 146     lwz 6,0(12)
+<a id='L147' name='L147'></a> 147     addi    12,12,4
+<a id='L148' name='L148'></a> 148     stw 6,0(3)
+<a id='L149' name='L149'></a> 149     addi    3,3,4
+<a id='L150' name='L150'></a> 150 2:  <em class='comment'>/* Copy 2 bytes.  */</em>
+<a id='L151' name='L151'></a> 151     bf  30,1f
+<a id='L152' name='L152'></a> 152 
+<a id='L153' name='L153'></a> 153     lhz 6,0(12)
+<a id='L154' name='L154'></a> 154     addi    12,12,2
+<a id='L155' name='L155'></a> 155     sth 6,0(3)
+<a id='L156' name='L156'></a> 156     addi    3,3,2
+<a id='L157' name='L157'></a> 157 1:  <em class='comment'>/* Copy 1 byte.  */</em>
+<a id='L158' name='L158'></a> 158     bf  31,0f
+<a id='L159' name='L159'></a> 159 
+<a id='L160' name='L160'></a> 160     lbz 6,0(12)
+<a id='L161' name='L161'></a> 161     stb 6,0(3)
+<a id='L162' name='L162'></a> 162 0:  <em class='comment'>/* Return DST + LEN pointer.  */</em>
+<a id='L163' name='L163'></a> 163     add 3,30,5
+<a id='L164' name='L164'></a> 164     lwz 30,20(1)
+<a id='L165' name='L165'></a> 165     lwz 31,24(1)
+<a id='L166' name='L166'></a> 166     addi    1,1,32
+<a id='L167' name='L167'></a> 167     blr
+<a id='L168' name='L168'></a> 168 
+<a id='L169' name='L169'></a> 169     <em class='comment'>/* Handle copies of 0~31 bytes.  */</em>
+<a id='L170' name='L170'></a> 170     .align  4
+<a id='L171' name='L171'></a> 171 L(copy_LT_32):
+<a id='L172' name='L172'></a> 172     cmplwi  cr6,5,8
+<a id='L173' name='L173'></a> 173     mr  12,4
+<a id='L174' name='L174'></a> 174     mtcrf   0x01,5
+<a id='L175' name='L175'></a> 175     ble cr6,L(copy_LE_8)
+<a id='L176' name='L176'></a> 176 
+<a id='L177' name='L177'></a> 177     <em class='comment'>/* At least 9 bytes to go.  */</em>
+<a id='L178' name='L178'></a> 178     neg 8,4
+<a id='L179' name='L179'></a> 179     clrrwi  11,4,2
+<a id='L180' name='L180'></a> 180     andi.   0,8,3
+<a id='L181' name='L181'></a> 181     cmplwi  cr1,5,16
+<a id='L182' name='L182'></a> 182     mr  10,5
+<a id='L183' name='L183'></a> 183     beq L(copy_LT_32_aligned)
+<a id='L184' name='L184'></a> 184 
+<a id='L185' name='L185'></a> 185     <em class='comment'>/* Force 4-bytes alignment for SRC.  */</em>
+<a id='L186' name='L186'></a> 186     mtocrf  0x01,0
+<a id='L187' name='L187'></a> 187     subf    10,0,5
+<a id='L188' name='L188'></a> 188 2:  bf  30,1f
+<a id='L189' name='L189'></a> 189 
+<a id='L190' name='L190'></a> 190     lhz 6,0(12)
+<a id='L191' name='L191'></a> 191     addi    12,12,2
+<a id='L192' name='L192'></a> 192     sth 6,0(3)
+<a id='L193' name='L193'></a> 193     addi    3,3,2
+<a id='L194' name='L194'></a> 194 1:  bf  31,L(end_4bytes_alignment)
+<a id='L195' name='L195'></a> 195 
+<a id='L196' name='L196'></a> 196     lbz 6,0(12)
+<a id='L197' name='L197'></a> 197     addi    12,12,1
+<a id='L198' name='L198'></a> 198     stb 6,0(3)
+<a id='L199' name='L199'></a> 199     addi    3,3,1
+<a id='L200' name='L200'></a> 200 
+<a id='L201' name='L201'></a> 201     .align  4
+<a id='L202' name='L202'></a> 202 L(end_4bytes_alignment):
+<a id='L203' name='L203'></a> 203     cmplwi  cr1,10,16
+<a id='L204' name='L204'></a> 204     mtcrf   0x01,10
+<a id='L205' name='L205'></a> 205 
+<a id='L206' name='L206'></a> 206 L(copy_LT_32_aligned):
+<a id='L207' name='L207'></a> 207     <em class='comment'>/* At least 6 bytes to go, and SRC is word-aligned.  */</em>
+<a id='L208' name='L208'></a> 208     blt cr1,8f
+<a id='L209' name='L209'></a> 209 
+<a id='L210' name='L210'></a> 210     <em class='comment'>/* Copy 16 bytes.  */</em>
+<a id='L211' name='L211'></a> 211     lwz 6,0(12)
+<a id='L212' name='L212'></a> 212     lwz 7,4(12)
+<a id='L213' name='L213'></a> 213     stw 6,0(3)
+<a id='L214' name='L214'></a> 214     lwz 8,8(12)
+<a id='L215' name='L215'></a> 215     stw 7,4(3)
+<a id='L216' name='L216'></a> 216     lwz 6,12(12)
+<a id='L217' name='L217'></a> 217     addi    12,12,16
+<a id='L218' name='L218'></a> 218     stw 8,8(3)
+<a id='L219' name='L219'></a> 219     stw 6,12(3)
+<a id='L220' name='L220'></a> 220     addi    3,3,16
+<a id='L221' name='L221'></a> 221 8:  <em class='comment'>/* Copy 8 bytes.  */</em>
+<a id='L222' name='L222'></a> 222     bf  28,4f
+<a id='L223' name='L223'></a> 223 
+<a id='L224' name='L224'></a> 224     lwz 6,0(12)
+<a id='L225' name='L225'></a> 225     lwz 7,4(12)
+<a id='L226' name='L226'></a> 226     addi    12,12,8
+<a id='L227' name='L227'></a> 227     stw 6,0(3)
+<a id='L228' name='L228'></a> 228     stw 7,4(3)
+<a id='L229' name='L229'></a> 229     addi    3,3,8
+<a id='L230' name='L230'></a> 230 4:  <em class='comment'>/* Copy 4 bytes.  */</em>
+<a id='L231' name='L231'></a> 231     bf  29,2f
+<a id='L232' name='L232'></a> 232 
+<a id='L233' name='L233'></a> 233     lwz 6,0(12)
+<a id='L234' name='L234'></a> 234     addi    12,12,4
+<a id='L235' name='L235'></a> 235     stw 6,0(3)
+<a id='L236' name='L236'></a> 236     addi    3,3,4
+<a id='L237' name='L237'></a> 237 2:  <em class='comment'>/* Copy 2-3 bytes.  */</em>
+<a id='L238' name='L238'></a> 238     bf  30,1f
+<a id='L239' name='L239'></a> 239 
+<a id='L240' name='L240'></a> 240     lhz 6,0(12)
+<a id='L241' name='L241'></a> 241     sth 6,0(3)
+<a id='L242' name='L242'></a> 242     bf  31,0f
+<a id='L243' name='L243'></a> 243     lbz 7,2(12)
+<a id='L244' name='L244'></a> 244     stb 7,2(3)
+<a id='L245' name='L245'></a> 245 
+<a id='L246' name='L246'></a> 246     <em class='comment'>/* Return DST + LEN pointer.  */</em>
+<a id='L247' name='L247'></a> 247     add 3,30,5
+<a id='L248' name='L248'></a> 248     lwz 30,20(1)
+<a id='L249' name='L249'></a> 249     addi    1,1,32
+<a id='L250' name='L250'></a> 250     blr
+<a id='L251' name='L251'></a> 251 
+<a id='L252' name='L252'></a> 252     .align  4
+<a id='L253' name='L253'></a> 253 1:  <em class='comment'>/* Copy 1 byte.  */</em>
+<a id='L254' name='L254'></a> 254     bf  31,0f
+<a id='L255' name='L255'></a> 255 
+<a id='L256' name='L256'></a> 256     lbz 6,0(12)
+<a id='L257' name='L257'></a> 257     stb 6,0(3)
+<a id='L258' name='L258'></a> 258 0:  <em class='comment'>/* Return DST + LEN pointer.  */</em>
+<a id='L259' name='L259'></a> 259     add 3,30,5
+<a id='L260' name='L260'></a> 260     lwz 30,20(1)
+<a id='L261' name='L261'></a> 261     addi    1,1,32
+<a id='L262' name='L262'></a> 262     blr
+<a id='L263' name='L263'></a> 263 
+<a id='L264' name='L264'></a> 264     <em class='comment'>/* Handles copies of 0~8 bytes.  */</em>
+<a id='L265' name='L265'></a> 265     .align  4
+<a id='L266' name='L266'></a> 266 L(copy_LE_8):
+<a id='L267' name='L267'></a> 267     bne cr6,4f
+<a id='L268' name='L268'></a> 268 
+<a id='L269' name='L269'></a> 269     <em class='comment'>/* Though we could've used lfd/stfd here, they are still</em>
+<a id='L270' name='L270'></a> 270 <em class='comment'>    slow for unaligned cases.  */</em>
+<a id='L271' name='L271'></a> 271 
+<a id='L272' name='L272'></a> 272     lwz 6,0(4)
+<a id='L273' name='L273'></a> 273     lwz 7,4(4)
+<a id='L274' name='L274'></a> 274     stw 6,0(3)
+<a id='L275' name='L275'></a> 275     stw 7,4(3)
+<a id='L276' name='L276'></a> 276 
+<a id='L277' name='L277'></a> 277     <em class='comment'>/* Return DST + LEN pointer.  */</em>
+<a id='L278' name='L278'></a> 278     add 3,30,5
+<a id='L279' name='L279'></a> 279     lwz 30,20(1)
+<a id='L280' name='L280'></a> 280     addi    1,1,32
+<a id='L281' name='L281'></a> 281     blr
+<a id='L282' name='L282'></a> 282 
+<a id='L283' name='L283'></a> 283     .align  4
+<a id='L284' name='L284'></a> 284 4:  <em class='comment'>/* Copies 4~7 bytes.  */</em>
+<a id='L285' name='L285'></a> 285     bf  29,2b
+<a id='L286' name='L286'></a> 286 
+<a id='L287' name='L287'></a> 287     lwz 6,0(4)
+<a id='L288' name='L288'></a> 288     stw 6,0(3)
+<a id='L289' name='L289'></a> 289     bf  30,5f
+<a id='L290' name='L290'></a> 290     lhz 7,4(4)
+<a id='L291' name='L291'></a> 291     sth 7,4(3)
+<a id='L292' name='L292'></a> 292     bf  31,0f
+<a id='L293' name='L293'></a> 293     lbz 8,6(4)
+<a id='L294' name='L294'></a> 294     stb 8,6(3)
+<a id='L295' name='L295'></a> 295 
+<a id='L296' name='L296'></a> 296     <em class='comment'>/* Return DST + LEN pointer.  */</em>
+<a id='L297' name='L297'></a> 297     add 3,30,5
+<a id='L298' name='L298'></a> 298     lwz 30,20(1)
+<a id='L299' name='L299'></a> 299     addi    1,1,32
+<a id='L300' name='L300'></a> 300     blr
+<a id='L301' name='L301'></a> 301 
+<a id='L302' name='L302'></a> 302     .align  4
+<a id='L303' name='L303'></a> 303 5:  <em class='comment'>/* Copy 1 byte.  */</em>
+<a id='L304' name='L304'></a> 304     bf  31,0f
+<a id='L305' name='L305'></a> 305 
+<a id='L306' name='L306'></a> 306     lbz 6,4(4)
+<a id='L307' name='L307'></a> 307     stb 6,4(3)
+<a id='L308' name='L308'></a> 308 
+<a id='L309' name='L309'></a> 309 0:  <em class='comment'>/* Return DST + LEN pointer.  */</em>
+<a id='L310' name='L310'></a> 310     add 3,30,5
+<a id='L311' name='L311'></a> 311     lwz 30,20(1)
+<a id='L312' name='L312'></a> 312     addi    1,1,32
+<a id='L313' name='L313'></a> 313     blr
+<a id='L314' name='L314'></a> 314 
+<a id='L315' name='L315'></a> 315     <em class='comment'>/* Handle copies of 32+ bytes where DST is aligned (to quadword) but</em>
+<a id='L316' name='L316'></a> 316 <em class='comment'>    SRC is not. Use aligned quadword loads from SRC, shifted to realign</em>
+<a id='L317' name='L317'></a> 317 <em class='comment'>    the data, allowing for aligned DST stores.  */</em>
+<a id='L318' name='L318'></a> 318     .align  4
+<a id='L319' name='L319'></a> 319 L(copy_GE_32_unaligned):
+<a id='L320' name='L320'></a> 320     andi.   11,3,15       <em class='comment'>/* Check alignment of DST.  */</em>
+<a id='L321' name='L321'></a> 321     clrlwi  0,0,28        <em class='comment'>/* Number of bytes until the 1st</em>
+<a id='L322' name='L322'></a> 322 <em class='comment'>                 quadword of DST.  */</em>
+<a id='L323' name='L323'></a> 323     srwi    9,5,4         <em class='comment'>/* Number of full quadwords remaining.  */</em>
+<a id='L324' name='L324'></a> 324 
+<a id='L325' name='L325'></a> 325     beq L(copy_GE_32_unaligned_cont)
+<a id='L326' name='L326'></a> 326 
+<a id='L327' name='L327'></a> 327     <em class='comment'>/* DST is not quadword aligned, get it aligned.  */</em>
+<a id='L328' name='L328'></a> 328 
+<a id='L329' name='L329'></a> 329     mtcrf   0x01,0
+<a id='L330' name='L330'></a> 330     subf    31,0,5
+<a id='L331' name='L331'></a> 331 
+<a id='L332' name='L332'></a> 332     <em class='comment'>/* Vector instructions work best when proper alignment (16-bytes)</em>
+<a id='L333' name='L333'></a> 333 <em class='comment'>    is present.  Move 0~15 bytes as needed to get DST quadword-aligned.  */</em>
+<a id='L334' name='L334'></a> 334 1:  <em class='comment'>/* Copy 1 byte.  */</em>
+<a id='L335' name='L335'></a> 335     bf  31,2f
+<a id='L336' name='L336'></a> 336 
+<a id='L337' name='L337'></a> 337     lbz 6,0(12)
+<a id='L338' name='L338'></a> 338     addi    12,12,1
+<a id='L339' name='L339'></a> 339     stb 6,0(3)
+<a id='L340' name='L340'></a> 340     addi    3,3,1
+<a id='L341' name='L341'></a> 341 2:  <em class='comment'>/* Copy 2 bytes.  */</em>
+<a id='L342' name='L342'></a> 342     bf      30,4f
+<a id='L343' name='L343'></a> 343 
+<a id='L344' name='L344'></a> 344     lhz 6,0(12)
+<a id='L345' name='L345'></a> 345     addi    12,12,2
+<a id='L346' name='L346'></a> 346     sth 6,0(3)
+<a id='L347' name='L347'></a> 347     addi    3,3,2
+<a id='L348' name='L348'></a> 348 4:  <em class='comment'>/* Copy 4 bytes.  */</em>
+<a id='L349' name='L349'></a> 349     bf  29,8f
+<a id='L350' name='L350'></a> 350 
+<a id='L351' name='L351'></a> 351     lwz 6,0(12)
+<a id='L352' name='L352'></a> 352     addi    12,12,4
+<a id='L353' name='L353'></a> 353     stw 6,0(3)
+<a id='L354' name='L354'></a> 354     addi    3,3,4
+<a id='L355' name='L355'></a> 355 8:  <em class='comment'>/* Copy 8 bytes.  */</em>
+<a id='L356' name='L356'></a> 356     bf  28,0f
+<a id='L357' name='L357'></a> 357 
+<a id='L358' name='L358'></a> 358     lfd 6,0(12)
+<a id='L359' name='L359'></a> 359     addi    12,12,8
+<a id='L360' name='L360'></a> 360     stfd    6,0(3)
+<a id='L361' name='L361'></a> 361     addi    3,3,8
+<a id='L362' name='L362'></a> 362 0:
+<a id='L363' name='L363'></a> 363     clrlwi  10,12,28      <em class='comment'>/* Check alignment of SRC.  */</em>
+<a id='L364' name='L364'></a> 364     srwi    9,31,4        <em class='comment'>/* Number of full quadwords remaining.  */</em>
+<a id='L365' name='L365'></a> 365 
+<a id='L366' name='L366'></a> 366     <em class='comment'>/* The proper alignment is present, it is OK to copy the bytes now.  */</em>
+<a id='L367' name='L367'></a> 367 L(copy_GE_32_unaligned_cont):
+<a id='L368' name='L368'></a> 368 
+<a id='L369' name='L369'></a> 369     <em class='comment'>/* Setup two indexes to speed up the indexed vector operations.  */</em>
+<a id='L370' name='L370'></a> 370     clrlwi  11,31,28
+<a id='L371' name='L371'></a> 371     li  6,16          <em class='comment'>/* Index for 16-bytes offsets.  */</em>
+<a id='L372' name='L372'></a> 372     li  7,32          <em class='comment'>/* Index for 32-bytes offsets.  */</em>
+<a id='L373' name='L373'></a> 373     cmplwi  cr1,11,0
+<a id='L374' name='L374'></a> 374     srwi    8,31,5        <em class='comment'>/* Setup the loop counter.  */</em>
+<a id='L375' name='L375'></a> 375     mr  10,3
+<a id='L376' name='L376'></a> 376     mr  11,12
+<a id='L377' name='L377'></a> 377     mtcrf   0x01,9
+<a id='L378' name='L378'></a> 378     cmplwi  cr6,9,1
+<a id='L379' name='L379'></a> 379 <em class='sharp'>#ifdef</em> <a href='../Y/3238.html' title='Multiple used in 570 places.'>__LITTLE_ENDIAN__</a>
+<a id='L380' name='L380'></a> 380     lvsr    5,0,12
+<a id='L381' name='L381'></a> 381 <em class='sharp'>#else</em>
+<a id='L382' name='L382'></a> 382     lvsl    5,0,12
+<a id='L383' name='L383'></a> 383 <em class='sharp'>#endif</em>
+<a id='L384' name='L384'></a> 384     lvx 3,0,12
+<a id='L385' name='L385'></a> 385     bf  31,L(setup_unaligned_loop)
+<a id='L386' name='L386'></a> 386 
+<a id='L387' name='L387'></a> 387     <em class='comment'>/* Copy another 16 bytes to align to 32-bytes due to the loop .  */</em>
+<a id='L388' name='L388'></a> 388     lvx 4,12,6
+<a id='L389' name='L389'></a> 389 <em class='sharp'>#ifdef</em> <a href='../Y/3238.html' title='Multiple used in 570 places.'>__LITTLE_ENDIAN__</a>
+<a id='L390' name='L390'></a> 390     vperm   6,4,3,5
+<a id='L391' name='L391'></a> 391 <em class='sharp'>#else</em>
+<a id='L392' name='L392'></a> 392     vperm   6,3,4,5
+<a id='L393' name='L393'></a> 393 <em class='sharp'>#endif</em>
+<a id='L394' name='L394'></a> 394     addi    11,12,16
+<a id='L395' name='L395'></a> 395     addi    10,3,16
+<a id='L396' name='L396'></a> 396     stvx    6,0,3
+<a id='L397' name='L397'></a> 397     vor 3,4,4
+<a id='L398' name='L398'></a> 398 
+<a id='L399' name='L399'></a> 399 L(setup_unaligned_loop):
+<a id='L400' name='L400'></a> 400     mtctr   8
+<a id='L401' name='L401'></a> 401     ble cr6,L(end_unaligned_loop)
+<a id='L402' name='L402'></a> 402 
+<a id='L403' name='L403'></a> 403     <em class='comment'>/* Copy 32 bytes at a time using vector instructions.  */</em>
+<a id='L404' name='L404'></a> 404     .align  4
+<a id='L405' name='L405'></a> 405 L(unaligned_loop):
+<a id='L406' name='L406'></a> 406 
+<a id='L407' name='L407'></a> 407     <em class='comment'>/* Note: vr6/vr10 may contain data that was already copied,</em>
+<a id='L408' name='L408'></a> 408 <em class='comment'>    but in order to get proper alignment, we may have to copy</em>
+<a id='L409' name='L409'></a> 409 <em class='comment'>    some portions again. This is faster than having unaligned</em>
+<a id='L410' name='L410'></a> 410 <em class='comment'>    vector instructions though.  */</em>
+<a id='L411' name='L411'></a> 411 
+<a id='L412' name='L412'></a> 412     lvx 4,11,6        <em class='comment'>/* vr4 = r11+16.  */</em>
+<a id='L413' name='L413'></a> 413 <em class='sharp'>#ifdef</em> <a href='../Y/3238.html' title='Multiple used in 570 places.'>__LITTLE_ENDIAN__</a>
+<a id='L414' name='L414'></a> 414     vperm   6,4,3,5
+<a id='L415' name='L415'></a> 415 <em class='sharp'>#else</em>
+<a id='L416' name='L416'></a> 416     vperm   6,3,4,5
+<a id='L417' name='L417'></a> 417 <em class='sharp'>#endif</em>
+<a id='L418' name='L418'></a> 418     lvx 3,11,7        <em class='comment'>/* vr3 = r11+32.  */</em>
+<a id='L419' name='L419'></a> 419 <em class='sharp'>#ifdef</em> <a href='../Y/3238.html' title='Multiple used in 570 places.'>__LITTLE_ENDIAN__</a>
+<a id='L420' name='L420'></a> 420     vperm   10,3,4,5
+<a id='L421' name='L421'></a> 421 <em class='sharp'>#else</em>
+<a id='L422' name='L422'></a> 422     vperm   10,4,3,5
+<a id='L423' name='L423'></a> 423 <em class='sharp'>#endif</em>
+<a id='L424' name='L424'></a> 424     addi    11,11,32
+<a id='L425' name='L425'></a> 425     stvx    6,0,10
+<a id='L426' name='L426'></a> 426     stvx    10,10,6
+<a id='L427' name='L427'></a> 427     addi    10,10,32
+<a id='L428' name='L428'></a> 428 
+<a id='L429' name='L429'></a> 429     bdnz    L(unaligned_loop)
+<a id='L430' name='L430'></a> 430 
+<a id='L431' name='L431'></a> 431     .align  4
+<a id='L432' name='L432'></a> 432 L(end_unaligned_loop):
+<a id='L433' name='L433'></a> 433 
+<a id='L434' name='L434'></a> 434     <em class='comment'>/* Check for tail bytes.  */</em>
+<a id='L435' name='L435'></a> 435     clrrwi  0,31,4
+<a id='L436' name='L436'></a> 436     mtcrf   0x01,31
+<a id='L437' name='L437'></a> 437     beq cr1,0f
+<a id='L438' name='L438'></a> 438 
+<a id='L439' name='L439'></a> 439     add 3,3,0
+<a id='L440' name='L440'></a> 440     add 12,12,0
+<a id='L441' name='L441'></a> 441 
+<a id='L442' name='L442'></a> 442     <em class='comment'>/*  We have 1~15 tail bytes to copy, and DST is quadword aligned.  */</em>
+<a id='L443' name='L443'></a> 443 8:  <em class='comment'>/* Copy 8 bytes.  */</em>
+<a id='L444' name='L444'></a> 444     bf  28,4f
+<a id='L445' name='L445'></a> 445 
+<a id='L446' name='L446'></a> 446     lwz 6,0(12)
+<a id='L447' name='L447'></a> 447     lwz 7,4(12)
+<a id='L448' name='L448'></a> 448     addi    12,12,8
+<a id='L449' name='L449'></a> 449     stw 6,0(3)
+<a id='L450' name='L450'></a> 450     stw 7,4(3)
+<a id='L451' name='L451'></a> 451     addi    3,3,8
+<a id='L452' name='L452'></a> 452 4:  <em class='comment'>/* Copy 4 bytes.  */</em>
+<a id='L453' name='L453'></a> 453     bf  29,2f
+<a id='L454' name='L454'></a> 454 
+<a id='L455' name='L455'></a> 455     lwz 6,0(12)
+<a id='L456' name='L456'></a> 456     addi    12,12,4
+<a id='L457' name='L457'></a> 457     stw 6,0(3)
+<a id='L458' name='L458'></a> 458     addi    3,3,4
+<a id='L459' name='L459'></a> 459 2:  <em class='comment'>/* Copy 2~3 bytes.  */</em>
+<a id='L460' name='L460'></a> 460     bf  30,1f
+<a id='L461' name='L461'></a> 461 
+<a id='L462' name='L462'></a> 462     lhz 6,0(12)
+<a id='L463' name='L463'></a> 463     addi    12,12,2
+<a id='L464' name='L464'></a> 464     sth 6,0(3)
+<a id='L465' name='L465'></a> 465     addi    3,3,2
+<a id='L466' name='L466'></a> 466 1:  <em class='comment'>/* Copy 1 byte.  */</em>
+<a id='L467' name='L467'></a> 467     bf  31,0f
+<a id='L468' name='L468'></a> 468 
+<a id='L469' name='L469'></a> 469     lbz 6,0(12)
+<a id='L470' name='L470'></a> 470     stb 6,0(3)
+<a id='L471' name='L471'></a> 471 0:  <em class='comment'>/* Return DST + LEN pointer.  */</em>
+<a id='L472' name='L472'></a> 472     add 3,30,5
+<a id='L473' name='L473'></a> 473     lwz 30,20(1)
+<a id='L474' name='L474'></a> 474     lwz 31,24(1)
+<a id='L475' name='L475'></a> 475     addi    1,1,32
+<a id='L476' name='L476'></a> 476     blr
+<a id='L477' name='L477'></a> 477 
+<a id='L478' name='L478'></a> 478 END (__mempcpy)
+<a id='L479' name='L479'></a> 479 libc_hidden_def (__mempcpy)
+<a id='L480' name='L480'></a> 480 weak_alias (__mempcpy, mempcpy)
+<a id='L481' name='L481'></a> 481 libc_hidden_builtin_def (mempcpy)
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;][^][v]<a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

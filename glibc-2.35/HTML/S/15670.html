@@ -1,0 +1,166 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>sysdeps/x86_64/dl-tlsdesc.S</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18977.html'>sysdeps</a>/<a href='../files/19391.html'>x86_64</a>/dl-tlsdesc.S</h2>
+<em class='comment'>/* [&lt;][&gt;][^][v][top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* Thread-local storage handling in the ELF dynamic linker.  x86_64 version.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   Copyright (C) 2004-2022 Free Software Foundation, Inc.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'></em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'></em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'></em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   License along with the GNU C Library; if not, see</em>
+<a id='L17' name='L17'></a>  17 <em class='comment'>   &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L18' name='L18'></a>  18 
+<a id='L19' name='L19'></a>  19 <em class='sharp'>#include</em> &lt;<a href='../I/5967.html'>sysdep.h</a>&gt;
+<a id='L20' name='L20'></a>  20 <em class='sharp'>#include</em> &lt;<a href='../I/5949.html'>tls.h</a>&gt;
+<a id='L21' name='L21'></a>  21 <em class='sharp'>#include</em> "tlsdesc.h"
+<a id='L22' name='L22'></a>  22 
+<a id='L23' name='L23'></a>  23     .text
+<a id='L24' name='L24'></a>  24 
+<a id='L25' name='L25'></a>  25      <em class='comment'>/* This function is used to compute the TP offset for symbols in</em>
+<a id='L26' name='L26'></a>  26 <em class='comment'>    Static TLS, i.e., whose TP offset is the same for all</em>
+<a id='L27' name='L27'></a>  27 <em class='comment'>    threads.</em>
+<a id='L28' name='L28'></a>  28 <em class='comment'></em>
+<a id='L29' name='L29'></a>  29 <em class='comment'>    The incoming %rax points to the TLS descriptor, such that</em>
+<a id='L30' name='L30'></a>  30 <em class='comment'>    0(%rax) points to _dl_tlsdesc_return itself, and 8(%rax) holds</em>
+<a id='L31' name='L31'></a>  31 <em class='comment'>    the TP offset of the symbol corresponding to the object</em>
+<a id='L32' name='L32'></a>  32 <em class='comment'>    denoted by the argument.  */</em>
+<a id='L33' name='L33'></a>  33 
+<a id='L34' name='L34'></a>  34     .hidden _dl_tlsdesc_return
+<a id='L35' name='L35'></a>  35     .global _dl_tlsdesc_return
+<a id='L36' name='L36'></a>  36     .type   _dl_tlsdesc_return,@function
+<a id='L37' name='L37'></a>  37     cfi_startproc
+<a id='L38' name='L38'></a>  38     .align 16
+<a id='L39' name='L39'></a>  39 _dl_tlsdesc_return:
+<a id='L40' name='L40'></a>  40     _CET_ENDBR
+<a id='L41' name='L41'></a>  41     movq    8(%rax), %rax
+<a id='L42' name='L42'></a>  42     ret
+<a id='L43' name='L43'></a>  43     cfi_endproc
+<a id='L44' name='L44'></a>  44     .size   _dl_tlsdesc_return, .-_dl_tlsdesc_return
+<a id='L45' name='L45'></a>  45 
+<a id='L46' name='L46'></a>  46      <em class='comment'>/* This function is used for undefined weak TLS symbols, for</em>
+<a id='L47' name='L47'></a>  47 <em class='comment'>    which the base address (i.e., disregarding any addend) should</em>
+<a id='L48' name='L48'></a>  48 <em class='comment'>    resolve to NULL.</em>
+<a id='L49' name='L49'></a>  49 <em class='comment'></em>
+<a id='L50' name='L50'></a>  50 <em class='comment'>    %rax points to the TLS descriptor, such that 0(%rax) points to</em>
+<a id='L51' name='L51'></a>  51 <em class='comment'>    _dl_tlsdesc_undefweak itself, and 8(%rax) holds the addend.</em>
+<a id='L52' name='L52'></a>  52 <em class='comment'>    We return the addend minus the TP, such that, when the caller</em>
+<a id='L53' name='L53'></a>  53 <em class='comment'>    adds TP, it gets the addend back.  If that's zero, as usual,</em>
+<a id='L54' name='L54'></a>  54 <em class='comment'>    that's most likely a NULL pointer.  */</em>
+<a id='L55' name='L55'></a>  55 
+<a id='L56' name='L56'></a>  56     .hidden _dl_tlsdesc_undefweak
+<a id='L57' name='L57'></a>  57     .global _dl_tlsdesc_undefweak
+<a id='L58' name='L58'></a>  58     .type   _dl_tlsdesc_undefweak,@function
+<a id='L59' name='L59'></a>  59     cfi_startproc
+<a id='L60' name='L60'></a>  60     .align 16
+<a id='L61' name='L61'></a>  61 _dl_tlsdesc_undefweak:
+<a id='L62' name='L62'></a>  62     _CET_ENDBR
+<a id='L63' name='L63'></a>  63     movq    8(%rax), %rax
+<a id='L64' name='L64'></a>  64     subq    %fs:0, %rax
+<a id='L65' name='L65'></a>  65     ret
+<a id='L66' name='L66'></a>  66     cfi_endproc
+<a id='L67' name='L67'></a>  67     .size   _dl_tlsdesc_undefweak, .-_dl_tlsdesc_undefweak
+<a id='L68' name='L68'></a>  68 
+<a id='L69' name='L69'></a>  69 <em class='sharp'>#ifdef</em> <a href='../D/13935.html' title='Multiple defined in 2 places.'>SHARED</a>
+<a id='L70' name='L70'></a>  70     .hidden _dl_tlsdesc_dynamic
+<a id='L71' name='L71'></a>  71     .global _dl_tlsdesc_dynamic
+<a id='L72' name='L72'></a>  72     .type   _dl_tlsdesc_dynamic,@function
+<a id='L73' name='L73'></a>  73 
+<a id='L74' name='L74'></a>  74      <em class='comment'>/* %rax points to the TLS descriptor, such that 0(%rax) points to</em>
+<a id='L75' name='L75'></a>  75 <em class='comment'>    _dl_tlsdesc_dynamic itself, and 8(%rax) points to a struct</em>
+<a id='L76' name='L76'></a>  76 <em class='comment'>    tlsdesc_dynamic_arg object.  It must return in %rax the offset</em>
+<a id='L77' name='L77'></a>  77 <em class='comment'>    between the thread pointer and the object denoted by the</em>
+<a id='L78' name='L78'></a>  78 <em class='comment'>    argument, without clobbering any registers.</em>
+<a id='L79' name='L79'></a>  79 <em class='comment'></em>
+<a id='L80' name='L80'></a>  80 <em class='comment'>    The assembly code that follows is a rendition of the following</em>
+<a id='L81' name='L81'></a>  81 <em class='comment'>    C code, hand-optimized a little bit.</em>
+<a id='L82' name='L82'></a>  82 <em class='comment'></em>
+<a id='L83' name='L83'></a>  83 <em class='comment'>ptrdiff_t</em>
+<a id='L84' name='L84'></a>  84 <em class='comment'>_dl_tlsdesc_dynamic (register struct tlsdesc *tdp asm ("%rax"))</em>
+<a id='L85' name='L85'></a>  85 <em class='comment'>{</em>
+<a id='L86' name='L86'></a>  86 <em class='comment'>  struct tlsdesc_dynamic_arg *td = tdp-&gt;arg;</em>
+<a id='L87' name='L87'></a>  87 <em class='comment'>  dtv_t *dtv = *(dtv_t **)((char *)__thread_pointer + DTV_OFFSET);</em>
+<a id='L88' name='L88'></a>  88 <em class='comment'>  if (__builtin_expect (td-&gt;gen_count &lt;= dtv[0].counter</em>
+<a id='L89' name='L89'></a>  89 <em class='comment'>            &amp;&amp; (dtv[td-&gt;tlsinfo.ti_module].pointer.val</em>
+<a id='L90' name='L90'></a>  90 <em class='comment'>                != TLS_DTV_UNALLOCATED),</em>
+<a id='L91' name='L91'></a>  91 <em class='comment'>            1))</em>
+<a id='L92' name='L92'></a>  92 <em class='comment'>    return dtv[td-&gt;tlsinfo.ti_module].pointer.val + td-&gt;tlsinfo.ti_offset</em>
+<a id='L93' name='L93'></a>  93 <em class='comment'>      - __thread_pointer;</em>
+<a id='L94' name='L94'></a>  94 <em class='comment'></em>
+<a id='L95' name='L95'></a>  95 <em class='comment'>  return __tls_get_addr_internal (&amp;td-&gt;tlsinfo) - __thread_pointer;</em>
+<a id='L96' name='L96'></a>  96 <em class='comment'>}</em>
+<a id='L97' name='L97'></a>  97 <em class='comment'>*/</em>
+<a id='L98' name='L98'></a>  98     cfi_startproc
+<a id='L99' name='L99'></a>  99     .align 16
+<a id='L100' name='L100'></a> 100 _dl_tlsdesc_dynamic:
+<a id='L101' name='L101'></a> 101     _CET_ENDBR
+<a id='L102' name='L102'></a> 102     <em class='comment'>/* Preserve call-clobbered registers that we modify.</em>
+<a id='L103' name='L103'></a> 103 <em class='comment'>       We need two scratch regs anyway.  */</em>
+<a id='L104' name='L104'></a> 104     movq    %rsi, -16(%rsp)
+<a id='L105' name='L105'></a> 105     movq    %fs:DTV_OFFSET, %rsi
+<a id='L106' name='L106'></a> 106     movq    %rdi, -8(%rsp)
+<a id='L107' name='L107'></a> 107     movq    TLSDESC_ARG(%rax), %rdi
+<a id='L108' name='L108'></a> 108     movq    (%rsi), %rax
+<a id='L109' name='L109'></a> 109     cmpq    %rax, TLSDESC_GEN_COUNT(%rdi)
+<a id='L110' name='L110'></a> 110     ja  .Lslow
+<a id='L111' name='L111'></a> 111     movq    TLSDESC_MODID(%rdi), %rax
+<a id='L112' name='L112'></a> 112     salq    $4, %rax
+<a id='L113' name='L113'></a> 113     movq    (%rax,%rsi), %rax
+<a id='L114' name='L114'></a> 114     cmpq    $-1, %rax
+<a id='L115' name='L115'></a> 115     je  .Lslow
+<a id='L116' name='L116'></a> 116     addq    TLSDESC_MODOFF(%rdi), %rax
+<a id='L117' name='L117'></a> 117 .Lret:
+<a id='L118' name='L118'></a> 118     movq    -16(%rsp), %rsi
+<a id='L119' name='L119'></a> 119     subq    %fs:0, %rax
+<a id='L120' name='L120'></a> 120     movq    -8(%rsp), %rdi
+<a id='L121' name='L121'></a> 121     ret
+<a id='L122' name='L122'></a> 122 .Lslow:
+<a id='L123' name='L123'></a> 123     <em class='comment'>/* Besides rdi and rsi, saved above, save rdx, rcx, r8, r9,</em>
+<a id='L124' name='L124'></a> 124 <em class='comment'>       r10 and r11.  Also, align the stack, that's off by 8 bytes.  */</em>
+<a id='L125' name='L125'></a> 125     subq    $72, %rsp
+<a id='L126' name='L126'></a> 126     cfi_adjust_cfa_offset (72)
+<a id='L127' name='L127'></a> 127     movq    %rdx, 8(%rsp)
+<a id='L128' name='L128'></a> 128     movq    %rcx, 16(%rsp)
+<a id='L129' name='L129'></a> 129     movq    %r8, 24(%rsp)
+<a id='L130' name='L130'></a> 130     movq    %r9, 32(%rsp)
+<a id='L131' name='L131'></a> 131     movq    %r10, 40(%rsp)
+<a id='L132' name='L132'></a> 132     movq    %r11, 48(%rsp)
+<a id='L133' name='L133'></a> 133     <em class='comment'>/* %rdi already points to the tlsinfo data structure.  */</em>
+<a id='L134' name='L134'></a> 134     call    HIDDEN_JUMPTARGET (__tls_get_addr)
+<a id='L135' name='L135'></a> 135     movq    8(%rsp), %rdx
+<a id='L136' name='L136'></a> 136     movq    16(%rsp), %rcx
+<a id='L137' name='L137'></a> 137     movq    24(%rsp), %r8
+<a id='L138' name='L138'></a> 138     movq    32(%rsp), %r9
+<a id='L139' name='L139'></a> 139     movq    40(%rsp), %r10
+<a id='L140' name='L140'></a> 140     movq    48(%rsp), %r11
+<a id='L141' name='L141'></a> 141     addq    $72, %rsp
+<a id='L142' name='L142'></a> 142     cfi_adjust_cfa_offset (-72)
+<a id='L143' name='L143'></a> 143     jmp .Lret
+<a id='L144' name='L144'></a> 144     cfi_endproc
+<a id='L145' name='L145'></a> 145     .size   _dl_tlsdesc_dynamic, .-_dl_tlsdesc_dynamic
+<a id='L146' name='L146'></a> 146 <em class='sharp'>#endif</em> <em class='comment'>/* SHARED */</em>
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;][^][v]<a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

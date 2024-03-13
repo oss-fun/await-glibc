@@ -1,0 +1,129 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>sysdeps/ieee754/flt-32/s_sincosf.c</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18977.html'>sysdeps</a>/<a href='../files/19058.html'>ieee754</a>/<a href='../files/19061.html'>flt-32</a>/s_sincosf.c</h2>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L38'>[^]</a>[v][top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<h2 class='header'>DEFINITIONS</h2>
+This source file includes following definitions.
+<ol>
+<li><a href='#L38' title='Defined at 38.'>SINCOSF_FUNC</a></li>
+</ol>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* Compute sine and cosine of argument.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   Copyright (C) 2018-2022 Free Software Foundation, Inc.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'></em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'></em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'></em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   License along with the GNU C Library; if not, see</em>
+<a id='L17' name='L17'></a>  17 <em class='comment'>   &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L18' name='L18'></a>  18 
+<a id='L19' name='L19'></a>  19 <em class='sharp'>#include</em> &lt;<a href='../I/116.html'>errno.h</a>&gt;
+<a id='L20' name='L20'></a>  20 <em class='sharp'>#include</em> &lt;<a href='../I/1969.html'>stdint.h</a>&gt;
+<a id='L21' name='L21'></a>  21 <em class='sharp'>#include</em> &lt;<a href='../I/1890.html'>math.h</a>&gt;
+<a id='L22' name='L22'></a>  22 <em class='sharp'>#include</em> &lt;<a href='../I/5881.html'>math-barriers.h</a>&gt;
+<a id='L23' name='L23'></a>  23 <em class='sharp'>#include</em> &lt;<a href='12190.html'>libm-alias-float.h</a>&gt;
+<a id='L24' name='L24'></a>  24 <em class='sharp'>#include</em> "<a href='../I/7787.html'>math_config.h</a>"
+<a id='L25' name='L25'></a>  25 <em class='sharp'>#include</em> "<a href='8531.html'>s_sincosf.h</a>"
+<a id='L26' name='L26'></a>  26 
+<a id='L27' name='L27'></a>  27 <em class='sharp'>#ifndef</em> <a href='../D/14273.html' title='Multiple defined in 3 places.'>SINCOSF</a>
+<a id='L28' name='L28'></a>  28 <em class='sharp'># define</em> SINCOSF_FUNC <a href='../Y/7466.html' title='Multiple used in 7 places.'>__sincosf</a>
+<a id='L29' name='L29'></a>  29 <em class='sharp'>#else</em>
+<a id='L30' name='L30'></a>  30 <em class='sharp'># define</em> SINCOSF_FUNC <a href='../D/14273.html' title='Multiple defined in 3 places.'>SINCOSF</a>
+<a id='L31' name='L31'></a>  31 <em class='sharp'>#endif</em>
+<a id='L32' name='L32'></a>  32 
+<a id='L33' name='L33'></a>  33 <em class='comment'>/* Fast sincosf implementation.  Worst-case ULP is 0.5607, maximum relative</em>
+<a id='L34' name='L34'></a>  34 <em class='comment'>   error is 0.5303 * 2^-23.  A single-step range reduction is used for</em>
+<a id='L35' name='L35'></a>  35 <em class='comment'>   small values.  Large inputs have their range reduced using fast integer</em>
+<a id='L36' name='L36'></a>  36 <em class='comment'>   arithmetic.  */</em>
+<a id='L37' name='L37'></a>  37 <strong class='reserved'>void</strong>
+<a id='L38' name='L38'></a>  38 SINCOSF_FUNC (<strong class='reserved'>float</strong> <a href='../D/39646.html' title='Multiple defined in 4 places.'>y</a>, <strong class='reserved'>float</strong> *<a href='../Y/25553.html' title='Multiple used in 37 places.'>sinp</a>, <strong class='reserved'>float</strong> *<a href='../Y/12048.html' title='Multiple used in 14 places.'>cosp</a>)
+<a id='L39' name='L39'></a>  39 <em class='brace'>{</em>
+<a id='L40' name='L40'></a>  40   <strong class='reserved'>double</strong> <a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a> = <a href='../D/39646.html' title='Multiple defined in 4 places.'>y</a>;
+<a id='L41' name='L41'></a>  41   <strong class='reserved'>double</strong> <a href='../D/36247.html' title='Multiple defined in 13 places.'>s</a>;
+<a id='L42' name='L42'></a>  42   <strong class='reserved'>int</strong> <a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>;
+<a id='L43' name='L43'></a>  43   <strong class='reserved'>const</strong> <a href='../D/36796.html' title='Multiple defined in 2 places.'>sincos_t</a> *<a href='../S/2562.html#L29' title='Defined at 29 in elf/testobj2.c.'>p</a> = &amp;<a href='../Y/7471.html' title='Multiple used in 13 places.'>__sincosf_table</a>[0];
+<a id='L44' name='L44'></a>  44 
+<a id='L45' name='L45'></a>  45   <strong class='reserved'>if</strong> (<a href='../S/8531.html#L37' title='Defined at 37 in sysdeps/ieee754/flt-32/s_sincosf.h.'>abstop12</a> (<a href='../D/39646.html' title='Multiple defined in 4 places.'>y</a>) &lt; <a href='../S/8531.html#L37' title='Defined at 37 in sysdeps/ieee754/flt-32/s_sincosf.h.'>abstop12</a> (<a href='../Y/22432.html' title='Multiple used in 6 places.'>pio4</a>))
+<a id='L46' name='L46'></a>  46     <em class='brace'>{</em>
+<a id='L47' name='L47'></a>  47       <strong class='reserved'>double</strong> <a href='../Y/29236.html' title='Multiple used in 158 places.'>x2</a> = <a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a> * <a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a>;
+<a id='L48' name='L48'></a>  48 
+<a id='L49' name='L49'></a>  49       <strong class='reserved'>if</strong> (<a href='../D/24205.html' title='Multiple defined in 2 places.'>__glibc_unlikely</a> (<a href='../S/8531.html#L37' title='Defined at 37 in sysdeps/ieee754/flt-32/s_sincosf.h.'>abstop12</a> (<a href='../D/39646.html' title='Multiple defined in 4 places.'>y</a>) &lt; <a href='../S/8531.html#L37' title='Defined at 37 in sysdeps/ieee754/flt-32/s_sincosf.h.'>abstop12</a> (0x1p-12f)))
+<a id='L50' name='L50'></a>  50       <em class='brace'>{</em>
+<a id='L51' name='L51'></a>  51     <em class='comment'>/* Force underflow for tiny y.  */</em>
+<a id='L52' name='L52'></a>  52     <strong class='reserved'>if</strong> (<a href='../D/24205.html' title='Multiple defined in 2 places.'>__glibc_unlikely</a> (<a href='../S/8531.html#L37' title='Defined at 37 in sysdeps/ieee754/flt-32/s_sincosf.h.'>abstop12</a> (<a href='../D/39646.html' title='Multiple defined in 4 places.'>y</a>) &lt; <a href='../S/8531.html#L37' title='Defined at 37 in sysdeps/ieee754/flt-32/s_sincosf.h.'>abstop12</a> (0x1p-126f)))
+<a id='L53' name='L53'></a>  53       <a href='../D/33352.html' title='Multiple defined in 8 places.'>math_force_eval</a> ((<strong class='reserved'>float</strong>)<a href='../Y/29236.html' title='Multiple used in 158 places.'>x2</a>);
+<a id='L54' name='L54'></a>  54     *<a href='../Y/25553.html' title='Multiple used in 37 places.'>sinp</a> = <a href='../D/39646.html' title='Multiple defined in 4 places.'>y</a>;
+<a id='L55' name='L55'></a>  55     *<a href='../Y/12048.html' title='Multiple used in 14 places.'>cosp</a> = 1.0f;
+<a id='L56' name='L56'></a>  56     <strong class='reserved'>return</strong>;
+<a id='L57' name='L57'></a>  57       <em class='brace'>}</em>
+<a id='L58' name='L58'></a>  58 
+<a id='L59' name='L59'></a>  59       <a href='../D/36797.html' title='Multiple defined in 2 places.'>sincosf_poly</a> (<a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a>, <a href='../Y/29236.html' title='Multiple used in 158 places.'>x2</a>, <a href='../S/2562.html#L29' title='Defined at 29 in elf/testobj2.c.'>p</a>, 0, <a href='../Y/25553.html' title='Multiple used in 37 places.'>sinp</a>, <a href='../Y/12048.html' title='Multiple used in 14 places.'>cosp</a>);
+<a id='L60' name='L60'></a>  60     <em class='brace'>}</em>
+<a id='L61' name='L61'></a>  61   <strong class='reserved'>else</strong> <strong class='reserved'>if</strong> (<a href='../S/8531.html#L37' title='Defined at 37 in sysdeps/ieee754/flt-32/s_sincosf.h.'>abstop12</a> (<a href='../D/39646.html' title='Multiple defined in 4 places.'>y</a>) &lt; <a href='../S/8531.html#L37' title='Defined at 37 in sysdeps/ieee754/flt-32/s_sincosf.h.'>abstop12</a> (120.0f))
+<a id='L62' name='L62'></a>  62     <em class='brace'>{</em>
+<a id='L63' name='L63'></a>  63       <a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a> = <a href='../S/8531.html#L48' title='Defined at 48 in sysdeps/ieee754/flt-32/s_sincosf.h.'>reduce_fast</a> (<a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a>, <a href='../S/2562.html#L29' title='Defined at 29 in elf/testobj2.c.'>p</a>, &amp;<a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>);
+<a id='L64' name='L64'></a>  64 
+<a id='L65' name='L65'></a>  65       <em class='comment'>/* Setup the signs for sin and cos.  */</em>
+<a id='L66' name='L66'></a>  66       <a href='../D/36247.html' title='Multiple defined in 13 places.'>s</a> = <a href='../S/2562.html#L29' title='Defined at 29 in elf/testobj2.c.'>p</a>-&gt;<a href='../Y/25400.html' title='Multiple used in 334 places.'>sign</a>[<a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a> &amp; 3];
+<a id='L67' name='L67'></a>  67 
+<a id='L68' name='L68'></a>  68       <strong class='reserved'>if</strong> (<a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a> &amp; 2)
+<a id='L69' name='L69'></a>  69     <a href='../S/2562.html#L29' title='Defined at 29 in elf/testobj2.c.'>p</a> = &amp;<a href='../Y/7471.html' title='Multiple used in 13 places.'>__sincosf_table</a>[1];
+<a id='L70' name='L70'></a>  70 
+<a id='L71' name='L71'></a>  71       <a href='../D/36797.html' title='Multiple defined in 2 places.'>sincosf_poly</a> (<a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a> * <a href='../D/36247.html' title='Multiple defined in 13 places.'>s</a>, <a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a> * <a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a>, <a href='../S/2562.html#L29' title='Defined at 29 in elf/testobj2.c.'>p</a>, <a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>, <a href='../Y/25553.html' title='Multiple used in 37 places.'>sinp</a>, <a href='../Y/12048.html' title='Multiple used in 14 places.'>cosp</a>);
+<a id='L72' name='L72'></a>  72     <em class='brace'>}</em>
+<a id='L73' name='L73'></a>  73   <strong class='reserved'>else</strong> <strong class='reserved'>if</strong> (<a href='../D/24195.html' title='Multiple defined in 2 places.'>__glibc_likely</a> (<a href='../S/8531.html#L37' title='Defined at 37 in sysdeps/ieee754/flt-32/s_sincosf.h.'>abstop12</a> (<a href='../D/39646.html' title='Multiple defined in 4 places.'>y</a>) &lt; <a href='../S/8531.html#L37' title='Defined at 37 in sysdeps/ieee754/flt-32/s_sincosf.h.'>abstop12</a> (<a href='../D/6060.html' title='Multiple defined in 3 places.'>INFINITY</a>)))
+<a id='L74' name='L74'></a>  74     <em class='brace'>{</em>
+<a id='L75' name='L75'></a>  75       <a href='../S/223.html#L26' title='Defined at 26 in bits/stdint-uintn.h.'>uint32_t</a> <a href='../Y/29433.html' title='Multiple used in 58 places.'>xi</a> = <a href='../S/8566.html#L61' title='Defined at 61 in sysdeps/ieee754/flt-32/math_config.h.'>asuint</a> (<a href='../D/39646.html' title='Multiple defined in 4 places.'>y</a>);
+<a id='L76' name='L76'></a>  76       <strong class='reserved'>int</strong> <a href='../Y/25400.html' title='Multiple used in 334 places.'>sign</a> = <a href='../Y/29433.html' title='Multiple used in 58 places.'>xi</a> &gt;&gt; 31;
+<a id='L77' name='L77'></a>  77 
+<a id='L78' name='L78'></a>  78       <a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a> = <a href='../S/8531.html#L75' title='Defined at 75 in sysdeps/ieee754/flt-32/s_sincosf.h.'>reduce_large</a> (<a href='../Y/29433.html' title='Multiple used in 58 places.'>xi</a>, &amp;<a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>);
+<a id='L79' name='L79'></a>  79 
+<a id='L80' name='L80'></a>  80       <em class='comment'>/* Setup signs for sin and cos - include original sign.  */</em>
+<a id='L81' name='L81'></a>  81       <a href='../D/36247.html' title='Multiple defined in 13 places.'>s</a> = <a href='../S/2562.html#L29' title='Defined at 29 in elf/testobj2.c.'>p</a>-&gt;<a href='../Y/25400.html' title='Multiple used in 334 places.'>sign</a>[(<a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a> + <a href='../Y/25400.html' title='Multiple used in 334 places.'>sign</a>) &amp; 3];
+<a id='L82' name='L82'></a>  82 
+<a id='L83' name='L83'></a>  83       <strong class='reserved'>if</strong> ((<a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a> + <a href='../Y/25400.html' title='Multiple used in 334 places.'>sign</a>) &amp; 2)
+<a id='L84' name='L84'></a>  84     <a href='../S/2562.html#L29' title='Defined at 29 in elf/testobj2.c.'>p</a> = &amp;<a href='../Y/7471.html' title='Multiple used in 13 places.'>__sincosf_table</a>[1];
+<a id='L85' name='L85'></a>  85 
+<a id='L86' name='L86'></a>  86       <a href='../D/36797.html' title='Multiple defined in 2 places.'>sincosf_poly</a> (<a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a> * <a href='../D/36247.html' title='Multiple defined in 13 places.'>s</a>, <a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a> * <a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a>, <a href='../S/2562.html#L29' title='Defined at 29 in elf/testobj2.c.'>p</a>, <a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>, <a href='../Y/25553.html' title='Multiple used in 37 places.'>sinp</a>, <a href='../Y/12048.html' title='Multiple used in 14 places.'>cosp</a>);
+<a id='L87' name='L87'></a>  87     <em class='brace'>}</em>
+<a id='L88' name='L88'></a>  88   <strong class='reserved'>else</strong>
+<a id='L89' name='L89'></a>  89     <em class='brace'>{</em>
+<a id='L90' name='L90'></a>  90       <em class='comment'>/* Return NaN if Inf or NaN for both sin and cos.  */</em>
+<a id='L91' name='L91'></a>  91       *<a href='../Y/25553.html' title='Multiple used in 37 places.'>sinp</a> = *<a href='../Y/12048.html' title='Multiple used in 14 places.'>cosp</a> = <a href='../D/39646.html' title='Multiple defined in 4 places.'>y</a> - <a href='../D/39646.html' title='Multiple defined in 4 places.'>y</a>;
+<a id='L92' name='L92'></a>  92 <em class='sharp'>#if</em> <a href='../D/17114.html' title='Multiple defined in 2 places.'>WANT_ERRNO</a>
+<a id='L93' name='L93'></a>  93       <em class='comment'>/* Needed to set errno for +-Inf, the add is a hack to work</em>
+<a id='L94' name='L94'></a>  94 <em class='comment'>     around a gcc register allocation issue: just passing y</em>
+<a id='L95' name='L95'></a>  95 <em class='comment'>     affects code generation in the fast path (PR86901).  */</em>
+<a id='L96' name='L96'></a>  96       <a href='../S/8571.html#L72' title='Defined at 72 in sysdeps/ieee754/flt-32/math_errf.c.'>__math_invalidf</a> (<a href='../D/39646.html' title='Multiple defined in 4 places.'>y</a> + <a href='../D/39646.html' title='Multiple defined in 4 places.'>y</a>);
+<a id='L97' name='L97'></a>  97 <em class='sharp'>#endif</em>
+<a id='L98' name='L98'></a>  98     <em class='brace'>}</em>
+<a id='L99' name='L99'></a>  99 <em class='brace'>}</em>
+<a id='L100' name='L100'></a> 100 
+<a id='L101' name='L101'></a> 101 <em class='sharp'>#ifndef</em> <a href='../D/14273.html' title='Multiple defined in 3 places.'>SINCOSF</a>
+<a id='L102' name='L102'></a> 102 <a href='../D/32836.html' title='Multiple defined in 17 places.'>libm_alias_float</a> (<a href='../S/9015.html#L31' title='Defined at 31 in sysdeps/ieee754/dbl-64/s_sincos.c.'>__sincos</a>, <a href='../Y/25537.html' title='Multiple used in 17 places.'>sincos</a>)
+<a id='L103' name='L103'></a> 103 <em class='sharp'>#endif</em>
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;][^]<a href='#L38'>[v]</a><a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

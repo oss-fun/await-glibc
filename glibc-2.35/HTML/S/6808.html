@@ -1,0 +1,196 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>stdlib/cxa_thread_atexit_impl.c</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18969.html'>stdlib</a>/cxa_thread_atexit_impl.c</h2>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L100'>[^]</a><a href='#L148'>[v]</a>[top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<h2 class='header'>DEFINITIONS</h2>
+This source file includes following definitions.
+<ol>
+<li><a href='#L100' title='Defined at 100.'>__cxa_thread_atexit_impl</a></li>
+<li><a href='#L148' title='Defined at 148.'>__call_tls_dtors</a></li>
+</ol>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* Register destructors for C++ TLS variables declared with thread_local.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   Copyright (C) 2013-2022 Free Software Foundation, Inc.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'></em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'></em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'></em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   License along with the GNU C Library; if not, see</em>
+<a id='L17' name='L17'></a>  17 <em class='comment'>   &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L18' name='L18'></a>  18 
+<a id='L19' name='L19'></a>  19 <em class='comment'>/* CONCURRENCY NOTES:</em>
+<a id='L20' name='L20'></a>  20 <em class='comment'></em>
+<a id='L21' name='L21'></a>  21 <em class='comment'>   This documents concurrency for the non-POD TLS destructor registration,</em>
+<a id='L22' name='L22'></a>  22 <em class='comment'>   calling and destruction.  The functions __cxa_thread_atexit_impl,</em>
+<a id='L23' name='L23'></a>  23 <em class='comment'>   _dl_close_worker and __call_tls_dtors are the three main routines that may</em>
+<a id='L24' name='L24'></a>  24 <em class='comment'>   run concurrently and access shared data.  The shared data in all possible</em>
+<a id='L25' name='L25'></a>  25 <em class='comment'>   combinations of all three functions are the link map list, a link map for a</em>
+<a id='L26' name='L26'></a>  26 <em class='comment'>   DSO and the link map member l_tls_dtor_count.</em>
+<a id='L27' name='L27'></a>  27 <em class='comment'></em>
+<a id='L28' name='L28'></a>  28 <em class='comment'>   __cxa_thread_atexit_impl acquires the dl_load_lock before accessing any</em>
+<a id='L29' name='L29'></a>  29 <em class='comment'>   shared state and hence multiple of its instances can safely execute</em>
+<a id='L30' name='L30'></a>  30 <em class='comment'>   concurrently.</em>
+<a id='L31' name='L31'></a>  31 <em class='comment'></em>
+<a id='L32' name='L32'></a>  32 <em class='comment'>   _dl_close_worker acquires the dl_load_lock before accessing any shared state</em>
+<a id='L33' name='L33'></a>  33 <em class='comment'>   as well and hence can concurrently execute multiple of its own instances as</em>
+<a id='L34' name='L34'></a>  34 <em class='comment'>   well as those of __cxa_thread_atexit_impl safely.  Not all accesses to</em>
+<a id='L35' name='L35'></a>  35 <em class='comment'>   l_tls_dtor_count are protected by the dl_load_lock, so we need to</em>
+<a id='L36' name='L36'></a>  36 <em class='comment'>   synchronize using atomics.</em>
+<a id='L37' name='L37'></a>  37 <em class='comment'></em>
+<a id='L38' name='L38'></a>  38 <em class='comment'>   __call_tls_dtors accesses the l_tls_dtor_count without taking the lock; it</em>
+<a id='L39' name='L39'></a>  39 <em class='comment'>   decrements the value by one.  It does not need the big lock because it does</em>
+<a id='L40' name='L40'></a>  40 <em class='comment'>   not access any other shared state except for the current DSO link map and</em>
+<a id='L41' name='L41'></a>  41 <em class='comment'>   its member l_tls_dtor_count.</em>
+<a id='L42' name='L42'></a>  42 <em class='comment'></em>
+<a id='L43' name='L43'></a>  43 <em class='comment'>   Correspondingly, _dl_close_worker loads l_tls_dtor_count and if it is zero,</em>
+<a id='L44' name='L44'></a>  44 <em class='comment'>   unloads the DSO, thus deallocating the current link map.  This is the goal</em>
+<a id='L45' name='L45'></a>  45 <em class='comment'>   of maintaining l_tls_dtor_count - to unload the DSO and free resources if</em>
+<a id='L46' name='L46'></a>  46 <em class='comment'>   there are no pending destructors to be called.</em>
+<a id='L47' name='L47'></a>  47 <em class='comment'></em>
+<a id='L48' name='L48'></a>  48 <em class='comment'>   We want to eliminate the inconsistent state where the DSO is unloaded in</em>
+<a id='L49' name='L49'></a>  49 <em class='comment'>   _dl_close_worker before it is used in __call_tls_dtors.  This could happen</em>
+<a id='L50' name='L50'></a>  50 <em class='comment'>   if __call_tls_dtors uses the link map after it sets l_tls_dtor_count to 0,</em>
+<a id='L51' name='L51'></a>  51 <em class='comment'>   since _dl_close_worker will conclude from the 0 l_tls_dtor_count value that</em>
+<a id='L52' name='L52'></a>  52 <em class='comment'>   it is safe to unload the DSO.  Hence, to ensure that this does not happen,</em>
+<a id='L53' name='L53'></a>  53 <em class='comment'>   the following conditions must be met:</em>
+<a id='L54' name='L54'></a>  54 <em class='comment'></em>
+<a id='L55' name='L55'></a>  55 <em class='comment'>   1. In _dl_close_worker, the l_tls_dtor_count load happens before the DSO is</em>
+<a id='L56' name='L56'></a>  56 <em class='comment'>      unloaded and its link map is freed</em>
+<a id='L57' name='L57'></a>  57 <em class='comment'>   2. The link map dereference in __call_tls_dtors happens before the</em>
+<a id='L58' name='L58'></a>  58 <em class='comment'>      l_tls_dtor_count dereference.</em>
+<a id='L59' name='L59'></a>  59 <em class='comment'></em>
+<a id='L60' name='L60'></a>  60 <em class='comment'>   To ensure this, the l_tls_dtor_count decrement in __call_tls_dtors should</em>
+<a id='L61' name='L61'></a>  61 <em class='comment'>   have release semantics and the load in _dl_close_worker should have acquire</em>
+<a id='L62' name='L62'></a>  62 <em class='comment'>   semantics.</em>
+<a id='L63' name='L63'></a>  63 <em class='comment'></em>
+<a id='L64' name='L64'></a>  64 <em class='comment'>   Concurrent executions of __call_tls_dtors should only ensure that the value</em>
+<a id='L65' name='L65'></a>  65 <em class='comment'>   is accessed atomically; no reordering constraints need to be considered.</em>
+<a id='L66' name='L66'></a>  66 <em class='comment'>   Likewise for the increment of l_tls_dtor_count in __cxa_thread_atexit_impl.</em>
+<a id='L67' name='L67'></a>  67 <em class='comment'></em>
+<a id='L68' name='L68'></a>  68 <em class='comment'>   There is still a possibility on concurrent execution of _dl_close_worker and</em>
+<a id='L69' name='L69'></a>  69 <em class='comment'>   __call_tls_dtors where _dl_close_worker reads the value of l_tls_dtor_count</em>
+<a id='L70' name='L70'></a>  70 <em class='comment'>   as 1, __call_tls_dtors decrements the value of l_tls_dtor_count but</em>
+<a id='L71' name='L71'></a>  71 <em class='comment'>   _dl_close_worker does not unload the DSO, having read the old value.  This</em>
+<a id='L72' name='L72'></a>  72 <em class='comment'>   is not very different from a case where __call_tls_dtors is called after</em>
+<a id='L73' name='L73'></a>  73 <em class='comment'>   _dl_close_worker on the DSO and hence is an accepted execution.  */</em>
+<a id='L74' name='L74'></a>  74 
+<a id='L75' name='L75'></a>  75 <em class='sharp'>#include</em> &lt;<a href='../I/1776.html'>stdio.h</a>&gt;
+<a id='L76' name='L76'></a>  76 <em class='sharp'>#include</em> &lt;<a href='../I/1780.html'>stdlib.h</a>&gt;
+<a id='L77' name='L77'></a>  77 <em class='sharp'>#include</em> &lt;<a href='../I/5906.html'>ldsodefs.h</a>&gt;
+<a id='L78' name='L78'></a>  78 
+<a id='L79' name='L79'></a>  79 <strong class='reserved'>typedef</strong> <strong class='reserved'>void</strong> (*<a href='../Y/13357.html' title='Multiple used in 4 places.'>dtor_func</a>) (<strong class='reserved'>void</strong> *);
+<a id='L80' name='L80'></a>  80 
+<a id='L81' name='L81'></a>  81 <strong class='reserved'>struct</strong> <a href='../R/18883.html' title='Multiple referred from 4 places.'>dtor_list</a>
+<a id='L82' name='L82'></a>  82 <em class='brace'>{</em>
+<a id='L83' name='L83'></a>  83   <a href='../Y/13357.html' title='Multiple used in 4 places.'>dtor_func</a> <a href='../D/30951.html' title='Multiple defined in 15 places.'>func</a>;
+<a id='L84' name='L84'></a>  84   <strong class='reserved'>void</strong> *<a href='../Y/21448.html' title='Multiple used in 370 places.'>obj</a>;
+<a id='L85' name='L85'></a>  85   <strong class='reserved'>struct</strong> <a href='../D/32945.html' title='Multiple defined in 4 places.'>link_map</a> *<a href='../D/33311.html' title='Multiple defined in 2 places.'>map</a>;
+<a id='L86' name='L86'></a>  86   <strong class='reserved'>struct</strong> <a href='../S/6808.html#L81' title='Defined at 81 in stdlib/cxa_thread_atexit_impl.c.'>dtor_list</a> *<a href='../Y/20703.html' title='Multiple used in 1000 places.'>next</a>;
+<a id='L87' name='L87'></a>  87 <em class='brace'>}</em>;
+<a id='L88' name='L88'></a>  88 
+<a id='L89' name='L89'></a>  89 <strong class='reserved'>static</strong> <strong class='reserved'>__thread</strong> <strong class='reserved'>struct</strong> <a href='../S/6808.html#L81' title='Defined at 81 in stdlib/cxa_thread_atexit_impl.c.'>dtor_list</a> *<a href='../Y/27372.html' title='Multiple used in 6 places.'>tls_dtor_list</a>;
+<a id='L90' name='L90'></a>  90 <strong class='reserved'>static</strong> <strong class='reserved'>__thread</strong> <strong class='reserved'>void</strong> *<a href='../Y/13307.html' title='Multiple used in 2 places.'>dso_symbol_cache</a>;
+<a id='L91' name='L91'></a>  91 <strong class='reserved'>static</strong> <strong class='reserved'>__thread</strong> <strong class='reserved'>struct</strong> <a href='../D/32945.html' title='Multiple defined in 4 places.'>link_map</a> *<a href='../Y/18293.html' title='Multiple used in 4 places.'>lm_cache</a>;
+<a id='L92' name='L92'></a>  92 
+<a id='L93' name='L93'></a>  93 <em class='comment'>/* Register a destructor for TLS variables declared with the 'thread_local'</em>
+<a id='L94' name='L94'></a>  94 <em class='comment'>   keyword.  This function is only called from code generated by the C++</em>
+<a id='L95' name='L95'></a>  95 <em class='comment'>   compiler.  FUNC is the destructor function and OBJ is the object to be</em>
+<a id='L96' name='L96'></a>  96 <em class='comment'>   passed to the destructor.  DSO_SYMBOL is the __dso_handle symbol that each</em>
+<a id='L97' name='L97'></a>  97 <em class='comment'>   DSO has at a unique address in its map, added from crtbegin.o during the</em>
+<a id='L98' name='L98'></a>  98 <em class='comment'>   linking phase.  */</em>
+<a id='L99' name='L99'></a>  99 <strong class='reserved'>int</strong>
+<a id='L100' name='L100'></a> 100 <a href='../R/13882.html' title='Multiple referred from 2 places.'>__cxa_thread_atexit_impl</a> (<a href='../Y/13357.html' title='Multiple used in 4 places.'>dtor_func</a> <a href='../D/30951.html' title='Multiple defined in 15 places.'>func</a>, <strong class='reserved'>void</strong> *<a href='../Y/21448.html' title='Multiple used in 370 places.'>obj</a>, <strong class='reserved'>void</strong> *<a href='../Y/13306.html' title='Multiple used in 3 places.'>dso_symbol</a>)
+<a id='L101' name='L101'></a> 101 <em class='brace'>{</em>
+<a id='L102' name='L102'></a> 102 <em class='sharp'>#ifdef</em> <a href='../D/10568.html' title='Multiple defined in 47 places.'>PTR_MANGLE</a>
+<a id='L103' name='L103'></a> 103   <a href='../D/10568.html' title='Multiple defined in 47 places.'>PTR_MANGLE</a> (<a href='../D/30951.html' title='Multiple defined in 15 places.'>func</a>);
+<a id='L104' name='L104'></a> 104 <em class='sharp'>#endif</em>
+<a id='L105' name='L105'></a> 105 
+<a id='L106' name='L106'></a> 106   <em class='comment'>/* Prepend.  */</em>
+<a id='L107' name='L107'></a> 107   <strong class='reserved'>struct</strong> <a href='../S/6808.html#L81' title='Defined at 81 in stdlib/cxa_thread_atexit_impl.c.'>dtor_list</a> *<a href='../Y/20433.html' title='Multiple used in 561 places.'>new</a> = <a href='../D/28498.html' title='Multiple defined in 4 places.'>calloc</a> (1, <strong class='reserved'>sizeof</strong> (<strong class='reserved'>struct</strong> <a href='../S/6808.html#L81' title='Defined at 81 in stdlib/cxa_thread_atexit_impl.c.'>dtor_list</a>));
+<a id='L108' name='L108'></a> 108   <strong class='reserved'>if</strong> (<a href='../D/24205.html' title='Multiple defined in 2 places.'>__glibc_unlikely</a> (<a href='../Y/20433.html' title='Multiple used in 561 places.'>new</a> == <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>))
+<a id='L109' name='L109'></a> 109     <a href='../D/24579.html' title='Multiple defined in 3 places.'>__libc_fatal</a> ("Fatal glibc error: failed to register TLS destructor: "
+<a id='L110' name='L110'></a> 110           "out of memory\n");
+<a id='L111' name='L111'></a> 111   <a href='../Y/20433.html' title='Multiple used in 561 places.'>new</a>-&gt;<a href='../D/30951.html' title='Multiple defined in 15 places.'>func</a> = <a href='../D/30951.html' title='Multiple defined in 15 places.'>func</a>;
+<a id='L112' name='L112'></a> 112   <a href='../Y/20433.html' title='Multiple used in 561 places.'>new</a>-&gt;<a href='../Y/21448.html' title='Multiple used in 370 places.'>obj</a> = <a href='../Y/21448.html' title='Multiple used in 370 places.'>obj</a>;
+<a id='L113' name='L113'></a> 113   <a href='../Y/20433.html' title='Multiple used in 561 places.'>new</a>-&gt;<a href='../Y/20703.html' title='Multiple used in 1000 places.'>next</a> = <a href='../Y/27372.html' title='Multiple used in 6 places.'>tls_dtor_list</a>;
+<a id='L114' name='L114'></a> 114   <a href='../Y/27372.html' title='Multiple used in 6 places.'>tls_dtor_list</a> = <a href='../Y/20433.html' title='Multiple used in 561 places.'>new</a>;
+<a id='L115' name='L115'></a> 115 
+<a id='L116' name='L116'></a> 116   <em class='comment'>/* We have to acquire the big lock to prevent a racing dlclose from pulling</em>
+<a id='L117' name='L117'></a> 117 <em class='comment'>     our DSO from underneath us while we're setting up our destructor.  */</em>
+<a id='L118' name='L118'></a> 118   <a href='../D/25835.html' title='Multiple defined in 4 places.'>__rtld_lock_lock_recursive</a> (<a href='../D/5057.html' title='Multiple defined in 6 places.'>GL</a>(<a href='../Y/12910.html' title='Multiple used in 27 places.'>dl_load_lock</a>));
+<a id='L119' name='L119'></a> 119 
+<a id='L120' name='L120'></a> 120   <em class='comment'>/* See if we already encountered the DSO.  */</em>
+<a id='L121' name='L121'></a> 121   <strong class='reserved'>if</strong> (<a href='../D/24205.html' title='Multiple defined in 2 places.'>__glibc_unlikely</a> (<a href='../Y/13307.html' title='Multiple used in 2 places.'>dso_symbol_cache</a> != <a href='../Y/13306.html' title='Multiple used in 3 places.'>dso_symbol</a>))
+<a id='L122' name='L122'></a> 122     <em class='brace'>{</em>
+<a id='L123' name='L123'></a> 123       <a href='../D/4051.html' title='Multiple defined in 85 places.'>ElfW</a>(<a href='../Y/109.html' title='Multiple used in 497 places.'>Addr</a>) <a href='../Y/11233.html' title='Multiple used in 70 places.'>caller</a> = (<a href='../D/4051.html' title='Multiple defined in 85 places.'>ElfW</a>(<a href='../Y/109.html' title='Multiple used in 497 places.'>Addr</a>)) <a href='../Y/13306.html' title='Multiple used in 3 places.'>dso_symbol</a>;
+<a id='L124' name='L124'></a> 124 
+<a id='L125' name='L125'></a> 125       <strong class='reserved'>struct</strong> <a href='../D/32945.html' title='Multiple defined in 4 places.'>link_map</a> *<a href='../D/32486.html' title='Multiple defined in 3 places.'>l</a> = <a href='../S/2514.html#L213' title='Defined at 213 in elf/dl-open.c.'>_dl_find_dso_for_object</a> (<a href='../Y/11233.html' title='Multiple used in 70 places.'>caller</a>);
+<a id='L126' name='L126'></a> 126 
+<a id='L127' name='L127'></a> 127       <em class='comment'>/* If the address is not recognized the call comes from the main</em>
+<a id='L128' name='L128'></a> 128 <em class='comment'>     program (we hope).  */</em>
+<a id='L129' name='L129'></a> 129       <a href='../Y/18293.html' title='Multiple used in 4 places.'>lm_cache</a> = <a href='../D/32486.html' title='Multiple defined in 3 places.'>l</a> ? <a href='../D/32486.html' title='Multiple defined in 3 places.'>l</a> : <a href='../D/5057.html' title='Multiple defined in 6 places.'>GL</a>(<a href='../Y/12920.html' title='Multiple used in 103 places.'>dl_ns</a>)[<a href='../S/1466.html#L49' title='Defined at 49 in dlfcn/dlfcn.h.'>LM_ID_BASE</a>].<a href='../Y/9379.html' title='Multiple used in 72 places.'>_ns_loaded</a>;
+<a id='L130' name='L130'></a> 130     <em class='brace'>}</em>
+<a id='L131' name='L131'></a> 131 
+<a id='L132' name='L132'></a> 132   <em class='comment'>/* This increment may only be concurrently observed either by the decrement</em>
+<a id='L133' name='L133'></a> 133 <em class='comment'>     in __call_tls_dtors since the other l_tls_dtor_count access in</em>
+<a id='L134' name='L134'></a> 134 <em class='comment'>     _dl_close_worker is protected by the dl_load_lock.  The execution in</em>
+<a id='L135' name='L135'></a> 135 <em class='comment'>     __call_tls_dtors does not really depend on this value beyond the fact that</em>
+<a id='L136' name='L136'></a> 136 <em class='comment'>     it should be atomic, so Relaxed MO should be sufficient.  */</em>
+<a id='L137' name='L137'></a> 137   <a href='../D/27916.html' title='Multiple defined in 2 places.'>atomic_fetch_add_relaxed</a> (&amp;<a href='../Y/18293.html' title='Multiple used in 4 places.'>lm_cache</a>-&gt;<a href='../Y/17671.html' title='Multiple used in 4 places.'>l_tls_dtor_count</a>, 1);
+<a id='L138' name='L138'></a> 138   <a href='../D/25838.html' title='Multiple defined in 4 places.'>__rtld_lock_unlock_recursive</a> (<a href='../D/5057.html' title='Multiple defined in 6 places.'>GL</a>(<a href='../Y/12910.html' title='Multiple used in 27 places.'>dl_load_lock</a>));
+<a id='L139' name='L139'></a> 139 
+<a id='L140' name='L140'></a> 140   <a href='../Y/20433.html' title='Multiple used in 561 places.'>new</a>-&gt;<a href='../D/33311.html' title='Multiple defined in 2 places.'>map</a> = <a href='../Y/18293.html' title='Multiple used in 4 places.'>lm_cache</a>;
+<a id='L141' name='L141'></a> 141 
+<a id='L142' name='L142'></a> 142   <strong class='reserved'>return</strong> 0;
+<a id='L143' name='L143'></a> 143 <em class='brace'>}</em>
+<a id='L144' name='L144'></a> 144 
+<a id='L145' name='L145'></a> 145 <em class='comment'>/* Call the destructors.  This is called either when a thread returns from the</em>
+<a id='L146' name='L146'></a> 146 <em class='comment'>   initial function or when the process exits via the exit function.  */</em>
+<a id='L147' name='L147'></a> 147 <strong class='reserved'>void</strong>
+<a id='L148' name='L148'></a> 148 <a href='../R/13765.html' title='Multiple referred from 7 places.'>__call_tls_dtors</a> (<strong class='reserved'>void</strong>)
+<a id='L149' name='L149'></a> 149 <em class='brace'>{</em>
+<a id='L150' name='L150'></a> 150   <strong class='reserved'>while</strong> (<a href='../Y/27372.html' title='Multiple used in 6 places.'>tls_dtor_list</a>)
+<a id='L151' name='L151'></a> 151     <em class='brace'>{</em>
+<a id='L152' name='L152'></a> 152       <strong class='reserved'>struct</strong> <a href='../S/6808.html#L81' title='Defined at 81 in stdlib/cxa_thread_atexit_impl.c.'>dtor_list</a> *<a href='../Y/12277.html' title='Multiple used in 356 places.'>cur</a> = <a href='../Y/27372.html' title='Multiple used in 6 places.'>tls_dtor_list</a>;
+<a id='L153' name='L153'></a> 153       <a href='../Y/13357.html' title='Multiple used in 4 places.'>dtor_func</a> <a href='../D/30951.html' title='Multiple defined in 15 places.'>func</a> = <a href='../Y/12277.html' title='Multiple used in 356 places.'>cur</a>-&gt;<a href='../D/30951.html' title='Multiple defined in 15 places.'>func</a>;
+<a id='L154' name='L154'></a> 154 <em class='sharp'>#ifdef</em> <a href='../D/10558.html' title='Multiple defined in 44 places.'>PTR_DEMANGLE</a>
+<a id='L155' name='L155'></a> 155       <a href='../D/10558.html' title='Multiple defined in 44 places.'>PTR_DEMANGLE</a> (<a href='../D/30951.html' title='Multiple defined in 15 places.'>func</a>);
+<a id='L156' name='L156'></a> 156 <em class='sharp'>#endif</em>
+<a id='L157' name='L157'></a> 157 
+<a id='L158' name='L158'></a> 158       <a href='../Y/27372.html' title='Multiple used in 6 places.'>tls_dtor_list</a> = <a href='../Y/27372.html' title='Multiple used in 6 places.'>tls_dtor_list</a>-&gt;<a href='../Y/20703.html' title='Multiple used in 1000 places.'>next</a>;
+<a id='L159' name='L159'></a> 159       <a href='../D/30951.html' title='Multiple defined in 15 places.'>func</a> (<a href='../Y/12277.html' title='Multiple used in 356 places.'>cur</a>-&gt;<a href='../Y/21448.html' title='Multiple used in 370 places.'>obj</a>);
+<a id='L160' name='L160'></a> 160 
+<a id='L161' name='L161'></a> 161       <em class='comment'>/* Ensure that the MAP dereference happens before</em>
+<a id='L162' name='L162'></a> 162 <em class='comment'>     l_tls_dtor_count decrement.  That way, we protect this access from a</em>
+<a id='L163' name='L163'></a> 163 <em class='comment'>     potential DSO unload in _dl_close_worker, which happens when</em>
+<a id='L164' name='L164'></a> 164 <em class='comment'>     l_tls_dtor_count is 0.  See CONCURRENCY NOTES for more detail.  */</em>
+<a id='L165' name='L165'></a> 165       <a href='../D/27917.html' title='Multiple defined in 2 places.'>atomic_fetch_add_release</a> (&amp;<a href='../Y/12277.html' title='Multiple used in 356 places.'>cur</a>-&gt;<a href='../D/33311.html' title='Multiple defined in 2 places.'>map</a>-&gt;<a href='../Y/17671.html' title='Multiple used in 4 places.'>l_tls_dtor_count</a>, -1);
+<a id='L166' name='L166'></a> 166       <a href='../D/30785.html' title='Multiple defined in 5 places.'>free</a> (<a href='../Y/12277.html' title='Multiple used in 356 places.'>cur</a>);
+<a id='L167' name='L167'></a> 167     <em class='brace'>}</em>
+<a id='L168' name='L168'></a> 168 <em class='brace'>}</em>
+<a id='L169' name='L169'></a> 169 <a href='../D/32797.html' title='Multiple defined in 447 places.'>libc_hidden_def</a> (<a href='../S/6808.html#L148' title='Defined at 148 in stdlib/cxa_thread_atexit_impl.c.'>__call_tls_dtors</a>)
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L100'>[^]</a><a href='#L148'>[v]</a><a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

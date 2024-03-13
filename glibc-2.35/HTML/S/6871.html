@@ -1,0 +1,150 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>benchtests/bench-memset-walk.c</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18858.html'>benchtests</a>/bench-memset-walk.c</h2>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L31'>[^]</a><a href='#L72'>[v]</a>[top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<h2 class='header'>DEFINITIONS</h2>
+This source file includes following definitions.
+<ol>
+<li><a href='#L31' title='Defined at 31.'>IMPL</a></li>
+<li><a href='#L53' title='Defined at 53.'>do_test</a></li>
+<li><a href='#L72' title='Defined at 72.'>test_main</a></li>
+</ol>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* Measure memset function throughput with large data sizes.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   Copyright (C) 2017-2022 Free Software Foundation, Inc.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'></em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'></em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'></em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   License along with the GNU C Library; if not, see</em>
+<a id='L17' name='L17'></a>  17 <em class='comment'>   &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L18' name='L18'></a>  18 
+<a id='L19' name='L19'></a>  19 <em class='sharp'>#define</em> <a href='../R/8623.html' title='Multiple referred from 2 places.'>TEST_MAIN</a>
+<a id='L20' name='L20'></a>  20 <em class='sharp'>#define</em> <a href='../R/8630.html' title='Multiple referred from 32 places.'>TEST_NAME</a> "memset"
+<a id='L21' name='L21'></a>  21 <em class='sharp'>#define</em> <a href='../R/7995.html' title='Multiple referred from 9 places.'>START_SIZE</a> 128
+<a id='L22' name='L22'></a>  22 <em class='sharp'>#define</em> <a href='../R/4920.html' title='Multiple referred from 21 places.'>MIN_PAGE_SIZE</a> (<a href='../Y/15540.html' title='Multiple used in 60 places.'>getpagesize</a> () + 32 * 1024 * 1024)
+<a id='L23' name='L23'></a>  23 <em class='sharp'>#define</em> <a href='../R/8731.html' title='Multiple referred from 9 places.'>TIMEOUT</a> (20 * 60)
+<a id='L24' name='L24'></a>  24 <em class='sharp'>#include</em> "<a href='6898.html'>bench-string.h</a>"
+<a id='L25' name='L25'></a>  25 
+<a id='L26' name='L26'></a>  26 <em class='sharp'>#include</em> "<a href='7000.html'>json-lib.h</a>"
+<a id='L27' name='L27'></a>  27 
+<a id='L28' name='L28'></a>  28 <strong class='reserved'>void</strong> *<a href='../S/7020.html#L24' title='Defined at 24 in benchtests/bench-memset.c.'>generic_memset</a> (<strong class='reserved'>void</strong> *, <strong class='reserved'>int</strong>, <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a>);
+<a id='L29' name='L29'></a>  29 <strong class='reserved'>typedef</strong> <strong class='reserved'>void</strong> *(*<a href='../Y/22874.html' title='Multiple used in 81 places.'>proto_t</a>) (<strong class='reserved'>void</strong> *, <strong class='reserved'>int</strong>, <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a>);
+<a id='L30' name='L30'></a>  30 
+<a id='L31' name='L31'></a>  31 <a href='../R/3689.html' title='Multiple referred from 122 places.'>IMPL</a> (<a href='../D/7913.html' title='Multiple defined in 63 places.'>MEMSET</a>, 1)
+<a id='L32' name='L32'></a>  32 <a href='../D/6021.html' title='Multiple defined in 82 places.'>IMPL</a> (<a href='../S/7020.html#L24' title='Defined at 24 in benchtests/bench-memset.c.'>generic_memset</a>, 0)
+<a id='L33' name='L33'></a>  33 
+<a id='L34' name='L34'></a>  34 <strong class='reserved'>static</strong> <strong class='reserved'>void</strong>
+<a id='L35' name='L35'></a>  35 <a href='../D/29639.html' title='Multiple defined in 47 places.'>do_one_test</a> (<a href='../S/7000.html#L33' title='Defined at 33 in benchtests/json-lib.h.'>json_ctx_t</a> *<a href='../S/7000.html#L26' title='Defined at 26 in benchtests/json-lib.h.'>json_ctx</a>, <a href='../D/31736.html' title='Multiple defined in 2 places.'>impl_t</a> *<a href='../Y/16647.html' title='Multiple used in 771 places.'>impl</a>, <a href='../D/1156.html' title='Multiple defined in 81 places.'>CHAR</a> *<a href='../D/36247.html' title='Multiple defined in 13 places.'>s</a>, <a href='../D/1156.html' title='Multiple defined in 81 places.'>CHAR</a> *<a href='../Y/24496.html' title='Multiple used in 2 places.'>s_end</a>,
+<a id='L36' name='L36'></a>  36          <strong class='reserved'>int</strong> <a href='../D/28364.html' title='Multiple defined in 2 places.'>c</a> <strong class='reserved'>__attribute</strong> ((<a href='../S/2757.html#L20' title='Defined at 20 in elf/tst-tlsalign-vars.c.'>unused</a>)), <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>)
+<a id='L37' name='L37'></a>  37 <em class='brace'>{</em>
+<a id='L38' name='L38'></a>  38   <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>, <a href='../Y/17305.html' title='Multiple used in 182 places.'>iters</a> = <a href='../D/7998.html' title='Multiple defined in 15 places.'>MIN_PAGE_SIZE</a> / <a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>;
+<a id='L39' name='L39'></a>  39   <a href='../S/6874.html#L30' title='Defined at 30 in benchtests/bench-timing.h.'>timing_t</a> <a href='../D/36987.html' title='Multiple defined in 10 places.'>start</a>, <a href='../S/2170.html#L624' title='Defined at 624 in hurd/hurdsig.c.'>stop</a>, <a href='../Y/12277.html' title='Multiple used in 356 places.'>cur</a>;
+<a id='L40' name='L40'></a>  40 
+<a id='L41' name='L41'></a>  41   <a href='../S/6874.html#L34' title='Defined at 34 in benchtests/bench-timing.h.'>TIMING_NOW</a> (<a href='../D/36987.html' title='Multiple defined in 10 places.'>start</a>);
+<a id='L42' name='L42'></a>  42   <strong class='reserved'>for</strong> (<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> = 0; <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> &lt; <a href='../Y/17305.html' title='Multiple used in 182 places.'>iters</a> &amp;&amp; <a href='../D/36247.html' title='Multiple defined in 13 places.'>s</a> &lt;= <a href='../Y/24496.html' title='Multiple used in 2 places.'>s_end</a>; <a href='../Y/24496.html' title='Multiple used in 2 places.'>s_end</a> -= <a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>, <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>++)
+<a id='L43' name='L43'></a>  43     <a href='../D/1056.html' title='Multiple defined in 3 places.'>CALL</a> (<a href='../Y/16647.html' title='Multiple used in 771 places.'>impl</a>, <a href='../D/36247.html' title='Multiple defined in 13 places.'>s</a>, <a href='../D/28364.html' title='Multiple defined in 2 places.'>c</a>, <a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>);
+<a id='L44' name='L44'></a>  44   <a href='../S/6874.html#L34' title='Defined at 34 in benchtests/bench-timing.h.'>TIMING_NOW</a> (<a href='../S/2170.html#L624' title='Defined at 624 in hurd/hurdsig.c.'>stop</a>);
+<a id='L45' name='L45'></a>  45 
+<a id='L46' name='L46'></a>  46   <a href='../S/6874.html#L35' title='Defined at 35 in benchtests/bench-timing.h.'>TIMING_DIFF</a> (<a href='../Y/12277.html' title='Multiple used in 356 places.'>cur</a>, <a href='../D/36987.html' title='Multiple defined in 10 places.'>start</a>, <a href='../S/2170.html#L624' title='Defined at 624 in hurd/hurdsig.c.'>stop</a>);
+<a id='L47' name='L47'></a>  47 
+<a id='L48' name='L48'></a>  48   <em class='comment'>/* Get time taken per function call.  */</em>
+<a id='L49' name='L49'></a>  49   <a href='../S/7007.html#L202' title='Defined at 202 in benchtests/json-lib.c.'>json_element_double</a> (<a href='../S/7000.html#L26' title='Defined at 26 in benchtests/json-lib.h.'>json_ctx</a>, (<strong class='reserved'>double</strong>) <a href='../Y/12277.html' title='Multiple used in 356 places.'>cur</a> / <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>);
+<a id='L50' name='L50'></a>  50 <em class='brace'>}</em>
+<a id='L51' name='L51'></a>  51 
+<a id='L52' name='L52'></a>  52 <strong class='reserved'>static</strong> <strong class='reserved'>void</strong>
+<a id='L53' name='L53'></a>  53 <a href='../R/18782.html' title='Multiple referred from 1850 places.'>do_test</a> (<a href='../S/7000.html#L33' title='Defined at 33 in benchtests/json-lib.h.'>json_ctx_t</a> *<a href='../S/7000.html#L26' title='Defined at 26 in benchtests/json-lib.h.'>json_ctx</a>, <strong class='reserved'>int</strong> <a href='../D/28364.html' title='Multiple defined in 2 places.'>c</a>, <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../D/32598.html' title='Multiple defined in 10 places.'>len</a>)
+<a id='L54' name='L54'></a>  54 <em class='brace'>{</em>
+<a id='L55' name='L55'></a>  55   <a href='../S/7007.html#L214' title='Defined at 214 in benchtests/json-lib.c.'>json_element_object_begin</a> (<a href='../S/7000.html#L26' title='Defined at 26 in benchtests/json-lib.h.'>json_ctx</a>);
+<a id='L56' name='L56'></a>  56   <a href='../S/7007.html#L104' title='Defined at 104 in benchtests/json-lib.c.'>json_attr_uint</a> (<a href='../S/7000.html#L26' title='Defined at 26 in benchtests/json-lib.h.'>json_ctx</a>, "length", <a href='../D/32598.html' title='Multiple defined in 10 places.'>len</a>);
+<a id='L57' name='L57'></a>  57   <a href='../S/7007.html#L104' title='Defined at 104 in benchtests/json-lib.c.'>json_attr_uint</a> (<a href='../S/7000.html#L26' title='Defined at 26 in benchtests/json-lib.h.'>json_ctx</a>, "char", <a href='../D/28364.html' title='Multiple defined in 2 places.'>c</a>);
+<a id='L58' name='L58'></a>  58   <a href='../S/7007.html#L143' title='Defined at 143 in benchtests/json-lib.c.'>json_array_begin</a> (<a href='../S/7000.html#L26' title='Defined at 26 in benchtests/json-lib.h.'>json_ctx</a>, "timings");
+<a id='L59' name='L59'></a>  59 
+<a id='L60' name='L60'></a>  60   <a href='../D/4366.html' title='Multiple defined in 4 places.'>FOR_EACH_IMPL</a> (<a href='../Y/16647.html' title='Multiple used in 771 places.'>impl</a>, 0)
+<a id='L61' name='L61'></a>  61     <em class='brace'>{</em>
+<a id='L62' name='L62'></a>  62       <a href='../D/29639.html' title='Multiple defined in 47 places.'>do_one_test</a> (<a href='../S/7000.html#L26' title='Defined at 26 in benchtests/json-lib.h.'>json_ctx</a>, <a href='../Y/16647.html' title='Multiple used in 771 places.'>impl</a>, (<a href='../D/1156.html' title='Multiple defined in 81 places.'>CHAR</a> *) <a href='../Y/11038.html' title='Multiple used in 410 places.'>buf1</a>,
+<a id='L63' name='L63'></a>  63            (<a href='../D/1156.html' title='Multiple defined in 81 places.'>CHAR</a> *) <a href='../Y/11038.html' title='Multiple used in 410 places.'>buf1</a> + <a href='../D/7998.html' title='Multiple defined in 15 places.'>MIN_PAGE_SIZE</a> - <a href='../D/32598.html' title='Multiple defined in 10 places.'>len</a>, <a href='../D/28364.html' title='Multiple defined in 2 places.'>c</a>, <a href='../D/32598.html' title='Multiple defined in 10 places.'>len</a>);
+<a id='L64' name='L64'></a>  64       <a href='../S/6898.html#L285' title='Defined at 285 in benchtests/bench-string.h.'>alloc_bufs</a> ();
+<a id='L65' name='L65'></a>  65     <em class='brace'>}</em>
+<a id='L66' name='L66'></a>  66 
+<a id='L67' name='L67'></a>  67   <a href='../S/7007.html#L157' title='Defined at 157 in benchtests/json-lib.c.'>json_array_end</a> (<a href='../S/7000.html#L26' title='Defined at 26 in benchtests/json-lib.h.'>json_ctx</a>);
+<a id='L68' name='L68'></a>  68   <a href='../S/7007.html#L230' title='Defined at 230 in benchtests/json-lib.c.'>json_element_object_end</a> (<a href='../S/7000.html#L26' title='Defined at 26 in benchtests/json-lib.h.'>json_ctx</a>);
+<a id='L69' name='L69'></a>  69 <em class='brace'>}</em>
+<a id='L70' name='L70'></a>  70 
+<a id='L71' name='L71'></a>  71 <strong class='reserved'>int</strong>
+<a id='L72' name='L72'></a>  72 <a href='../R/25331.html' title='Multiple referred from 5 places.'>test_main</a> (<strong class='reserved'>void</strong>)
+<a id='L73' name='L73'></a>  73 <em class='brace'>{</em>
+<a id='L74' name='L74'></a>  74   <a href='../S/7000.html#L33' title='Defined at 33 in benchtests/json-lib.h.'>json_ctx_t</a> <a href='../S/7000.html#L26' title='Defined at 26 in benchtests/json-lib.h.'>json_ctx</a>;
+<a id='L75' name='L75'></a>  75   <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>;
+<a id='L76' name='L76'></a>  76 
+<a id='L77' name='L77'></a>  77   <a href='../D/37726.html' title='Multiple defined in 4 places.'>test_init</a> ();
+<a id='L78' name='L78'></a>  78 
+<a id='L79' name='L79'></a>  79   <a href='../S/7007.html#L24' title='Defined at 24 in benchtests/json-lib.c.'>json_init</a> (&amp;<a href='../S/7000.html#L26' title='Defined at 26 in benchtests/json-lib.h.'>json_ctx</a>, 0, <a href='../D/37041.html' title='Multiple defined in 3 places.'>stdout</a>);
+<a id='L80' name='L80'></a>  80 
+<a id='L81' name='L81'></a>  81   <a href='../S/7007.html#L43' title='Defined at 43 in benchtests/json-lib.c.'>json_document_begin</a> (&amp;<a href='../S/7000.html#L26' title='Defined at 26 in benchtests/json-lib.h.'>json_ctx</a>);
+<a id='L82' name='L82'></a>  82   <a href='../S/7007.html#L91' title='Defined at 91 in benchtests/json-lib.c.'>json_attr_string</a> (&amp;<a href='../S/7000.html#L26' title='Defined at 26 in benchtests/json-lib.h.'>json_ctx</a>, "timing_type", <a href='../S/6874.html#L32' title='Defined at 32 in benchtests/bench-timing.h.'>TIMING_TYPE</a>);
+<a id='L83' name='L83'></a>  83 
+<a id='L84' name='L84'></a>  84   <a href='../S/7007.html#L64' title='Defined at 64 in benchtests/json-lib.c.'>json_attr_object_begin</a> (&amp;<a href='../S/7000.html#L26' title='Defined at 26 in benchtests/json-lib.h.'>json_ctx</a>, "functions");
+<a id='L85' name='L85'></a>  85   <a href='../S/7007.html#L64' title='Defined at 64 in benchtests/json-lib.c.'>json_attr_object_begin</a> (&amp;<a href='../S/7000.html#L26' title='Defined at 26 in benchtests/json-lib.h.'>json_ctx</a>, <a href='../D/15788.html' title='Multiple defined in 144 places.'>TEST_NAME</a>);
+<a id='L86' name='L86'></a>  86   <a href='../S/7007.html#L91' title='Defined at 91 in benchtests/json-lib.c.'>json_attr_string</a> (&amp;<a href='../S/7000.html#L26' title='Defined at 26 in benchtests/json-lib.h.'>json_ctx</a>, "bench-variant", "walk");
+<a id='L87' name='L87'></a>  87 
+<a id='L88' name='L88'></a>  88   <a href='../S/7007.html#L143' title='Defined at 143 in benchtests/json-lib.c.'>json_array_begin</a> (&amp;<a href='../S/7000.html#L26' title='Defined at 26 in benchtests/json-lib.h.'>json_ctx</a>, "ifuncs");
+<a id='L89' name='L89'></a>  89   <a href='../D/4366.html' title='Multiple defined in 4 places.'>FOR_EACH_IMPL</a> (<a href='../Y/16647.html' title='Multiple used in 771 places.'>impl</a>, 0)
+<a id='L90' name='L90'></a>  90     <a href='../S/7007.html#L166' title='Defined at 166 in benchtests/json-lib.c.'>json_element_string</a> (&amp;<a href='../S/7000.html#L26' title='Defined at 26 in benchtests/json-lib.h.'>json_ctx</a>, <a href='../Y/16647.html' title='Multiple used in 771 places.'>impl</a>-&gt;<a href='../D/33817.html' title='Multiple defined in 21 places.'>name</a>);
+<a id='L91' name='L91'></a>  91   <a href='../S/7007.html#L157' title='Defined at 157 in benchtests/json-lib.c.'>json_array_end</a> (&amp;<a href='../S/7000.html#L26' title='Defined at 26 in benchtests/json-lib.h.'>json_ctx</a>);
+<a id='L92' name='L92'></a>  92 
+<a id='L93' name='L93'></a>  93   <a href='../S/7007.html#L143' title='Defined at 143 in benchtests/json-lib.c.'>json_array_begin</a> (&amp;<a href='../S/7000.html#L26' title='Defined at 26 in benchtests/json-lib.h.'>json_ctx</a>, "results");
+<a id='L94' name='L94'></a>  94   <strong class='reserved'>for</strong> (<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> = <a href='../D/14727.html' title='Multiple defined in 6 places.'>START_SIZE</a>; <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> &lt;= <a href='../D/7998.html' title='Multiple defined in 15 places.'>MIN_PAGE_SIZE</a>; <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> &lt;&lt;= 1)
+<a id='L95' name='L95'></a>  95     <em class='brace'>{</em>
+<a id='L96' name='L96'></a>  96       <a href='../D/29701.html' title='Multiple defined in 1421 places.'>do_test</a> (&amp;<a href='../S/7000.html#L26' title='Defined at 26 in benchtests/json-lib.h.'>json_ctx</a>, 65, <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>);
+<a id='L97' name='L97'></a>  97       <a href='../D/29701.html' title='Multiple defined in 1421 places.'>do_test</a> (&amp;<a href='../S/7000.html#L26' title='Defined at 26 in benchtests/json-lib.h.'>json_ctx</a>, 65, <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> + 1);
+<a id='L98' name='L98'></a>  98     <em class='brace'>}</em>
+<a id='L99' name='L99'></a>  99 
+<a id='L100' name='L100'></a> 100   <strong class='reserved'>for</strong> (<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> = <a href='../D/14727.html' title='Multiple defined in 6 places.'>START_SIZE</a>; <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> &lt;= <a href='../D/7998.html' title='Multiple defined in 15 places.'>MIN_PAGE_SIZE</a>; <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> &lt;&lt;= 1)
+<a id='L101' name='L101'></a> 101     <em class='brace'>{</em>
+<a id='L102' name='L102'></a> 102       <a href='../D/29701.html' title='Multiple defined in 1421 places.'>do_test</a> (&amp;<a href='../S/7000.html#L26' title='Defined at 26 in benchtests/json-lib.h.'>json_ctx</a>, 0, <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>);
+<a id='L103' name='L103'></a> 103       <a href='../D/29701.html' title='Multiple defined in 1421 places.'>do_test</a> (&amp;<a href='../S/7000.html#L26' title='Defined at 26 in benchtests/json-lib.h.'>json_ctx</a>, 0, <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> + 1);
+<a id='L104' name='L104'></a> 104     <em class='brace'>}</em>
+<a id='L105' name='L105'></a> 105 
+<a id='L106' name='L106'></a> 106   <a href='../S/7007.html#L157' title='Defined at 157 in benchtests/json-lib.c.'>json_array_end</a> (&amp;<a href='../S/7000.html#L26' title='Defined at 26 in benchtests/json-lib.h.'>json_ctx</a>);
+<a id='L107' name='L107'></a> 107   <a href='../S/7007.html#L78' title='Defined at 78 in benchtests/json-lib.c.'>json_attr_object_end</a> (&amp;<a href='../S/7000.html#L26' title='Defined at 26 in benchtests/json-lib.h.'>json_ctx</a>);
+<a id='L108' name='L108'></a> 108   <a href='../S/7007.html#L78' title='Defined at 78 in benchtests/json-lib.c.'>json_attr_object_end</a> (&amp;<a href='../S/7000.html#L26' title='Defined at 26 in benchtests/json-lib.h.'>json_ctx</a>);
+<a id='L109' name='L109'></a> 109   <a href='../S/7007.html#L54' title='Defined at 54 in benchtests/json-lib.c.'>json_document_end</a> (&amp;<a href='../S/7000.html#L26' title='Defined at 26 in benchtests/json-lib.h.'>json_ctx</a>);
+<a id='L110' name='L110'></a> 110 
+<a id='L111' name='L111'></a> 111   <strong class='reserved'>return</strong> <a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a>;
+<a id='L112' name='L112'></a> 112 <em class='brace'>}</em>
+<a id='L113' name='L113'></a> 113 
+<a id='L114' name='L114'></a> 114 <em class='sharp'>#include</em> &lt;support/test-driver.c&gt;
+<a id='L115' name='L115'></a> 115 
+<a id='L116' name='L116'></a> 116 <em class='sharp'>#define</em> <a href='../R/21251.html' title='Multiple referred from 31 places.'>libc_hidden_builtin_def</a>(<a href='../D/17455.html' title='Multiple defined in 3 places.'>X</a>)
+<a id='L117' name='L117'></a> 117 <em class='sharp'>#define</em> <a href='../R/21255.html' title='Multiple referred from 702 places.'>libc_hidden_def</a>(<a href='../D/17455.html' title='Multiple defined in 3 places.'>X</a>)
+<a id='L118' name='L118'></a> 118 <em class='sharp'>#define</em> <a href='../R/21262.html' title='Multiple referred from 110 places.'>libc_hidden_weak</a>(<a href='../D/17455.html' title='Multiple defined in 3 places.'>X</a>)
+<a id='L119' name='L119'></a> 119 <em class='sharp'>#define</em> <a href='../R/26489.html' title='Multiple referred from 1703 places.'>weak_alias</a>(<a href='../D/17455.html' title='Multiple defined in 3 places.'>X</a>,<a href='../D/17547.html' title='Multiple defined in 3 places.'>Y</a>)
+<a id='L120' name='L120'></a> 120 <em class='sharp'>#undef</em> <a href='../R/4855.html' title='Multiple referred from 35 places.'>MEMSET</a>
+<a id='L121' name='L121'></a> 121 <em class='sharp'>#define</em> <a href='../R/4855.html' title='Multiple referred from 35 places.'>MEMSET</a> <a href='../S/7020.html#L24' title='Defined at 24 in benchtests/bench-memset.c.'>generic_memset</a>
+<a id='L122' name='L122'></a> 122 <em class='sharp'>#include</em> &lt;string/memset.c&gt;
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L31'>[^]</a><a href='#L72'>[v]</a><a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

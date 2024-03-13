@@ -1,0 +1,381 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>sysdeps/sparc/sparc64/strncmp.S</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18977.html'>sysdeps</a>/<a href='../files/19227.html'>sparc</a>/<a href='../files/19240.html'>sparc64</a>/strncmp.S</h2>
+<em class='comment'>/* [&lt;][&gt;][^][v][top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* Compare no more than N characters of S1 and S2, returning less than,</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   equal to or greater than zero if S1 is lexicographically less than,</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'>   equal to or greater than S2.</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'>   For SPARC v9.</em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   Copyright (C) 1997-2022 Free Software Foundation, Inc.</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'></em>
+<a id='L8' name='L8'></a>   8 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'></em>
+<a id='L13' name='L13'></a>  13 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L17' name='L17'></a>  17 <em class='comment'></em>
+<a id='L18' name='L18'></a>  18 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L19' name='L19'></a>  19 <em class='comment'>   License along with the GNU C Library; if not, see</em>
+<a id='L20' name='L20'></a>  20 <em class='comment'>   &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L21' name='L21'></a>  21 
+<a id='L22' name='L22'></a>  22 <em class='sharp'>#include</em> &lt;<a href='../I/5967.html'>sysdep.h</a>&gt;
+<a id='L23' name='L23'></a>  23 <em class='sharp'>#include</em> &lt;asm/asi.h&gt;
+<a id='L24' name='L24'></a>  24 <em class='sharp'>#ifndef</em> <a href='../D/17486.html' title='Multiple defined in 43 places.'>XCC</a>
+<a id='L25' name='L25'></a>  25 <em class='sharp'>#define</em> <a href='../R/9775.html' title='Multiple referred from 23 places.'>XCC</a> xcc
+<a id='L26' name='L26'></a>  26 <em class='sharp'>#define</em> <a href='../R/9253.html' title='Multiple referred from 11 places.'>USE_BPR</a>
+<a id='L27' name='L27'></a>  27     .register   %g2, #scratch
+<a id='L28' name='L28'></a>  28     .register   %g3, #scratch
+<a id='L29' name='L29'></a>  29     .register   %g6, #scratch
+<a id='L30' name='L30'></a>  30 <em class='sharp'>#endif</em>
+<a id='L31' name='L31'></a>  31 
+<a id='L32' name='L32'></a>  32     <em class='comment'>/* Normally, this uses</em>
+<a id='L33' name='L33'></a>  33 <em class='comment'>       ((xword - 0x0101010101010101) &amp; 0x8080808080808080) test</em>
+<a id='L34' name='L34'></a>  34 <em class='comment'>       to find out if any byte in xword could be zero. This is fast, but</em>
+<a id='L35' name='L35'></a>  35 <em class='comment'>       also gives false alarm for any byte in range 0x81-0xff. It does</em>
+<a id='L36' name='L36'></a>  36 <em class='comment'>       not matter for correctness, as if this test tells us there could</em>
+<a id='L37' name='L37'></a>  37 <em class='comment'>       be some zero byte, we check it byte by byte, but if bytes with</em>
+<a id='L38' name='L38'></a>  38 <em class='comment'>       high bits set are common in the strings, then this will give poor</em>
+<a id='L39' name='L39'></a>  39 <em class='comment'>       performance. You can #define EIGHTBIT_NOT_RARE and the algorithm</em>
+<a id='L40' name='L40'></a>  40 <em class='comment'>       will use one tick slower, but more precise test</em>
+<a id='L41' name='L41'></a>  41 <em class='comment'>       ((xword - 0x0101010101010101) &amp; (~xword) &amp; 0x8080808080808080),</em>
+<a id='L42' name='L42'></a>  42 <em class='comment'>       which does not give any false alarms (but if some bits are set,</em>
+<a id='L43' name='L43'></a>  43 <em class='comment'>       one cannot assume from it which bytes are zero and which are not).</em>
+<a id='L44' name='L44'></a>  44 <em class='comment'>       It is yet to be measured, what is the correct default for glibc</em>
+<a id='L45' name='L45'></a>  45 <em class='comment'>       in these days for an average user.</em>
+<a id='L46' name='L46'></a>  46 <em class='comment'>     */</em>
+<a id='L47' name='L47'></a>  47 
+<a id='L48' name='L48'></a>  48     .text
+<a id='L49' name='L49'></a>  49     .align      32
+<a id='L50' name='L50'></a>  50 <a href='../D/3651.html' title='Multiple defined in 54 places.'>ENTRY</a>(<a href='../R/24766.html' title='Multiple referred from 226 places.'>strncmp</a>)
+<a id='L51' name='L51'></a>  51 <em class='sharp'>#ifdef</em> <a href='../D/16796.html' title='Multiple defined in 14 places.'>USE_BPR</a>
+<a id='L52' name='L52'></a>  52     brz,pn      %o2, 4f             <em class='comment'>/* CTI+IEU1 Group       */</em>
+<a id='L53' name='L53'></a>  53 <em class='sharp'>#else</em>
+<a id='L54' name='L54'></a>  54     tst     %o2             <em class='comment'>/* IEU1     Group       */</em>
+<a id='L55' name='L55'></a>  55     be,pn       %XCC, 4f            <em class='comment'>/* CTI              */</em>
+<a id='L56' name='L56'></a>  56 <em class='sharp'>#endif</em>
+<a id='L57' name='L57'></a>  57      sethi      %hi(0x1010101), %g1     <em class='comment'>/* IEU0             */</em>
+<a id='L58' name='L58'></a>  58     andcc       %o0, 7, %g0         <em class='comment'>/* IEU1     Group       */</em>
+<a id='L59' name='L59'></a>  59     bne,pn      %icc, 9f            <em class='comment'>/* CTI              */</em>
+<a id='L60' name='L60'></a>  60 
+<a id='L61' name='L61'></a>  61      or     %g1, %lo(0x1010101), %g1    <em class='comment'>/* IEU0             */</em>
+<a id='L62' name='L62'></a>  62     andcc       %o1, 7, %g3         <em class='comment'>/* IEU1     Group       */</em>
+<a id='L63' name='L63'></a>  63     bne,pn      %icc, 11f           <em class='comment'>/* CTI              */</em>
+<a id='L64' name='L64'></a>  64      sllx       %g1, 32, %g2            <em class='comment'>/* IEU0             */</em>
+<a id='L65' name='L65'></a>  65 
+<a id='L66' name='L66'></a>  66     ldx     [%o0], %g4          <em class='comment'>/* Load     Group       */</em>
+<a id='L67' name='L67'></a>  67     or      %g1, %g2, %g1           <em class='comment'>/* IEU0             */</em>
+<a id='L68' name='L68'></a>  68 1:  ldx     [%o1], %o3          <em class='comment'>/* Load     Group       */</em>
+<a id='L69' name='L69'></a>  69     sllx        %g1, 7, %g2         <em class='comment'>/* IEU0             */</em>
+<a id='L70' name='L70'></a>  70 
+<a id='L71' name='L71'></a>  71     add     %o0, 8, %o0         <em class='comment'>/* IEU1             */</em>
+<a id='L72' name='L72'></a>  72 2:  subcc       %o2, 8, %o2         <em class='comment'>/* IEU1     Group       */</em>
+<a id='L73' name='L73'></a>  73     bcs,pn      %XCC, 5f            <em class='comment'>/* CTI              */</em>
+<a id='L74' name='L74'></a>  74      add        %o1, 8, %o1         <em class='comment'>/* IEU0             */</em>
+<a id='L75' name='L75'></a>  75 
+<a id='L76' name='L76'></a>  76     sub     %g4, %g1, %g3           <em class='comment'>/* IEU0     Group       */</em>
+<a id='L77' name='L77'></a>  77     subcc       %g4, %o3, %o4           <em class='comment'>/* IEU1             */</em>
+<a id='L78' name='L78'></a>  78 <em class='sharp'>#ifdef</em> <a href='../Y/343.html' title='Multiple used in 29 places.'>EIGHTBIT_NOT_RARE</a>
+<a id='L79' name='L79'></a>  79     andn        %g3, %g4, %g6           <em class='comment'>/* IEU0     Group       */</em>
+<a id='L80' name='L80'></a>  80 <em class='sharp'>#endif</em>
+<a id='L81' name='L81'></a>  81     bne,pn      %xcc, 6f            <em class='comment'>/* CTI              */</em>
+<a id='L82' name='L82'></a>  82      ldxa       [%o0] ASI_PNF, %g4      <em class='comment'>/* Load     Group       */</em>
+<a id='L83' name='L83'></a>  83 
+<a id='L84' name='L84'></a>  84     add     %o0, 8, %o0         <em class='comment'>/* IEU0             */</em>
+<a id='L85' name='L85'></a>  85 <em class='sharp'>#ifdef</em> <a href='../Y/343.html' title='Multiple used in 29 places.'>EIGHTBIT_NOT_RARE</a>
+<a id='L86' name='L86'></a>  86     andcc       %g6, %g2, %g0           <em class='comment'>/* IEU1             */</em>
+<a id='L87' name='L87'></a>  87 <em class='sharp'>#else</em>
+<a id='L88' name='L88'></a>  88     andcc       %g3, %g2, %g0           <em class='comment'>/* IEU1             */</em>
+<a id='L89' name='L89'></a>  89 <em class='sharp'>#endif</em>
+<a id='L90' name='L90'></a>  90     be,a,pt     %xcc, 2b            <em class='comment'>/* CTI              */</em>
+<a id='L91' name='L91'></a>  91      ldxa       [%o1] ASI_PNF, %o3      <em class='comment'>/* Load     Group       */</em>
+<a id='L92' name='L92'></a>  92 
+<a id='L93' name='L93'></a>  93     addcc       %g3, %g1, %o4           <em class='comment'>/* IEU1             */</em>
+<a id='L94' name='L94'></a>  94 <em class='sharp'>#ifdef</em> <a href='../Y/343.html' title='Multiple used in 29 places.'>EIGHTBIT_NOT_RARE</a>
+<a id='L95' name='L95'></a>  95     srlx        %g6, 32, %g6            <em class='comment'>/* IEU0             */</em>
+<a id='L96' name='L96'></a>  96     andcc       %g6, %g2, %g0           <em class='comment'>/* IEU1     Group       */</em>
+<a id='L97' name='L97'></a>  97 <em class='sharp'>#else</em>
+<a id='L98' name='L98'></a>  98     srlx        %g3, 32, %g3            <em class='comment'>/* IEU0             */</em>
+<a id='L99' name='L99'></a>  99     andcc       %g3, %g2, %g0           <em class='comment'>/* IEU1     Group       */</em>
+<a id='L100' name='L100'></a> 100 <em class='sharp'>#endif</em>
+<a id='L101' name='L101'></a> 101     be,pt       %xcc, 3f            <em class='comment'>/* CTI              */</em>
+<a id='L102' name='L102'></a> 102 
+<a id='L103' name='L103'></a> 103      srlx       %o4, 56, %o5            <em class='comment'>/* IEU0             */</em>
+<a id='L104' name='L104'></a> 104     andcc       %o5, 0xff, %g0          <em class='comment'>/* IEU1     Group       */</em>
+<a id='L105' name='L105'></a> 105     be,pn       %icc, 4f            <em class='comment'>/* CTI              */</em>
+<a id='L106' name='L106'></a> 106      srlx       %o4, 48, %o5            <em class='comment'>/* IEU0             */</em>
+<a id='L107' name='L107'></a> 107 
+<a id='L108' name='L108'></a> 108     andcc       %o5, 0xff, %g0          <em class='comment'>/* IEU1     Group       */</em>
+<a id='L109' name='L109'></a> 109     be,pn       %icc, 4f            <em class='comment'>/* CTI              */</em>
+<a id='L110' name='L110'></a> 110      srlx       %o4, 40, %o5            <em class='comment'>/* IEU0             */</em>
+<a id='L111' name='L111'></a> 111     andcc       %o5, 0xff, %g0          <em class='comment'>/* IEU1     Group       */</em>
+<a id='L112' name='L112'></a> 112 
+<a id='L113' name='L113'></a> 113     be,pn       %icc, 4f            <em class='comment'>/* CTI              */</em>
+<a id='L114' name='L114'></a> 114      srlx       %o4, 32, %o5            <em class='comment'>/* IEU0             */</em>
+<a id='L115' name='L115'></a> 115     andcc       %o5, 0xff, %g0          <em class='comment'>/* IEU1     Group       */</em>
+<a id='L116' name='L116'></a> 116     be,pn       %icc, 4f            <em class='comment'>/* CTI              */</em>
+<a id='L117' name='L117'></a> 117 
+<a id='L118' name='L118'></a> 118 3:   srlx       %o4, 24, %o5            <em class='comment'>/* IEU0             */</em>
+<a id='L119' name='L119'></a> 119     andcc       %o5, 0xff, %g0          <em class='comment'>/* IEU1     Group       */</em>
+<a id='L120' name='L120'></a> 120     be,pn       %icc, 4f            <em class='comment'>/* CTI              */</em>
+<a id='L121' name='L121'></a> 121      srlx       %o4, 16, %o5            <em class='comment'>/* IEU0             */</em>
+<a id='L122' name='L122'></a> 122 
+<a id='L123' name='L123'></a> 123     andcc       %o5, 0xff, %g0          <em class='comment'>/* IEU1     Group       */</em>
+<a id='L124' name='L124'></a> 124     be,pn       %icc, 4f            <em class='comment'>/* CTI              */</em>
+<a id='L125' name='L125'></a> 125      srlx       %o4, 8, %o5         <em class='comment'>/* IEU0             */</em>
+<a id='L126' name='L126'></a> 126     andcc       %o5, 0xff, %g0          <em class='comment'>/* IEU1     Group       */</em>
+<a id='L127' name='L127'></a> 127 
+<a id='L128' name='L128'></a> 128     be,pn       %icc, 4f            <em class='comment'>/* CTI              */</em>
+<a id='L129' name='L129'></a> 129     andcc       %o4, 0xff, %g0          <em class='comment'>/* IEU1     Group       */</em>
+<a id='L130' name='L130'></a> 130     bne,a,pn    %icc, 2b            <em class='comment'>/* CTI              */</em>
+<a id='L131' name='L131'></a> 131      ldxa       [%o1] ASI_PNF, %o3      <em class='comment'>/* Load             */</em>
+<a id='L132' name='L132'></a> 132 
+<a id='L133' name='L133'></a> 133 4:  retl                        <em class='comment'>/* CTI+IEU1 Group       */</em>
+<a id='L134' name='L134'></a> 134      clr        %o0             <em class='comment'>/* IEU0             */</em>
+<a id='L135' name='L135'></a> 135 
+<a id='L136' name='L136'></a> 136     .align      16
+<a id='L137' name='L137'></a> 137 5:  srlx        %g4, 56, %o4            <em class='comment'>/* IEU0     Group       */</em>
+<a id='L138' name='L138'></a> 138     cmp     %o2, -8             <em class='comment'>/* IEU1             */</em>
+<a id='L139' name='L139'></a> 139     be,pn       %XCC, 4b            <em class='comment'>/* CTI              */</em>
+<a id='L140' name='L140'></a> 140      srlx       %o3, 56, %o5            <em class='comment'>/* IEU0     Group       */</em>
+<a id='L141' name='L141'></a> 141 
+<a id='L142' name='L142'></a> 142     andcc       %o4, 0xff, %g0          <em class='comment'>/* IEU1             */</em>
+<a id='L143' name='L143'></a> 143     be,pn       %xcc, 8f            <em class='comment'>/* CTI              */</em>
+<a id='L144' name='L144'></a> 144      subcc      %o4, %o5, %o4           <em class='comment'>/* IEU1     Group       */</em>
+<a id='L145' name='L145'></a> 145     bne,pn      %xcc, 8f            <em class='comment'>/* CTI              */</em>
+<a id='L146' name='L146'></a> 146 
+<a id='L147' name='L147'></a> 147      srlx       %o3, 48, %o5            <em class='comment'>/* IEU0             */</em>
+<a id='L148' name='L148'></a> 148     cmp     %o2, -7             <em class='comment'>/* IEU1     Group       */</em>
+<a id='L149' name='L149'></a> 149     be,pn       %XCC, 4b            <em class='comment'>/* CTI              */</em>
+<a id='L150' name='L150'></a> 150      srlx       %g4, 48, %o4            <em class='comment'>/* IEU0             */</em>
+<a id='L151' name='L151'></a> 151 
+<a id='L152' name='L152'></a> 152     andcc       %o4, 0xff, %g0          <em class='comment'>/* IEU1     Group       */</em>
+<a id='L153' name='L153'></a> 153     be,pn       %xcc, 8f            <em class='comment'>/* CTI              */</em>
+<a id='L154' name='L154'></a> 154      subcc      %o4, %o5, %o4           <em class='comment'>/* IEU1     Group       */</em>
+<a id='L155' name='L155'></a> 155     bne,pn      %xcc, 8f            <em class='comment'>/* CTI              */</em>
+<a id='L156' name='L156'></a> 156 
+<a id='L157' name='L157'></a> 157      srlx       %o3, 40, %o5            <em class='comment'>/* IEU0             */</em>
+<a id='L158' name='L158'></a> 158     cmp     %o2, -6             <em class='comment'>/* IEU1     Group       */</em>
+<a id='L159' name='L159'></a> 159     be,pn       %XCC, 4b            <em class='comment'>/* CTI              */</em>
+<a id='L160' name='L160'></a> 160      srlx       %g4, 40, %o4            <em class='comment'>/* IEU0             */</em>
+<a id='L161' name='L161'></a> 161 
+<a id='L162' name='L162'></a> 162     andcc       %o4, 0xff, %g0          <em class='comment'>/* IEU1     Group       */</em>
+<a id='L163' name='L163'></a> 163     be,pn       %xcc, 8f            <em class='comment'>/* CTI              */</em>
+<a id='L164' name='L164'></a> 164      subcc      %o4, %o5, %o4           <em class='comment'>/* IEU1     Group       */</em>
+<a id='L165' name='L165'></a> 165     bne,pn      %xcc, 8f            <em class='comment'>/* CTI              */</em>
+<a id='L166' name='L166'></a> 166 
+<a id='L167' name='L167'></a> 167      srlx       %o3, 32, %o5            <em class='comment'>/* IEU0             */</em>
+<a id='L168' name='L168'></a> 168     cmp     %o2, -5             <em class='comment'>/* IEU1     Group       */</em>
+<a id='L169' name='L169'></a> 169     be,pn       %XCC, 4b            <em class='comment'>/* CTI              */</em>
+<a id='L170' name='L170'></a> 170      srlx       %g4, 32, %o4            <em class='comment'>/* IEU0             */</em>
+<a id='L171' name='L171'></a> 171 
+<a id='L172' name='L172'></a> 172     andcc       %o4, 0xff, %g0          <em class='comment'>/* IEU1     Group       */</em>
+<a id='L173' name='L173'></a> 173     be,pn       %xcc, 8f            <em class='comment'>/* CTI              */</em>
+<a id='L174' name='L174'></a> 174      subcc      %o4, %o5, %o4           <em class='comment'>/* IEU1     Group       */</em>
+<a id='L175' name='L175'></a> 175     bne,pn      %xcc, 8f            <em class='comment'>/* CTI              */</em>
+<a id='L176' name='L176'></a> 176 
+<a id='L177' name='L177'></a> 177      srlx       %o3, 24, %o5            <em class='comment'>/* IEU0             */</em>
+<a id='L178' name='L178'></a> 178     cmp     %o2, -4             <em class='comment'>/* IEU1     Group       */</em>
+<a id='L179' name='L179'></a> 179     be,pn       %XCC, 4b            <em class='comment'>/* CTI              */</em>
+<a id='L180' name='L180'></a> 180      srlx       %g4, 24, %o4            <em class='comment'>/* IEU0             */</em>
+<a id='L181' name='L181'></a> 181 
+<a id='L182' name='L182'></a> 182     andcc       %o4, 0xff, %g0          <em class='comment'>/* IEU1     Group       */</em>
+<a id='L183' name='L183'></a> 183     be,pn       %xcc, 8f            <em class='comment'>/* CTI              */</em>
+<a id='L184' name='L184'></a> 184      subcc      %o4, %o5, %o4           <em class='comment'>/* IEU1     Group       */</em>
+<a id='L185' name='L185'></a> 185     bne,pn      %xcc, 8f            <em class='comment'>/* CTI              */</em>
+<a id='L186' name='L186'></a> 186 
+<a id='L187' name='L187'></a> 187      srlx       %o3, 16, %o5            <em class='comment'>/* IEU0             */</em>
+<a id='L188' name='L188'></a> 188     cmp     %o2, -3             <em class='comment'>/* IEU1     Group       */</em>
+<a id='L189' name='L189'></a> 189     be,pn       %XCC, 4b            <em class='comment'>/* CTI              */</em>
+<a id='L190' name='L190'></a> 190      srlx       %g4, 16, %o4            <em class='comment'>/* IEU0             */</em>
+<a id='L191' name='L191'></a> 191 
+<a id='L192' name='L192'></a> 192     andcc       %o4, 0xff, %g0          <em class='comment'>/* IEU1     Group       */</em>
+<a id='L193' name='L193'></a> 193     be,pn       %xcc, 8f            <em class='comment'>/* CTI              */</em>
+<a id='L194' name='L194'></a> 194      subcc      %o4, %o5, %o4           <em class='comment'>/* IEU1     Group       */</em>
+<a id='L195' name='L195'></a> 195     bne,pn      %xcc, 8f            <em class='comment'>/* CTI              */</em>
+<a id='L196' name='L196'></a> 196 
+<a id='L197' name='L197'></a> 197      srlx       %o3, 8, %o5         <em class='comment'>/* IEU0             */</em>
+<a id='L198' name='L198'></a> 198     cmp     %o2, -2             <em class='comment'>/* IEU1     Group       */</em>
+<a id='L199' name='L199'></a> 199     be,pn       %XCC, 4b            <em class='comment'>/* CTI              */</em>
+<a id='L200' name='L200'></a> 200      srlx       %g4, 8, %o4         <em class='comment'>/* IEU0             */</em>
+<a id='L201' name='L201'></a> 201 
+<a id='L202' name='L202'></a> 202     retl                        <em class='comment'>/* CTI+IEU1 Group       */</em>
+<a id='L203' name='L203'></a> 203      sub        %o4, %o5, %o0           <em class='comment'>/* IEU0             */</em>
+<a id='L204' name='L204'></a> 204 6:  addcc       %o3, %o4, %g4           <em class='comment'>/* IEU1             */</em>
+<a id='L205' name='L205'></a> 205 7:  srlx        %o3, 56, %o5            <em class='comment'>/* IEU0             */</em>
+<a id='L206' name='L206'></a> 206 
+<a id='L207' name='L207'></a> 207     srlx        %g4, 56, %o4            <em class='comment'>/* IEU0     Group       */</em>
+<a id='L208' name='L208'></a> 208     andcc       %o4, 0xff, %g0          <em class='comment'>/* IEU1     Group       */</em>
+<a id='L209' name='L209'></a> 209     be,pn       %xcc, 8f            <em class='comment'>/* CTI              */</em>
+<a id='L210' name='L210'></a> 210      subcc      %o4, %o5, %o4           <em class='comment'>/* IEU1     Group       */</em>
+<a id='L211' name='L211'></a> 211 
+<a id='L212' name='L212'></a> 212     bne,pn      %xcc, 8f            <em class='comment'>/* CTI              */</em>
+<a id='L213' name='L213'></a> 213      srlx       %o3, 48, %o5            <em class='comment'>/* IEU0             */</em>
+<a id='L214' name='L214'></a> 214     srlx        %g4, 48, %o4            <em class='comment'>/* IEU0     Group       */</em>
+<a id='L215' name='L215'></a> 215     andcc       %o4, 0xff, %g0          <em class='comment'>/* IEU1     Group       */</em>
+<a id='L216' name='L216'></a> 216 
+<a id='L217' name='L217'></a> 217     be,pn       %xcc, 8f            <em class='comment'>/* CTI              */</em>
+<a id='L218' name='L218'></a> 218      subcc      %o4, %o5, %o4           <em class='comment'>/* IEU1     Group       */</em>
+<a id='L219' name='L219'></a> 219     bne,pn      %xcc, 8f            <em class='comment'>/* CTI              */</em>
+<a id='L220' name='L220'></a> 220      srlx       %o3, 40, %o5            <em class='comment'>/* IEU0             */</em>
+<a id='L221' name='L221'></a> 221 
+<a id='L222' name='L222'></a> 222     srlx        %g4, 40, %o4            <em class='comment'>/* IEU0     Group       */</em>
+<a id='L223' name='L223'></a> 223     andcc       %o4, 0xff, %g0          <em class='comment'>/* IEU1     Group       */</em>
+<a id='L224' name='L224'></a> 224     be,pn       %xcc, 8f            <em class='comment'>/* CTI              */</em>
+<a id='L225' name='L225'></a> 225      subcc      %o4, %o5, %o4           <em class='comment'>/* IEU1     Group       */</em>
+<a id='L226' name='L226'></a> 226 
+<a id='L227' name='L227'></a> 227     bne,pn      %xcc, 8f            <em class='comment'>/* CTI              */</em>
+<a id='L228' name='L228'></a> 228      srlx       %o3, 32, %o5            <em class='comment'>/* IEU0             */</em>
+<a id='L229' name='L229'></a> 229     srlx        %g4, 32, %o4            <em class='comment'>/* IEU0     Group       */</em>
+<a id='L230' name='L230'></a> 230     andcc       %o4, 0xff, %g0          <em class='comment'>/* IEU1     Group       */</em>
+<a id='L231' name='L231'></a> 231 
+<a id='L232' name='L232'></a> 232     be,pn       %xcc, 8f            <em class='comment'>/* CTI              */</em>
+<a id='L233' name='L233'></a> 233      subcc      %o4, %o5, %o4           <em class='comment'>/* IEU1     Group       */</em>
+<a id='L234' name='L234'></a> 234     bne,pn      %xcc, 8f            <em class='comment'>/* CTI              */</em>
+<a id='L235' name='L235'></a> 235      srlx       %o3, 24, %o5            <em class='comment'>/* IEU0             */</em>
+<a id='L236' name='L236'></a> 236 
+<a id='L237' name='L237'></a> 237     srlx        %g4, 24, %o4            <em class='comment'>/* IEU0     Group       */</em>
+<a id='L238' name='L238'></a> 238     andcc       %o4, 0xff, %g0          <em class='comment'>/* IEU1     Group       */</em>
+<a id='L239' name='L239'></a> 239     be,pn       %xcc, 8f            <em class='comment'>/* CTI              */</em>
+<a id='L240' name='L240'></a> 240      subcc      %o4, %o5, %o4           <em class='comment'>/* IEU1     Group       */</em>
+<a id='L241' name='L241'></a> 241 
+<a id='L242' name='L242'></a> 242     bne,pn      %xcc, 8f            <em class='comment'>/* CTI              */</em>
+<a id='L243' name='L243'></a> 243      srlx       %o3, 16, %o5            <em class='comment'>/* IEU0             */</em>
+<a id='L244' name='L244'></a> 244     srlx        %g4, 16, %o4            <em class='comment'>/* IEU0     Group       */</em>
+<a id='L245' name='L245'></a> 245     andcc       %o4, 0xff, %g0          <em class='comment'>/* IEU1     Group       */</em>
+<a id='L246' name='L246'></a> 246 
+<a id='L247' name='L247'></a> 247     be,pn       %xcc, 8f            <em class='comment'>/* CTI              */</em>
+<a id='L248' name='L248'></a> 248      subcc      %o4, %o5, %o4           <em class='comment'>/* IEU1     Group       */</em>
+<a id='L249' name='L249'></a> 249     bne,pn      %xcc, 8f            <em class='comment'>/* CTI              */</em>
+<a id='L250' name='L250'></a> 250      srlx       %o3, 8, %o5         <em class='comment'>/* IEU0             */</em>
+<a id='L251' name='L251'></a> 251 
+<a id='L252' name='L252'></a> 252     srlx        %g4, 8, %o4         <em class='comment'>/* IEU0     Group       */</em>
+<a id='L253' name='L253'></a> 253     andcc       %o4, 0xff, %g0          <em class='comment'>/* IEU1     Group       */</em>
+<a id='L254' name='L254'></a> 254     be,pn       %xcc, 8f            <em class='comment'>/* CTI              */</em>
+<a id='L255' name='L255'></a> 255      subcc      %o4, %o5, %o4           <em class='comment'>/* IEU1     Group       */</em>
+<a id='L256' name='L256'></a> 256 
+<a id='L257' name='L257'></a> 257     retl                        <em class='comment'>/* CTI+IEU1 Group       */</em>
+<a id='L258' name='L258'></a> 258      sub        %g4, %o3, %o0           <em class='comment'>/* IEU0             */</em>
+<a id='L259' name='L259'></a> 259 8:  retl                        <em class='comment'>/* CTI+IEU1 Group       */</em>
+<a id='L260' name='L260'></a> 260      mov        %o4, %o0            <em class='comment'>/* IEU0             */</em>
+<a id='L261' name='L261'></a> 261 
+<a id='L262' name='L262'></a> 262 9:  ldub        [%o0], %g4          <em class='comment'>/* Load     Group       */</em>
+<a id='L263' name='L263'></a> 263     add     %o0, 1, %o0         <em class='comment'>/* IEU0             */</em>
+<a id='L264' name='L264'></a> 264     ldub        [%o1], %o3          <em class='comment'>/* Load     Group       */</em>
+<a id='L265' name='L265'></a> 265     sllx        %g1, 32, %g2            <em class='comment'>/* IEU0             */</em>
+<a id='L266' name='L266'></a> 266 
+<a id='L267' name='L267'></a> 267 10: subcc       %o2, 1, %o2         <em class='comment'>/* IEU1     Group       */</em>
+<a id='L268' name='L268'></a> 268     be,pn       %XCC, 8b            <em class='comment'>/* CTI              */</em>
+<a id='L269' name='L269'></a> 269      sub        %g4, %o3, %o4           <em class='comment'>/* IEU0             */</em>
+<a id='L270' name='L270'></a> 270     add     %o1, 1, %o1         <em class='comment'>/* IEU0     Group       */</em>
+<a id='L271' name='L271'></a> 271 
+<a id='L272' name='L272'></a> 272     cmp     %g4, %o3            <em class='comment'>/* IEU1             */</em>
+<a id='L273' name='L273'></a> 273     bne,pn      %xcc, 8b            <em class='comment'>/* CTI              */</em>
+<a id='L274' name='L274'></a> 274      lduba      [%o0] ASI_PNF, %g4      <em class='comment'>/* Load     Group       */</em>
+<a id='L275' name='L275'></a> 275     andcc       %o3, 0xff, %g0          <em class='comment'>/* IEU1             */</em>
+<a id='L276' name='L276'></a> 276 
+<a id='L277' name='L277'></a> 277     be,pn       %icc, 4b            <em class='comment'>/* CTI              */</em>
+<a id='L278' name='L278'></a> 278      lduba      [%o1] ASI_PNF, %o3      <em class='comment'>/* Load     Group       */</em>
+<a id='L279' name='L279'></a> 279     andcc       %o0, 7, %g0         <em class='comment'>/* IEU1             */</em>
+<a id='L280' name='L280'></a> 280     bne,a,pn    %icc, 10b           <em class='comment'>/* CTI              */</em>
+<a id='L281' name='L281'></a> 281 
+<a id='L282' name='L282'></a> 282      add        %o0, 1, %o0         <em class='comment'>/* IEU0     Group       */</em>
+<a id='L283' name='L283'></a> 283     or      %g1, %g2, %g1           <em class='comment'>/* IEU1             */</em>
+<a id='L284' name='L284'></a> 284     andcc       %o1, 7, %g3         <em class='comment'>/* IEU1     Group       */</em>
+<a id='L285' name='L285'></a> 285     be,pn       %icc, 1b            <em class='comment'>/* CTI              */</em>
+<a id='L286' name='L286'></a> 286 
+<a id='L287' name='L287'></a> 287      ldxa       [%o0] ASI_PNF, %g4      <em class='comment'>/* Load             */</em>
+<a id='L288' name='L288'></a> 288 11: sllx        %g3, 3, %g5         <em class='comment'>/* IEU0     Group       */</em>
+<a id='L289' name='L289'></a> 289     mov     64, %g6             <em class='comment'>/* IEU1             */</em>
+<a id='L290' name='L290'></a> 290     or      %g1, %g2, %g1           <em class='comment'>/* IEU0     Group       */</em>
+<a id='L291' name='L291'></a> 291     sub     %o1, %g3, %o1           <em class='comment'>/* IEU1             */</em>
+<a id='L292' name='L292'></a> 292 
+<a id='L293' name='L293'></a> 293     sub     %g6, %g5, %g6           <em class='comment'>/* IEU0     Group       */</em>
+<a id='L294' name='L294'></a> 294     ldxa        [%o1] ASI_PNF, %o4      <em class='comment'>/* Load             */</em>
+<a id='L295' name='L295'></a> 295     sllx        %g1, 7, %g2         <em class='comment'>/* IEU1             */</em>
+<a id='L296' name='L296'></a> 296     add     %o1, 8, %o1         <em class='comment'>/* IEU0     Group       */</em>
+<a id='L297' name='L297'></a> 297                             <em class='comment'>/* %g1 = 0101010101010101</em>
+<a id='L298' name='L298'></a> 298 <em class='comment'>                               %g2 = 8080808080808080</em>
+<a id='L299' name='L299'></a> 299 <em class='comment'>                               %g3 = %o1 alignment</em>
+<a id='L300' name='L300'></a> 300 <em class='comment'>                               %g5 = number of bits to shift left</em>
+<a id='L301' name='L301'></a> 301 <em class='comment'>                               %g6 = number of bits to shift right */</em>
+<a id='L302' name='L302'></a> 302 
+<a id='L303' name='L303'></a> 303 12: sllx        %o4, %g5, %o3           <em class='comment'>/* IEU0     Group       */</em>
+<a id='L304' name='L304'></a> 304     ldxa        [%o1] ASI_PNF, %o4      <em class='comment'>/* Load             */</em>
+<a id='L305' name='L305'></a> 305     add     %o1, 8, %o1         <em class='comment'>/* IEU1             */</em>
+<a id='L306' name='L306'></a> 306 13: ldxa        [%o0] ASI_PNF, %g4      <em class='comment'>/* Load     Group       */</em>
+<a id='L307' name='L307'></a> 307 
+<a id='L308' name='L308'></a> 308     addcc       %o0, 8, %o0         <em class='comment'>/* IEU1             */</em>
+<a id='L309' name='L309'></a> 309     srlx        %o4, %g6, %o5           <em class='comment'>/* IEU0             */</em>
+<a id='L310' name='L310'></a> 310     subcc       %o2, 8, %o2         <em class='comment'>/* IEU1     Group       */</em>
+<a id='L311' name='L311'></a> 311     bcs,pn      %XCC, 5b            <em class='comment'>/* CTI              */</em>
+<a id='L312' name='L312'></a> 312 
+<a id='L313' name='L313'></a> 313      or     %o3, %o5, %o3           <em class='comment'>/* IEU0             */</em>
+<a id='L314' name='L314'></a> 314     cmp     %g4, %o3            <em class='comment'>/* IEU1     Group       */</em>
+<a id='L315' name='L315'></a> 315     bne,pn      %xcc, 7b            <em class='comment'>/* CTI              */</em>
+<a id='L316' name='L316'></a> 316      sub        %g4, %g1, %o5           <em class='comment'>/* IEU0             */</em>
+<a id='L317' name='L317'></a> 317 
+<a id='L318' name='L318'></a> 318 <em class='sharp'>#ifdef</em> <a href='../Y/343.html' title='Multiple used in 29 places.'>EIGHTBIT_NOT_RARE</a>
+<a id='L319' name='L319'></a> 319     andn        %o5, %g4, %o5           <em class='comment'>/* IEU0     Group       */</em>
+<a id='L320' name='L320'></a> 320 <em class='sharp'>#endif</em>
+<a id='L321' name='L321'></a> 321     andcc       %o5, %g2, %g0           <em class='comment'>/* IEU1     Group       */</em>
+<a id='L322' name='L322'></a> 322     be,pt       %xcc, 12b           <em class='comment'>/* CTI              */</em>
+<a id='L323' name='L323'></a> 323      srlx       %o5, 32, %o5            <em class='comment'>/* IEU0             */</em>
+<a id='L324' name='L324'></a> 324     andcc       %o5, %g2, %g0           <em class='comment'>/* IEU1     Group       */</em>
+<a id='L325' name='L325'></a> 325 
+<a id='L326' name='L326'></a> 326     be,pt       %xcc, 14f           <em class='comment'>/* CTI              */</em>
+<a id='L327' name='L327'></a> 327      srlx       %g4, 56, %o5            <em class='comment'>/* IEU0             */</em>
+<a id='L328' name='L328'></a> 328     andcc       %o5, 0xff, %g0          <em class='comment'>/* IEU1     Group       */</em>
+<a id='L329' name='L329'></a> 329     be,pn       %icc, 4b            <em class='comment'>/* CTI              */</em>
+<a id='L330' name='L330'></a> 330 
+<a id='L331' name='L331'></a> 331      srlx       %g4, 48, %o5            <em class='comment'>/* IEU0             */</em>
+<a id='L332' name='L332'></a> 332     andcc       %o5, 0xff, %g0          <em class='comment'>/* IEU1     Group       */</em>
+<a id='L333' name='L333'></a> 333     be,pn       %icc, 4b            <em class='comment'>/* CTI              */</em>
+<a id='L334' name='L334'></a> 334      srlx       %g4, 40, %o5            <em class='comment'>/* IEU0             */</em>
+<a id='L335' name='L335'></a> 335 
+<a id='L336' name='L336'></a> 336     andcc       %o5, 0xff, %g0          <em class='comment'>/* IEU1     Group       */</em>
+<a id='L337' name='L337'></a> 337     be,pn       %icc, 4b            <em class='comment'>/* CTI              */</em>
+<a id='L338' name='L338'></a> 338      srlx       %g4, 32, %o5            <em class='comment'>/* IEU0             */</em>
+<a id='L339' name='L339'></a> 339     andcc       %o5, 0xff, %g0          <em class='comment'>/* IEU1     Group       */</em>
+<a id='L340' name='L340'></a> 340 
+<a id='L341' name='L341'></a> 341     be,pn       %icc, 4b            <em class='comment'>/* CTI              */</em>
+<a id='L342' name='L342'></a> 342 14:  srlx       %g4, 24, %o5            <em class='comment'>/* IEU0             */</em>
+<a id='L343' name='L343'></a> 343     andcc       %o5, 0xff, %g0          <em class='comment'>/* IEU1     Group       */</em>
+<a id='L344' name='L344'></a> 344     be,pn       %icc, 4b            <em class='comment'>/* CTI              */</em>
+<a id='L345' name='L345'></a> 345 
+<a id='L346' name='L346'></a> 346      srlx       %g4, 16, %o5            <em class='comment'>/* IEU0             */</em>
+<a id='L347' name='L347'></a> 347     andcc       %o5, 0xff, %g0          <em class='comment'>/* IEU1     Group       */</em>
+<a id='L348' name='L348'></a> 348     be,pn       %icc, 4b            <em class='comment'>/* CTI              */</em>
+<a id='L349' name='L349'></a> 349      srlx       %g4, 8, %o5         <em class='comment'>/* IEU0             */</em>
+<a id='L350' name='L350'></a> 350 
+<a id='L351' name='L351'></a> 351     andcc       %o5, 0xff, %g0          <em class='comment'>/* IEU1     Group       */</em>
+<a id='L352' name='L352'></a> 352     be,pn       %icc, 4b            <em class='comment'>/* CTI              */</em>
+<a id='L353' name='L353'></a> 353      andcc      %g4, 0xff, %g0          <em class='comment'>/* IEU1     Group       */</em>
+<a id='L354' name='L354'></a> 354     be,pn       %icc, 4b            <em class='comment'>/* CTI              */</em>
+<a id='L355' name='L355'></a> 355 
+<a id='L356' name='L356'></a> 356      sllx       %o4, %g5, %o3           <em class='comment'>/* IEU0             */</em>
+<a id='L357' name='L357'></a> 357     ldxa        [%o1] ASI_PNF, %o4      <em class='comment'>/* Load     Group       */</em>
+<a id='L358' name='L358'></a> 358     ba,pt       %xcc, 13b           <em class='comment'>/* CTI              */</em>
+<a id='L359' name='L359'></a> 359      add        %o1, 8, %o1         <em class='comment'>/* IEU0             */</em>
+<a id='L360' name='L360'></a> 360 END(strncmp)
+<a id='L361' name='L361'></a> 361 libc_hidden_builtin_def (strncmp)
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;][^][v]<a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

@@ -1,0 +1,121 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>sysdeps/i386/fpu/e_acoshf.S</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18977.html'>sysdeps</a>/<a href='../files/19041.html'>i386</a>/<a href='../files/19042.html'>fpu</a>/e_acoshf.S</h2>
+<em class='comment'>/* [&lt;][&gt;][^][v][top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* ix87 specific implementation of arcsinh.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   Copyright (C) 1996-2022 Free Software Foundation, Inc.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'></em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'></em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'></em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   License along with the GNU C Library; if not, see</em>
+<a id='L17' name='L17'></a>  17 <em class='comment'>   &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L18' name='L18'></a>  18 
+<a id='L19' name='L19'></a>  19 <em class='sharp'>#include</em> &lt;<a href='../I/3122.html'>machine/asm.h</a>&gt;
+<a id='L20' name='L20'></a>  20 <em class='sharp'>#include</em> &lt;<a href='9438.html'>libm-alias-finite.h</a>&gt;
+<a id='L21' name='L21'></a>  21 
+<a id='L22' name='L22'></a>  22     .section .rodata.cst8,"aM",@progbits,8
+<a id='L23' name='L23'></a>  23 
+<a id='L24' name='L24'></a>  24     .p2align 3
+<a id='L25' name='L25'></a>  25     .type one,@object
+<a id='L26' name='L26'></a>  26 one:    .double 1.0
+<a id='L27' name='L27'></a>  27     ASM_SIZE_DIRECTIVE(one)
+<a id='L28' name='L28'></a>  28     .type limit,@object
+<a id='L29' name='L29'></a>  29 limit:  .double 0.29
+<a id='L30' name='L30'></a>  30     ASM_SIZE_DIRECTIVE(limit)
+<a id='L31' name='L31'></a>  31 
+<a id='L32' name='L32'></a>  32 <em class='sharp'>#ifdef</em> <a href='../Y/1408.html' title='Multiple used in 370 places.'>PIC</a>
+<a id='L33' name='L33'></a>  33 <em class='sharp'>#define</em> <a href='../R/4975.html' title='Multiple referred from 20 places.'>MO</a>(op) op##@GOTOFF(%edx)
+<a id='L34' name='L34'></a>  34 <em class='sharp'>#else</em>
+<a id='L35' name='L35'></a>  35 <em class='sharp'>#define</em> <a href='../R/4975.html' title='Multiple referred from 20 places.'>MO</a>(op) op
+<a id='L36' name='L36'></a>  36 <em class='sharp'>#endif</em>
+<a id='L37' name='L37'></a>  37 
+<a id='L38' name='L38'></a>  38     .text
+<a id='L39' name='L39'></a>  39 <a href='../D/3651.html' title='Multiple defined in 54 places.'>ENTRY</a>(<a href='../R/14404.html' title='Multiple referred from 2 places.'>__ieee754_acoshf</a>)
+<a id='L40' name='L40'></a>  40     movl    4(%esp), %ecx
+<a id='L41' name='L41'></a>  41     cmpl    $0x3f800000, %ecx
+<a id='L42' name='L42'></a>  42     jl  5f          <em class='comment'>// &lt; 1 =&gt; invalid</em>
+<a id='L43' name='L43'></a>  43     fldln2              <em class='comment'>// log(2)</em>
+<a id='L44' name='L44'></a>  44     flds    4(%esp)         <em class='comment'>// x : log(2)</em>
+<a id='L45' name='L45'></a>  45     cmpl    $0x47000000, %ecx
+<a id='L46' name='L46'></a>  46     ja  3f          <em class='comment'>// x &gt; 2^14</em>
+<a id='L47' name='L47'></a>  47 <em class='sharp'>#ifdef</em>  <a href='../Y/1408.html' title='Multiple used in 370 places.'>PIC</a>
+<a id='L48' name='L48'></a>  48     LOAD_PIC_REG (dx)
+<a id='L49' name='L49'></a>  49 <em class='sharp'>#endif</em>
+<a id='L50' name='L50'></a>  50     cmpl    $0x40000000, %ecx
+<a id='L51' name='L51'></a>  51     ja  4f          <em class='comment'>// x &gt; 2</em>
+<a id='L52' name='L52'></a>  52 
+<a id='L53' name='L53'></a>  53     <em class='comment'>// 1 &lt;= x &lt;= 2 =&gt; y = log1p(x-1+sqrt(2*(x-1)+(x-1)^2))</em>
+<a id='L54' name='L54'></a>  54     fsubl   MO(one)         <em class='comment'>// x-1 : log(2)</em>
+<a id='L55' name='L55'></a>  55     fabs                <em class='comment'>// acosh(1) is +0 in all rounding modes</em>
+<a id='L56' name='L56'></a>  56     fld %st         <em class='comment'>// x-1 : x-1 : log(2)</em>
+<a id='L57' name='L57'></a>  57     fmul    %st(1)          <em class='comment'>// (x-1)^2 : x-1 : log(2)</em>
+<a id='L58' name='L58'></a>  58     fadd    %st(1)          <em class='comment'>// x-1+(x-1)^2 : x-1 : log(2)</em>
+<a id='L59' name='L59'></a>  59     fadd    %st(1)          <em class='comment'>// 2*(x-1)+(x-1)^2 : x-1 : log(2)</em>
+<a id='L60' name='L60'></a>  60     fsqrt               <em class='comment'>// sqrt(2*(x-1)+(x-1)^2) : x-1 : log(2)</em>
+<a id='L61' name='L61'></a>  61     faddp               <em class='comment'>// x-1+sqrt(2*(x-1)+(x-1)^2) : log(2)</em>
+<a id='L62' name='L62'></a>  62     fcoml   MO(limit)
+<a id='L63' name='L63'></a>  63     fnstsw
+<a id='L64' name='L64'></a>  64     sahf
+<a id='L65' name='L65'></a>  65     ja  2f
+<a id='L66' name='L66'></a>  66     fyl2xp1             <em class='comment'>// log1p(x-1+sqrt(2*(x-1)+(x-1)^2))</em>
+<a id='L67' name='L67'></a>  67     ret
+<a id='L68' name='L68'></a>  68 
+<a id='L69' name='L69'></a>  69 2:  faddl   MO(one)         <em class='comment'>// x+sqrt(2*(x-1)+(x-1)^2) : log(2)</em>
+<a id='L70' name='L70'></a>  70     fyl2x               <em class='comment'>// log(x+sqrt(2*(x-1)+(x-1)^2))</em>
+<a id='L71' name='L71'></a>  71     ret
+<a id='L72' name='L72'></a>  72 
+<a id='L73' name='L73'></a>  73     <em class='comment'>// x &gt; 2^14 =&gt; y = log(x) + log(2)</em>
+<a id='L74' name='L74'></a>  74     .align ALIGNARG(4)
+<a id='L75' name='L75'></a>  75 3:  fyl2x               <em class='comment'>// log(x)</em>
+<a id='L76' name='L76'></a>  76     fldln2              <em class='comment'>// log(2) : log(x)</em>
+<a id='L77' name='L77'></a>  77     faddp               <em class='comment'>// log(x)+log(2)</em>
+<a id='L78' name='L78'></a>  78     ret
+<a id='L79' name='L79'></a>  79 
+<a id='L80' name='L80'></a>  80     <em class='comment'>// 2^28 &gt; x &gt; 2 =&gt; y = log(2*x - 1/(x+sqrt(x*x-1)))</em>
+<a id='L81' name='L81'></a>  81     .align ALIGNARG(4)
+<a id='L82' name='L82'></a>  82 4:  fld %st         <em class='comment'>// x : x : log(2)</em>
+<a id='L83' name='L83'></a>  83     fadd    %st, %st(1)     <em class='comment'>// x : 2*x : log(2)</em>
+<a id='L84' name='L84'></a>  84     fld %st         <em class='comment'>// x : x : 2*x : log(2)</em>
+<a id='L85' name='L85'></a>  85     fmul    %st(1)          <em class='comment'>// x^2 : x : 2*x : log(2)</em>
+<a id='L86' name='L86'></a>  86     fsubl   MO(one)         <em class='comment'>// x^2-1 : x : 2*x : log(2)</em>
+<a id='L87' name='L87'></a>  87     fsqrt               <em class='comment'>// sqrt(x^2-1) : x : 2*x : log(2)</em>
+<a id='L88' name='L88'></a>  88     faddp               <em class='comment'>// x+sqrt(x^2-1) : 2*x : log(2)</em>
+<a id='L89' name='L89'></a>  89     fdivrl  MO(one)         <em class='comment'>// 1/(x+sqrt(x^2-1)) : 2*x : log(2)</em>
+<a id='L90' name='L90'></a>  90     fsubrp              <em class='comment'>// 2*x+1/(x+sqrt(x^2)-1) : log(2)</em>
+<a id='L91' name='L91'></a>  91     fyl2x               <em class='comment'>// log(2*x+1/(x+sqrt(x^2-1)))</em>
+<a id='L92' name='L92'></a>  92     ret
+<a id='L93' name='L93'></a>  93 
+<a id='L94' name='L94'></a>  94     <em class='comment'>// x &lt; 1 (or -NaN) =&gt; NaN</em>
+<a id='L95' name='L95'></a>  95     .align ALIGNARG(4)
+<a id='L96' name='L96'></a>  96 5:  flds    4(%esp)
+<a id='L97' name='L97'></a>  97     fsub    %st
+<a id='L98' name='L98'></a>  98     fdiv    %st, %st(0)
+<a id='L99' name='L99'></a>  99     ret
+<a id='L100' name='L100'></a> 100 END(__ieee754_acoshf)
+<a id='L101' name='L101'></a> 101 libm_alias_finite (__ieee754_acoshf, __acoshf)
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;][^][v]<a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

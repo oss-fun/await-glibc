@@ -1,0 +1,234 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>sysdeps/unix/sysv/linux/ia64/ioperm.c</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18977.html'>sysdeps</a>/<a href='../files/19246.html'>unix</a>/<a href='../files/19257.html'>sysv</a>/<a href='../files/19258.html'>linux</a>/<a href='../files/19288.html'>ia64</a>/ioperm.c</h2>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L53'>[^]</a><a href='#L185'>[v]</a>[top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<h2 class='header'>DEFINITIONS</h2>
+This source file includes following definitions.
+<ol>
+<li><a href='#L53' title='Defined at 53.'>io_offset</a></li>
+<li><a href='#L59' title='Defined at 59.'>_ioperm</a></li>
+<li><a href='#L115' title='Defined at 115.'>_iopl</a></li>
+<li><a href='#L134' title='Defined at 134.'>_inb</a></li>
+<li><a href='#L145' title='Defined at 145.'>_inw</a></li>
+<li><a href='#L156' title='Defined at 156.'>_inl</a></li>
+<li><a href='#L167' title='Defined at 167.'>_outb</a></li>
+<li><a href='#L176' title='Defined at 176.'>_outw</a></li>
+<li><a href='#L185' title='Defined at 185.'>_outl</a></li>
+</ol>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* Copyright (C) 1999-2022 Free Software Foundation, Inc.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'></em>
+<a id='L4' name='L4'></a>   4 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'></em>
+<a id='L9' name='L9'></a>   9 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'></em>
+<a id='L14' name='L14'></a>  14 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   License along with the GNU C Library; if not, see</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L17' name='L17'></a>  17 
+<a id='L18' name='L18'></a>  18 <em class='comment'>/* I/O access is restricted to ISA port space (ports 0..65535).</em>
+<a id='L19' name='L19'></a>  19 <em class='comment'>   Modern devices hopefully are sane enough not to put any performance</em>
+<a id='L20' name='L20'></a>  20 <em class='comment'>   critical registers in i/o space.</em>
+<a id='L21' name='L21'></a>  21 <em class='comment'></em>
+<a id='L22' name='L22'></a>  22 <em class='comment'>   On the first call to ioperm() or iopl(), the entire (E)ISA port</em>
+<a id='L23' name='L23'></a>  23 <em class='comment'>   space is mapped into the virtual address space at address io.base.</em>
+<a id='L24' name='L24'></a>  24 <em class='comment'>   mprotect() calls are then used to enable/disable access to ports.</em>
+<a id='L25' name='L25'></a>  25 <em class='comment'>   Per 4KB page, there are 4 I/O ports.  */</em>
+<a id='L26' name='L26'></a>  26 
+<a id='L27' name='L27'></a>  27 <em class='sharp'>#include</em> &lt;<a href='../I/116.html'>errno.h</a>&gt;
+<a id='L28' name='L28'></a>  28 <em class='sharp'>#include</em> &lt;<a href='../I/117.html'>fcntl.h</a>&gt;
+<a id='L29' name='L29'></a>  29 <em class='sharp'>#include</em> &lt;<a href='../I/252.html'>ctype.h</a>&gt;
+<a id='L30' name='L30'></a>  30 <em class='sharp'>#include</em> &lt;<a href='../I/1780.html'>stdlib.h</a>&gt;
+<a id='L31' name='L31'></a>  31 <em class='sharp'>#include</em> &lt;<a href='../I/1973.html'>string.h</a>&gt;
+<a id='L32' name='L32'></a>  32 <em class='sharp'>#include</em> &lt;<a href='../I/1819.html'>unistd.h</a>&gt;
+<a id='L33' name='L33'></a>  33 
+<a id='L34' name='L34'></a>  34 <em class='sharp'>#include</em> &lt;<a href='../I/1786.html'>sys/types.h</a>&gt;
+<a id='L35' name='L35'></a>  35 <em class='sharp'>#include</em> &lt;<a href='../I/140.html'>sys/mman.h</a>&gt;
+<a id='L36' name='L36'></a>  36 
+<a id='L37' name='L37'></a>  37 <em class='sharp'>#define</em> <a href='../R/4746.html' title='Multiple referred from 9 places.'>MAX_PORT</a>    0x10000
+<a id='L38' name='L38'></a>  38 
+<a id='L39' name='L39'></a>  39 <em class='comment'>/*</em>
+<a id='L40' name='L40'></a>  40 <em class='comment'> * Memory fence w/accept.  This should never be used in code that is</em>
+<a id='L41' name='L41'></a>  41 <em class='comment'> * not IA-64 specific.</em>
+<a id='L42' name='L42'></a>  42 <em class='comment'> */</em>
+<a id='L43' name='L43'></a>  43 <em class='sharp'>#define</em> <a href='../R/14395.html' title='Multiple referred from 6 places.'>__ia64_mf_a</a>()   <strong class='reserved'>__asm__</strong> <strong class='reserved'>__volatile__</strong> ("mf.a" ::: "memory")
+<a id='L44' name='L44'></a>  44 
+<a id='L45' name='L45'></a>  45 <strong class='reserved'>static</strong> <strong class='reserved'>struct</strong>
+<a id='L46' name='L46'></a>  46   <em class='brace'>{</em>
+<a id='L47' name='L47'></a>  47     <strong class='reserved'>unsigned</strong> <strong class='reserved'>long</strong> <strong class='reserved'>int</strong> <a href='../Y/10765.html' title='Multiple used in 573 places.'>base</a>;
+<a id='L48' name='L48'></a>  48     <strong class='reserved'>unsigned</strong> <strong class='reserved'>long</strong> <strong class='reserved'>int</strong> <a href='../Y/22160.html' title='Multiple used in 6 places.'>page_mask</a>;
+<a id='L49' name='L49'></a>  49   <em class='brace'>}</em>
+<a id='L50' name='L50'></a>  50 <a href='../Y/17052.html' title='Multiple used in 70 places.'>io</a>;
+<a id='L51' name='L51'></a>  51 
+<a id='L52' name='L52'></a>  52 <strong class='reserved'>__inline__</strong> <strong class='reserved'>unsigned</strong> <strong class='reserved'>long</strong> <strong class='reserved'>int</strong>
+<a id='L53' name='L53'></a>  53 <a href='../R/20745.html' title='Multiple referred from 7 places.'>io_offset</a> (<strong class='reserved'>unsigned</strong> <strong class='reserved'>long</strong> <strong class='reserved'>int</strong> <a href='../Y/22541.html' title='Multiple used in 781 places.'>port</a>)
+<a id='L54' name='L54'></a>  54 <em class='brace'>{</em>
+<a id='L55' name='L55'></a>  55     <strong class='reserved'>return</strong> ((<a href='../Y/22541.html' title='Multiple used in 781 places.'>port</a> &gt;&gt; 2) &lt;&lt; 12) | (<a href='../Y/22541.html' title='Multiple used in 781 places.'>port</a> &amp; 0xfff);
+<a id='L56' name='L56'></a>  56 <em class='brace'>}</em>
+<a id='L57' name='L57'></a>  57 
+<a id='L58' name='L58'></a>  58 <strong class='reserved'>int</strong>
+<a id='L59' name='L59'></a>  59 <a href='../R/16776.html' title='Multiple referred from 4 places.'>_ioperm</a> (<strong class='reserved'>unsigned</strong> <strong class='reserved'>long</strong> <strong class='reserved'>int</strong> <a href='../Y/15029.html' title='Multiple used in 605 places.'>from</a>, <strong class='reserved'>unsigned</strong> <strong class='reserved'>long</strong> <strong class='reserved'>int</strong> <a href='../S/259.html#L34' title='Defined at 34 in intl/plural-exp.h.'>num</a>, <strong class='reserved'>int</strong> <a href='../Y/27965.html' title='Multiple used in 8 places.'>turn_on</a>)
+<a id='L60' name='L60'></a>  60 <em class='brace'>{</em>
+<a id='L61' name='L61'></a>  61   <strong class='reserved'>unsigned</strong> <strong class='reserved'>long</strong> <strong class='reserved'>int</strong> <a href='../Y/10765.html' title='Multiple used in 573 places.'>base</a>;
+<a id='L62' name='L62'></a>  62 
+<a id='L63' name='L63'></a>  63   <em class='comment'>/* this test isn't as silly as it may look like; consider overflows! */</em>
+<a id='L64' name='L64'></a>  64   <strong class='reserved'>if</strong> (<a href='../Y/15029.html' title='Multiple used in 605 places.'>from</a> &gt;= <a href='../D/7762.html' title='Multiple defined in 2 places.'>MAX_PORT</a> || <a href='../Y/15029.html' title='Multiple used in 605 places.'>from</a> + <a href='../S/259.html#L34' title='Defined at 34 in intl/plural-exp.h.'>num</a> &gt; <a href='../D/7762.html' title='Multiple defined in 2 places.'>MAX_PORT</a>)
+<a id='L65' name='L65'></a>  65     <em class='brace'>{</em>
+<a id='L66' name='L66'></a>  66       <a href='../D/25959.html' title='Multiple defined in 8 places.'>__set_errno</a> (<a href='../D/3156.html' title='Multiple defined in 3 places.'>EINVAL</a>);
+<a id='L67' name='L67'></a>  67       <strong class='reserved'>return</strong> -1;
+<a id='L68' name='L68'></a>  68     <em class='brace'>}</em>
+<a id='L69' name='L69'></a>  69 
+<a id='L70' name='L70'></a>  70   <strong class='reserved'>if</strong> (<a href='../Y/27965.html' title='Multiple used in 8 places.'>turn_on</a>)
+<a id='L71' name='L71'></a>  71     <em class='brace'>{</em>
+<a id='L72' name='L72'></a>  72       <strong class='reserved'>if</strong> (!<a href='../Y/17052.html' title='Multiple used in 70 places.'>io</a>.<a href='../Y/10765.html' title='Multiple used in 573 places.'>base</a>)
+<a id='L73' name='L73'></a>  73     <em class='brace'>{</em>
+<a id='L74' name='L74'></a>  74       <strong class='reserved'>unsigned</strong> <strong class='reserved'>long</strong> <a href='../Y/22385.html' title='Multiple used in 3 places.'>phys_io_base</a>, <a href='../D/32598.html' title='Multiple defined in 10 places.'>len</a>;
+<a id='L75' name='L75'></a>  75       <strong class='reserved'>int</strong> <a href='../S/1663.html#L52' title='Defined at 52 in nscd/initgrcache.c.'>fd</a>;
+<a id='L76' name='L76'></a>  76 
+<a id='L77' name='L77'></a>  77       <a href='../Y/17052.html' title='Multiple used in 70 places.'>io</a>.<a href='../Y/22160.html' title='Multiple used in 6 places.'>page_mask</a> = ~(<a href='../D/24152.html' title='Multiple defined in 6 places.'>__getpagesize</a>() - 1);
+<a id='L78' name='L78'></a>  78 
+<a id='L79' name='L79'></a>  79       <em class='comment'>/* get I/O base physical address from ar.k0 as per PRM: */</em>
+<a id='L80' name='L80'></a>  80       <strong class='reserved'>__asm__</strong> ("mov %0=ar.k0" : "=r"(<a href='../Y/22385.html' title='Multiple used in 3 places.'>phys_io_base</a>));
+<a id='L81' name='L81'></a>  81 
+<a id='L82' name='L82'></a>  82       <em class='comment'>/* The O_SYNC flag tells the /dev/mem driver to map the</em>
+<a id='L83' name='L83'></a>  83 <em class='comment'>             memory uncached: */</em>
+<a id='L84' name='L84'></a>  84       <a href='../S/1663.html#L52' title='Defined at 52 in nscd/initgrcache.c.'>fd</a> = <a href='../D/25351.html' title='Multiple defined in 2 places.'>__open</a> ("/dev/mem", <a href='../D/9633.html' title='Multiple defined in 3 places.'>O_RDWR</a> | <a href='../D/9637.html' title='Multiple defined in 8 places.'>O_SYNC</a>);
+<a id='L85' name='L85'></a>  85       <strong class='reserved'>if</strong> (<a href='../S/1663.html#L52' title='Defined at 52 in nscd/initgrcache.c.'>fd</a> &lt; 0)
+<a id='L86' name='L86'></a>  86         <strong class='reserved'>return</strong> -1;
+<a id='L87' name='L87'></a>  87 
+<a id='L88' name='L88'></a>  88       <a href='../D/32598.html' title='Multiple defined in 10 places.'>len</a> = <a href='../S/10514.html#L53' title='Defined at 53 in sysdeps/unix/sysv/linux/ia64/ioperm.c.'>io_offset</a> (<a href='../D/7762.html' title='Multiple defined in 2 places.'>MAX_PORT</a>);
+<a id='L89' name='L89'></a>  89       <em class='comment'>/* see comment below */</em>
+<a id='L90' name='L90'></a>  90       <a href='../Y/10765.html' title='Multiple used in 573 places.'>base</a> = (<strong class='reserved'>unsigned</strong> <strong class='reserved'>long</strong> <strong class='reserved'>int</strong>) <a href='../D/24976.html' title='Multiple defined in 4 places.'>__mmap</a> (0, <a href='../D/32598.html' title='Multiple defined in 10 places.'>len</a>, <a href='../D/10287.html' title='Multiple defined in 2 places.'>PROT_READ</a> | <a href='../D/10289.html' title='Multiple defined in 2 places.'>PROT_WRITE</a>, <a href='../D/7642.html' title='Multiple defined in 2 places.'>MAP_SHARED</a>,
+<a id='L91' name='L91'></a>  91                         <a href='../S/1663.html#L52' title='Defined at 52 in nscd/initgrcache.c.'>fd</a>, <a href='../Y/22385.html' title='Multiple used in 3 places.'>phys_io_base</a>);
+<a id='L92' name='L92'></a>  92       <a href='../D/23503.html' title='Multiple defined in 3 places.'>__close</a> (<a href='../S/1663.html#L52' title='Defined at 52 in nscd/initgrcache.c.'>fd</a>);
+<a id='L93' name='L93'></a>  93 
+<a id='L94' name='L94'></a>  94       <strong class='reserved'>if</strong> ((<strong class='reserved'>long</strong>) <a href='../Y/10765.html' title='Multiple used in 573 places.'>base</a> == -1)
+<a id='L95' name='L95'></a>  95         <strong class='reserved'>return</strong> -1;
+<a id='L96' name='L96'></a>  96 
+<a id='L97' name='L97'></a>  97       <a href='../Y/17052.html' title='Multiple used in 70 places.'>io</a>.<a href='../Y/10765.html' title='Multiple used in 573 places.'>base</a> = <a href='../Y/10765.html' title='Multiple used in 573 places.'>base</a>;
+<a id='L98' name='L98'></a>  98     <em class='brace'>}</em>
+<a id='L99' name='L99'></a>  99     <em class='brace'>}</em>
+<a id='L100' name='L100'></a> 100   <strong class='reserved'>else</strong>
+<a id='L101' name='L101'></a> 101     <em class='brace'>{</em>
+<a id='L102' name='L102'></a> 102       <strong class='reserved'>if</strong> (!<a href='../Y/17052.html' title='Multiple used in 70 places.'>io</a>.<a href='../Y/10765.html' title='Multiple used in 573 places.'>base</a>)
+<a id='L103' name='L103'></a> 103     <strong class='reserved'>return</strong> 0;   <em class='comment'>/* never was turned on... */</em>
+<a id='L104' name='L104'></a> 104     <em class='brace'>}</em>
+<a id='L105' name='L105'></a> 105 
+<a id='L106' name='L106'></a> 106   <em class='comment'>/* We can't do mprotect because that would cause us to lose the</em>
+<a id='L107' name='L107'></a> 107 <em class='comment'>     uncached flag that the /dev/mem driver turned on.  A MAP_UNCACHED</em>
+<a id='L108' name='L108'></a> 108 <em class='comment'>     flag seems so much cleaner...</em>
+<a id='L109' name='L109'></a> 109 <em class='comment'></em>
+<a id='L110' name='L110'></a> 110 <em class='comment'>     See the history of this file for a version that tried mprotect.  */</em>
+<a id='L111' name='L111'></a> 111   <strong class='reserved'>return</strong> 0;
+<a id='L112' name='L112'></a> 112 <em class='brace'>}</em>
+<a id='L113' name='L113'></a> 113 
+<a id='L114' name='L114'></a> 114 <strong class='reserved'>int</strong>
+<a id='L115' name='L115'></a> 115 <a href='../R/16777.html' title='Multiple referred from 2 places.'>_iopl</a> (<strong class='reserved'>unsigned</strong> <strong class='reserved'>int</strong> <a href='../Y/18051.html' title='Multiple used in 202 places.'>level</a>)
+<a id='L116' name='L116'></a> 116 <em class='brace'>{</em>
+<a id='L117' name='L117'></a> 117   <strong class='reserved'>if</strong> (<a href='../Y/18051.html' title='Multiple used in 202 places.'>level</a> &gt; 3)
+<a id='L118' name='L118'></a> 118     <em class='brace'>{</em>
+<a id='L119' name='L119'></a> 119       <a href='../D/25959.html' title='Multiple defined in 8 places.'>__set_errno</a> (<a href='../D/3156.html' title='Multiple defined in 3 places.'>EINVAL</a>);
+<a id='L120' name='L120'></a> 120       <strong class='reserved'>return</strong> -1;
+<a id='L121' name='L121'></a> 121     <em class='brace'>}</em>
+<a id='L122' name='L122'></a> 122   <strong class='reserved'>if</strong> (<a href='../Y/18051.html' title='Multiple used in 202 places.'>level</a>)
+<a id='L123' name='L123'></a> 123     <em class='brace'>{</em>
+<a id='L124' name='L124'></a> 124       <strong class='reserved'>int</strong> <a href='../Y/24020.html' title='Multiple used in 1191 places.'>retval</a> = <a href='../D/27071.html' title='Multiple defined in 2 places.'>_ioperm</a> (0, <a href='../D/7762.html' title='Multiple defined in 2 places.'>MAX_PORT</a>, 1);
+<a id='L125' name='L125'></a> 125       <em class='comment'>/* Match the documented error returns of the x86 version.  */</em>
+<a id='L126' name='L126'></a> 126       <strong class='reserved'>if</strong> (<a href='../Y/24020.html' title='Multiple used in 1191 places.'>retval</a> &lt; 0 &amp;&amp; <a href='../D/30023.html' title='Multiple defined in 13 places.'>errno</a> == <a href='../D/2890.html' title='Multiple defined in 2 places.'>EACCES</a>)
+<a id='L127' name='L127'></a> 127     <a href='../D/25959.html' title='Multiple defined in 8 places.'>__set_errno</a> (<a href='../D/3685.html' title='Multiple defined in 2 places.'>EPERM</a>);
+<a id='L128' name='L128'></a> 128       <strong class='reserved'>return</strong> <a href='../Y/24020.html' title='Multiple used in 1191 places.'>retval</a>;
+<a id='L129' name='L129'></a> 129     <em class='brace'>}</em>
+<a id='L130' name='L130'></a> 130   <strong class='reserved'>return</strong> 0;
+<a id='L131' name='L131'></a> 131 <em class='brace'>}</em>
+<a id='L132' name='L132'></a> 132 
+<a id='L133' name='L133'></a> 133 <strong class='reserved'>unsigned</strong> <strong class='reserved'>int</strong>
+<a id='L134' name='L134'></a> 134 <a href='../R/16767.html' title='Multiple referred from 5 places.'>_inb</a> (<strong class='reserved'>unsigned</strong> <strong class='reserved'>long</strong> <strong class='reserved'>int</strong> <a href='../Y/22541.html' title='Multiple used in 781 places.'>port</a>)
+<a id='L135' name='L135'></a> 135 <em class='brace'>{</em>
+<a id='L136' name='L136'></a> 136   <strong class='reserved'>volatile</strong> <strong class='reserved'>unsigned</strong> <strong class='reserved'>char</strong> *<a href='../S/2561.html#L5' title='Defined at 5 in elf/nodelmod3.c.'>addr</a> = (<strong class='reserved'>void</strong> *) <a href='../Y/17052.html' title='Multiple used in 70 places.'>io</a>.<a href='../Y/10765.html' title='Multiple used in 573 places.'>base</a> + <a href='../S/10514.html#L53' title='Defined at 53 in sysdeps/unix/sysv/linux/ia64/ioperm.c.'>io_offset</a> (<a href='../Y/22541.html' title='Multiple used in 781 places.'>port</a>);
+<a id='L137' name='L137'></a> 137   <strong class='reserved'>unsigned</strong> <strong class='reserved'>char</strong> <a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a>;
+<a id='L138' name='L138'></a> 138 
+<a id='L139' name='L139'></a> 139   <a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a> = *<a href='../S/2561.html#L5' title='Defined at 5 in elf/nodelmod3.c.'>addr</a>;
+<a id='L140' name='L140'></a> 140   <a href='../S/10514.html#L43' title='Defined at 43 in sysdeps/unix/sysv/linux/ia64/ioperm.c.'>__ia64_mf_a</a>();
+<a id='L141' name='L141'></a> 141   <strong class='reserved'>return</strong> <a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a>;
+<a id='L142' name='L142'></a> 142 <em class='brace'>}</em>
+<a id='L143' name='L143'></a> 143 
+<a id='L144' name='L144'></a> 144 <strong class='reserved'>unsigned</strong> <strong class='reserved'>int</strong>
+<a id='L145' name='L145'></a> 145 <a href='../R/16775.html' title='Multiple referred from 4 places.'>_inw</a> (<strong class='reserved'>unsigned</strong> <strong class='reserved'>long</strong> <strong class='reserved'>int</strong> <a href='../Y/22541.html' title='Multiple used in 781 places.'>port</a>)
+<a id='L146' name='L146'></a> 146 <em class='brace'>{</em>
+<a id='L147' name='L147'></a> 147   <strong class='reserved'>volatile</strong> <strong class='reserved'>unsigned</strong> <strong class='reserved'>short</strong> *<a href='../S/2561.html#L5' title='Defined at 5 in elf/nodelmod3.c.'>addr</a> = (<strong class='reserved'>void</strong> *) <a href='../Y/17052.html' title='Multiple used in 70 places.'>io</a>.<a href='../Y/10765.html' title='Multiple used in 573 places.'>base</a> + <a href='../S/10514.html#L53' title='Defined at 53 in sysdeps/unix/sysv/linux/ia64/ioperm.c.'>io_offset</a> (<a href='../Y/22541.html' title='Multiple used in 781 places.'>port</a>);
+<a id='L148' name='L148'></a> 148   <strong class='reserved'>unsigned</strong> <strong class='reserved'>short</strong> <a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a>;
+<a id='L149' name='L149'></a> 149 
+<a id='L150' name='L150'></a> 150   <a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a> = *<a href='../S/2561.html#L5' title='Defined at 5 in elf/nodelmod3.c.'>addr</a>;
+<a id='L151' name='L151'></a> 151   <a href='../S/10514.html#L43' title='Defined at 43 in sysdeps/unix/sysv/linux/ia64/ioperm.c.'>__ia64_mf_a</a>();
+<a id='L152' name='L152'></a> 152   <strong class='reserved'>return</strong> <a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a>;
+<a id='L153' name='L153'></a> 153 <em class='brace'>}</em>
+<a id='L154' name='L154'></a> 154 
+<a id='L155' name='L155'></a> 155 <strong class='reserved'>unsigned</strong> <strong class='reserved'>int</strong>
+<a id='L156' name='L156'></a> 156 <a href='../R/16769.html' title='Multiple referred from 4 places.'>_inl</a> (<strong class='reserved'>unsigned</strong> <strong class='reserved'>long</strong> <strong class='reserved'>int</strong> <a href='../Y/22541.html' title='Multiple used in 781 places.'>port</a>)
+<a id='L157' name='L157'></a> 157 <em class='brace'>{</em>
+<a id='L158' name='L158'></a> 158   <strong class='reserved'>volatile</strong> <strong class='reserved'>unsigned</strong> <strong class='reserved'>int</strong> *<a href='../S/2561.html#L5' title='Defined at 5 in elf/nodelmod3.c.'>addr</a> = (<strong class='reserved'>void</strong> *) <a href='../Y/17052.html' title='Multiple used in 70 places.'>io</a>.<a href='../Y/10765.html' title='Multiple used in 573 places.'>base</a> + <a href='../S/10514.html#L53' title='Defined at 53 in sysdeps/unix/sysv/linux/ia64/ioperm.c.'>io_offset</a> (<a href='../Y/22541.html' title='Multiple used in 781 places.'>port</a>);
+<a id='L159' name='L159'></a> 159   <strong class='reserved'>unsigned</strong> <strong class='reserved'>int</strong> <a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a>;
+<a id='L160' name='L160'></a> 160 
+<a id='L161' name='L161'></a> 161   <a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a> = *<a href='../S/2561.html#L5' title='Defined at 5 in elf/nodelmod3.c.'>addr</a>;
+<a id='L162' name='L162'></a> 162   <a href='../S/10514.html#L43' title='Defined at 43 in sysdeps/unix/sysv/linux/ia64/ioperm.c.'>__ia64_mf_a</a>();
+<a id='L163' name='L163'></a> 163   <strong class='reserved'>return</strong> <a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a>;
+<a id='L164' name='L164'></a> 164 <em class='brace'>}</em>
+<a id='L165' name='L165'></a> 165 
+<a id='L166' name='L166'></a> 166 <strong class='reserved'>void</strong>
+<a id='L167' name='L167'></a> 167 <a href='../R/16848.html' title='Multiple referred from 4 places.'>_outb</a> (<strong class='reserved'>unsigned</strong> <strong class='reserved'>char</strong> <a href='../D/38896.html' title='Multiple defined in 2 places.'>val</a>, <strong class='reserved'>unsigned</strong> <strong class='reserved'>long</strong> <strong class='reserved'>int</strong> <a href='../Y/22541.html' title='Multiple used in 781 places.'>port</a>)
+<a id='L168' name='L168'></a> 168 <em class='brace'>{</em>
+<a id='L169' name='L169'></a> 169   <strong class='reserved'>volatile</strong> <strong class='reserved'>unsigned</strong> <strong class='reserved'>char</strong> *<a href='../S/2561.html#L5' title='Defined at 5 in elf/nodelmod3.c.'>addr</a> = (<strong class='reserved'>void</strong> *) <a href='../Y/17052.html' title='Multiple used in 70 places.'>io</a>.<a href='../Y/10765.html' title='Multiple used in 573 places.'>base</a> + <a href='../S/10514.html#L53' title='Defined at 53 in sysdeps/unix/sysv/linux/ia64/ioperm.c.'>io_offset</a> (<a href='../Y/22541.html' title='Multiple used in 781 places.'>port</a>);
+<a id='L170' name='L170'></a> 170 
+<a id='L171' name='L171'></a> 171   *<a href='../S/2561.html#L5' title='Defined at 5 in elf/nodelmod3.c.'>addr</a> = <a href='../D/38896.html' title='Multiple defined in 2 places.'>val</a>;
+<a id='L172' name='L172'></a> 172   <a href='../S/10514.html#L43' title='Defined at 43 in sysdeps/unix/sysv/linux/ia64/ioperm.c.'>__ia64_mf_a</a>();
+<a id='L173' name='L173'></a> 173 <em class='brace'>}</em>
+<a id='L174' name='L174'></a> 174 
+<a id='L175' name='L175'></a> 175 <strong class='reserved'>void</strong>
+<a id='L176' name='L176'></a> 176 <a href='../R/16850.html' title='Multiple referred from 4 places.'>_outw</a> (<strong class='reserved'>unsigned</strong> <strong class='reserved'>short</strong> <a href='../D/38896.html' title='Multiple defined in 2 places.'>val</a>, <strong class='reserved'>unsigned</strong> <strong class='reserved'>long</strong> <strong class='reserved'>int</strong> <a href='../Y/22541.html' title='Multiple used in 781 places.'>port</a>)
+<a id='L177' name='L177'></a> 177 <em class='brace'>{</em>
+<a id='L178' name='L178'></a> 178   <strong class='reserved'>volatile</strong> <strong class='reserved'>unsigned</strong> <strong class='reserved'>short</strong> *<a href='../S/2561.html#L5' title='Defined at 5 in elf/nodelmod3.c.'>addr</a> = (<strong class='reserved'>void</strong> *) <a href='../Y/17052.html' title='Multiple used in 70 places.'>io</a>.<a href='../Y/10765.html' title='Multiple used in 573 places.'>base</a> + <a href='../S/10514.html#L53' title='Defined at 53 in sysdeps/unix/sysv/linux/ia64/ioperm.c.'>io_offset</a> (<a href='../Y/22541.html' title='Multiple used in 781 places.'>port</a>);
+<a id='L179' name='L179'></a> 179 
+<a id='L180' name='L180'></a> 180   *<a href='../S/2561.html#L5' title='Defined at 5 in elf/nodelmod3.c.'>addr</a> = <a href='../D/38896.html' title='Multiple defined in 2 places.'>val</a>;
+<a id='L181' name='L181'></a> 181   <a href='../S/10514.html#L43' title='Defined at 43 in sysdeps/unix/sysv/linux/ia64/ioperm.c.'>__ia64_mf_a</a>();
+<a id='L182' name='L182'></a> 182 <em class='brace'>}</em>
+<a id='L183' name='L183'></a> 183 
+<a id='L184' name='L184'></a> 184 <strong class='reserved'>void</strong>
+<a id='L185' name='L185'></a> 185 <a href='../R/16849.html' title='Multiple referred from 4 places.'>_outl</a> (<strong class='reserved'>unsigned</strong> <strong class='reserved'>int</strong> <a href='../D/38896.html' title='Multiple defined in 2 places.'>val</a>, <strong class='reserved'>unsigned</strong> <strong class='reserved'>long</strong> <strong class='reserved'>int</strong> <a href='../Y/22541.html' title='Multiple used in 781 places.'>port</a>)
+<a id='L186' name='L186'></a> 186 <em class='brace'>{</em>
+<a id='L187' name='L187'></a> 187   <strong class='reserved'>volatile</strong> <strong class='reserved'>unsigned</strong> <strong class='reserved'>int</strong> *<a href='../S/2561.html#L5' title='Defined at 5 in elf/nodelmod3.c.'>addr</a> = (<strong class='reserved'>void</strong> *) <a href='../Y/17052.html' title='Multiple used in 70 places.'>io</a>.<a href='../Y/10765.html' title='Multiple used in 573 places.'>base</a> + <a href='../S/10514.html#L53' title='Defined at 53 in sysdeps/unix/sysv/linux/ia64/ioperm.c.'>io_offset</a> (<a href='../Y/22541.html' title='Multiple used in 781 places.'>port</a>);
+<a id='L188' name='L188'></a> 188 
+<a id='L189' name='L189'></a> 189   *<a href='../S/2561.html#L5' title='Defined at 5 in elf/nodelmod3.c.'>addr</a> = <a href='../D/38896.html' title='Multiple defined in 2 places.'>val</a>;
+<a id='L190' name='L190'></a> 190   <a href='../S/10514.html#L43' title='Defined at 43 in sysdeps/unix/sysv/linux/ia64/ioperm.c.'>__ia64_mf_a</a>();
+<a id='L191' name='L191'></a> 191 <em class='brace'>}</em>
+<a id='L192' name='L192'></a> 192 
+<a id='L193' name='L193'></a> 193 <a href='../D/39088.html' title='Multiple defined in 375 places.'>weak_alias</a> (<a href='../D/27071.html' title='Multiple defined in 2 places.'>_ioperm</a>, <a href='../D/32227.html' title='Multiple defined in 2 places.'>ioperm</a>);
+<a id='L194' name='L194'></a> 194 <a href='../D/39088.html' title='Multiple defined in 375 places.'>weak_alias</a> (<a href='../D/27072.html' title='Multiple defined in 2 places.'>_iopl</a>, <a href='../S/11780.html#L32' title='Defined at 32 in sysdeps/unix/sysv/linux/arm/ioperm.c.'>iopl</a>);
+<a id='L195' name='L195'></a> 195 <a href='../D/39088.html' title='Multiple defined in 375 places.'>weak_alias</a> (<a href='../D/27061.html' title='Multiple defined in 2 places.'>_inb</a>, <a href='../D/31770.html' title='Multiple defined in 4 places.'>inb</a>);
+<a id='L196' name='L196'></a> 196 <a href='../D/39088.html' title='Multiple defined in 375 places.'>weak_alias</a> (<a href='../D/27070.html' title='Multiple defined in 2 places.'>_inw</a>, <a href='../D/32217.html' title='Multiple defined in 4 places.'>inw</a>);
+<a id='L197' name='L197'></a> 197 <a href='../D/39088.html' title='Multiple defined in 375 places.'>weak_alias</a> (<a href='../D/27064.html' title='Multiple defined in 2 places.'>_inl</a>, <a href='../D/32076.html' title='Multiple defined in 4 places.'>inl</a>);
+<a id='L198' name='L198'></a> 198 <a href='../D/39088.html' title='Multiple defined in 375 places.'>weak_alias</a> (<a href='../D/27195.html' title='Multiple defined in 2 places.'>_outb</a>, <a href='../D/34573.html' title='Multiple defined in 4 places.'>outb</a>);
+<a id='L199' name='L199'></a> 199 <a href='../D/39088.html' title='Multiple defined in 375 places.'>weak_alias</a> (<a href='../D/27197.html' title='Multiple defined in 2 places.'>_outw</a>, <a href='../D/34603.html' title='Multiple defined in 4 places.'>outw</a>);
+<a id='L200' name='L200'></a> 200 <a href='../D/39088.html' title='Multiple defined in 375 places.'>weak_alias</a> (<a href='../D/27196.html' title='Multiple defined in 2 places.'>_outl</a>, <a href='../D/34580.html' title='Multiple defined in 4 places.'>outl</a>);
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L53'>[^]</a><a href='#L185'>[v]</a><a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

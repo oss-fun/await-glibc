@@ -1,0 +1,297 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>sysdeps/nptl/lowlevellock.h</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18977.html'>sysdeps</a>/<a href='../files/19141.html'>nptl</a>/lowlevellock.h</h2>
+<em class='comment'>/* [&lt;][&gt;][^][v][top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<h2 class='header'><a href='../J/2910.html' title='Multiple included from 37 places.'>INCLUDED FROM</a></h2>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* Low-level lock implementation.  Generic futex-based version.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   Copyright (C) 2005-2022 Free Software Foundation, Inc.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'></em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'></em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'></em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   License along with the GNU C Library.  If not, see</em>
+<a id='L17' name='L17'></a>  17 <em class='comment'>   &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L18' name='L18'></a>  18 
+<a id='L19' name='L19'></a>  19 <em class='sharp'>#ifndef</em> <a href='../S/17841.html#L20' title='Defined at 20 in sysdeps/nptl/lowlevellock.h.'>_LOWLEVELLOCK_H</a>
+<a id='L20' name='L20'></a>  20 <em class='sharp'>#define</em> <a href='../S/17841.html#L19' title='Referred from 19 in sysdeps/nptl/lowlevellock.h.'>_LOWLEVELLOCK_H</a> 1
+<a id='L21' name='L21'></a>  21 
+<a id='L22' name='L22'></a>  22 <em class='sharp'>#include</em> &lt;<a href='17870.html'>atomic.h</a>&gt;
+<a id='L23' name='L23'></a>  23 <em class='sharp'>#include</em> &lt;<a href='../I/3659.html'>elision-conf.h</a>&gt;
+<a id='L24' name='L24'></a>  24 <em class='sharp'>#include</em> &lt;<a href='17854.html'>lowlevellock-futex.h</a>&gt;
+<a id='L25' name='L25'></a>  25 <em class='sharp'>#include</em> &lt;<a href='../I/176.html'>time.h</a>&gt;
+<a id='L26' name='L26'></a>  26 
+<a id='L27' name='L27'></a>  27 <em class='comment'>/* Low-level locks use a combination of atomic operations (to acquire and</em>
+<a id='L28' name='L28'></a>  28 <em class='comment'>   release lock ownership) and futex operations (to block until the state</em>
+<a id='L29' name='L29'></a>  29 <em class='comment'>   of a lock changes).  A lock can be in one of three states:</em>
+<a id='L30' name='L30'></a>  30 <em class='comment'>   0:  not acquired,</em>
+<a id='L31' name='L31'></a>  31 <em class='comment'>   1:  acquired with no waiters; no other threads are blocked or about to block</em>
+<a id='L32' name='L32'></a>  32 <em class='comment'>       for changes to the lock state,</em>
+<a id='L33' name='L33'></a>  33 <em class='comment'>   &gt;1: acquired, possibly with waiters; there may be other threads blocked or</em>
+<a id='L34' name='L34'></a>  34 <em class='comment'>       about to block for changes to the lock state.</em>
+<a id='L35' name='L35'></a>  35 <em class='comment'></em>
+<a id='L36' name='L36'></a>  36 <em class='comment'>   We expect that the common case is an uncontended lock, so we just need</em>
+<a id='L37' name='L37'></a>  37 <em class='comment'>   to transition the lock between states 0 and 1; releasing the lock does</em>
+<a id='L38' name='L38'></a>  38 <em class='comment'>   not need to wake any other blocked threads.  If the lock is contended</em>
+<a id='L39' name='L39'></a>  39 <em class='comment'>   and a thread decides to block using a futex operation, then this thread</em>
+<a id='L40' name='L40'></a>  40 <em class='comment'>   needs to first change the state to &gt;1; if this state is observed during</em>
+<a id='L41' name='L41'></a>  41 <em class='comment'>   lock release, the releasing thread will wake one of the potentially</em>
+<a id='L42' name='L42'></a>  42 <em class='comment'>   blocked threads.</em>
+<a id='L43' name='L43'></a>  43 <em class='comment'></em>
+<a id='L44' name='L44'></a>  44 <em class='comment'>   Much of this code takes a 'private' parameter.  This may be:</em>
+<a id='L45' name='L45'></a>  45 <em class='comment'>   LLL_PRIVATE: lock only shared within a process</em>
+<a id='L46' name='L46'></a>  46 <em class='comment'>   LLL_SHARED:  lock may be shared across processes.</em>
+<a id='L47' name='L47'></a>  47 <em class='comment'></em>
+<a id='L48' name='L48'></a>  48 <em class='comment'>   Condition variables contain an optimization for broadcasts that requeues</em>
+<a id='L49' name='L49'></a>  49 <em class='comment'>   waiting threads on a lock's futex.  Therefore, there is a special</em>
+<a id='L50' name='L50'></a>  50 <em class='comment'>   variant of the locks (whose name contains "cond") that makes sure to</em>
+<a id='L51' name='L51'></a>  51 <em class='comment'>   always set the lock state to &gt;1 and not just 1.</em>
+<a id='L52' name='L52'></a>  52 <em class='comment'></em>
+<a id='L53' name='L53'></a>  53 <em class='comment'>   Robust locks set the lock to the id of the owner.  This allows detection</em>
+<a id='L54' name='L54'></a>  54 <em class='comment'>   of the case where the owner exits without releasing the lock.  Flags are</em>
+<a id='L55' name='L55'></a>  55 <em class='comment'>   OR'd with the owner id to record additional information about lock state.</em>
+<a id='L56' name='L56'></a>  56 <em class='comment'>   Therefore the states of robust locks are:</em>
+<a id='L57' name='L57'></a>  57 <em class='comment'>    0: not acquired</em>
+<a id='L58' name='L58'></a>  58 <em class='comment'>   id: acquired (by user identified by id &amp; FUTEX_TID_MASK)</em>
+<a id='L59' name='L59'></a>  59 <em class='comment'></em>
+<a id='L60' name='L60'></a>  60 <em class='comment'>   The following flags may be set in the robust lock value:</em>
+<a id='L61' name='L61'></a>  61 <em class='comment'>   FUTEX_WAITERS     - possibly has waiters</em>
+<a id='L62' name='L62'></a>  62 <em class='comment'>   FUTEX_OWNER_DIED  - owning user has exited without releasing the futex.  */</em>
+<a id='L63' name='L63'></a>  63 
+<a id='L64' name='L64'></a>  64 
+<a id='L65' name='L65'></a>  65 <em class='comment'>/* If LOCK is 0 (not acquired), set to 1 (acquired with no waiters) and return</em>
+<a id='L66' name='L66'></a>  66 <em class='comment'>   0.  Otherwise leave lock unchanged and return non-zero to indicate that the</em>
+<a id='L67' name='L67'></a>  67 <em class='comment'>   lock was not acquired.  */</em>
+<a id='L68' name='L68'></a>  68 <em class='sharp'>#define</em> <a href='../R/14836.html' title='Multiple referred from 4 places.'>__lll_trylock</a>(<a href='../S/1874.html#L71' title='Defined at 71 in malloc/tst-interpose-aux.c.'>lock</a>) \
+<a id='L69' name='L69'></a>  69   <a href='../D/24205.html' title='Multiple defined in 2 places.'>__glibc_unlikely</a> (<a href='../D/27896.html' title='Multiple defined in 14 places.'>atomic_compare_and_exchange_bool_acq</a> ((<a href='../S/1874.html#L71' title='Defined at 71 in malloc/tst-interpose-aux.c.'>lock</a>), 1, 0))
+<a id='L70' name='L70'></a>  70 <em class='sharp'>#define</em> <a href='../R/21396.html' title='Multiple referred from 17 places.'>lll_trylock</a>(<a href='../S/1874.html#L71' title='Defined at 71 in malloc/tst-interpose-aux.c.'>lock</a>)   \
+<a id='L71' name='L71'></a>  71    <a href='../D/24751.html' title='Multiple defined in 2 places.'>__lll_trylock</a> (&amp;(<a href='../S/1874.html#L71' title='Defined at 71 in malloc/tst-interpose-aux.c.'>lock</a>))
+<a id='L72' name='L72'></a>  72 
+<a id='L73' name='L73'></a>  73 <em class='comment'>/* If LOCK is 0 (not acquired), set to 2 (acquired, possibly with waiters) and</em>
+<a id='L74' name='L74'></a>  74 <em class='comment'>   return 0.  Otherwise leave lock unchanged and return non-zero to indicate</em>
+<a id='L75' name='L75'></a>  75 <em class='comment'>   that the lock was not acquired.  */</em>
+<a id='L76' name='L76'></a>  76 <em class='sharp'>#define</em> <a href='../S/18557.html#L12' title='Referred from 12 in nptl/pthread_mutex_cond_lock.c.'>lll_cond_trylock</a>(<a href='../S/1874.html#L71' title='Defined at 71 in malloc/tst-interpose-aux.c.'>lock</a>)  \
+<a id='L77' name='L77'></a>  77   <a href='../D/24205.html' title='Multiple defined in 2 places.'>__glibc_unlikely</a> (<a href='../D/27896.html' title='Multiple defined in 14 places.'>atomic_compare_and_exchange_bool_acq</a> (&amp;(<a href='../S/1874.html#L71' title='Defined at 71 in malloc/tst-interpose-aux.c.'>lock</a>), 2, 0))
+<a id='L78' name='L78'></a>  78 
+<a id='L79' name='L79'></a>  79 <strong class='reserved'>extern</strong> <strong class='reserved'>void</strong> <a href='../S/18407.html#L25' title='Defined at 25 in nptl/lowlevellock.c.'>__lll_lock_wait_private</a> (<strong class='reserved'>int</strong> *<a href='../S/10652.html#L59' title='Defined at 59 in sysdeps/unix/sysv/linux/i386/tst-bz21269.c.'>futex</a>);
+<a id='L80' name='L80'></a>  80 <a href='../D/32800.html' title='Multiple defined in 29 places.'>libc_hidden_proto</a> (<a href='../S/18407.html#L25' title='Defined at 25 in nptl/lowlevellock.c.'>__lll_lock_wait_private</a>)
+<a id='L81' name='L81'></a>  81 <strong class='reserved'>extern</strong> <strong class='reserved'>void</strong> <a href='../Y/5465.html' title='Multiple used in 6 places.'>__lll_lock_wait</a> (<strong class='reserved'>int</strong> *<a href='../S/10652.html#L59' title='Defined at 59 in sysdeps/unix/sysv/linux/i386/tst-bz21269.c.'>futex</a>, <strong class='reserved'>int</strong> <a href='../Y/22790.html' title='Multiple used in 254 places.'>private</a>);
+<a id='L82' name='L82'></a>  82 <a href='../D/32800.html' title='Multiple defined in 29 places.'>libc_hidden_proto</a> (<a href='../Y/5465.html' title='Multiple used in 6 places.'>__lll_lock_wait</a>)
+<a id='L83' name='L83'></a>  83 
+<a id='L84' name='L84'></a>  84 <em class='comment'>/* This is an expression rather than a statement even though its value is</em>
+<a id='L85' name='L85'></a>  85 <em class='comment'>   void, so that it can be used in a comma expression or as an expression</em>
+<a id='L86' name='L86'></a>  86 <em class='comment'>   that's cast to void.  */</em>
+<a id='L87' name='L87'></a>  87 <em class='comment'>/* The inner conditional compiles to a call to __lll_lock_wait_private if</em>
+<a id='L88' name='L88'></a>  88 <em class='comment'>   private is known at compile time to be LLL_PRIVATE, and to a call to</em>
+<a id='L89' name='L89'></a>  89 <em class='comment'>   __lll_lock_wait otherwise.  */</em>
+<a id='L90' name='L90'></a>  90 <em class='comment'>/* If FUTEX is 0 (not acquired), set to 1 (acquired with no waiters) and</em>
+<a id='L91' name='L91'></a>  91 <em class='comment'>   return.  Otherwise, ensure that it is &gt;1 (acquired, possibly with waiters)</em>
+<a id='L92' name='L92'></a>  92 <em class='comment'>   and then block until we acquire the lock, at which point FUTEX will still be</em>
+<a id='L93' name='L93'></a>  93 <em class='comment'>   &gt;1.  The lock is always acquired on return.  */</em>
+<a id='L94' name='L94'></a>  94 <em class='sharp'>#define</em> <a href='../R/14824.html' title='Multiple referred from 3 places.'>__lll_lock</a>(<a href='../S/10652.html#L59' title='Defined at 59 in sysdeps/unix/sysv/linux/i386/tst-bz21269.c.'>futex</a>, <a href='../Y/22790.html' title='Multiple used in 254 places.'>private</a>)                                      \
+<a id='L95' name='L95'></a>  95   ((<strong class='reserved'>void</strong>)                                                               \
+<a id='L96' name='L96'></a>  96    (<em class='brace'>{</em>                                                                   \
+<a id='L97' name='L97'></a>  97      <strong class='reserved'>int</strong> *<a href='../Y/4640.html' title='Multiple used in 11 places.'>__futex</a> = (<a href='../S/10652.html#L59' title='Defined at 59 in sysdeps/unix/sysv/linux/i386/tst-bz21269.c.'>futex</a>);                                            \
+<a id='L98' name='L98'></a>  98      <strong class='reserved'>if</strong> (<a href='../D/24205.html' title='Multiple defined in 2 places.'>__glibc_unlikely</a>                                               \
+<a id='L99' name='L99'></a>  99          (<a href='../D/27896.html' title='Multiple defined in 14 places.'>atomic_compare_and_exchange_bool_acq</a> (<a href='../Y/4640.html' title='Multiple used in 11 places.'>__futex</a>, 1, 0)))        \
+<a id='L100' name='L100'></a> 100        <em class='brace'>{</em>                                                                \
+<a id='L101' name='L101'></a> 101          <strong class='reserved'>if</strong> (<a href='../Y/3750.html' title='Multiple used in 63 places.'>__builtin_constant_p</a> (<a href='../Y/22790.html' title='Multiple used in 254 places.'>private</a>) &amp;&amp; (<a href='../Y/22790.html' title='Multiple used in 254 places.'>private</a>) == <a href='../D/7214.html' title='Multiple defined in 2 places.'>LLL_PRIVATE</a>) \
+<a id='L102' name='L102'></a> 102            <a href='../S/18407.html#L25' title='Defined at 25 in nptl/lowlevellock.c.'>__lll_lock_wait_private</a> (<a href='../Y/4640.html' title='Multiple used in 11 places.'>__futex</a>);                           \
+<a id='L103' name='L103'></a> 103          <strong class='reserved'>else</strong>                                                           \
+<a id='L104' name='L104'></a> 104            <a href='../Y/5465.html' title='Multiple used in 6 places.'>__lll_lock_wait</a> (<a href='../Y/4640.html' title='Multiple used in 11 places.'>__futex</a>, <a href='../Y/22790.html' title='Multiple used in 254 places.'>private</a>);                          \
+<a id='L105' name='L105'></a> 105        <em class='brace'>}</em>                                                                \
+<a id='L106' name='L106'></a> 106    <em class='brace'>}</em>))
+<a id='L107' name='L107'></a> 107 <em class='sharp'>#define</em> <a href='../R/21389.html' title='Multiple referred from 41 places.'>lll_lock</a>(<a href='../S/10652.html#L59' title='Defined at 59 in sysdeps/unix/sysv/linux/i386/tst-bz21269.c.'>futex</a>, <a href='../Y/22790.html' title='Multiple used in 254 places.'>private</a>)    \
+<a id='L108' name='L108'></a> 108   <a href='../D/24738.html' title='Multiple defined in 2 places.'>__lll_lock</a> (&amp;(<a href='../S/10652.html#L59' title='Defined at 59 in sysdeps/unix/sysv/linux/i386/tst-bz21269.c.'>futex</a>), <a href='../Y/22790.html' title='Multiple used in 254 places.'>private</a>)
+<a id='L109' name='L109'></a> 109 
+<a id='L110' name='L110'></a> 110 
+<a id='L111' name='L111'></a> 111 <em class='comment'>/* This is an expression rather than a statement even though its value is</em>
+<a id='L112' name='L112'></a> 112 <em class='comment'>   void, so that it can be used in a comma expression or as an expression</em>
+<a id='L113' name='L113'></a> 113 <em class='comment'>   that's cast to void.  */</em>
+<a id='L114' name='L114'></a> 114 <em class='comment'>/* Unconditionally set FUTEX to 2 (acquired, possibly with waiters).  If FUTEX</em>
+<a id='L115' name='L115'></a> 115 <em class='comment'>   was 0 (not acquired) then return.  Otherwise, block until the lock is</em>
+<a id='L116' name='L116'></a> 116 <em class='comment'>   acquired, at which point FUTEX is 2 (acquired, possibly with waiters).  The</em>
+<a id='L117' name='L117'></a> 117 <em class='comment'>   lock is always acquired on return.  */</em>
+<a id='L118' name='L118'></a> 118 <em class='sharp'>#define</em> <a href='../S/17841.html#L125' title='Referred from 125 in sysdeps/nptl/lowlevellock.h.'>__lll_cond_lock</a>(<a href='../S/10652.html#L59' title='Defined at 59 in sysdeps/unix/sysv/linux/i386/tst-bz21269.c.'>futex</a>, <a href='../Y/22790.html' title='Multiple used in 254 places.'>private</a>)                                 \
+<a id='L119' name='L119'></a> 119   ((<strong class='reserved'>void</strong>)                                                               \
+<a id='L120' name='L120'></a> 120    (<em class='brace'>{</em>                                                                   \
+<a id='L121' name='L121'></a> 121      <strong class='reserved'>int</strong> *<a href='../Y/4640.html' title='Multiple used in 11 places.'>__futex</a> = (<a href='../S/10652.html#L59' title='Defined at 59 in sysdeps/unix/sysv/linux/i386/tst-bz21269.c.'>futex</a>);                                            \
+<a id='L122' name='L122'></a> 122      <strong class='reserved'>if</strong> (<a href='../D/24205.html' title='Multiple defined in 2 places.'>__glibc_unlikely</a> (<a href='../D/27906.html' title='Multiple defined in 12 places.'>atomic_exchange_acq</a> (<a href='../Y/4640.html' title='Multiple used in 11 places.'>__futex</a>, 2) != 0))      \
+<a id='L123' name='L123'></a> 123        <a href='../Y/5465.html' title='Multiple used in 6 places.'>__lll_lock_wait</a> (<a href='../Y/4640.html' title='Multiple used in 11 places.'>__futex</a>, <a href='../Y/22790.html' title='Multiple used in 254 places.'>private</a>);                              \
+<a id='L124' name='L124'></a> 124    <em class='brace'>}</em>))
+<a id='L125' name='L125'></a> 125 <em class='sharp'>#define</em> <a href='../R/21379.html' title='Multiple referred from 2 places.'>lll_cond_lock</a>(<a href='../S/10652.html#L59' title='Defined at 59 in sysdeps/unix/sysv/linux/i386/tst-bz21269.c.'>futex</a>, <a href='../Y/22790.html' title='Multiple used in 254 places.'>private</a>) <a href='../S/17841.html#L118' title='Defined at 118 in sysdeps/nptl/lowlevellock.h.'>__lll_cond_lock</a> (&amp;(<a href='../S/10652.html#L59' title='Defined at 59 in sysdeps/unix/sysv/linux/i386/tst-bz21269.c.'>futex</a>), <a href='../Y/22790.html' title='Multiple used in 254 places.'>private</a>)
+<a id='L126' name='L126'></a> 126 
+<a id='L127' name='L127'></a> 127 
+<a id='L128' name='L128'></a> 128 <strong class='reserved'>extern</strong> <strong class='reserved'>void</strong> <a href='../Y/5467.html' title='Multiple used in 5 places.'>__lll_lock_wake_private</a> (<strong class='reserved'>int</strong> *<a href='../S/10652.html#L59' title='Defined at 59 in sysdeps/unix/sysv/linux/i386/tst-bz21269.c.'>futex</a>);
+<a id='L129' name='L129'></a> 129 <a href='../D/32800.html' title='Multiple defined in 29 places.'>libc_hidden_proto</a> (<a href='../Y/5467.html' title='Multiple used in 5 places.'>__lll_lock_wake_private</a>)
+<a id='L130' name='L130'></a> 130 <strong class='reserved'>extern</strong> <strong class='reserved'>void</strong> <a href='../Y/5466.html' title='Multiple used in 5 places.'>__lll_lock_wake</a> (<strong class='reserved'>int</strong> *<a href='../S/10652.html#L59' title='Defined at 59 in sysdeps/unix/sysv/linux/i386/tst-bz21269.c.'>futex</a>, <strong class='reserved'>int</strong> <a href='../Y/22790.html' title='Multiple used in 254 places.'>private</a>);
+<a id='L131' name='L131'></a> 131 <a href='../D/32800.html' title='Multiple defined in 29 places.'>libc_hidden_proto</a> (<a href='../Y/5466.html' title='Multiple used in 5 places.'>__lll_lock_wake</a>)
+<a id='L132' name='L132'></a> 132 
+<a id='L133' name='L133'></a> 133 <em class='comment'>/* This is an expression rather than a statement even though its value is</em>
+<a id='L134' name='L134'></a> 134 <em class='comment'>   void, so that it can be used in a comma expression or as an expression</em>
+<a id='L135' name='L135'></a> 135 <em class='comment'>   that's cast to void.  */</em>
+<a id='L136' name='L136'></a> 136 <em class='comment'>/* Unconditionally set FUTEX to 0 (not acquired), releasing the lock.  If FUTEX</em>
+<a id='L137' name='L137'></a> 137 <em class='comment'>   was &gt;1 (acquired, possibly with waiters), then wake any waiters.  The waiter</em>
+<a id='L138' name='L138'></a> 138 <em class='comment'>   that acquires the lock will set FUTEX to &gt;1.</em>
+<a id='L139' name='L139'></a> 139 <em class='comment'>   Evaluate PRIVATE before releasing the lock so that we do not violate the</em>
+<a id='L140' name='L140'></a> 140 <em class='comment'>   mutex destruction requirements.  Specifically, we need to ensure that</em>
+<a id='L141' name='L141'></a> 141 <em class='comment'>   another thread can destroy the mutex (and reuse its memory) once it</em>
+<a id='L142' name='L142'></a> 142 <em class='comment'>   acquires the lock and when there will be no further lock acquisitions;</em>
+<a id='L143' name='L143'></a> 143 <em class='comment'>   thus, we must not access the lock after releasing it, or those accesses</em>
+<a id='L144' name='L144'></a> 144 <em class='comment'>   could be concurrent with mutex destruction or reuse of the memory.  */</em>
+<a id='L145' name='L145'></a> 145 <em class='sharp'>#define</em> <a href='../R/14838.html' title='Multiple referred from 3 places.'>__lll_unlock</a>(<a href='../S/10652.html#L59' title='Defined at 59 in sysdeps/unix/sysv/linux/i386/tst-bz21269.c.'>futex</a>, <a href='../Y/22790.html' title='Multiple used in 254 places.'>private</a>)                    \
+<a id='L146' name='L146'></a> 146   ((<strong class='reserved'>void</strong>)                               \
+<a id='L147' name='L147'></a> 147   (<em class='brace'>{</em>                                    \
+<a id='L148' name='L148'></a> 148      <strong class='reserved'>int</strong> *<a href='../Y/4640.html' title='Multiple used in 11 places.'>__futex</a> = (<a href='../S/10652.html#L59' title='Defined at 59 in sysdeps/unix/sysv/linux/i386/tst-bz21269.c.'>futex</a>);                        \
+<a id='L149' name='L149'></a> 149      <strong class='reserved'>int</strong> <a href='../Y/6574.html' title='Multiple used in 7 places.'>__private</a> = (<a href='../Y/22790.html' title='Multiple used in 254 places.'>private</a>);                     \
+<a id='L150' name='L150'></a> 150      <strong class='reserved'>int</strong> <a href='../Y/6394.html' title='Multiple used in 93 places.'>__oldval</a> = <a href='../D/27911.html' title='Multiple defined in 10 places.'>atomic_exchange_rel</a> (<a href='../Y/4640.html' title='Multiple used in 11 places.'>__futex</a>, 0);           \
+<a id='L151' name='L151'></a> 151      <strong class='reserved'>if</strong> (<a href='../D/24205.html' title='Multiple defined in 2 places.'>__glibc_unlikely</a> (<a href='../Y/6394.html' title='Multiple used in 93 places.'>__oldval</a> &gt; 1))               \
+<a id='L152' name='L152'></a> 152        <em class='brace'>{</em>                                \
+<a id='L153' name='L153'></a> 153          <strong class='reserved'>if</strong> (<a href='../Y/3750.html' title='Multiple used in 63 places.'>__builtin_constant_p</a> (<a href='../Y/22790.html' title='Multiple used in 254 places.'>private</a>) &amp;&amp; (<a href='../Y/22790.html' title='Multiple used in 254 places.'>private</a>) == <a href='../D/7214.html' title='Multiple defined in 2 places.'>LLL_PRIVATE</a>) \
+<a id='L154' name='L154'></a> 154            <a href='../Y/5467.html' title='Multiple used in 5 places.'>__lll_lock_wake_private</a> (<a href='../Y/4640.html' title='Multiple used in 11 places.'>__futex</a>);                           \
+<a id='L155' name='L155'></a> 155          <strong class='reserved'>else</strong>                                                           \
+<a id='L156' name='L156'></a> 156            <a href='../Y/5466.html' title='Multiple used in 5 places.'>__lll_lock_wake</a> (<a href='../Y/4640.html' title='Multiple used in 11 places.'>__futex</a>, <a href='../Y/6574.html' title='Multiple used in 7 places.'>__private</a>);            \
+<a id='L157' name='L157'></a> 157        <em class='brace'>}</em>                                \
+<a id='L158' name='L158'></a> 158    <em class='brace'>}</em>))
+<a id='L159' name='L159'></a> 159 <em class='sharp'>#define</em> <a href='../R/21398.html' title='Multiple referred from 45 places.'>lll_unlock</a>(<a href='../S/10652.html#L59' title='Defined at 59 in sysdeps/unix/sysv/linux/i386/tst-bz21269.c.'>futex</a>, <a href='../Y/22790.html' title='Multiple used in 254 places.'>private</a>)  \
+<a id='L160' name='L160'></a> 160   <a href='../D/24753.html' title='Multiple defined in 2 places.'>__lll_unlock</a> (&amp;(<a href='../S/10652.html#L59' title='Defined at 59 in sysdeps/unix/sysv/linux/i386/tst-bz21269.c.'>futex</a>), <a href='../Y/22790.html' title='Multiple used in 254 places.'>private</a>)
+<a id='L161' name='L161'></a> 161 
+<a id='L162' name='L162'></a> 162 
+<a id='L163' name='L163'></a> 163 <em class='sharp'>#define</em> <a href='../R/21388.html' title='Multiple referred from 3 places.'>lll_islocked</a>(<a href='../S/10652.html#L59' title='Defined at 59 in sysdeps/unix/sysv/linux/i386/tst-bz21269.c.'>futex</a>) \
+<a id='L164' name='L164'></a> 164   ((<a href='../S/10652.html#L59' title='Defined at 59 in sysdeps/unix/sysv/linux/i386/tst-bz21269.c.'>futex</a>) != <a href='../D/7205.html' title='Multiple defined in 2 places.'>LLL_LOCK_INITIALIZER</a>)
+<a id='L165' name='L165'></a> 165 
+<a id='L166' name='L166'></a> 166 
+<a id='L167' name='L167'></a> 167 <em class='comment'>/* Our internal lock implementation is identical to the binary-compatible</em>
+<a id='L168' name='L168'></a> 168 <em class='comment'>   mutex implementation. */</em>
+<a id='L169' name='L169'></a> 169 
+<a id='L170' name='L170'></a> 170 <em class='comment'>/* Initializers for lock.  */</em>
+<a id='L171' name='L171'></a> 171 <em class='sharp'>#define</em> <a href='../R/4343.html' title='Multiple referred from 20 places.'>LLL_LOCK_INITIALIZER</a>        (0)
+<a id='L172' name='L172'></a> 172 <em class='sharp'>#define</em> LLL_LOCK_INITIALIZER_LOCKED (1)
+<a id='L173' name='L173'></a> 173 
+<a id='L174' name='L174'></a> 174 <em class='comment'>/* Elision support.  */</em>
+<a id='L175' name='L175'></a> 175 
+<a id='L176' name='L176'></a> 176 <em class='sharp'>#if</em> <a href='../D/3567.html' title='Multiple defined in 4 places.'>ENABLE_ELISION_SUPPORT</a>
+<a id='L177' name='L177'></a> 177 <em class='comment'>/* Force elision for all new locks.  This is used to decide whether</em>
+<a id='L178' name='L178'></a> 178 <em class='comment'>   existing DEFAULT locks should be automatically upgraded to elision</em>
+<a id='L179' name='L179'></a> 179 <em class='comment'>   in pthread_mutex_lock.  Disabled for suid programs.  Only used when</em>
+<a id='L180' name='L180'></a> 180 <em class='comment'>   elision is available.  */</em>
+<a id='L181' name='L181'></a> 181 <strong class='reserved'>extern</strong> <strong class='reserved'>int</strong> <a href='../Y/6648.html' title='Multiple used in 12 places.'>__pthread_force_elision</a>;
+<a id='L182' name='L182'></a> 182 <a href='../D/32800.html' title='Multiple defined in 29 places.'>libc_hidden_proto</a> (<a href='../Y/6648.html' title='Multiple used in 12 places.'>__pthread_force_elision</a>)
+<a id='L183' name='L183'></a> 183 
+<a id='L184' name='L184'></a> 184 <strong class='reserved'>extern</strong> <strong class='reserved'>void</strong> <a href='../D/24737.html' title='Multiple defined in 3 places.'>__lll_elision_init</a> (<strong class='reserved'>void</strong>) <a href='../D/27947.html' title='Multiple defined in 7 places.'>attribute_hidden</a>;
+<a id='L185' name='L185'></a> 185 <strong class='reserved'>extern</strong> <strong class='reserved'>int</strong> <a href='../Y/5464.html' title='Multiple used in 6 places.'>__lll_clocklock_elision</a> (<strong class='reserved'>int</strong> *<a href='../S/10652.html#L59' title='Defined at 59 in sysdeps/unix/sysv/linux/i386/tst-bz21269.c.'>futex</a>, <strong class='reserved'>short</strong> *<a href='../Y/9915.html' title='Multiple used in 74 places.'>adapt_count</a>,
+<a id='L186' name='L186'></a> 186                                     <a href='../S/3982.html#L7' title='Defined at 7 in time/bits/types/clockid_t.h.'>clockid_t</a> <a href='../Y/11702.html' title='Multiple used in 217 places.'>clockid</a>,
+<a id='L187' name='L187'></a> 187                     <strong class='reserved'>const</strong> <strong class='reserved'>struct</strong> <a href='../D/26293.html' title='Multiple defined in 3 places.'>__timespec64</a> *<a href='../Y/27314.html' title='Multiple used in 406 places.'>timeout</a>,
+<a id='L188' name='L188'></a> 188                     <strong class='reserved'>int</strong> <a href='../Y/22790.html' title='Multiple used in 254 places.'>private</a>);
+<a id='L189' name='L189'></a> 189 <a href='../D/32800.html' title='Multiple defined in 29 places.'>libc_hidden_proto</a> (<a href='../Y/5464.html' title='Multiple used in 6 places.'>__lll_clocklock_elision</a>)
+<a id='L190' name='L190'></a> 190 
+<a id='L191' name='L191'></a> 191 <strong class='reserved'>extern</strong> <strong class='reserved'>int</strong> <a href='../D/24739.html' title='Multiple defined in 6 places.'>__lll_lock_elision</a> (<strong class='reserved'>int</strong> *<a href='../S/10652.html#L59' title='Defined at 59 in sysdeps/unix/sysv/linux/i386/tst-bz21269.c.'>futex</a>, <strong class='reserved'>short</strong> *<a href='../Y/9915.html' title='Multiple used in 74 places.'>adapt_count</a>, <strong class='reserved'>int</strong> <a href='../Y/22790.html' title='Multiple used in 254 places.'>private</a>);
+<a id='L192' name='L192'></a> 192 <a href='../D/32800.html' title='Multiple defined in 29 places.'>libc_hidden_proto</a> (<a href='../D/24739.html' title='Multiple defined in 6 places.'>__lll_lock_elision</a>)
+<a id='L193' name='L193'></a> 193 
+<a id='L194' name='L194'></a> 194 <em class='sharp'># if</em> <a href='../D/3334.html' title='Multiple defined in 4 places.'>ELISION_UNLOCK_NEEDS_ADAPT_COUNT</a>
+<a id='L195' name='L195'></a> 195 <strong class='reserved'>extern</strong> <strong class='reserved'>int</strong> <a href='../D/24754.html' title='Multiple defined in 3 places.'>__lll_unlock_elision</a> (<strong class='reserved'>int</strong> *<a href='../S/1874.html#L71' title='Defined at 71 in malloc/tst-interpose-aux.c.'>lock</a>, <strong class='reserved'>short</strong> *<a href='../Y/9915.html' title='Multiple used in 74 places.'>adapt_count</a>, <strong class='reserved'>int</strong> <a href='../Y/22790.html' title='Multiple used in 254 places.'>private</a>);
+<a id='L196' name='L196'></a> 196 <em class='sharp'># else</em>
+<a id='L197' name='L197'></a> 197 <strong class='reserved'>extern</strong> <strong class='reserved'>int</strong> <a href='../D/24754.html' title='Multiple defined in 3 places.'>__lll_unlock_elision</a> (<strong class='reserved'>int</strong> *<a href='../S/1874.html#L71' title='Defined at 71 in malloc/tst-interpose-aux.c.'>lock</a>, <strong class='reserved'>int</strong> <a href='../Y/22790.html' title='Multiple used in 254 places.'>private</a>);
+<a id='L198' name='L198'></a> 198 <em class='sharp'># endif</em>
+<a id='L199' name='L199'></a> 199 <a href='../D/32800.html' title='Multiple defined in 29 places.'>libc_hidden_proto</a> (<a href='../D/24754.html' title='Multiple defined in 3 places.'>__lll_unlock_elision</a>)
+<a id='L200' name='L200'></a> 200 
+<a id='L201' name='L201'></a> 201 <strong class='reserved'>extern</strong> <strong class='reserved'>int</strong> <a href='../D/24752.html' title='Multiple defined in 3 places.'>__lll_trylock_elision</a> (<strong class='reserved'>int</strong> *<a href='../S/1874.html#L71' title='Defined at 71 in malloc/tst-interpose-aux.c.'>lock</a>, <strong class='reserved'>short</strong> *<a href='../Y/9915.html' title='Multiple used in 74 places.'>adapt_count</a>);
+<a id='L202' name='L202'></a> 202 <a href='../D/32800.html' title='Multiple defined in 29 places.'>libc_hidden_proto</a> (<a href='../D/24752.html' title='Multiple defined in 3 places.'>__lll_trylock_elision</a>)
+<a id='L203' name='L203'></a> 203 
+<a id='L204' name='L204'></a> 204 <em class='sharp'># define</em> <a href='../S/18456.html#L95' title='Referred from 95 in nptl/pthread_mutex_timedlock.c.'>lll_clocklock_elision</a>(<a href='../S/10652.html#L59' title='Defined at 59 in sysdeps/unix/sysv/linux/i386/tst-bz21269.c.'>futex</a>, <a href='../Y/9915.html' title='Multiple used in 74 places.'>adapt_count</a>, <a href='../Y/11702.html' title='Multiple used in 217 places.'>clockid</a>, <a href='../Y/27314.html' title='Multiple used in 406 places.'>timeout</a>, <a href='../Y/22790.html' title='Multiple used in 254 places.'>private</a>) \
+<a id='L205' name='L205'></a> 205   <a href='../Y/5464.html' title='Multiple used in 6 places.'>__lll_clocklock_elision</a> (&amp;(<a href='../S/10652.html#L59' title='Defined at 59 in sysdeps/unix/sysv/linux/i386/tst-bz21269.c.'>futex</a>), &amp;(<a href='../Y/9915.html' title='Multiple used in 74 places.'>adapt_count</a>), <a href='../Y/11702.html' title='Multiple used in 217 places.'>clockid</a>, <a href='../Y/27314.html' title='Multiple used in 406 places.'>timeout</a>, <a href='../Y/22790.html' title='Multiple used in 254 places.'>private</a>)
+<a id='L206' name='L206'></a> 206 <em class='sharp'># define</em> <a href='../S/18412.html#L58' title='Referred from 58 in nptl/pthread_mutex_lock.c.'>lll_lock_elision</a>(<a href='../S/10652.html#L59' title='Defined at 59 in sysdeps/unix/sysv/linux/i386/tst-bz21269.c.'>futex</a>, <a href='../Y/9915.html' title='Multiple used in 74 places.'>adapt_count</a>, <a href='../Y/22790.html' title='Multiple used in 254 places.'>private</a>)      \
+<a id='L207' name='L207'></a> 207   <a href='../D/24739.html' title='Multiple defined in 6 places.'>__lll_lock_elision</a> (&amp;(<a href='../S/10652.html#L59' title='Defined at 59 in sysdeps/unix/sysv/linux/i386/tst-bz21269.c.'>futex</a>), &amp;(<a href='../Y/9915.html' title='Multiple used in 74 places.'>adapt_count</a>), <a href='../Y/22790.html' title='Multiple used in 254 places.'>private</a>)
+<a id='L208' name='L208'></a> 208 <em class='sharp'># define</em> <a href='../R/21397.html' title='Multiple referred from 2 places.'>lll_trylock_elision</a>(<a href='../S/10652.html#L59' title='Defined at 59 in sysdeps/unix/sysv/linux/i386/tst-bz21269.c.'>futex</a>, <a href='../Y/9915.html' title='Multiple used in 74 places.'>adapt_count</a>)    \
+<a id='L209' name='L209'></a> 209   <a href='../D/24752.html' title='Multiple defined in 3 places.'>__lll_trylock_elision</a> (&amp;(<a href='../S/10652.html#L59' title='Defined at 59 in sysdeps/unix/sysv/linux/i386/tst-bz21269.c.'>futex</a>), &amp;(<a href='../Y/9915.html' title='Multiple used in 74 places.'>adapt_count</a>))
+<a id='L210' name='L210'></a> 210 <em class='sharp'># if</em> <a href='../D/3334.html' title='Multiple defined in 4 places.'>ELISION_UNLOCK_NEEDS_ADAPT_COUNT</a>
+<a id='L211' name='L211'></a> 211 <em class='sharp'>#  define</em> <a href='../S/18447.html#L77' title='Referred from 77 in nptl/pthread_mutex_unlock.c.'>lll_unlock_elision</a>(<a href='../S/10652.html#L59' title='Defined at 59 in sysdeps/unix/sysv/linux/i386/tst-bz21269.c.'>futex</a>, <a href='../Y/9915.html' title='Multiple used in 74 places.'>adapt_count</a>, <a href='../Y/22790.html' title='Multiple used in 254 places.'>private</a>)   \
+<a id='L212' name='L212'></a> 212   <a href='../D/24754.html' title='Multiple defined in 3 places.'>__lll_unlock_elision</a> (&amp;(<a href='../S/10652.html#L59' title='Defined at 59 in sysdeps/unix/sysv/linux/i386/tst-bz21269.c.'>futex</a>), &amp;(<a href='../Y/9915.html' title='Multiple used in 74 places.'>adapt_count</a>), <a href='../Y/22790.html' title='Multiple used in 254 places.'>private</a>)
+<a id='L213' name='L213'></a> 213 <em class='sharp'># else</em>
+<a id='L214' name='L214'></a> 214 <em class='sharp'>#  define</em> <a href='../S/18447.html#L77' title='Referred from 77 in nptl/pthread_mutex_unlock.c.'>lll_unlock_elision</a>(<a href='../S/10652.html#L59' title='Defined at 59 in sysdeps/unix/sysv/linux/i386/tst-bz21269.c.'>futex</a>, <a href='../Y/9915.html' title='Multiple used in 74 places.'>adapt_count</a>, <a href='../Y/22790.html' title='Multiple used in 254 places.'>private</a>)   \
+<a id='L215' name='L215'></a> 215   <a href='../D/24754.html' title='Multiple defined in 3 places.'>__lll_unlock_elision</a> (&amp;(<a href='../S/10652.html#L59' title='Defined at 59 in sysdeps/unix/sysv/linux/i386/tst-bz21269.c.'>futex</a>), <a href='../Y/22790.html' title='Multiple used in 254 places.'>private</a>)
+<a id='L216' name='L216'></a> 216 <em class='sharp'># endif</em>
+<a id='L217' name='L217'></a> 217 
+<a id='L218' name='L218'></a> 218 <em class='comment'>/* Automatically enable elision for existing user lock kinds.  */</em>
+<a id='L219' name='L219'></a> 219 <em class='sharp'># define</em> <a href='../R/2552.html' title='Multiple referred from 3 places.'>FORCE_ELISION</a>(<a href='../D/33231.html' title='Multiple defined in 2 places.'>m</a>, <a href='../D/36247.html' title='Multiple defined in 13 places.'>s</a>)                                            \
+<a id='L220' name='L220'></a> 220   <strong class='reserved'>if</strong> (<a href='../Y/6648.html' title='Multiple used in 12 places.'>__pthread_force_elision</a>)                                          \
+<a id='L221' name='L221'></a> 221     <em class='brace'>{</em>                                                                   \
+<a id='L222' name='L222'></a> 222       <em class='comment'>/* See concurrency notes regarding __kind in                      \</em>
+<a id='L223' name='L223'></a> 223 <em class='comment'>         struct __pthread_mutex_s in                                    \</em>
+<a id='L224' name='L224'></a> 224 <em class='comment'>         sysdeps/nptl/bits/thread-shared-types.h.                       \</em>
+<a id='L225' name='L225'></a> 225 <em class='comment'>                                                                        \</em>
+<a id='L226' name='L226'></a> 226 <em class='comment'>         There are the following cases for the kind of a mutex          \</em>
+<a id='L227' name='L227'></a> 227 <em class='comment'>         (The mask PTHREAD_MUTEX_ELISION_FLAGS_NP covers the flags      \</em>
+<a id='L228' name='L228'></a> 228 <em class='comment'>         PTHREAD_MUTEX_ELISION_NP and PTHREAD_MUTEX_NO_ELISION_NP where \</em>
+<a id='L229' name='L229'></a> 229 <em class='comment'>         only one of both flags can be set):                            \</em>
+<a id='L230' name='L230'></a> 230 <em class='comment'>         - both flags are not set:                                      \</em>
+<a id='L231' name='L231'></a> 231 <em class='comment'>         This is the first lock operation for this mutex.  Enable       \</em>
+<a id='L232' name='L232'></a> 232 <em class='comment'>         elision as it is not enabled so far.                           \</em>
+<a id='L233' name='L233'></a> 233 <em class='comment'>         Note: It can happen that multiple threads are calling e.g.     \</em>
+<a id='L234' name='L234'></a> 234 <em class='comment'>         pthread_mutex_lock at the same time as the first lock          \</em>
+<a id='L235' name='L235'></a> 235 <em class='comment'>         operation for this mutex.  Then elision is enabled for this    \</em>
+<a id='L236' name='L236'></a> 236 <em class='comment'>         mutex by multiple threads.  Storing with relaxed MO is enough  \</em>
+<a id='L237' name='L237'></a> 237 <em class='comment'>         as all threads will store the same new value for the kind of   \</em>
+<a id='L238' name='L238'></a> 238 <em class='comment'>         the mutex.  But we have to ensure that we always use the       \</em>
+<a id='L239' name='L239'></a> 239 <em class='comment'>         elision path regardless if this thread has enabled elision or  \</em>
+<a id='L240' name='L240'></a> 240 <em class='comment'>         another one.                                                   \</em>
+<a id='L241' name='L241'></a> 241 <em class='comment'>                                                                        \</em>
+<a id='L242' name='L242'></a> 242 <em class='comment'>         - PTHREAD_MUTEX_ELISION_NP flag is set:                        \</em>
+<a id='L243' name='L243'></a> 243 <em class='comment'>         Elision was already enabled for this mutex by a previous lock  \</em>
+<a id='L244' name='L244'></a> 244 <em class='comment'>         operation.  See case above.  Just use the elision path.        \</em>
+<a id='L245' name='L245'></a> 245 <em class='comment'>                                                                        \</em>
+<a id='L246' name='L246'></a> 246 <em class='comment'>         - PTHREAD_MUTEX_NO_ELISION_NP flag is set:                     \</em>
+<a id='L247' name='L247'></a> 247 <em class='comment'>         Elision was explicitly disabled by pthread_mutexattr_settype.  \</em>
+<a id='L248' name='L248'></a> 248 <em class='comment'>         Do not use the elision path.                                   \</em>
+<a id='L249' name='L249'></a> 249 <em class='comment'>         Note: The flag PTHREAD_MUTEX_NO_ELISION_NP will never be       \</em>
+<a id='L250' name='L250'></a> 250 <em class='comment'>         changed after mutex initialization.  */</em>                        \
+<a id='L251' name='L251'></a> 251       <strong class='reserved'>int</strong> <a href='../Y/20049.html' title='Multiple used in 25 places.'>mutex_kind</a> = <a href='../D/27931.html' title='Multiple defined in 3 places.'>atomic_load_relaxed</a> (&amp;((<a href='../D/33231.html' title='Multiple defined in 2 places.'>m</a>)-&gt;<a href='../Y/4155.html' title='Multiple used in 633 places.'>__data</a>.<a href='../Y/5305.html' title='Multiple used in 60 places.'>__kind</a>));     \
+<a id='L252' name='L252'></a> 252       <strong class='reserved'>if</strong> ((<a href='../Y/20049.html' title='Multiple used in 25 places.'>mutex_kind</a> &amp; <a href='../S/17823.html#L108' title='Defined at 108 in sysdeps/nptl/pthreadP.h.'>PTHREAD_MUTEX_ELISION_FLAGS_NP</a>) == 0)           \
+<a id='L253' name='L253'></a> 253         <em class='brace'>{</em>                                                               \
+<a id='L254' name='L254'></a> 254           <a href='../Y/20049.html' title='Multiple used in 25 places.'>mutex_kind</a> |= <a href='../S/17823.html#L72' title='Defined at 72 in sysdeps/nptl/pthreadP.h.'>PTHREAD_MUTEX_ELISION_NP</a>;                       \
+<a id='L255' name='L255'></a> 255           <a href='../D/27938.html' title='Multiple defined in 3 places.'>atomic_store_relaxed</a> (&amp;((<a href='../D/33231.html' title='Multiple defined in 2 places.'>m</a>)-&gt;<a href='../Y/4155.html' title='Multiple used in 633 places.'>__data</a>.<a href='../Y/5305.html' title='Multiple used in 60 places.'>__kind</a>), <a href='../Y/20049.html' title='Multiple used in 25 places.'>mutex_kind</a>);     \
+<a id='L256' name='L256'></a> 256         <em class='brace'>}</em>                                                               \
+<a id='L257' name='L257'></a> 257       <strong class='reserved'>if</strong> ((<a href='../Y/20049.html' title='Multiple used in 25 places.'>mutex_kind</a> &amp; <a href='../S/17823.html#L72' title='Defined at 72 in sysdeps/nptl/pthreadP.h.'>PTHREAD_MUTEX_ELISION_NP</a>) != 0)                 \
+<a id='L258' name='L258'></a> 258         <em class='brace'>{</em>                                                               \
+<a id='L259' name='L259'></a> 259           <a href='../D/36247.html' title='Multiple defined in 13 places.'>s</a>;                                                            \
+<a id='L260' name='L260'></a> 260         <em class='brace'>}</em>                                                               \
+<a id='L261' name='L261'></a> 261     <em class='brace'>}</em>
+<a id='L262' name='L262'></a> 262 
+<a id='L263' name='L263'></a> 263 <em class='sharp'>#else</em> <em class='comment'>/* !ENABLE_ELISION_SUPPORT */</em>
+<a id='L264' name='L264'></a> 264 
+<a id='L265' name='L265'></a> 265 <em class='sharp'># define</em> <a href='../S/18456.html#L95' title='Referred from 95 in nptl/pthread_mutex_timedlock.c.'>lll_clocklock_elision</a>(<a href='../S/10652.html#L59' title='Defined at 59 in sysdeps/unix/sysv/linux/i386/tst-bz21269.c.'>futex</a>, <a href='../Y/9915.html' title='Multiple used in 74 places.'>adapt_count</a>, <a href='../Y/11702.html' title='Multiple used in 217 places.'>clockid</a>, <a href='../Y/9810.html' title='Multiple used in 201 places.'>abstime</a>, <a href='../Y/22790.html' title='Multiple used in 254 places.'>private</a>) \
+<a id='L266' name='L266'></a> 266   <a href='../S/17835.html#L317' title='Defined at 317 in sysdeps/nptl/futex-internal.h.'>__futex_clocklock64</a> (&amp;(<a href='../S/10652.html#L59' title='Defined at 59 in sysdeps/unix/sysv/linux/i386/tst-bz21269.c.'>futex</a>), <a href='../Y/11702.html' title='Multiple used in 217 places.'>clockid</a>, <a href='../Y/9810.html' title='Multiple used in 201 places.'>abstime</a>, <a href='../Y/22790.html' title='Multiple used in 254 places.'>private</a>)
+<a id='L267' name='L267'></a> 267 <em class='sharp'># define</em> <a href='../S/18412.html#L58' title='Referred from 58 in nptl/pthread_mutex_lock.c.'>lll_lock_elision</a>(<a href='../S/1874.html#L71' title='Defined at 71 in malloc/tst-interpose-aux.c.'>lock</a>, try_lock, <a href='../Y/22790.html' title='Multiple used in 254 places.'>private</a>)  \
+<a id='L268' name='L268'></a> 268   (<em class='brace'>{</em> <a href='../D/33010.html' title='Multiple defined in 2 places.'>lll_lock</a> (<a href='../S/1874.html#L71' title='Defined at 71 in malloc/tst-interpose-aux.c.'>lock</a>, <a href='../Y/22790.html' title='Multiple used in 254 places.'>private</a>); 0; <em class='brace'>}</em>)
+<a id='L269' name='L269'></a> 269 <em class='sharp'># define</em> <a href='../R/21397.html' title='Multiple referred from 2 places.'>lll_trylock_elision</a>(<a href='../Y/9676.html' title='Multiple used in 2513 places.'>a</a>,<a href='../S/4165.html#L39' title='Defined at 39 in wcsmbs/tst-mbrtowc2.c.'>t</a>) <a href='../D/33017.html' title='Multiple defined in 2 places.'>lll_trylock</a>(<a href='../Y/9676.html' title='Multiple used in 2513 places.'>a</a>)
+<a id='L270' name='L270'></a> 270 <em class='sharp'># define</em> <a href='../S/18447.html#L77' title='Referred from 77 in nptl/pthread_mutex_unlock.c.'>lll_unlock_elision</a>(<a href='../Y/9676.html' title='Multiple used in 2513 places.'>a</a>,<a href='../S/5162.html#L61' title='Defined at 61 in ctype/ctype-info.c.'>b</a>,<a href='../D/28364.html' title='Multiple defined in 2 places.'>c</a>) (<em class='brace'>{</em> <a href='../D/33019.html' title='Multiple defined in 2 places.'>lll_unlock</a> (<a href='../Y/9676.html' title='Multiple used in 2513 places.'>a</a>,<a href='../D/28364.html' title='Multiple defined in 2 places.'>c</a>); 0; <em class='brace'>}</em>)
+<a id='L271' name='L271'></a> 271 <em class='sharp'># define</em> <a href='../R/2552.html' title='Multiple referred from 3 places.'>FORCE_ELISION</a>(<a href='../D/33231.html' title='Multiple defined in 2 places.'>m</a>, <a href='../D/36247.html' title='Multiple defined in 13 places.'>s</a>)
+<a id='L272' name='L272'></a> 272 
+<a id='L273' name='L273'></a> 273 <em class='sharp'>#endif</em> <em class='comment'>/* !ENABLE_ELISION_SUPPORT */</em>
+<a id='L274' name='L274'></a> 274 
+<a id='L275' name='L275'></a> 275 <em class='sharp'>#endif</em>  <em class='comment'>/* lowlevellock.h */</em>
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;][^][v]<a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

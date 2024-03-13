@@ -1,0 +1,186 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>sysdeps/ia64/fpu/s_truncl.S</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18977.html'>sysdeps</a>/<a href='../files/19053.html'>ia64</a>/<a href='../files/19055.html'>fpu</a>/s_truncl.S</h2>
+<em class='comment'>/* [&lt;][&gt;][^][v][top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 .file "truncl.s"
+<a id='L2' name='L2'></a>   2 
+<a id='L3' name='L3'></a>   3 
+<a id='L4' name='L4'></a>   4 <em class='comment'>// Copyright (c) 2000 - 2003, Intel Corporation</em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>// All rights reserved.</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>//</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>//</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'>// Redistribution and use in source and binary forms, with or without</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'>// modification, are permitted provided that the following conditions are</em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>// met:</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>//</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>// * Redistributions of source code must retain the above copyright</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'>// notice, this list of conditions and the following disclaimer.</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'>//</em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>// * Redistributions in binary form must reproduce the above copyright</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>// notice, this list of conditions and the following disclaimer in the</em>
+<a id='L17' name='L17'></a>  17 <em class='comment'>// documentation and/or other materials provided with the distribution.</em>
+<a id='L18' name='L18'></a>  18 <em class='comment'>//</em>
+<a id='L19' name='L19'></a>  19 <em class='comment'>// * The name of Intel Corporation may not be used to endorse or promote</em>
+<a id='L20' name='L20'></a>  20 <em class='comment'>// products derived from this software without specific prior written</em>
+<a id='L21' name='L21'></a>  21 <em class='comment'>// permission.</em>
+<a id='L22' name='L22'></a>  22 
+<a id='L23' name='L23'></a>  23 <em class='comment'>// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS</em>
+<a id='L24' name='L24'></a>  24 <em class='comment'>// "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT</em>
+<a id='L25' name='L25'></a>  25 <em class='comment'>// LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR</em>
+<a id='L26' name='L26'></a>  26 <em class='comment'>// A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL INTEL OR ITS</em>
+<a id='L27' name='L27'></a>  27 <em class='comment'>// CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,</em>
+<a id='L28' name='L28'></a>  28 <em class='comment'>// EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,</em>
+<a id='L29' name='L29'></a>  29 <em class='comment'>// PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR</em>
+<a id='L30' name='L30'></a>  30 <em class='comment'>// PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY</em>
+<a id='L31' name='L31'></a>  31 <em class='comment'>// OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY OR TORT (INCLUDING</em>
+<a id='L32' name='L32'></a>  32 <em class='comment'>// NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS</em>
+<a id='L33' name='L33'></a>  33 <em class='comment'>// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.</em>
+<a id='L34' name='L34'></a>  34 <em class='comment'>//</em>
+<a id='L35' name='L35'></a>  35 <em class='comment'>// Intel Corporation is the author of this code, and requests that all</em>
+<a id='L36' name='L36'></a>  36 <em class='comment'>// problem reports or change requests be submitted to it directly at</em>
+<a id='L37' name='L37'></a>  37 <em class='comment'>// http://www.intel.com/software/products/opensource/libraries/num.htm.</em>
+<a id='L38' name='L38'></a>  38 <em class='comment'>//</em>
+<a id='L39' name='L39'></a>  39 <em class='comment'>// History</em>
+<a id='L40' name='L40'></a>  40 <em class='comment'>//==============================================================</em>
+<a id='L41' name='L41'></a>  41 <em class='comment'>// 07/07/00 Created</em>
+<a id='L42' name='L42'></a>  42 <em class='comment'>// 05/20/02 Cleaned up namespace and sf0 syntax</em>
+<a id='L43' name='L43'></a>  43 <em class='comment'>// 01/20/03 Improved performance and reduced code size</em>
+<a id='L44' name='L44'></a>  44 <em class='comment'>//==============================================================</em>
+<a id='L45' name='L45'></a>  45 
+<a id='L46' name='L46'></a>  46 <em class='comment'>// API</em>
+<a id='L47' name='L47'></a>  47 <em class='comment'>//==============================================================</em>
+<a id='L48' name='L48'></a>  48 <em class='comment'>// long double truncl(long double x)</em>
+<a id='L49' name='L49'></a>  49 <em class='comment'>//==============================================================</em>
+<a id='L50' name='L50'></a>  50 
+<a id='L51' name='L51'></a>  51 <em class='comment'>// general input registers:</em>
+<a id='L52' name='L52'></a>  52 <em class='comment'>// r14 - r18</em>
+<a id='L53' name='L53'></a>  53 
+<a id='L54' name='L54'></a>  54 rExpBias   = r14
+<a id='L55' name='L55'></a>  55 rSignexp   = r15
+<a id='L56' name='L56'></a>  56 rExp       = r16
+<a id='L57' name='L57'></a>  57 rExpMask   = r17
+<a id='L58' name='L58'></a>  58 rBigexp    = r18
+<a id='L59' name='L59'></a>  59 
+<a id='L60' name='L60'></a>  60 <em class='comment'>// floating-point registers:</em>
+<a id='L61' name='L61'></a>  61 <em class='comment'>// f8 - f10</em>
+<a id='L62' name='L62'></a>  62 
+<a id='L63' name='L63'></a>  63 fXtruncInt = f9
+<a id='L64' name='L64'></a>  64 fNormX     = f10
+<a id='L65' name='L65'></a>  65 
+<a id='L66' name='L66'></a>  66 <em class='comment'>// predicate registers used:</em>
+<a id='L67' name='L67'></a>  67 <em class='comment'>// p6, p7</em>
+<a id='L68' name='L68'></a>  68 
+<a id='L69' name='L69'></a>  69 <em class='comment'>// Overview of operation</em>
+<a id='L70' name='L70'></a>  70 <em class='comment'>//==============================================================</em>
+<a id='L71' name='L71'></a>  71 <em class='comment'>// long double truncl(long double x)</em>
+<a id='L72' name='L72'></a>  72 <em class='comment'>// Return an integer value (represented as a long double) less than or</em>
+<a id='L73' name='L73'></a>  73 <em class='comment'>// equal to x in magnitude.</em>
+<a id='L74' name='L74'></a>  74 <em class='comment'>// This is x rounded toward zero to an integral value.</em>
+<a id='L75' name='L75'></a>  75 <em class='comment'>//==============================================================</em>
+<a id='L76' name='L76'></a>  76 
+<a id='L77' name='L77'></a>  77 <em class='comment'>// double_extended</em>
+<a id='L78' name='L78'></a>  78 <em class='comment'>// if the exponent is &gt; 1003e =&gt; 3F(true) = 63(decimal)</em>
+<a id='L79' name='L79'></a>  79 <em class='comment'>// we have a significand of 64 bits 1.63-bits.</em>
+<a id='L80' name='L80'></a>  80 <em class='comment'>// If we multiply by 2^63, we no longer have a fractional part</em>
+<a id='L81' name='L81'></a>  81 <em class='comment'>// So input is an integer value already.</em>
+<a id='L82' name='L82'></a>  82 
+<a id='L83' name='L83'></a>  83 <em class='comment'>// double</em>
+<a id='L84' name='L84'></a>  84 <em class='comment'>// if the exponent is &gt;= 10033 =&gt; 34(true) = 52(decimal)</em>
+<a id='L85' name='L85'></a>  85 <em class='comment'>// 34 + 3ff = 433</em>
+<a id='L86' name='L86'></a>  86 <em class='comment'>// we have a significand of 53 bits 1.52-bits. (implicit 1)</em>
+<a id='L87' name='L87'></a>  87 <em class='comment'>// If we multiply by 2^52, we no longer have a fractional part</em>
+<a id='L88' name='L88'></a>  88 <em class='comment'>// So input is an integer value already.</em>
+<a id='L89' name='L89'></a>  89 
+<a id='L90' name='L90'></a>  90 <em class='comment'>// single</em>
+<a id='L91' name='L91'></a>  91 <em class='comment'>// if the exponent is &gt; 10016 =&gt; 17(true) = 23(decimal)</em>
+<a id='L92' name='L92'></a>  92 <em class='comment'>// we have a significand of 24 bits 1.23-bits. (implicit 1)</em>
+<a id='L93' name='L93'></a>  93 <em class='comment'>// If we multiply by 2^23, we no longer have a fractional part</em>
+<a id='L94' name='L94'></a>  94 <em class='comment'>// So input is an integer value already.</em>
+<a id='L95' name='L95'></a>  95 
+<a id='L96' name='L96'></a>  96 .section .text
+<a id='L97' name='L97'></a>  97 GLOBAL_LIBM_ENTRY(truncl)
+<a id='L98' name='L98'></a>  98 
+<a id='L99' name='L99'></a>  99 <em class='brace'>{</em> .mfi
+<a id='L100' name='L100'></a> 100       getf.exp         rSignexp  = f8        <em class='comment'>// Get signexp, recompute if unorm</em>
+<a id='L101' name='L101'></a> 101       fcvt.fx.trunc.s1 fXtruncInt  = f8      <em class='comment'>// Convert to int in significand</em>
+<a id='L102' name='L102'></a> 102       addl             rBigexp = 0x1003e, r0 <em class='comment'>// Set exponent at which is integer</em>
+<a id='L103' name='L103'></a> 103 <em class='brace'>}</em>
+<a id='L104' name='L104'></a> 104 <em class='brace'>{</em> .mfi
+<a id='L105' name='L105'></a> 105       mov              rExpBias    = 0x0FFFF <em class='comment'>// Form exponent bias</em>
+<a id='L106' name='L106'></a> 106       fnorm.s1         fNormX  = f8          <em class='comment'>// Normalize input</em>
+<a id='L107' name='L107'></a> 107       mov              rExpMask    = 0x1FFFF <em class='comment'>// Form exponent mask</em>
+<a id='L108' name='L108'></a> 108 <em class='brace'>}</em>
+<a id='L109' name='L109'></a> 109 ;;
+<a id='L110' name='L110'></a> 110 
+<a id='L111' name='L111'></a> 111 <em class='brace'>{</em> .mfi
+<a id='L112' name='L112'></a> 112       nop.m            0
+<a id='L113' name='L113'></a> 113       fclass.m         p7,p0 = f8, 0x0b      <em class='comment'>// Test x unorm</em>
+<a id='L114' name='L114'></a> 114       nop.i            0
+<a id='L115' name='L115'></a> 115 <em class='brace'>}</em>
+<a id='L116' name='L116'></a> 116 ;;
+<a id='L117' name='L117'></a> 117 
+<a id='L118' name='L118'></a> 118 <em class='brace'>{</em> .mfb
+<a id='L119' name='L119'></a> 119       nop.m            0
+<a id='L120' name='L120'></a> 120       fclass.m         p6,p0 = f8, 0x1e3     <em class='comment'>// Test x natval, nan, inf</em>
+<a id='L121' name='L121'></a> 121 (p7)  br.cond.spnt     TRUNC_UNORM           <em class='comment'>// Branch if x unorm</em>
+<a id='L122' name='L122'></a> 122 <em class='brace'>}</em>
+<a id='L123' name='L123'></a> 123 ;;
+<a id='L124' name='L124'></a> 124 
+<a id='L125' name='L125'></a> 125 TRUNC_COMMON:
+<a id='L126' name='L126'></a> 126 <em class='comment'>// Return here from TRUNC_UNORM</em>
+<a id='L127' name='L127'></a> 127 <em class='brace'>{</em> .mfb
+<a id='L128' name='L128'></a> 128       and              rExp = rSignexp, rExpMask <em class='comment'>// Get biased exponent</em>
+<a id='L129' name='L129'></a> 129 (p6)  fma.s0           f8 = f8, f1, f0       <em class='comment'>// Result if x natval, nan, inf</em>
+<a id='L130' name='L130'></a> 130 (p6)  br.ret.spnt      b0                    <em class='comment'>// Exit if x natval, nan, inf</em>
+<a id='L131' name='L131'></a> 131 <em class='brace'>}</em>
+<a id='L132' name='L132'></a> 132 ;;
+<a id='L133' name='L133'></a> 133 
+<a id='L134' name='L134'></a> 134 <em class='brace'>{</em> .mfi
+<a id='L135' name='L135'></a> 135       cmp.lt           p6,p0 = rExp, rExpBias <em class='comment'>// Is |x| &lt; 1?</em>
+<a id='L136' name='L136'></a> 136       fcvt.xf          f8 = fXtruncInt        <em class='comment'>// Result, assume 1 &lt;= |x| &lt; 2^63</em>
+<a id='L137' name='L137'></a> 137       cmp.ge           p7,p0 = rExp, rBigexp  <em class='comment'>// Is |x| &gt;= 2^63?</em>
+<a id='L138' name='L138'></a> 138 <em class='brace'>}</em>
+<a id='L139' name='L139'></a> 139 ;;
+<a id='L140' name='L140'></a> 140 
+<a id='L141' name='L141'></a> 141 <em class='comment'>// We must correct result if |x| &lt; 1, or |x| &gt;= 2^63</em>
+<a id='L142' name='L142'></a> 142 .pred.rel "mutex",p6,p7
+<a id='L143' name='L143'></a> 143 <em class='brace'>{</em> .mfi
+<a id='L144' name='L144'></a> 144       nop.m            0
+<a id='L145' name='L145'></a> 145 (p6)  fmerge.s         f8 = fNormX, f0        <em class='comment'>// If |x| &lt; 1, result sgn(x)*0</em>
+<a id='L146' name='L146'></a> 146       nop.i            0
+<a id='L147' name='L147'></a> 147 <em class='brace'>}</em>
+<a id='L148' name='L148'></a> 148 <em class='brace'>{</em> .mfb
+<a id='L149' name='L149'></a> 149       nop.m            0
+<a id='L150' name='L150'></a> 150 (p7)  fma.s0           f8 = fNormX, f1, f0    <em class='comment'>// If |x| &gt;= 2^63, result x</em>
+<a id='L151' name='L151'></a> 151       br.ret.sptk      b0                     <em class='comment'>// Exit main path</em>
+<a id='L152' name='L152'></a> 152 <em class='brace'>}</em>
+<a id='L153' name='L153'></a> 153 ;;
+<a id='L154' name='L154'></a> 154 
+<a id='L155' name='L155'></a> 155 
+<a id='L156' name='L156'></a> 156 TRUNC_UNORM:
+<a id='L157' name='L157'></a> 157 <em class='comment'>// Here if x unorm</em>
+<a id='L158' name='L158'></a> 158 <em class='brace'>{</em> .mfb
+<a id='L159' name='L159'></a> 159       getf.exp         rSignexp  = fNormX     <em class='comment'>// Get signexp, recompute if unorm</em>
+<a id='L160' name='L160'></a> 160       fcmp.eq.s0       p7,p0 = f8, f0         <em class='comment'>// Dummy op to set denormal flag</em>
+<a id='L161' name='L161'></a> 161       br.cond.sptk     TRUNC_COMMON           <em class='comment'>// Return to main path</em>
+<a id='L162' name='L162'></a> 162 <em class='brace'>}</em>
+<a id='L163' name='L163'></a> 163 ;;
+<a id='L164' name='L164'></a> 164 
+<a id='L165' name='L165'></a> 165 GLOBAL_LIBM_END(truncl)
+<a id='L166' name='L166'></a> 166 libm_alias_ldouble_other (trunc, trunc)
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;][^][v]<a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

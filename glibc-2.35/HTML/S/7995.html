@@ -1,0 +1,201 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>sysdeps/powerpc/powerpc64/lshift.S</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18977.html'>sysdeps</a>/<a href='../files/19149.html'>powerpc</a>/<a href='../files/19172.html'>powerpc64</a>/lshift.S</h2>
+<em class='comment'>/* [&lt;][&gt;][^][v][top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* PowerPC64 mpn_lshift -- rp[] = up[] &lt;&lt; cnt</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   Copyright (C) 2003-2022 Free Software Foundation, Inc.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'></em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'></em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'></em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   License along with the GNU C Library; if not, see</em>
+<a id='L17' name='L17'></a>  17 <em class='comment'>   &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L18' name='L18'></a>  18 
+<a id='L19' name='L19'></a>  19 <em class='sharp'>#include</em> &lt;<a href='../I/5967.html'>sysdep.h</a>&gt;
+<a id='L20' name='L20'></a>  20 
+<a id='L21' name='L21'></a>  21 <em class='sharp'>#define</em> RP       r3
+<a id='L22' name='L22'></a>  22 <em class='sharp'>#define</em> UP       r4
+<a id='L23' name='L23'></a>  23 <em class='sharp'>#define</em> <a href='../R/5184.html' title='Multiple referred from 526 places.'>N</a>        r5
+<a id='L24' name='L24'></a>  24 <em class='sharp'>#define</em> CNT      r6
+<a id='L25' name='L25'></a>  25 
+<a id='L26' name='L26'></a>  26 <em class='sharp'>#define</em> TNC      r0
+<a id='L27' name='L27'></a>  27 <em class='sharp'>#define</em> <a href='../R/9080.html' title='Multiple referred from 18 places.'>U0</a>      r30
+<a id='L28' name='L28'></a>  28 <em class='sharp'>#define</em> <a href='../R/9081.html' title='Multiple referred from 6 places.'>U1</a>      r31
+<a id='L29' name='L29'></a>  29 <em class='sharp'>#define</em> U0SAVE  (-16)
+<a id='L30' name='L30'></a>  30 <em class='sharp'>#define</em> U1SAVE  (-8)
+<a id='L31' name='L31'></a>  31 <em class='sharp'>#define</em> RETVAL   r5
+<a id='L32' name='L32'></a>  32 
+<a id='L33' name='L33'></a>  33 ENTRY_TOCLESS (__mpn_lshift, 5)
+<a id='L34' name='L34'></a>  34     std U1, U1SAVE(r1)
+<a id='L35' name='L35'></a>  35     std U0, U0SAVE(r1)
+<a id='L36' name='L36'></a>  36     cfi_offset(U1, U1SAVE)
+<a id='L37' name='L37'></a>  37     cfi_offset(U0, U0SAVE)
+<a id='L38' name='L38'></a>  38     subfic  TNC, CNT, 64
+<a id='L39' name='L39'></a>  39     sldi    r7, N, RP
+<a id='L40' name='L40'></a>  40     add UP, UP, r7
+<a id='L41' name='L41'></a>  41     add RP, RP, r7
+<a id='L42' name='L42'></a>  42     rldicl. U0, N, 0, 62
+<a id='L43' name='L43'></a>  43     cmpdi   CNT, U0, 2
+<a id='L44' name='L44'></a>  44     addi    U1, N, RP
+<a id='L45' name='L45'></a>  45     ld  r10, -8(UP)
+<a id='L46' name='L46'></a>  46     srd RETVAL, r10, TNC
+<a id='L47' name='L47'></a>  47 
+<a id='L48' name='L48'></a>  48     srdi    U1, U1, 2
+<a id='L49' name='L49'></a>  49     mtctr   U1
+<a id='L50' name='L50'></a>  50     beq cr0, L(b00)
+<a id='L51' name='L51'></a>  51     blt cr6, L(b01)
+<a id='L52' name='L52'></a>  52     ld  r11, -16(UP)
+<a id='L53' name='L53'></a>  53     beq cr6, L(b10)
+<a id='L54' name='L54'></a>  54 
+<a id='L55' name='L55'></a>  55     .align  4
+<a id='L56' name='L56'></a>  56 L(b11): sld r8, r10, CNT
+<a id='L57' name='L57'></a>  57     srd r9, r11, TNC
+<a id='L58' name='L58'></a>  58     ld  U1, -24(UP)
+<a id='L59' name='L59'></a>  59     addi    UP, UP, -24
+<a id='L60' name='L60'></a>  60     sld r12, r11, CNT
+<a id='L61' name='L61'></a>  61     srd r7, U1, TNC
+<a id='L62' name='L62'></a>  62     addi    RP, RP, 16
+<a id='L63' name='L63'></a>  63     bdnz    L(gt3)
+<a id='L64' name='L64'></a>  64 
+<a id='L65' name='L65'></a>  65     or  r11, r8, r9
+<a id='L66' name='L66'></a>  66     sld r8, U1, CNT
+<a id='L67' name='L67'></a>  67     b   L(cj3)
+<a id='L68' name='L68'></a>  68 
+<a id='L69' name='L69'></a>  69     .align  4
+<a id='L70' name='L70'></a>  70 L(gt3): ld  U0, -8(UP)
+<a id='L71' name='L71'></a>  71     or  r11, r8, r9
+<a id='L72' name='L72'></a>  72     sld r8, U1, CNT
+<a id='L73' name='L73'></a>  73     srd r9, U0, TNC
+<a id='L74' name='L74'></a>  74     ld  U1, -16(UP)
+<a id='L75' name='L75'></a>  75     or  r10, r12, r7
+<a id='L76' name='L76'></a>  76     b   L(L11)
+<a id='L77' name='L77'></a>  77 
+<a id='L78' name='L78'></a>  78     .align  5
+<a id='L79' name='L79'></a>  79 L(b10): sld r12, r10, CNT
+<a id='L80' name='L80'></a>  80     addi    RP, RP, 24
+<a id='L81' name='L81'></a>  81     srd r7, r11, TNC
+<a id='L82' name='L82'></a>  82     bdnz    L(gt2)
+<a id='L83' name='L83'></a>  83 
+<a id='L84' name='L84'></a>  84     sld r8, r11, CNT
+<a id='L85' name='L85'></a>  85     or  r10, r12, r7
+<a id='L86' name='L86'></a>  86     b   L(cj2)
+<a id='L87' name='L87'></a>  87 
+<a id='L88' name='L88'></a>  88 L(gt2): ld  U0, -24(UP)
+<a id='L89' name='L89'></a>  89     sld r8, r11, CNT
+<a id='L90' name='L90'></a>  90     srd r9, U0, TNC
+<a id='L91' name='L91'></a>  91     ld  U1, -32(UP)
+<a id='L92' name='L92'></a>  92     or  r10, r12, r7
+<a id='L93' name='L93'></a>  93     sld r12, U0, CNT
+<a id='L94' name='L94'></a>  94     srd r7, U1, 0
+<a id='L95' name='L95'></a>  95     ld  U0, -40(UP)
+<a id='L96' name='L96'></a>  96     or  r11, r8, r9
+<a id='L97' name='L97'></a>  97     addi    UP, UP, -16
+<a id='L98' name='L98'></a>  98     b   L(L10)
+<a id='L99' name='L99'></a>  99 
+<a id='L100' name='L100'></a> 100     .align  4
+<a id='L101' name='L101'></a> 101 L(b00): ld  U1, -16(UP)
+<a id='L102' name='L102'></a> 102     sld r12, r10, CNT
+<a id='L103' name='L103'></a> 103     srd r7, U1, TNC
+<a id='L104' name='L104'></a> 104     ld  U0, -24(UP)
+<a id='L105' name='L105'></a> 105     sld r8, U1, CNT
+<a id='L106' name='L106'></a> 106     srd r9, U0, TNC
+<a id='L107' name='L107'></a> 107     ld  U1, -32(UP)
+<a id='L108' name='L108'></a> 108     or  r10, r12, r7
+<a id='L109' name='L109'></a> 109     sld r12, U0, CNT
+<a id='L110' name='L110'></a> 110     srd r7, U1, TNC
+<a id='L111' name='L111'></a> 111     addi    RP, RP, r8
+<a id='L112' name='L112'></a> 112     bdz L(cj4)
+<a id='L113' name='L113'></a> 113 
+<a id='L114' name='L114'></a> 114 L(gt4): addi    UP, UP, -32
+<a id='L115' name='L115'></a> 115     ld  U0, -8(UP)
+<a id='L116' name='L116'></a> 116     or  r11, r8, r9
+<a id='L117' name='L117'></a> 117     b   L(L00)
+<a id='L118' name='L118'></a> 118 
+<a id='L119' name='L119'></a> 119     .align  4
+<a id='L120' name='L120'></a> 120 L(b01): bdnz    L(gt1)
+<a id='L121' name='L121'></a> 121     sld r8, r10, CNT
+<a id='L122' name='L122'></a> 122     std r8, -8(RP)
+<a id='L123' name='L123'></a> 123     b   L(ret)
+<a id='L124' name='L124'></a> 124 
+<a id='L125' name='L125'></a> 125 L(gt1): ld  U0, -16(UP)
+<a id='L126' name='L126'></a> 126     sld r8, r10, CNT
+<a id='L127' name='L127'></a> 127     srd r9, U0, TNC
+<a id='L128' name='L128'></a> 128     ld  U1, -24(UP)
+<a id='L129' name='L129'></a> 129     sld r12, U0, CNT
+<a id='L130' name='L130'></a> 130     srd r7, U1, TNC
+<a id='L131' name='L131'></a> 131     ld  U0, -32(UP)
+<a id='L132' name='L132'></a> 132     or  r11, r8, r9
+<a id='L133' name='L133'></a> 133     sld r8, U1, CNT
+<a id='L134' name='L134'></a> 134     srd r9, U0, TNC
+<a id='L135' name='L135'></a> 135     ld  U1, -40(UP)
+<a id='L136' name='L136'></a> 136     addi    UP, UP, -40
+<a id='L137' name='L137'></a> 137     or  r10, r12, r7
+<a id='L138' name='L138'></a> 138     bdz L(end)
+<a id='L139' name='L139'></a> 139 
+<a id='L140' name='L140'></a> 140     .align  5
+<a id='L141' name='L141'></a> 141 L(top): sld r12, U0, CNT
+<a id='L142' name='L142'></a> 142     srd r7, U1, TNC
+<a id='L143' name='L143'></a> 143     ld  U0, -8(UP)
+<a id='L144' name='L144'></a> 144     std r11, -8(RP)
+<a id='L145' name='L145'></a> 145     or  r11, r8, r9
+<a id='L146' name='L146'></a> 146 L(L00): sld r8, U1, CNT
+<a id='L147' name='L147'></a> 147     srd r9, U0, TNC
+<a id='L148' name='L148'></a> 148     ld  U1, -16(UP)
+<a id='L149' name='L149'></a> 149     std r10, -16(RP)
+<a id='L150' name='L150'></a> 150     or  r10, r12, r7
+<a id='L151' name='L151'></a> 151 L(L11): sld r12, U0, CNT
+<a id='L152' name='L152'></a> 152     srd r7, U1, TNC
+<a id='L153' name='L153'></a> 153     ld  U0, -24(UP)
+<a id='L154' name='L154'></a> 154     std r11, -24(RP)
+<a id='L155' name='L155'></a> 155     or  r11, r8, r9
+<a id='L156' name='L156'></a> 156 L(L10): sld r8, U1, CNT
+<a id='L157' name='L157'></a> 157     srd r9, U0, TNC
+<a id='L158' name='L158'></a> 158     ld  U1, -32(UP)
+<a id='L159' name='L159'></a> 159     addi    UP, UP, -32
+<a id='L160' name='L160'></a> 160     std r10, -32(RP)
+<a id='L161' name='L161'></a> 161     addi    RP, RP, -32
+<a id='L162' name='L162'></a> 162     or  r10, r12, r7
+<a id='L163' name='L163'></a> 163     bdnz    L(top)
+<a id='L164' name='L164'></a> 164 
+<a id='L165' name='L165'></a> 165     .align  5
+<a id='L166' name='L166'></a> 166 L(end): sld r12, U0, CNT
+<a id='L167' name='L167'></a> 167     srd r7, U1, TNC
+<a id='L168' name='L168'></a> 168     std r11, -8(RP)
+<a id='L169' name='L169'></a> 169 L(cj4): or  r11, r8, r9
+<a id='L170' name='L170'></a> 170     sld r8, U1, CNT
+<a id='L171' name='L171'></a> 171     std r10, -16(RP)
+<a id='L172' name='L172'></a> 172 L(cj3): or  r10, r12, r7
+<a id='L173' name='L173'></a> 173     std r11, -24(RP)
+<a id='L174' name='L174'></a> 174 L(cj2): std r10, -32(RP)
+<a id='L175' name='L175'></a> 175     std r8, -40(RP)
+<a id='L176' name='L176'></a> 176 
+<a id='L177' name='L177'></a> 177 L(ret): ld  U1, U1SAVE(r1)
+<a id='L178' name='L178'></a> 178     ld  U0, U0SAVE(r1)
+<a id='L179' name='L179'></a> 179     mr  RP, RETVAL
+<a id='L180' name='L180'></a> 180     blr
+<a id='L181' name='L181'></a> 181 END(__mpn_lshift)
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;][^][v]<a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

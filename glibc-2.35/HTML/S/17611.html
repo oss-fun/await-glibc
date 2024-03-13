@@ -1,0 +1,195 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>sysdeps/s390/memcmp-z900.S</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18977.html'>sysdeps</a>/<a href='../files/19209.html'>s390</a>/memcmp-z900.S</h2>
+<em class='comment'>/* [&lt;][&gt;][^][v][top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* memcmp - compare two memory blocks.  31/64 bit S/390 version.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   Copyright (C) 2012-2022 Free Software Foundation, Inc.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'></em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'></em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'></em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   License along with the GNU C Library; if not, see</em>
+<a id='L17' name='L17'></a>  17 <em class='comment'>   &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L18' name='L18'></a>  18 
+<a id='L19' name='L19'></a>  19 
+<a id='L20' name='L20'></a>  20 <em class='sharp'>#include</em> &lt;<a href='../I/5967.html'>sysdep.h</a>&gt;
+<a id='L21' name='L21'></a>  21 <em class='sharp'>#include</em> "<a href='../I/6421.html'>asm-syntax.h</a>"
+<a id='L22' name='L22'></a>  22 <em class='sharp'>#include</em> &lt;<a href='../I/11036.html'>ifunc-memcmp.h</a>&gt;
+<a id='L23' name='L23'></a>  23 
+<a id='L24' name='L24'></a>  24 <em class='comment'>/* INPUT PARAMETERS</em>
+<a id='L25' name='L25'></a>  25 <em class='comment'>     %r2 = address of first memory area</em>
+<a id='L26' name='L26'></a>  26 <em class='comment'>     %r3 = address of second memory area</em>
+<a id='L27' name='L27'></a>  27 <em class='comment'>     %r4 = number of bytes to compare.  */</em>
+<a id='L28' name='L28'></a>  28 
+<a id='L29' name='L29'></a>  29        .text
+<a id='L30' name='L30'></a>  30 
+<a id='L31' name='L31'></a>  31 <em class='sharp'>#if</em> <a href='../D/5284.html' title='Multiple defined in 3 places.'>HAVE_MEMCMP_Z900_G5</a>
+<a id='L32' name='L32'></a>  32 <em class='sharp'># if</em> <strong class='reserved'>defined</strong> <a href='../Y/7310.html' title='Multiple used in 82 places.'>__s390x__</a>
+<a id='L33' name='L33'></a>  33 <em class='sharp'>#  define</em> LTGR  ltgr
+<a id='L34' name='L34'></a>  34 <em class='sharp'>#  define</em> AGHI  aghi
+<a id='L35' name='L35'></a>  35 <em class='sharp'>#  define</em> BRCTG brctg
+<a id='L36' name='L36'></a>  36 <em class='sharp'># else</em>
+<a id='L37' name='L37'></a>  37 <em class='sharp'>#  define</em> LTGR  ltr
+<a id='L38' name='L38'></a>  38 <em class='sharp'>#  define</em> AGHI  ahi
+<a id='L39' name='L39'></a>  39 <em class='sharp'>#  define</em> BRCTG brct
+<a id='L40' name='L40'></a>  40 <em class='sharp'># endif</em> <em class='comment'>/* ! defined __s390x__  */</em>
+<a id='L41' name='L41'></a>  41 <a href='../D/3651.html' title='Multiple defined in 54 places.'>ENTRY</a>(<a href='../R/4817.html' title='Multiple referred from 3 places.'>MEMCMP_Z900_G5</a>)
+<a id='L42' name='L42'></a>  42 <em class='sharp'># if</em> <strong class='reserved'>defined</strong> <a href='../Y/7310.html' title='Multiple used in 82 places.'>__s390x__</a>
+<a id='L43' name='L43'></a>  43     .machine "z900"
+<a id='L44' name='L44'></a>  44 <em class='sharp'># else</em>
+<a id='L45' name='L45'></a>  45     .machine "g5"
+<a id='L46' name='L46'></a>  46     basr    %r5,0
+<a id='L47' name='L47'></a>  47 .L_Z900_G5_16:
+<a id='L48' name='L48'></a>  48 <em class='sharp'>#  define</em> Z900_G5_EX_D .L_Z900_G5_15-.L_Z900_G5_16
+<a id='L49' name='L49'></a>  49 <em class='sharp'># endif</em> <em class='comment'>/* ! defined __s390x__  */</em>
+<a id='L50' name='L50'></a>  50     LTGR    %r4,%r4
+<a id='L51' name='L51'></a>  51     je      .L_Z900_G5_4
+<a id='L52' name='L52'></a>  52     AGHI    %r4,-1
+<a id='L53' name='L53'></a>  53 <em class='sharp'># if</em> <strong class='reserved'>defined</strong> <a href='../Y/7310.html' title='Multiple used in 82 places.'>__s390x__</a>
+<a id='L54' name='L54'></a>  54     srlg    %r1,%r4,8
+<a id='L55' name='L55'></a>  55     larl    %r5,.L_Z900_G5_15
+<a id='L56' name='L56'></a>  56 <em class='sharp'>#  define</em> Z900_G5_EX_D 0
+<a id='L57' name='L57'></a>  57 <em class='sharp'># else</em>
+<a id='L58' name='L58'></a>  58     lr  %r1,%r4
+<a id='L59' name='L59'></a>  59     srl %r1,8
+<a id='L60' name='L60'></a>  60 <em class='sharp'># endif</em> <em class='comment'>/* ! defined __s390x__  */</em>
+<a id='L61' name='L61'></a>  61     LTGR    %r1,%r1
+<a id='L62' name='L62'></a>  62     jne     .L_Z900_G5_12
+<a id='L63' name='L63'></a>  63 .L_Z900_G5_3:
+<a id='L64' name='L64'></a>  64     ex      %r4,Z900_G5_EX_D(%r5)
+<a id='L65' name='L65'></a>  65 .L_Z900_G5_4:
+<a id='L66' name='L66'></a>  66     ipm     %r2
+<a id='L67' name='L67'></a>  67 <em class='sharp'># if</em> <strong class='reserved'>defined</strong> <a href='../Y/7310.html' title='Multiple used in 82 places.'>__s390x__</a>
+<a id='L68' name='L68'></a>  68     sllg    %r2,%r2,34
+<a id='L69' name='L69'></a>  69     srag    %r2,%r2,62
+<a id='L70' name='L70'></a>  70 <em class='sharp'># else</em>
+<a id='L71' name='L71'></a>  71     sll     %r2,2
+<a id='L72' name='L72'></a>  72     sra     %r2,30
+<a id='L73' name='L73'></a>  73 <em class='sharp'># endif</em> <em class='comment'>/* ! defined __s390x__  */</em>
+<a id='L74' name='L74'></a>  74     br      %r14
+<a id='L75' name='L75'></a>  75 .L_Z900_G5_12:
+<a id='L76' name='L76'></a>  76     clc     0(256,%r3),0(%r2)
+<a id='L77' name='L77'></a>  77     jne     .L_Z900_G5_4
+<a id='L78' name='L78'></a>  78     la      %r3,256(%r3)
+<a id='L79' name='L79'></a>  79     la      %r2,256(%r2)
+<a id='L80' name='L80'></a>  80     BRCTG   %r1,.L_Z900_G5_12
+<a id='L81' name='L81'></a>  81     j       .L_Z900_G5_3
+<a id='L82' name='L82'></a>  82 .L_Z900_G5_15:
+<a id='L83' name='L83'></a>  83     clc     0(1,%r3),0(%r2)
+<a id='L84' name='L84'></a>  84 END(MEMCMP_Z900_G5)
+<a id='L85' name='L85'></a>  85 <em class='sharp'># undef</em> LTGR
+<a id='L86' name='L86'></a>  86 <em class='sharp'># undef</em> AGHI
+<a id='L87' name='L87'></a>  87 <em class='sharp'># undef</em> BRCTG
+<a id='L88' name='L88'></a>  88 <em class='sharp'>#endif</em> <em class='comment'>/* HAVE_MEMCMP_Z900_G5  */</em>
+<a id='L89' name='L89'></a>  89 
+<a id='L90' name='L90'></a>  90 <em class='sharp'>#if</em> <a href='../D/5282.html' title='Multiple defined in 3 places.'>HAVE_MEMCMP_Z10</a>
+<a id='L91' name='L91'></a>  91 <a href='../D/3651.html' title='Multiple defined in 54 places.'>ENTRY</a>(<a href='../R/4815.html' title='Multiple referred from 4 places.'>MEMCMP_Z10</a>)
+<a id='L92' name='L92'></a>  92     .machine "z10"
+<a id='L93' name='L93'></a>  93     .machinemode "zarch_nohighgprs"
+<a id='L94' name='L94'></a>  94 <em class='sharp'># if</em> !<strong class='reserved'>defined</strong> <a href='../Y/7310.html' title='Multiple used in 82 places.'>__s390x__</a>
+<a id='L95' name='L95'></a>  95     llgfr   %r4,%r4
+<a id='L96' name='L96'></a>  96 <em class='sharp'># endif</em> <em class='comment'>/* !defined __s390x__  */</em>
+<a id='L97' name='L97'></a>  97     ltgr    %r4,%r4
+<a id='L98' name='L98'></a>  98     je      .L_Z10_4
+<a id='L99' name='L99'></a>  99     aghi    %r4,-1
+<a id='L100' name='L100'></a> 100     srlg    %r1,%r4,8
+<a id='L101' name='L101'></a> 101     cgijlh  %r1,0,.L_Z10_12
+<a id='L102' name='L102'></a> 102 .L_Z10_3:
+<a id='L103' name='L103'></a> 103     exrl    %r4,.L_Z10_15
+<a id='L104' name='L104'></a> 104 .L_Z10_4:
+<a id='L105' name='L105'></a> 105     ipm     %r2
+<a id='L106' name='L106'></a> 106     sllg    %r2,%r2,34
+<a id='L107' name='L107'></a> 107     srag    %r2,%r2,62
+<a id='L108' name='L108'></a> 108     br      %r14
+<a id='L109' name='L109'></a> 109 .L_Z10_12:
+<a id='L110' name='L110'></a> 110     pfd     1,512(%r3)
+<a id='L111' name='L111'></a> 111     pfd     1,512(%r2)
+<a id='L112' name='L112'></a> 112     clc     0(256,%r3),0(%r2)
+<a id='L113' name='L113'></a> 113     jne     .L_Z10_4
+<a id='L114' name='L114'></a> 114     la      %r3,256(%r3)
+<a id='L115' name='L115'></a> 115     la      %r2,256(%r2)
+<a id='L116' name='L116'></a> 116     brctg   %r1,.L_Z10_12
+<a id='L117' name='L117'></a> 117     j       .L_Z10_3
+<a id='L118' name='L118'></a> 118 .L_Z10_15:
+<a id='L119' name='L119'></a> 119     clc     0(1,%r3),0(%r2)
+<a id='L120' name='L120'></a> 120 END(MEMCMP_Z10)
+<a id='L121' name='L121'></a> 121 <em class='sharp'>#endif</em> <em class='comment'>/* HAVE_MEMCMP_Z10  */</em>
+<a id='L122' name='L122'></a> 122 
+<a id='L123' name='L123'></a> 123 <em class='sharp'>#if</em> <a href='../D/5283.html' title='Multiple defined in 3 places.'>HAVE_MEMCMP_Z196</a>
+<a id='L124' name='L124'></a> 124 <a href='../D/3651.html' title='Multiple defined in 54 places.'>ENTRY</a>(<a href='../R/4816.html' title='Multiple referred from 4 places.'>MEMCMP_Z196</a>)
+<a id='L125' name='L125'></a> 125     .machine "z196"
+<a id='L126' name='L126'></a> 126     .machinemode "zarch_nohighgprs"
+<a id='L127' name='L127'></a> 127 <em class='sharp'># if</em> !<strong class='reserved'>defined</strong> <a href='../Y/7310.html' title='Multiple used in 82 places.'>__s390x__</a>
+<a id='L128' name='L128'></a> 128     llgfr   %r4,%r4
+<a id='L129' name='L129'></a> 129 <em class='sharp'># endif</em> <em class='comment'>/* !defined __s390x__  */</em>
+<a id='L130' name='L130'></a> 130     ltgr    %r4,%r4
+<a id='L131' name='L131'></a> 131     je      .L_Z196_4
+<a id='L132' name='L132'></a> 132     aghi    %r4,-1
+<a id='L133' name='L133'></a> 133     srlg    %r1,%r4,8
+<a id='L134' name='L134'></a> 134     ltgr    %r1,%r1
+<a id='L135' name='L135'></a> 135     jne     .L_Z196_2
+<a id='L136' name='L136'></a> 136 .L_Z196_3:
+<a id='L137' name='L137'></a> 137     exrl    %r4,.L_Z196_14
+<a id='L138' name='L138'></a> 138 .L_Z196_4:
+<a id='L139' name='L139'></a> 139     ipm     %r2
+<a id='L140' name='L140'></a> 140     sllg    %r2,%r2,34
+<a id='L141' name='L141'></a> 141     srag    %r2,%r2,62
+<a id='L142' name='L142'></a> 142     br      %r14
+<a id='L143' name='L143'></a> 143 .L_Z196_17:
+<a id='L144' name='L144'></a> 144     la      %r3,256(%r3)
+<a id='L145' name='L145'></a> 145     la      %r2,256(%r2)
+<a id='L146' name='L146'></a> 146     aghi    %r1,-1
+<a id='L147' name='L147'></a> 147     je      .L_Z196_3
+<a id='L148' name='L148'></a> 148 .L_Z196_2:
+<a id='L149' name='L149'></a> 149     pfd     1,512(%r3)
+<a id='L150' name='L150'></a> 150     pfd     1,512(%r2)
+<a id='L151' name='L151'></a> 151     clc     0(256,%r3),0(%r2)
+<a id='L152' name='L152'></a> 152     je      .L_Z196_17
+<a id='L153' name='L153'></a> 153     ipm     %r2
+<a id='L154' name='L154'></a> 154     sllg    %r2,%r2,34
+<a id='L155' name='L155'></a> 155     srag    %r2,%r2,62
+<a id='L156' name='L156'></a> 156     br      %r14
+<a id='L157' name='L157'></a> 157 .L_Z196_14:
+<a id='L158' name='L158'></a> 158     clc     0(1,%r3),0(%r2)
+<a id='L159' name='L159'></a> 159 END(MEMCMP_Z196)
+<a id='L160' name='L160'></a> 160 <em class='sharp'>#endif</em> <em class='comment'>/* HAVE_MEMCMP_Z196  */</em>
+<a id='L161' name='L161'></a> 161 
+<a id='L162' name='L162'></a> 162 <em class='sharp'>#if</em> ! <a href='../D/5281.html' title='Multiple defined in 2 places.'>HAVE_MEMCMP_IFUNC</a>
+<a id='L163' name='L163'></a> 163 <em class='comment'>/* If we don't use ifunc, define an alias for memcmp here.</em>
+<a id='L164' name='L164'></a> 164 <em class='comment'>   Otherwise see sysdeps/s390/memcmp.c.  */</em>
+<a id='L165' name='L165'></a> 165 strong_alias (MEMCMP_DEFAULT, memcmp)
+<a id='L166' name='L166'></a> 166 weak_alias (memcmp, bcmp)
+<a id='L167' name='L167'></a> 167 strong_alias (memcmp, __memcmpeq)
+<a id='L168' name='L168'></a> 168 libc_hidden_def (__memcmpeq)
+<a id='L169' name='L169'></a> 169 <em class='sharp'>#endif</em>
+<a id='L170' name='L170'></a> 170 
+<a id='L171' name='L171'></a> 171 <em class='sharp'>#if</em> <strong class='reserved'>defined</strong> <a href='../D/13935.html' title='Multiple defined in 2 places.'>SHARED</a> &amp;&amp; <a href='../D/6753.html' title='Multiple defined in 3 places.'>IS_IN</a> (<a href='../D/32623.html' title='Multiple defined in 2 places.'>libc</a>)
+<a id='L172' name='L172'></a> 172 <em class='comment'>/* Defines the internal symbols.</em>
+<a id='L173' name='L173'></a> 173 <em class='comment'>   Compare to libc_hidden_builtin_def (memcmp) in string/memcmp.c.  */</em>
+<a id='L174' name='L174'></a> 174 strong_alias (MEMCMP_DEFAULT, __GI_memcmp)
+<a id='L175' name='L175'></a> 175 <em class='sharp'>#endif</em>
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;][^][v]<a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

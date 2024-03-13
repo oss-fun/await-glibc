@@ -1,0 +1,211 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>sysdeps/aarch64/memset.S</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18977.html'>sysdeps</a>/<a href='../files/18978.html'>aarch64</a>/memset.S</h2>
+<em class='comment'>/* [&lt;][&gt;][^][v][top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* Copyright (C) 2012-2022 Free Software Foundation, Inc.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'></em>
+<a id='L3' name='L3'></a>   3 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'></em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'></em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'></em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   License along with the GNU C Library.  If not, see</em>
+<a id='L17' name='L17'></a>  17 <em class='comment'>   &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L18' name='L18'></a>  18 
+<a id='L19' name='L19'></a>  19 <em class='sharp'>#include</em> &lt;<a href='../I/5967.html'>sysdep.h</a>&gt;
+<a id='L20' name='L20'></a>  20 <em class='sharp'>#include</em> "<a href='13745.html'>memset-reg.h</a>"
+<a id='L21' name='L21'></a>  21 
+<a id='L22' name='L22'></a>  22 <em class='sharp'>#ifndef</em> <a href='../D/7913.html' title='Multiple defined in 63 places.'>MEMSET</a>
+<a id='L23' name='L23'></a>  23 <em class='sharp'># define</em> <a href='../R/4855.html' title='Multiple referred from 35 places.'>MEMSET</a> memset
+<a id='L24' name='L24'></a>  24 <em class='sharp'>#endif</em>
+<a id='L25' name='L25'></a>  25 
+<a id='L26' name='L26'></a>  26 <em class='comment'>/* Assumptions:</em>
+<a id='L27' name='L27'></a>  27 <em class='comment'> *</em>
+<a id='L28' name='L28'></a>  28 <em class='comment'> * ARMv8-a, AArch64, unaligned accesses</em>
+<a id='L29' name='L29'></a>  29 <em class='comment'> *</em>
+<a id='L30' name='L30'></a>  30 <em class='comment'> */</em>
+<a id='L31' name='L31'></a>  31 
+<a id='L32' name='L32'></a>  32 ENTRY_ALIGN (MEMSET, 6)
+<a id='L33' name='L33'></a>  33 
+<a id='L34' name='L34'></a>  34     PTR_ARG (0)
+<a id='L35' name='L35'></a>  35     SIZE_ARG (2)
+<a id='L36' name='L36'></a>  36 
+<a id='L37' name='L37'></a>  37     dup v0.16B, valw
+<a id='L38' name='L38'></a>  38     add dstend, dstin, count
+<a id='L39' name='L39'></a>  39 
+<a id='L40' name='L40'></a>  40     cmp count, 96
+<a id='L41' name='L41'></a>  41     b.hi    L(set_long)
+<a id='L42' name='L42'></a>  42     cmp count, 16
+<a id='L43' name='L43'></a>  43     b.hs    L(set_medium)
+<a id='L44' name='L44'></a>  44     mov val, v0.D[0]
+<a id='L45' name='L45'></a>  45 
+<a id='L46' name='L46'></a>  46     <em class='comment'>/* Set 0..15 bytes.  */</em>
+<a id='L47' name='L47'></a>  47     tbz count, 3, 1f
+<a id='L48' name='L48'></a>  48     str val, [dstin]
+<a id='L49' name='L49'></a>  49     str val, [dstend, -8]
+<a id='L50' name='L50'></a>  50     ret
+<a id='L51' name='L51'></a>  51     nop
+<a id='L52' name='L52'></a>  52 1:  tbz count, 2, 2f
+<a id='L53' name='L53'></a>  53     str valw, [dstin]
+<a id='L54' name='L54'></a>  54     str valw, [dstend, -4]
+<a id='L55' name='L55'></a>  55     ret
+<a id='L56' name='L56'></a>  56 2:  cbz count, 3f
+<a id='L57' name='L57'></a>  57     strb    valw, [dstin]
+<a id='L58' name='L58'></a>  58     tbz count, 1, 3f
+<a id='L59' name='L59'></a>  59     strh    valw, [dstend, -2]
+<a id='L60' name='L60'></a>  60 3:  ret
+<a id='L61' name='L61'></a>  61 
+<a id='L62' name='L62'></a>  62     <em class='comment'>/* Set 17..96 bytes.  */</em>
+<a id='L63' name='L63'></a>  63 L(set_medium):
+<a id='L64' name='L64'></a>  64     str q0, [dstin]
+<a id='L65' name='L65'></a>  65     tbnz    count, 6, L(set96)
+<a id='L66' name='L66'></a>  66     str q0, [dstend, -16]
+<a id='L67' name='L67'></a>  67     tbz count, 5, 1f
+<a id='L68' name='L68'></a>  68     str q0, [dstin, 16]
+<a id='L69' name='L69'></a>  69     str q0, [dstend, -32]
+<a id='L70' name='L70'></a>  70 1:  ret
+<a id='L71' name='L71'></a>  71 
+<a id='L72' name='L72'></a>  72     .p2align 4
+<a id='L73' name='L73'></a>  73     <em class='comment'>/* Set 64..96 bytes.  Write 64 bytes from the start and</em>
+<a id='L74' name='L74'></a>  74 <em class='comment'>       32 bytes from the end.  */</em>
+<a id='L75' name='L75'></a>  75 L(set96):
+<a id='L76' name='L76'></a>  76     str q0, [dstin, 16]
+<a id='L77' name='L77'></a>  77     stp q0, q0, [dstin, 32]
+<a id='L78' name='L78'></a>  78     stp q0, q0, [dstend, -32]
+<a id='L79' name='L79'></a>  79     ret
+<a id='L80' name='L80'></a>  80 
+<a id='L81' name='L81'></a>  81     .p2align 3
+<a id='L82' name='L82'></a>  82     nop
+<a id='L83' name='L83'></a>  83 L(set_long):
+<a id='L84' name='L84'></a>  84     and valw, valw, 255
+<a id='L85' name='L85'></a>  85     bic dst, dstin, 15
+<a id='L86' name='L86'></a>  86     str q0, [dstin]
+<a id='L87' name='L87'></a>  87     cmp count, 256
+<a id='L88' name='L88'></a>  88     ccmp    valw, 0, 0, cs
+<a id='L89' name='L89'></a>  89     b.eq    L(try_zva)
+<a id='L90' name='L90'></a>  90 L(no_zva):
+<a id='L91' name='L91'></a>  91     sub count, dstend, dst  <em class='comment'>/* Count is 16 too large.  */</em>
+<a id='L92' name='L92'></a>  92     sub dst, dst, 16        <em class='comment'>/* Dst is biased by -32.  */</em>
+<a id='L93' name='L93'></a>  93     sub count, count, 64 + 16   <em class='comment'>/* Adjust count and bias for loop.  */</em>
+<a id='L94' name='L94'></a>  94 1:  stp q0, q0, [dst, 32]
+<a id='L95' name='L95'></a>  95     stp q0, q0, [dst, 64]!
+<a id='L96' name='L96'></a>  96 L(tail64):
+<a id='L97' name='L97'></a>  97     subs    count, count, 64
+<a id='L98' name='L98'></a>  98     b.hi    1b
+<a id='L99' name='L99'></a>  99 2:  stp q0, q0, [dstend, -64]
+<a id='L100' name='L100'></a> 100     stp q0, q0, [dstend, -32]
+<a id='L101' name='L101'></a> 101     ret
+<a id='L102' name='L102'></a> 102 
+<a id='L103' name='L103'></a> 103 L(try_zva):
+<a id='L104' name='L104'></a> 104 <em class='sharp'>#ifdef</em> <a href='../S/13731.html#L51' title='Defined at 51 in sysdeps/aarch64/multiarch/memset_falkor.S.'>ZVA_MACRO</a>
+<a id='L105' name='L105'></a> 105     zva_macro
+<a id='L106' name='L106'></a> 106 <em class='sharp'>#else</em>
+<a id='L107' name='L107'></a> 107     .p2align 3
+<a id='L108' name='L108'></a> 108     mrs tmp1, dczid_el0
+<a id='L109' name='L109'></a> 109     tbnz    tmp1w, 4, L(no_zva)
+<a id='L110' name='L110'></a> 110     and tmp1w, tmp1w, 15
+<a id='L111' name='L111'></a> 111     cmp tmp1w, 4    <em class='comment'>/* ZVA size is 64 bytes.  */</em>
+<a id='L112' name='L112'></a> 112     b.ne     L(zva_128)
+<a id='L113' name='L113'></a> 113 
+<a id='L114' name='L114'></a> 114     <em class='comment'>/* Write the first and last 64 byte aligned block using stp rather</em>
+<a id='L115' name='L115'></a> 115 <em class='comment'>       than using DC ZVA.  This is faster on some cores.</em>
+<a id='L116' name='L116'></a> 116 <em class='comment'>     */</em>
+<a id='L117' name='L117'></a> 117 L(zva_64):
+<a id='L118' name='L118'></a> 118     str q0, [dst, 16]
+<a id='L119' name='L119'></a> 119     stp q0, q0, [dst, 32]
+<a id='L120' name='L120'></a> 120     bic dst, dst, 63
+<a id='L121' name='L121'></a> 121     stp q0, q0, [dst, 64]
+<a id='L122' name='L122'></a> 122     stp q0, q0, [dst, 96]
+<a id='L123' name='L123'></a> 123     sub count, dstend, dst  <em class='comment'>/* Count is now 128 too large.  */</em>
+<a id='L124' name='L124'></a> 124     sub count, count, 128+64+64 <em class='comment'>/* Adjust count and bias for loop.  */</em>
+<a id='L125' name='L125'></a> 125     add dst, dst, 128
+<a id='L126' name='L126'></a> 126     nop
+<a id='L127' name='L127'></a> 127 1:  dc  zva, dst
+<a id='L128' name='L128'></a> 128     add dst, dst, 64
+<a id='L129' name='L129'></a> 129     subs    count, count, 64
+<a id='L130' name='L130'></a> 130     b.hi    1b
+<a id='L131' name='L131'></a> 131     stp q0, q0, [dst, 0]
+<a id='L132' name='L132'></a> 132     stp q0, q0, [dst, 32]
+<a id='L133' name='L133'></a> 133     stp q0, q0, [dstend, -64]
+<a id='L134' name='L134'></a> 134     stp q0, q0, [dstend, -32]
+<a id='L135' name='L135'></a> 135     ret
+<a id='L136' name='L136'></a> 136 
+<a id='L137' name='L137'></a> 137     .p2align 3
+<a id='L138' name='L138'></a> 138 L(zva_128):
+<a id='L139' name='L139'></a> 139     cmp tmp1w, 5    <em class='comment'>/* ZVA size is 128 bytes.  */</em>
+<a id='L140' name='L140'></a> 140     b.ne    L(zva_other)
+<a id='L141' name='L141'></a> 141 
+<a id='L142' name='L142'></a> 142     str q0, [dst, 16]
+<a id='L143' name='L143'></a> 143     stp q0, q0, [dst, 32]
+<a id='L144' name='L144'></a> 144     stp q0, q0, [dst, 64]
+<a id='L145' name='L145'></a> 145     stp q0, q0, [dst, 96]
+<a id='L146' name='L146'></a> 146     bic dst, dst, 127
+<a id='L147' name='L147'></a> 147     sub count, dstend, dst  <em class='comment'>/* Count is now 128 too large.  */</em>
+<a id='L148' name='L148'></a> 148     sub count, count, 128+128   <em class='comment'>/* Adjust count and bias for loop.  */</em>
+<a id='L149' name='L149'></a> 149     add dst, dst, 128
+<a id='L150' name='L150'></a> 150 1:  dc  zva, dst
+<a id='L151' name='L151'></a> 151     add dst, dst, 128
+<a id='L152' name='L152'></a> 152     subs    count, count, 128
+<a id='L153' name='L153'></a> 153     b.hi    1b
+<a id='L154' name='L154'></a> 154     stp q0, q0, [dstend, -128]
+<a id='L155' name='L155'></a> 155     stp q0, q0, [dstend, -96]
+<a id='L156' name='L156'></a> 156     stp q0, q0, [dstend, -64]
+<a id='L157' name='L157'></a> 157     stp q0, q0, [dstend, -32]
+<a id='L158' name='L158'></a> 158     ret
+<a id='L159' name='L159'></a> 159 
+<a id='L160' name='L160'></a> 160 L(zva_other):
+<a id='L161' name='L161'></a> 161     mov tmp2w, 4
+<a id='L162' name='L162'></a> 162     lsl zva_lenw, tmp2w, tmp1w
+<a id='L163' name='L163'></a> 163     add tmp1, zva_len, 64   <em class='comment'>/* Max alignment bytes written.  */</em>
+<a id='L164' name='L164'></a> 164     cmp count, tmp1
+<a id='L165' name='L165'></a> 165     blo L(no_zva)
+<a id='L166' name='L166'></a> 166 
+<a id='L167' name='L167'></a> 167     sub tmp2, zva_len, 1
+<a id='L168' name='L168'></a> 168     add tmp1, dst, zva_len
+<a id='L169' name='L169'></a> 169     add dst, dst, 16
+<a id='L170' name='L170'></a> 170     subs    count, tmp1, dst    <em class='comment'>/* Actual alignment bytes to write.  */</em>
+<a id='L171' name='L171'></a> 171     bic tmp1, tmp1, tmp2    <em class='comment'>/* Aligned dc zva start address.  */</em>
+<a id='L172' name='L172'></a> 172     beq 2f
+<a id='L173' name='L173'></a> 173 1:  stp q0, q0, [dst], 64
+<a id='L174' name='L174'></a> 174     stp q0, q0, [dst, -32]
+<a id='L175' name='L175'></a> 175     subs    count, count, 64
+<a id='L176' name='L176'></a> 176     b.hi    1b
+<a id='L177' name='L177'></a> 177 2:  mov dst, tmp1
+<a id='L178' name='L178'></a> 178     sub count, dstend, tmp1 <em class='comment'>/* Remaining bytes to write.  */</em>
+<a id='L179' name='L179'></a> 179     subs    count, count, zva_len
+<a id='L180' name='L180'></a> 180     b.lo    4f
+<a id='L181' name='L181'></a> 181 3:  dc  zva, dst
+<a id='L182' name='L182'></a> 182     add dst, dst, zva_len
+<a id='L183' name='L183'></a> 183     subs    count, count, zva_len
+<a id='L184' name='L184'></a> 184     b.hs    3b
+<a id='L185' name='L185'></a> 185 4:  add count, count, zva_len
+<a id='L186' name='L186'></a> 186     sub dst, dst, 32        <em class='comment'>/* Bias dst for tail loop.  */</em>
+<a id='L187' name='L187'></a> 187     b   L(tail64)
+<a id='L188' name='L188'></a> 188 <em class='sharp'>#endif</em>
+<a id='L189' name='L189'></a> 189 
+<a id='L190' name='L190'></a> 190 END (MEMSET)
+<a id='L191' name='L191'></a> 191 libc_hidden_builtin_def (MEMSET)
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;][^][v]<a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

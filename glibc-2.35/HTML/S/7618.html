@@ -1,0 +1,88 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>sysdeps/powerpc/powerpc32/add_n.S</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18977.html'>sysdeps</a>/<a href='../files/19149.html'>powerpc</a>/<a href='../files/19157.html'>powerpc32</a>/add_n.S</h2>
+<em class='comment'>/* [&lt;][&gt;][^][v][top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* Add two limb vectors of equal, non-zero length for PowerPC.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   Copyright (C) 1997-2022 Free Software Foundation, Inc.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'></em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'></em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'></em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   License along with the GNU C Library; if not, see</em>
+<a id='L17' name='L17'></a>  17 <em class='comment'>   &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L18' name='L18'></a>  18 
+<a id='L19' name='L19'></a>  19 <em class='sharp'>#include</em> &lt;<a href='../I/5967.html'>sysdep.h</a>&gt;
+<a id='L20' name='L20'></a>  20 
+<a id='L21' name='L21'></a>  21 <em class='comment'>/* mp_limb_t mpn_add_n (mp_ptr res_ptr, mp_srcptr s1_ptr, mp_srcptr s2_ptr,</em>
+<a id='L22' name='L22'></a>  22 <em class='comment'>                        mp_size_t size)</em>
+<a id='L23' name='L23'></a>  23 <em class='comment'>   Calculate s1+s2 and put result in res_ptr; return carry, 0 or 1.  */</em>
+<a id='L24' name='L24'></a>  24 
+<a id='L25' name='L25'></a>  25 <em class='comment'>/* Note on optimisation: This code is optimal for the 601.  Almost every other</em>
+<a id='L26' name='L26'></a>  26 <em class='comment'>   possible 2-unrolled inner loop will not be.  Also, watch out for the</em>
+<a id='L27' name='L27'></a>  27 <em class='comment'>   alignment...  */</em>
+<a id='L28' name='L28'></a>  28 
+<a id='L29' name='L29'></a>  29 EALIGN (__mpn_add_n, 3, 0)
+<a id='L30' name='L30'></a>  30 
+<a id='L31' name='L31'></a>  31 <em class='comment'>/* Set up for loop below.  */</em>
+<a id='L32' name='L32'></a>  32     mtcrf 0x01,r6
+<a id='L33' name='L33'></a>  33     srwi. r7,r6,1
+<a id='L34' name='L34'></a>  34     li    r10,0
+<a id='L35' name='L35'></a>  35     mtctr r7
+<a id='L36' name='L36'></a>  36     bt    31,L(2)
+<a id='L37' name='L37'></a>  37 
+<a id='L38' name='L38'></a>  38 <em class='comment'>/* Clear the carry.  */</em>
+<a id='L39' name='L39'></a>  39     addic r0,r0,0
+<a id='L40' name='L40'></a>  40 <em class='comment'>/* Adjust pointers for loop.  */</em>
+<a id='L41' name='L41'></a>  41     addi  r3,r3,-4
+<a id='L42' name='L42'></a>  42     addi  r4,r4,-4
+<a id='L43' name='L43'></a>  43     addi  r5,r5,-4
+<a id='L44' name='L44'></a>  44     b     L(0)
+<a id='L45' name='L45'></a>  45 
+<a id='L46' name='L46'></a>  46 L(2):   lwz  r7,0(r5)
+<a id='L47' name='L47'></a>  47     lwz  r6,0(r4)
+<a id='L48' name='L48'></a>  48     addc r6,r6,r7
+<a id='L49' name='L49'></a>  49     stw  r6,0(r3)
+<a id='L50' name='L50'></a>  50         beq  L(1)
+<a id='L51' name='L51'></a>  51 
+<a id='L52' name='L52'></a>  52 <em class='comment'>/* The loop.  */</em>
+<a id='L53' name='L53'></a>  53 
+<a id='L54' name='L54'></a>  54 <em class='comment'>/* Align start of loop to an odd word boundary to guarantee that the</em>
+<a id='L55' name='L55'></a>  55 <em class='comment'>   last two words can be fetched in one access (for 601).  */</em>
+<a id='L56' name='L56'></a>  56 L(0):   lwz  r9,4(r4)
+<a id='L57' name='L57'></a>  57     lwz  r8,4(r5)
+<a id='L58' name='L58'></a>  58     lwzu r6,8(r4)
+<a id='L59' name='L59'></a>  59     lwzu r7,8(r5)
+<a id='L60' name='L60'></a>  60     adde r8,r9,r8
+<a id='L61' name='L61'></a>  61     stw  r8,4(r3)
+<a id='L62' name='L62'></a>  62     adde r6,r6,r7
+<a id='L63' name='L63'></a>  63     stwu r6,8(r3)
+<a id='L64' name='L64'></a>  64     bdnz L(0)
+<a id='L65' name='L65'></a>  65 <em class='comment'>/* Return the carry.  */</em>
+<a id='L66' name='L66'></a>  66 L(1):   addze r3,r10
+<a id='L67' name='L67'></a>  67     blr
+<a id='L68' name='L68'></a>  68 END (__mpn_add_n)
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;][^][v]<a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

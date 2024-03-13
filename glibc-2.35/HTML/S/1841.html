@@ -1,0 +1,355 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>malloc/tst-malloc-too-large.c</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18918.html'>malloc</a>/tst-malloc-too-large.c</h2>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L51'>[^]</a><a href='#L239'>[v]</a>[top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<h2 class='header'>DEFINITIONS</h2>
+This source file includes following definitions.
+<ol>
+<li><a href='#L51' title='Defined at 51.'>test_setup</a></li>
+<li><a href='#L70' title='Defined at 70.'>test_large_allocations</a></li>
+<li><a href='#L161' title='Defined at 161.'>test_large_aligned_allocations</a></li>
+<li><a href='#L239' title='Defined at 239.'>do_test</a></li>
+</ol>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* Test and verify that too-large memory allocations fail with ENOMEM.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   Copyright (C) 2018-2022 Free Software Foundation, Inc.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'></em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'></em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'></em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   License along with the GNU C Library; if not, see</em>
+<a id='L17' name='L17'></a>  17 <em class='comment'>   &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L18' name='L18'></a>  18 
+<a id='L19' name='L19'></a>  19 <em class='comment'>/* Bug 22375 reported a regression in malloc where if after malloc'ing then</em>
+<a id='L20' name='L20'></a>  20 <em class='comment'>   free'ing a small block of memory, malloc is then called with a really</em>
+<a id='L21' name='L21'></a>  21 <em class='comment'>   large size argument (close to SIZE_MAX): instead of returning NULL and</em>
+<a id='L22' name='L22'></a>  22 <em class='comment'>   setting errno to ENOMEM, malloc incorrectly returns the previously</em>
+<a id='L23' name='L23'></a>  23 <em class='comment'>   allocated block instead.  Bug 22343 reported a similar case where</em>
+<a id='L24' name='L24'></a>  24 <em class='comment'>   posix_memalign incorrectly returns successfully when called with an with</em>
+<a id='L25' name='L25'></a>  25 <em class='comment'>   a really large size argument.</em>
+<a id='L26' name='L26'></a>  26 <em class='comment'></em>
+<a id='L27' name='L27'></a>  27 <em class='comment'>   Both of these were caused by integer overflows in the allocator when it</em>
+<a id='L28' name='L28'></a>  28 <em class='comment'>   was trying to pad the requested size to allow for book-keeping or</em>
+<a id='L29' name='L29'></a>  29 <em class='comment'>   alignment.  This test guards against such bugs by repeatedly allocating</em>
+<a id='L30' name='L30'></a>  30 <em class='comment'>   and freeing small blocks of memory then trying to allocate various block</em>
+<a id='L31' name='L31'></a>  31 <em class='comment'>   sizes larger than the memory bus width of 64-bit targets, or almost</em>
+<a id='L32' name='L32'></a>  32 <em class='comment'>   as large as SIZE_MAX on 32-bit targets supported by glibc.  In each case,</em>
+<a id='L33' name='L33'></a>  33 <em class='comment'>   it verifies that such impossibly large allocations correctly fail.  */</em>
+<a id='L34' name='L34'></a>  34 
+<a id='L35' name='L35'></a>  35 
+<a id='L36' name='L36'></a>  36 <em class='sharp'>#include</em> &lt;<a href='../I/1780.html'>stdlib.h</a>&gt;
+<a id='L37' name='L37'></a>  37 <em class='sharp'>#include</em> &lt;<a href='../I/1888.html'>malloc.h</a>&gt;
+<a id='L38' name='L38'></a>  38 <em class='sharp'>#include</em> &lt;<a href='../I/116.html'>errno.h</a>&gt;
+<a id='L39' name='L39'></a>  39 <em class='sharp'>#include</em> &lt;<a href='../I/1969.html'>stdint.h</a>&gt;
+<a id='L40' name='L40'></a>  40 <em class='sharp'>#include</em> &lt;<a href='../I/148.html'>sys/resource.h</a>&gt;
+<a id='L41' name='L41'></a>  41 <em class='sharp'>#include</em> &lt;<a href='18147.html'>libc-diag.h</a>&gt;
+<a id='L42' name='L42'></a>  42 <em class='sharp'>#include</em> &lt;<a href='5739.html'>support/check.h</a>&gt;
+<a id='L43' name='L43'></a>  43 <em class='sharp'>#include</em> &lt;<a href='../I/1819.html'>unistd.h</a>&gt;
+<a id='L44' name='L44'></a>  44 <em class='sharp'>#include</em> &lt;<a href='../I/144.html'>sys/param.h</a>&gt;
+<a id='L45' name='L45'></a>  45 
+<a id='L46' name='L46'></a>  46 
+<a id='L47' name='L47'></a>  47 <em class='comment'>/* This function prepares for each 'too-large memory allocation' test by</em>
+<a id='L48' name='L48'></a>  48 <em class='comment'>   performing a small successful malloc/free and resetting errno prior to</em>
+<a id='L49' name='L49'></a>  49 <em class='comment'>   the actual test.  */</em>
+<a id='L50' name='L50'></a>  50 <strong class='reserved'>static</strong> <strong class='reserved'>void</strong>
+<a id='L51' name='L51'></a>  51 <a href='../R/25434.html' title='Multiple referred from 11 places.'>test_setup</a> (<strong class='reserved'>void</strong>)
+<a id='L52' name='L52'></a>  52 <em class='brace'>{</em>
+<a id='L53' name='L53'></a>  53   <strong class='reserved'>void</strong> *<strong class='reserved'>volatile</strong> <a href='../D/35180.html' title='Multiple defined in 3 places.'>ptr</a> = <a href='../D/33276.html' title='Multiple defined in 8 places.'>malloc</a> (16);
+<a id='L54' name='L54'></a>  54   <a href='../S/5739.html#L59' title='Defined at 59 in support/check.h.'>TEST_VERIFY_EXIT</a> (<a href='../D/35180.html' title='Multiple defined in 3 places.'>ptr</a> != <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>);
+<a id='L55' name='L55'></a>  55   <a href='../D/30785.html' title='Multiple defined in 5 places.'>free</a> (<a href='../D/35180.html' title='Multiple defined in 3 places.'>ptr</a>);
+<a id='L56' name='L56'></a>  56   <a href='../D/30023.html' title='Multiple defined in 13 places.'>errno</a> = 0;
+<a id='L57' name='L57'></a>  57 <em class='brace'>}</em>
+<a id='L58' name='L58'></a>  58 
+<a id='L59' name='L59'></a>  59 
+<a id='L60' name='L60'></a>  60 <em class='comment'>/* This function tests each of:</em>
+<a id='L61' name='L61'></a>  61 <em class='comment'>   - malloc (SIZE)</em>
+<a id='L62' name='L62'></a>  62 <em class='comment'>   - realloc (PTR_FOR_REALLOC, SIZE)</em>
+<a id='L63' name='L63'></a>  63 <em class='comment'>   - for various values of NMEMB:</em>
+<a id='L64' name='L64'></a>  64 <em class='comment'>    - calloc (NMEMB, SIZE/NMEMB)</em>
+<a id='L65' name='L65'></a>  65 <em class='comment'>    - calloc (SIZE/NMEMB, NMEMB)</em>
+<a id='L66' name='L66'></a>  66 <em class='comment'>    - reallocarray (PTR_FOR_REALLOC, NMEMB, SIZE/NMEMB)</em>
+<a id='L67' name='L67'></a>  67 <em class='comment'>    - reallocarray (PTR_FOR_REALLOC, SIZE/NMEMB, NMEMB)</em>
+<a id='L68' name='L68'></a>  68 <em class='comment'>   and precedes each of these tests with a small malloc/free before it.  */</em>
+<a id='L69' name='L69'></a>  69 <strong class='reserved'>static</strong> <strong class='reserved'>void</strong>
+<a id='L70' name='L70'></a>  70 <a href='../R/25314.html' title='Multiple referred from 4 places.'>test_large_allocations</a> (<a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../D/36819.html' title='Multiple defined in 18 places.'>size</a>)
+<a id='L71' name='L71'></a>  71 <em class='brace'>{</em>
+<a id='L72' name='L72'></a>  72   <strong class='reserved'>void</strong> * <a href='../Y/23104.html' title='Multiple used in 13 places.'>ptr_to_realloc</a>;
+<a id='L73' name='L73'></a>  73 
+<a id='L74' name='L74'></a>  74   <a href='../S/1841.html#L51' title='Defined at 51 in malloc/tst-malloc-too-large.c.'>test_setup</a> ();
+<a id='L75' name='L75'></a>  75   <a href='../S/18147.html#L36' title='Defined at 36 in include/libc-diag.h.'>DIAG_PUSH_NEEDS_COMMENT</a>;
+<a id='L76' name='L76'></a>  76 <em class='sharp'>#if</em> <a href='../D/21626.html' title='Multiple defined in 2 places.'>__GNUC_PREREQ</a> (7, 0)
+<a id='L77' name='L77'></a>  77   <em class='comment'>/* GCC 7 warns about too-large allocations; here we want to test</em>
+<a id='L78' name='L78'></a>  78 <em class='comment'>     that they fail.  */</em>
+<a id='L79' name='L79'></a>  79   <a href='../S/18147.html#L56' title='Defined at 56 in include/libc-diag.h.'>DIAG_IGNORE_NEEDS_COMMENT</a> (7, "-Walloc-size-larger-than=");
+<a id='L80' name='L80'></a>  80 <em class='sharp'>#endif</em>
+<a id='L81' name='L81'></a>  81   <a href='../S/5739.html#L50' title='Defined at 50 in support/check.h.'>TEST_VERIFY</a> (<a href='../D/33276.html' title='Multiple defined in 8 places.'>malloc</a> (<a href='../D/36819.html' title='Multiple defined in 18 places.'>size</a>) == <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>);
+<a id='L82' name='L82'></a>  82 <em class='sharp'>#if</em> <a href='../D/21626.html' title='Multiple defined in 2 places.'>__GNUC_PREREQ</a> (7, 0)
+<a id='L83' name='L83'></a>  83   <a href='../S/18147.html#L39' title='Defined at 39 in include/libc-diag.h.'>DIAG_POP_NEEDS_COMMENT</a>;
+<a id='L84' name='L84'></a>  84 <em class='sharp'>#endif</em>
+<a id='L85' name='L85'></a>  85   <a href='../S/5739.html#L50' title='Defined at 50 in support/check.h.'>TEST_VERIFY</a> (<a href='../D/30023.html' title='Multiple defined in 13 places.'>errno</a> == <a href='../D/3621.html' title='Multiple defined in 3 places.'>ENOMEM</a>);
+<a id='L86' name='L86'></a>  86 
+<a id='L87' name='L87'></a>  87   <a href='../Y/23104.html' title='Multiple used in 13 places.'>ptr_to_realloc</a> = <a href='../D/33276.html' title='Multiple defined in 8 places.'>malloc</a> (16);
+<a id='L88' name='L88'></a>  88   <a href='../S/5739.html#L59' title='Defined at 59 in support/check.h.'>TEST_VERIFY_EXIT</a> (<a href='../Y/23104.html' title='Multiple used in 13 places.'>ptr_to_realloc</a> != <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>);
+<a id='L89' name='L89'></a>  89   <a href='../S/1841.html#L51' title='Defined at 51 in malloc/tst-malloc-too-large.c.'>test_setup</a> ();
+<a id='L90' name='L90'></a>  90 <em class='sharp'>#if</em> <a href='../D/21626.html' title='Multiple defined in 2 places.'>__GNUC_PREREQ</a> (7, 0)
+<a id='L91' name='L91'></a>  91   <a href='../S/18147.html#L56' title='Defined at 56 in include/libc-diag.h.'>DIAG_IGNORE_NEEDS_COMMENT</a> (7, "-Walloc-size-larger-than=");
+<a id='L92' name='L92'></a>  92 <em class='sharp'>#endif</em>
+<a id='L93' name='L93'></a>  93   <a href='../S/5739.html#L50' title='Defined at 50 in support/check.h.'>TEST_VERIFY</a> (<a href='../D/35623.html' title='Multiple defined in 6 places.'>realloc</a> (<a href='../Y/23104.html' title='Multiple used in 13 places.'>ptr_to_realloc</a>, <a href='../D/36819.html' title='Multiple defined in 18 places.'>size</a>) == <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>);
+<a id='L94' name='L94'></a>  94 <em class='sharp'>#if</em> <a href='../D/21626.html' title='Multiple defined in 2 places.'>__GNUC_PREREQ</a> (7, 0)
+<a id='L95' name='L95'></a>  95   <a href='../S/18147.html#L39' title='Defined at 39 in include/libc-diag.h.'>DIAG_POP_NEEDS_COMMENT</a>;
+<a id='L96' name='L96'></a>  96 <em class='sharp'>#endif</em>
+<a id='L97' name='L97'></a>  97   <a href='../S/5739.html#L50' title='Defined at 50 in support/check.h.'>TEST_VERIFY</a> (<a href='../D/30023.html' title='Multiple defined in 13 places.'>errno</a> == <a href='../D/3621.html' title='Multiple defined in 3 places.'>ENOMEM</a>);
+<a id='L98' name='L98'></a>  98 <em class='sharp'>#if</em> <a href='../D/21626.html' title='Multiple defined in 2 places.'>__GNUC_PREREQ</a> (12, 0)
+<a id='L99' name='L99'></a>  99   <em class='comment'>/* Ignore a warning about using a pointer made indeterminate by</em>
+<a id='L100' name='L100'></a> 100 <em class='comment'>     a prior call to realloc().  */</em>
+<a id='L101' name='L101'></a> 101   <a href='../S/18147.html#L56' title='Defined at 56 in include/libc-diag.h.'>DIAG_IGNORE_NEEDS_COMMENT</a> (12, "-Wuse-after-free");
+<a id='L102' name='L102'></a> 102 <em class='sharp'>#endif</em>
+<a id='L103' name='L103'></a> 103   <a href='../D/30785.html' title='Multiple defined in 5 places.'>free</a> (<a href='../Y/23104.html' title='Multiple used in 13 places.'>ptr_to_realloc</a>);
+<a id='L104' name='L104'></a> 104 <em class='sharp'>#if</em> <a href='../D/21626.html' title='Multiple defined in 2 places.'>__GNUC_PREREQ</a> (12, 0)
+<a id='L105' name='L105'></a> 105   <a href='../S/18147.html#L39' title='Defined at 39 in include/libc-diag.h.'>DIAG_POP_NEEDS_COMMENT</a>;
+<a id='L106' name='L106'></a> 106 <em class='sharp'>#endif</em>
+<a id='L107' name='L107'></a> 107 
+<a id='L108' name='L108'></a> 108   <strong class='reserved'>for</strong> (<a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/20950.html' title='Multiple used in 40 places.'>nmemb</a> = 1; <a href='../Y/20950.html' title='Multiple used in 40 places.'>nmemb</a> &lt;= 8; <a href='../Y/20950.html' title='Multiple used in 40 places.'>nmemb</a> *= 2)
+<a id='L109' name='L109'></a> 109     <strong class='reserved'>if</strong> ((<a href='../D/36819.html' title='Multiple defined in 18 places.'>size</a> % <a href='../Y/20950.html' title='Multiple used in 40 places.'>nmemb</a>) == 0)
+<a id='L110' name='L110'></a> 110       <em class='brace'>{</em>
+<a id='L111' name='L111'></a> 111         <a href='../S/1841.html#L51' title='Defined at 51 in malloc/tst-malloc-too-large.c.'>test_setup</a> ();
+<a id='L112' name='L112'></a> 112         <a href='../S/5739.html#L50' title='Defined at 50 in support/check.h.'>TEST_VERIFY</a> (<a href='../D/28498.html' title='Multiple defined in 4 places.'>calloc</a> (<a href='../Y/20950.html' title='Multiple used in 40 places.'>nmemb</a>, <a href='../D/36819.html' title='Multiple defined in 18 places.'>size</a> / <a href='../Y/20950.html' title='Multiple used in 40 places.'>nmemb</a>) == <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>);
+<a id='L113' name='L113'></a> 113         <a href='../S/5739.html#L50' title='Defined at 50 in support/check.h.'>TEST_VERIFY</a> (<a href='../D/30023.html' title='Multiple defined in 13 places.'>errno</a> == <a href='../D/3621.html' title='Multiple defined in 3 places.'>ENOMEM</a>);
+<a id='L114' name='L114'></a> 114 
+<a id='L115' name='L115'></a> 115         <a href='../S/1841.html#L51' title='Defined at 51 in malloc/tst-malloc-too-large.c.'>test_setup</a> ();
+<a id='L116' name='L116'></a> 116         <a href='../S/5739.html#L50' title='Defined at 50 in support/check.h.'>TEST_VERIFY</a> (<a href='../D/28498.html' title='Multiple defined in 4 places.'>calloc</a> (<a href='../D/36819.html' title='Multiple defined in 18 places.'>size</a> / <a href='../Y/20950.html' title='Multiple used in 40 places.'>nmemb</a>, <a href='../Y/20950.html' title='Multiple used in 40 places.'>nmemb</a>) == <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>);
+<a id='L117' name='L117'></a> 117         <a href='../S/5739.html#L50' title='Defined at 50 in support/check.h.'>TEST_VERIFY</a> (<a href='../D/30023.html' title='Multiple defined in 13 places.'>errno</a> == <a href='../D/3621.html' title='Multiple defined in 3 places.'>ENOMEM</a>);
+<a id='L118' name='L118'></a> 118 
+<a id='L119' name='L119'></a> 119         <a href='../Y/23104.html' title='Multiple used in 13 places.'>ptr_to_realloc</a> = <a href='../D/33276.html' title='Multiple defined in 8 places.'>malloc</a> (16);
+<a id='L120' name='L120'></a> 120         <a href='../S/5739.html#L59' title='Defined at 59 in support/check.h.'>TEST_VERIFY_EXIT</a> (<a href='../Y/23104.html' title='Multiple used in 13 places.'>ptr_to_realloc</a> != <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>);
+<a id='L121' name='L121'></a> 121         <a href='../S/1841.html#L51' title='Defined at 51 in malloc/tst-malloc-too-large.c.'>test_setup</a> ();
+<a id='L122' name='L122'></a> 122         <a href='../S/5739.html#L50' title='Defined at 50 in support/check.h.'>TEST_VERIFY</a> (<a href='../Y/23595.html' title='Multiple used in 12 places.'>reallocarray</a> (<a href='../Y/23104.html' title='Multiple used in 13 places.'>ptr_to_realloc</a>, <a href='../Y/20950.html' title='Multiple used in 40 places.'>nmemb</a>, <a href='../D/36819.html' title='Multiple defined in 18 places.'>size</a> / <a href='../Y/20950.html' title='Multiple used in 40 places.'>nmemb</a>) == <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>);
+<a id='L123' name='L123'></a> 123         <a href='../S/5739.html#L50' title='Defined at 50 in support/check.h.'>TEST_VERIFY</a> (<a href='../D/30023.html' title='Multiple defined in 13 places.'>errno</a> == <a href='../D/3621.html' title='Multiple defined in 3 places.'>ENOMEM</a>);
+<a id='L124' name='L124'></a> 124 <em class='sharp'>#if</em> <a href='../D/21626.html' title='Multiple defined in 2 places.'>__GNUC_PREREQ</a> (12, 0)
+<a id='L125' name='L125'></a> 125   <em class='comment'>/* Ignore a warning about using a pointer made indeterminate by</em>
+<a id='L126' name='L126'></a> 126 <em class='comment'>     a prior call to realloc().  */</em>
+<a id='L127' name='L127'></a> 127   <a href='../S/18147.html#L56' title='Defined at 56 in include/libc-diag.h.'>DIAG_IGNORE_NEEDS_COMMENT</a> (12, "-Wuse-after-free");
+<a id='L128' name='L128'></a> 128 <em class='sharp'>#endif</em>
+<a id='L129' name='L129'></a> 129         <a href='../D/30785.html' title='Multiple defined in 5 places.'>free</a> (<a href='../Y/23104.html' title='Multiple used in 13 places.'>ptr_to_realloc</a>);
+<a id='L130' name='L130'></a> 130 <em class='sharp'>#if</em> <a href='../D/21626.html' title='Multiple defined in 2 places.'>__GNUC_PREREQ</a> (12, 0)
+<a id='L131' name='L131'></a> 131   <a href='../S/18147.html#L39' title='Defined at 39 in include/libc-diag.h.'>DIAG_POP_NEEDS_COMMENT</a>;
+<a id='L132' name='L132'></a> 132 <em class='sharp'>#endif</em>
+<a id='L133' name='L133'></a> 133 
+<a id='L134' name='L134'></a> 134         <a href='../Y/23104.html' title='Multiple used in 13 places.'>ptr_to_realloc</a> = <a href='../D/33276.html' title='Multiple defined in 8 places.'>malloc</a> (16);
+<a id='L135' name='L135'></a> 135         <a href='../S/5739.html#L59' title='Defined at 59 in support/check.h.'>TEST_VERIFY_EXIT</a> (<a href='../Y/23104.html' title='Multiple used in 13 places.'>ptr_to_realloc</a> != <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>);
+<a id='L136' name='L136'></a> 136         <a href='../S/1841.html#L51' title='Defined at 51 in malloc/tst-malloc-too-large.c.'>test_setup</a> ();
+<a id='L137' name='L137'></a> 137         <a href='../S/5739.html#L50' title='Defined at 50 in support/check.h.'>TEST_VERIFY</a> (<a href='../Y/23595.html' title='Multiple used in 12 places.'>reallocarray</a> (<a href='../Y/23104.html' title='Multiple used in 13 places.'>ptr_to_realloc</a>, <a href='../D/36819.html' title='Multiple defined in 18 places.'>size</a> / <a href='../Y/20950.html' title='Multiple used in 40 places.'>nmemb</a>, <a href='../Y/20950.html' title='Multiple used in 40 places.'>nmemb</a>) == <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>);
+<a id='L138' name='L138'></a> 138         <a href='../S/5739.html#L50' title='Defined at 50 in support/check.h.'>TEST_VERIFY</a> (<a href='../D/30023.html' title='Multiple defined in 13 places.'>errno</a> == <a href='../D/3621.html' title='Multiple defined in 3 places.'>ENOMEM</a>);
+<a id='L139' name='L139'></a> 139 <em class='sharp'>#if</em> <a href='../D/21626.html' title='Multiple defined in 2 places.'>__GNUC_PREREQ</a> (12, 0)
+<a id='L140' name='L140'></a> 140   <em class='comment'>/* Ignore a warning about using a pointer made indeterminate by</em>
+<a id='L141' name='L141'></a> 141 <em class='comment'>     a prior call to realloc().  */</em>
+<a id='L142' name='L142'></a> 142   <a href='../S/18147.html#L56' title='Defined at 56 in include/libc-diag.h.'>DIAG_IGNORE_NEEDS_COMMENT</a> (12, "-Wuse-after-free");
+<a id='L143' name='L143'></a> 143 <em class='sharp'>#endif</em>
+<a id='L144' name='L144'></a> 144         <a href='../D/30785.html' title='Multiple defined in 5 places.'>free</a> (<a href='../Y/23104.html' title='Multiple used in 13 places.'>ptr_to_realloc</a>);
+<a id='L145' name='L145'></a> 145 <em class='sharp'>#if</em> <a href='../D/21626.html' title='Multiple defined in 2 places.'>__GNUC_PREREQ</a> (12, 0)
+<a id='L146' name='L146'></a> 146   <a href='../S/18147.html#L39' title='Defined at 39 in include/libc-diag.h.'>DIAG_POP_NEEDS_COMMENT</a>;
+<a id='L147' name='L147'></a> 147 <em class='sharp'>#endif</em>
+<a id='L148' name='L148'></a> 148       <em class='brace'>}</em>
+<a id='L149' name='L149'></a> 149     <strong class='reserved'>else</strong>
+<a id='L150' name='L150'></a> 150       <strong class='reserved'>break</strong>;
+<a id='L151' name='L151'></a> 151 <em class='brace'>}</em>
+<a id='L152' name='L152'></a> 152 
+<a id='L153' name='L153'></a> 153 
+<a id='L154' name='L154'></a> 154 <strong class='reserved'>static</strong> <strong class='reserved'>long</strong> <a href='../Y/22170.html' title='Multiple used in 151 places.'>pagesize</a>;
+<a id='L155' name='L155'></a> 155 
+<a id='L156' name='L156'></a> 156 <em class='comment'>/* This function tests the following aligned memory allocation functions</em>
+<a id='L157' name='L157'></a> 157 <em class='comment'>   using several valid alignments and precedes each allocation test with a</em>
+<a id='L158' name='L158'></a> 158 <em class='comment'>   small malloc/free before it:</em>
+<a id='L159' name='L159'></a> 159 <em class='comment'>   memalign, posix_memalign, aligned_alloc, valloc, pvalloc.  */</em>
+<a id='L160' name='L160'></a> 160 <strong class='reserved'>static</strong> <strong class='reserved'>void</strong>
+<a id='L161' name='L161'></a> 161 <a href='../R/25313.html' title='Multiple referred from 4 places.'>test_large_aligned_allocations</a> (<a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../D/36819.html' title='Multiple defined in 18 places.'>size</a>)
+<a id='L162' name='L162'></a> 162 <em class='brace'>{</em>
+<a id='L163' name='L163'></a> 163   <em class='comment'>/* ptr stores the result of posix_memalign but since all those calls</em>
+<a id='L164' name='L164'></a> 164 <em class='comment'>     should fail, posix_memalign should never change ptr.  We set it to</em>
+<a id='L165' name='L165'></a> 165 <em class='comment'>     NULL here and later on we check that it remains NULL after each</em>
+<a id='L166' name='L166'></a> 166 <em class='comment'>     posix_memalign call.  */</em>
+<a id='L167' name='L167'></a> 167   <strong class='reserved'>void</strong> * <a href='../D/35180.html' title='Multiple defined in 3 places.'>ptr</a> = <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>;
+<a id='L168' name='L168'></a> 168 
+<a id='L169' name='L169'></a> 169   <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../D/27636.html' title='Multiple defined in 3 places.'>align</a>;
+<a id='L170' name='L170'></a> 170 
+<a id='L171' name='L171'></a> 171   <em class='comment'>/* All aligned memory allocation functions expect an alignment that is a</em>
+<a id='L172' name='L172'></a> 172 <em class='comment'>     power of 2.  Given this, we test each of them with every valid</em>
+<a id='L173' name='L173'></a> 173 <em class='comment'>     alignment from 1 thru PAGESIZE.  */</em>
+<a id='L174' name='L174'></a> 174   <strong class='reserved'>for</strong> (<a href='../D/27636.html' title='Multiple defined in 3 places.'>align</a> = 1; <a href='../D/27636.html' title='Multiple defined in 3 places.'>align</a> &lt;= <a href='../Y/22170.html' title='Multiple used in 151 places.'>pagesize</a>; <a href='../D/27636.html' title='Multiple defined in 3 places.'>align</a> *= 2)
+<a id='L175' name='L175'></a> 175     <em class='brace'>{</em>
+<a id='L176' name='L176'></a> 176       <a href='../S/1841.html#L51' title='Defined at 51 in malloc/tst-malloc-too-large.c.'>test_setup</a> ();
+<a id='L177' name='L177'></a> 177 <em class='sharp'>#if</em> <a href='../D/21626.html' title='Multiple defined in 2 places.'>__GNUC_PREREQ</a> (7, 0)
+<a id='L178' name='L178'></a> 178       <a href='../S/18147.html#L56' title='Defined at 56 in include/libc-diag.h.'>DIAG_IGNORE_NEEDS_COMMENT</a> (7, "-Walloc-size-larger-than=");
+<a id='L179' name='L179'></a> 179 <em class='sharp'>#endif</em>
+<a id='L180' name='L180'></a> 180       <a href='../S/5739.html#L50' title='Defined at 50 in support/check.h.'>TEST_VERIFY</a> (<a href='../Y/19234.html' title='Multiple used in 16 places.'>memalign</a> (<a href='../D/27636.html' title='Multiple defined in 3 places.'>align</a>, <a href='../D/36819.html' title='Multiple defined in 18 places.'>size</a>) == <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>);
+<a id='L181' name='L181'></a> 181 <em class='sharp'>#if</em> <a href='../D/21626.html' title='Multiple defined in 2 places.'>__GNUC_PREREQ</a> (7, 0)
+<a id='L182' name='L182'></a> 182       <a href='../S/18147.html#L39' title='Defined at 39 in include/libc-diag.h.'>DIAG_POP_NEEDS_COMMENT</a>;
+<a id='L183' name='L183'></a> 183 <em class='sharp'>#endif</em>
+<a id='L184' name='L184'></a> 184       <a href='../S/5739.html#L50' title='Defined at 50 in support/check.h.'>TEST_VERIFY</a> (<a href='../D/30023.html' title='Multiple defined in 13 places.'>errno</a> == <a href='../D/3621.html' title='Multiple defined in 3 places.'>ENOMEM</a>);
+<a id='L185' name='L185'></a> 185 
+<a id='L186' name='L186'></a> 186       <em class='comment'>/* posix_memalign expects an alignment that is a power of 2 *and* a</em>
+<a id='L187' name='L187'></a> 187 <em class='comment'>         multiple of sizeof (void *).  */</em>
+<a id='L188' name='L188'></a> 188       <strong class='reserved'>if</strong> ((<a href='../D/27636.html' title='Multiple defined in 3 places.'>align</a> % <strong class='reserved'>sizeof</strong> (<strong class='reserved'>void</strong> *)) == 0)
+<a id='L189' name='L189'></a> 189         <em class='brace'>{</em>
+<a id='L190' name='L190'></a> 190           <a href='../S/1841.html#L51' title='Defined at 51 in malloc/tst-malloc-too-large.c.'>test_setup</a> ();
+<a id='L191' name='L191'></a> 191           <a href='../S/5739.html#L50' title='Defined at 50 in support/check.h.'>TEST_VERIFY</a> (<a href='../Y/22567.html' title='Multiple used in 17 places.'>posix_memalign</a> (&amp;<a href='../D/35180.html' title='Multiple defined in 3 places.'>ptr</a>, <a href='../D/27636.html' title='Multiple defined in 3 places.'>align</a>, <a href='../D/36819.html' title='Multiple defined in 18 places.'>size</a>) == <a href='../D/3621.html' title='Multiple defined in 3 places.'>ENOMEM</a>);
+<a id='L192' name='L192'></a> 192           <a href='../S/5739.html#L50' title='Defined at 50 in support/check.h.'>TEST_VERIFY</a> (<a href='../D/35180.html' title='Multiple defined in 3 places.'>ptr</a> == <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>);
+<a id='L193' name='L193'></a> 193         <em class='brace'>}</em>
+<a id='L194' name='L194'></a> 194 
+<a id='L195' name='L195'></a> 195       <em class='comment'>/* aligned_alloc expects a size that is a multiple of alignment.  */</em>
+<a id='L196' name='L196'></a> 196       <strong class='reserved'>if</strong> ((<a href='../D/36819.html' title='Multiple defined in 18 places.'>size</a> % <a href='../D/27636.html' title='Multiple defined in 3 places.'>align</a>) == 0)
+<a id='L197' name='L197'></a> 197         <em class='brace'>{</em>
+<a id='L198' name='L198'></a> 198           <a href='../S/1841.html#L51' title='Defined at 51 in malloc/tst-malloc-too-large.c.'>test_setup</a> ();
+<a id='L199' name='L199'></a> 199 <em class='sharp'>#if</em> <a href='../D/21626.html' title='Multiple defined in 2 places.'>__GNUC_PREREQ</a> (7, 0)
+<a id='L200' name='L200'></a> 200       <a href='../S/18147.html#L56' title='Defined at 56 in include/libc-diag.h.'>DIAG_IGNORE_NEEDS_COMMENT</a> (7, "-Walloc-size-larger-than=");
+<a id='L201' name='L201'></a> 201 <em class='sharp'>#endif</em>
+<a id='L202' name='L202'></a> 202           <a href='../S/5739.html#L50' title='Defined at 50 in support/check.h.'>TEST_VERIFY</a> (<a href='../Y/10117.html' title='Multiple used in 6 places.'>aligned_alloc</a> (<a href='../D/27636.html' title='Multiple defined in 3 places.'>align</a>, <a href='../D/36819.html' title='Multiple defined in 18 places.'>size</a>) == <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>);
+<a id='L203' name='L203'></a> 203 <em class='sharp'>#if</em> <a href='../D/21626.html' title='Multiple defined in 2 places.'>__GNUC_PREREQ</a> (7, 0)
+<a id='L204' name='L204'></a> 204       <a href='../S/18147.html#L39' title='Defined at 39 in include/libc-diag.h.'>DIAG_POP_NEEDS_COMMENT</a>;
+<a id='L205' name='L205'></a> 205 <em class='sharp'>#endif</em>
+<a id='L206' name='L206'></a> 206           <a href='../S/5739.html#L50' title='Defined at 50 in support/check.h.'>TEST_VERIFY</a> (<a href='../D/30023.html' title='Multiple defined in 13 places.'>errno</a> == <a href='../D/3621.html' title='Multiple defined in 3 places.'>ENOMEM</a>);
+<a id='L207' name='L207'></a> 207         <em class='brace'>}</em>
+<a id='L208' name='L208'></a> 208     <em class='brace'>}</em>
+<a id='L209' name='L209'></a> 209 
+<a id='L210' name='L210'></a> 210   <em class='comment'>/* Both valloc and pvalloc return page-aligned memory.  */</em>
+<a id='L211' name='L211'></a> 211 
+<a id='L212' name='L212'></a> 212   <a href='../S/1841.html#L51' title='Defined at 51 in malloc/tst-malloc-too-large.c.'>test_setup</a> ();
+<a id='L213' name='L213'></a> 213 <em class='sharp'>#if</em> <a href='../D/21626.html' title='Multiple defined in 2 places.'>__GNUC_PREREQ</a> (7, 0)
+<a id='L214' name='L214'></a> 214   <a href='../S/18147.html#L56' title='Defined at 56 in include/libc-diag.h.'>DIAG_IGNORE_NEEDS_COMMENT</a> (7, "-Walloc-size-larger-than=");
+<a id='L215' name='L215'></a> 215 <em class='sharp'>#endif</em>
+<a id='L216' name='L216'></a> 216   <a href='../S/5739.html#L50' title='Defined at 50 in support/check.h.'>TEST_VERIFY</a> (<a href='../Y/28585.html' title='Multiple used in 12 places.'>valloc</a> (<a href='../D/36819.html' title='Multiple defined in 18 places.'>size</a>) == <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>);
+<a id='L217' name='L217'></a> 217 <em class='sharp'>#if</em> <a href='../D/21626.html' title='Multiple defined in 2 places.'>__GNUC_PREREQ</a> (7, 0)
+<a id='L218' name='L218'></a> 218   <a href='../S/18147.html#L39' title='Defined at 39 in include/libc-diag.h.'>DIAG_POP_NEEDS_COMMENT</a>;
+<a id='L219' name='L219'></a> 219 <em class='sharp'>#endif</em>
+<a id='L220' name='L220'></a> 220   <a href='../S/5739.html#L50' title='Defined at 50 in support/check.h.'>TEST_VERIFY</a> (<a href='../D/30023.html' title='Multiple defined in 13 places.'>errno</a> == <a href='../D/3621.html' title='Multiple defined in 3 places.'>ENOMEM</a>);
+<a id='L221' name='L221'></a> 221 
+<a id='L222' name='L222'></a> 222   <a href='../S/1841.html#L51' title='Defined at 51 in malloc/tst-malloc-too-large.c.'>test_setup</a> ();
+<a id='L223' name='L223'></a> 223 <em class='sharp'>#if</em> <a href='../D/21626.html' title='Multiple defined in 2 places.'>__GNUC_PREREQ</a> (7, 0)
+<a id='L224' name='L224'></a> 224   <a href='../S/18147.html#L56' title='Defined at 56 in include/libc-diag.h.'>DIAG_IGNORE_NEEDS_COMMENT</a> (7, "-Walloc-size-larger-than=");
+<a id='L225' name='L225'></a> 225 <em class='sharp'>#endif</em>
+<a id='L226' name='L226'></a> 226   <a href='../S/5739.html#L50' title='Defined at 50 in support/check.h.'>TEST_VERIFY</a> (<a href='../Y/23146.html' title='Multiple used in 12 places.'>pvalloc</a> (<a href='../D/36819.html' title='Multiple defined in 18 places.'>size</a>) == <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>);
+<a id='L227' name='L227'></a> 227 <em class='sharp'>#if</em> <a href='../D/21626.html' title='Multiple defined in 2 places.'>__GNUC_PREREQ</a> (7, 0)
+<a id='L228' name='L228'></a> 228   <a href='../S/18147.html#L39' title='Defined at 39 in include/libc-diag.h.'>DIAG_POP_NEEDS_COMMENT</a>;
+<a id='L229' name='L229'></a> 229 <em class='sharp'>#endif</em>
+<a id='L230' name='L230'></a> 230   <a href='../S/5739.html#L50' title='Defined at 50 in support/check.h.'>TEST_VERIFY</a> (<a href='../D/30023.html' title='Multiple defined in 13 places.'>errno</a> == <a href='../D/3621.html' title='Multiple defined in 3 places.'>ENOMEM</a>);
+<a id='L231' name='L231'></a> 231 <em class='brace'>}</em>
+<a id='L232' name='L232'></a> 232 
+<a id='L233' name='L233'></a> 233 
+<a id='L234' name='L234'></a> 234 <em class='sharp'>#define</em> <a href='../R/2561.html' title='Multiple referred from 3 places.'>FOURTEEN_ON_BITS</a> ((1UL &lt;&lt; 14) - 1)
+<a id='L235' name='L235'></a> 235 <em class='sharp'>#define</em> <a href='../R/2436.html' title='Multiple referred from 3 places.'>FIFTY_ON_BITS</a> ((1UL &lt;&lt; 50) - 1)
+<a id='L236' name='L236'></a> 236 
+<a id='L237' name='L237'></a> 237 
+<a id='L238' name='L238'></a> 238 <strong class='reserved'>static</strong> <strong class='reserved'>int</strong>
+<a id='L239' name='L239'></a> 239 <a href='../R/18782.html' title='Multiple referred from 1850 places.'>do_test</a> (<strong class='reserved'>void</strong>)
+<a id='L240' name='L240'></a> 240 <em class='brace'>{</em>
+<a id='L241' name='L241'></a> 241 
+<a id='L242' name='L242'></a> 242 <em class='sharp'>#if</em> <a href='../D/22888.html' title='Multiple defined in 26 places.'>__WORDSIZE</a> &gt;= 64
+<a id='L243' name='L243'></a> 243 
+<a id='L244' name='L244'></a> 244   <em class='comment'>/* This test assumes that none of the supported targets have an address</em>
+<a id='L245' name='L245'></a> 245 <em class='comment'>     bus wider than 50 bits, and that therefore allocations for sizes wider</em>
+<a id='L246' name='L246'></a> 246 <em class='comment'>     than 50 bits will fail.  Here, we ensure that the assumption continues</em>
+<a id='L247' name='L247'></a> 247 <em class='comment'>     to be true in the future when we might have address buses wider than 50</em>
+<a id='L248' name='L248'></a> 248 <em class='comment'>     bits.  */</em>
+<a id='L249' name='L249'></a> 249 
+<a id='L250' name='L250'></a> 250   <strong class='reserved'>struct</strong> <a href='../D/36086.html' title='Multiple defined in 5 places.'>rlimit</a> <a href='../Y/10149.html' title='Multiple used in 2 places.'>alloc_size_limit</a>
+<a id='L251' name='L251'></a> 251     = <em class='brace'>{</em>
+<a id='L252' name='L252'></a> 252         .<a href='../Y/24102.html' title='Multiple used in 128 places.'>rlim_cur</a> = <a href='../S/1841.html#L235' title='Defined at 235 in malloc/tst-malloc-too-large.c.'>FIFTY_ON_BITS</a>,
+<a id='L253' name='L253'></a> 253         .<a href='../Y/24103.html' title='Multiple used in 61 places.'>rlim_max</a> = <a href='../S/1841.html#L235' title='Defined at 235 in malloc/tst-malloc-too-large.c.'>FIFTY_ON_BITS</a>
+<a id='L254' name='L254'></a> 254       <em class='brace'>}</em>;
+<a id='L255' name='L255'></a> 255 
+<a id='L256' name='L256'></a> 256   <a href='../D/36583.html' title='Multiple defined in 4 places.'>setrlimit</a> (<a href='../D/11379.html' title='Multiple defined in 16 places.'>RLIMIT_AS</a>, &amp;<a href='../Y/10149.html' title='Multiple used in 2 places.'>alloc_size_limit</a>);
+<a id='L257' name='L257'></a> 257 
+<a id='L258' name='L258'></a> 258 <em class='sharp'>#endif</em> <em class='comment'>/* __WORDSIZE &gt;= 64 */</em>
+<a id='L259' name='L259'></a> 259 
+<a id='L260' name='L260'></a> 260   <a href='../S/18147.html#L36' title='Defined at 36 in include/libc-diag.h.'>DIAG_PUSH_NEEDS_COMMENT</a>;
+<a id='L261' name='L261'></a> 261 <em class='sharp'>#if</em> <a href='../D/21626.html' title='Multiple defined in 2 places.'>__GNUC_PREREQ</a> (7, 0)
+<a id='L262' name='L262'></a> 262   <em class='comment'>/* GCC 7 warns about too-large allocations; here we want to test</em>
+<a id='L263' name='L263'></a> 263 <em class='comment'>     that they fail.  */</em>
+<a id='L264' name='L264'></a> 264   <a href='../S/18147.html#L56' title='Defined at 56 in include/libc-diag.h.'>DIAG_IGNORE_NEEDS_COMMENT</a> (7, "-Walloc-size-larger-than=");
+<a id='L265' name='L265'></a> 265 <em class='sharp'>#endif</em>
+<a id='L266' name='L266'></a> 266 
+<a id='L267' name='L267'></a> 267   <em class='comment'>/* Aligned memory allocation functions need to be tested up to alignment</em>
+<a id='L268' name='L268'></a> 268 <em class='comment'>     size equivalent to page size, which should be a power of 2.  */</em>
+<a id='L269' name='L269'></a> 269   <a href='../Y/22170.html' title='Multiple used in 151 places.'>pagesize</a> = <a href='../S/1082.html#L56' title='Defined at 56 in posix/glob.c.'>sysconf</a> (<a href='../D/20206.html' title='Multiple defined in 4 places.'>_SC_PAGESIZE</a>);
+<a id='L270' name='L270'></a> 270   <a href='../S/5739.html#L59' title='Defined at 59 in support/check.h.'>TEST_VERIFY_EXIT</a> (<a href='../S/3870.html#L99' title='Defined at 99 in misc/sys/param.h.'>powerof2</a> (<a href='../Y/22170.html' title='Multiple used in 151 places.'>pagesize</a>));
+<a id='L271' name='L271'></a> 271 
+<a id='L272' name='L272'></a> 272   <em class='comment'>/* Loop 1: Ensure that all allocations with SIZE close to SIZE_MAX, i.e.</em>
+<a id='L273' name='L273'></a> 273 <em class='comment'>     in the range (SIZE_MAX - 2^14, SIZE_MAX], fail.</em>
+<a id='L274' name='L274'></a> 274 <em class='comment'></em>
+<a id='L275' name='L275'></a> 275 <em class='comment'>     We can expect that this range of allocation sizes will always lead to</em>
+<a id='L276' name='L276'></a> 276 <em class='comment'>     an allocation failure on both 64 and 32 bit targets, because:</em>
+<a id='L277' name='L277'></a> 277 <em class='comment'></em>
+<a id='L278' name='L278'></a> 278 <em class='comment'>     1. no currently supported 64-bit target has an address bus wider than</em>
+<a id='L279' name='L279'></a> 279 <em class='comment'>     50 bits -- and (2^64 - 2^14) is much wider than that;</em>
+<a id='L280' name='L280'></a> 280 <em class='comment'></em>
+<a id='L281' name='L281'></a> 281 <em class='comment'>     2. on 32-bit targets, even though 2^32 is only 4 GB and potentially</em>
+<a id='L282' name='L282'></a> 282 <em class='comment'>     addressable, glibc itself is more than 2^14 bytes in size, and</em>
+<a id='L283' name='L283'></a> 283 <em class='comment'>     therefore once glibc is loaded, less than (2^32 - 2^14) bytes remain</em>
+<a id='L284' name='L284'></a> 284 <em class='comment'>     available.  */</em>
+<a id='L285' name='L285'></a> 285 
+<a id='L286' name='L286'></a> 286   <strong class='reserved'>for</strong> (<a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> = 0; <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> &lt;= <a href='../S/1841.html#L234' title='Defined at 234 in malloc/tst-malloc-too-large.c.'>FOURTEEN_ON_BITS</a>; <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>++)
+<a id='L287' name='L287'></a> 287     <em class='brace'>{</em>
+<a id='L288' name='L288'></a> 288       <a href='../S/1841.html#L70' title='Defined at 70 in malloc/tst-malloc-too-large.c.'>test_large_allocations</a> (<a href='../D/14400.html' title='Multiple defined in 5 places.'>SIZE_MAX</a> - <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>);
+<a id='L289' name='L289'></a> 289       <a href='../S/1841.html#L161' title='Defined at 161 in malloc/tst-malloc-too-large.c.'>test_large_aligned_allocations</a> (<a href='../D/14400.html' title='Multiple defined in 5 places.'>SIZE_MAX</a> - <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>);
+<a id='L290' name='L290'></a> 290     <em class='brace'>}</em>
+<a id='L291' name='L291'></a> 291 
+<a id='L292' name='L292'></a> 292   <em class='comment'>/* Allocation larger than PTRDIFF_MAX does play well with C standard,</em>
+<a id='L293' name='L293'></a> 293 <em class='comment'>     since pointer subtraction within the object might overflow ptrdiff_t</em>
+<a id='L294' name='L294'></a> 294 <em class='comment'>     resulting in undefined behavior.  To prevent it malloc function fail</em>
+<a id='L295' name='L295'></a> 295 <em class='comment'>     for such allocations.  */</em>
+<a id='L296' name='L296'></a> 296   <strong class='reserved'>for</strong> (<a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> = 1; <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> &lt;= <a href='../S/1841.html#L234' title='Defined at 234 in malloc/tst-malloc-too-large.c.'>FOURTEEN_ON_BITS</a>; <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>++)
+<a id='L297' name='L297'></a> 297     <em class='brace'>{</em>
+<a id='L298' name='L298'></a> 298       <a href='../S/1841.html#L70' title='Defined at 70 in malloc/tst-malloc-too-large.c.'>test_large_allocations</a> (<a href='../D/10545.html' title='Multiple defined in 3 places.'>PTRDIFF_MAX</a> + <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>);
+<a id='L299' name='L299'></a> 299       <a href='../S/1841.html#L161' title='Defined at 161 in malloc/tst-malloc-too-large.c.'>test_large_aligned_allocations</a> (<a href='../D/10545.html' title='Multiple defined in 3 places.'>PTRDIFF_MAX</a> + <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>);
+<a id='L300' name='L300'></a> 300     <em class='brace'>}</em>
+<a id='L301' name='L301'></a> 301 
+<a id='L302' name='L302'></a> 302 <em class='sharp'>#if</em> <a href='../D/22888.html' title='Multiple defined in 26 places.'>__WORDSIZE</a> &gt;= 64
+<a id='L303' name='L303'></a> 303   <em class='comment'>/* On 64-bit targets, we need to test a much wider range of too-large</em>
+<a id='L304' name='L304'></a> 304 <em class='comment'>     sizes, so we test at intervals of (1 &lt;&lt; 50) that allocation sizes</em>
+<a id='L305' name='L305'></a> 305 <em class='comment'>     ranging from SIZE_MAX down to (1 &lt;&lt; 50) fail:</em>
+<a id='L306' name='L306'></a> 306 <em class='comment'>     The 14 MSBs are decremented starting from "all ON" going down to 1,</em>
+<a id='L307' name='L307'></a> 307 <em class='comment'>     the 50 LSBs are "all ON" and then "all OFF" during every iteration.  */</em>
+<a id='L308' name='L308'></a> 308   <strong class='reserved'>for</strong> (<a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/19902.html' title='Multiple used in 3 places.'>msbs</a> = <a href='../S/1841.html#L234' title='Defined at 234 in malloc/tst-malloc-too-large.c.'>FOURTEEN_ON_BITS</a>; <a href='../Y/19902.html' title='Multiple used in 3 places.'>msbs</a> &gt;= 1; <a href='../Y/19902.html' title='Multiple used in 3 places.'>msbs</a>--)
+<a id='L309' name='L309'></a> 309     <em class='brace'>{</em>
+<a id='L310' name='L310'></a> 310       <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../D/36819.html' title='Multiple defined in 18 places.'>size</a> = (<a href='../Y/19902.html' title='Multiple used in 3 places.'>msbs</a> &lt;&lt; 50) | <a href='../S/1841.html#L235' title='Defined at 235 in malloc/tst-malloc-too-large.c.'>FIFTY_ON_BITS</a>;
+<a id='L311' name='L311'></a> 311       <a href='../S/1841.html#L70' title='Defined at 70 in malloc/tst-malloc-too-large.c.'>test_large_allocations</a> (<a href='../D/36819.html' title='Multiple defined in 18 places.'>size</a>);
+<a id='L312' name='L312'></a> 312       <a href='../S/1841.html#L161' title='Defined at 161 in malloc/tst-malloc-too-large.c.'>test_large_aligned_allocations</a> (<a href='../D/36819.html' title='Multiple defined in 18 places.'>size</a>);
+<a id='L313' name='L313'></a> 313 
+<a id='L314' name='L314'></a> 314       <a href='../D/36819.html' title='Multiple defined in 18 places.'>size</a> = <a href='../Y/19902.html' title='Multiple used in 3 places.'>msbs</a> &lt;&lt; 50;
+<a id='L315' name='L315'></a> 315       <a href='../S/1841.html#L70' title='Defined at 70 in malloc/tst-malloc-too-large.c.'>test_large_allocations</a> (<a href='../D/36819.html' title='Multiple defined in 18 places.'>size</a>);
+<a id='L316' name='L316'></a> 316       <a href='../S/1841.html#L161' title='Defined at 161 in malloc/tst-malloc-too-large.c.'>test_large_aligned_allocations</a> (<a href='../D/36819.html' title='Multiple defined in 18 places.'>size</a>);
+<a id='L317' name='L317'></a> 317     <em class='brace'>}</em>
+<a id='L318' name='L318'></a> 318 <em class='sharp'>#endif</em> <em class='comment'>/* __WORDSIZE &gt;= 64 */</em>
+<a id='L319' name='L319'></a> 319 
+<a id='L320' name='L320'></a> 320   <a href='../S/18147.html#L39' title='Defined at 39 in include/libc-diag.h.'>DIAG_POP_NEEDS_COMMENT</a>;
+<a id='L321' name='L321'></a> 321 
+<a id='L322' name='L322'></a> 322   <strong class='reserved'>return</strong> 0;
+<a id='L323' name='L323'></a> 323 <em class='brace'>}</em>
+<a id='L324' name='L324'></a> 324 
+<a id='L325' name='L325'></a> 325 
+<a id='L326' name='L326'></a> 326 <em class='sharp'>#include</em> &lt;support/test-driver.c&gt;
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L51'>[^]</a><a href='#L239'>[v]</a><a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

@@ -1,0 +1,170 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>sysdeps/unix/sysv/linux/mips/clone.S</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18977.html'>sysdeps</a>/<a href='../files/19246.html'>unix</a>/<a href='../files/19257.html'>sysv</a>/<a href='../files/19258.html'>linux</a>/<a href='../files/19302.html'>mips</a>/clone.S</h2>
+<em class='comment'>/* [&lt;][&gt;][^][v][top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* Copyright (C) 1996-2022 Free Software Foundation, Inc.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'></em>
+<a id='L4' name='L4'></a>   4 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'></em>
+<a id='L9' name='L9'></a>   9 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'></em>
+<a id='L14' name='L14'></a>  14 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   License along with the GNU C Library.  If not, see</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L17' name='L17'></a>  17 
+<a id='L18' name='L18'></a>  18 <em class='comment'>/* clone() is even more special than fork() as it mucks with stacks</em>
+<a id='L19' name='L19'></a>  19 <em class='comment'>   and invokes a function in the right context after its all over.  */</em>
+<a id='L20' name='L20'></a>  20 
+<a id='L21' name='L21'></a>  21 <em class='sharp'>#include</em> &lt;<a href='../I/3122.html'>sys/asm.h</a>&gt;
+<a id='L22' name='L22'></a>  22 <em class='sharp'>#include</em> &lt;<a href='../I/5967.html'>sysdep.h</a>&gt;
+<a id='L23' name='L23'></a>  23 <em class='sharp'>#define</em> <a href='../R/10213.html' title='Multiple referred from 9 places.'>_ERRNO_H</a>    1
+<a id='L24' name='L24'></a>  24 <em class='sharp'>#include</em> &lt;<a href='../I/116.html'>bits/errno.h</a>&gt;
+<a id='L25' name='L25'></a>  25 <em class='sharp'>#include</em> &lt;<a href='../I/5949.html'>tls.h</a>&gt;
+<a id='L26' name='L26'></a>  26 
+<a id='L27' name='L27'></a>  27 <em class='comment'>/* int clone(int (*fn)(void *arg), void *child_stack, int flags, void *arg,</em>
+<a id='L28' name='L28'></a>  28 <em class='comment'>         void *parent_tidptr, void *tls, void *child_tidptr) */</em>
+<a id='L29' name='L29'></a>  29 
+<a id='L30' name='L30'></a>  30     .text
+<a id='L31' name='L31'></a>  31     .set        nomips16
+<a id='L32' name='L32'></a>  32 <em class='sharp'>#if</em> <a href='../Y/2699.html' title='Multiple used in 147 places.'>_MIPS_SIM</a> == <a href='../S/8249.html#L57' title='Defined at 57 in sysdeps/mips/sgidefs.h.'>_ABIO32</a>
+<a id='L33' name='L33'></a>  33 <em class='sharp'># define</em> EXTRA_LOCALS 1
+<a id='L34' name='L34'></a>  34 <em class='sharp'>#else</em>
+<a id='L35' name='L35'></a>  35 <em class='sharp'># define</em> EXTRA_LOCALS 0
+<a id='L36' name='L36'></a>  36 <em class='sharp'>#endif</em>
+<a id='L37' name='L37'></a>  37 LOCALSZ= 4
+<a id='L38' name='L38'></a>  38 FRAMESZ= (((NARGSAVE+LOCALSZ)*SZREG)+ALSZ)&amp;ALMASK
+<a id='L39' name='L39'></a>  39 GPOFF= FRAMESZ-(1*SZREG)
+<a id='L40' name='L40'></a>  40 NESTED(__clone,4*SZREG,sp)
+<a id='L41' name='L41'></a>  41 <em class='sharp'>#ifdef</em> <a href='../Y/3266.html' title='Multiple used in 116 places.'>__PIC__</a>
+<a id='L42' name='L42'></a>  42     SETUP_GP
+<a id='L43' name='L43'></a>  43 <em class='sharp'>#endif</em>
+<a id='L44' name='L44'></a>  44     PTR_SUBU sp, FRAMESZ
+<a id='L45' name='L45'></a>  45     cfi_adjust_cfa_offset (FRAMESZ)
+<a id='L46' name='L46'></a>  46     SETUP_GP64_STACK (GPOFF, __clone)
+<a id='L47' name='L47'></a>  47 <em class='sharp'>#ifdef</em> <a href='../Y/3266.html' title='Multiple used in 116 places.'>__PIC__</a>
+<a id='L48' name='L48'></a>  48     SAVE_GP (GPOFF)
+<a id='L49' name='L49'></a>  49 <em class='sharp'>#endif</em>
+<a id='L50' name='L50'></a>  50 <em class='sharp'>#ifdef</em> <a href='../D/10267.html' title='Multiple defined in 3 places.'>PROF</a>
+<a id='L51' name='L51'></a>  51     .set        noat
+<a id='L52' name='L52'></a>  52     move        $1,ra
+<a id='L53' name='L53'></a>  53     jal     _mcount
+<a id='L54' name='L54'></a>  54     .set        at
+<a id='L55' name='L55'></a>  55 <em class='sharp'>#endif</em>
+<a id='L56' name='L56'></a>  56 
+<a id='L57' name='L57'></a>  57     <em class='comment'>/* Align stack to 8/16 bytes per the ABI.  */</em>
+<a id='L58' name='L58'></a>  58 <em class='sharp'>#if</em> <a href='../Y/2699.html' title='Multiple used in 147 places.'>_MIPS_SIM</a> == <a href='../S/8249.html#L57' title='Defined at 57 in sysdeps/mips/sgidefs.h.'>_ABIO32</a>
+<a id='L59' name='L59'></a>  59     li      t0,-8
+<a id='L60' name='L60'></a>  60 <em class='sharp'>#else</em>
+<a id='L61' name='L61'></a>  61     li      t0,-16
+<a id='L62' name='L62'></a>  62 <em class='sharp'>#endif</em>
+<a id='L63' name='L63'></a>  63     and     a1,a1,t0
+<a id='L64' name='L64'></a>  64 
+<a id='L65' name='L65'></a>  65     <em class='comment'>/* Sanity check arguments.  */</em>
+<a id='L66' name='L66'></a>  66     li      v0,EINVAL
+<a id='L67' name='L67'></a>  67     beqz        a0,L(error) <em class='comment'>/* No NULL function pointers.  */</em>
+<a id='L68' name='L68'></a>  68     beqz        a1,L(error) <em class='comment'>/* No NULL stack pointers.  */</em>
+<a id='L69' name='L69'></a>  69 
+<a id='L70' name='L70'></a>  70     PTR_SUBU    a1,32       <em class='comment'>/* Reserve argument save space.  */</em>
+<a id='L71' name='L71'></a>  71     PTR_S       a0,0(a1)    <em class='comment'>/* Save function pointer.  */</em>
+<a id='L72' name='L72'></a>  72     PTR_S       a3,PTRSIZE(a1)  <em class='comment'>/* Save argument pointer.  */</em>
+<a id='L73' name='L73'></a>  73     LONG_S      a2,(PTRSIZE*2)(a1)  <em class='comment'>/* Save clone flags.  */</em>
+<a id='L74' name='L74'></a>  74 
+<a id='L75' name='L75'></a>  75     move        a0,a2
+<a id='L76' name='L76'></a>  76 
+<a id='L77' name='L77'></a>  77     <em class='comment'>/* Shuffle in the last three arguments - arguments 5, 6, and 7 to</em>
+<a id='L78' name='L78'></a>  78 <em class='comment'>       this function, but arguments 3, 4, and 5 to the syscall.  */</em>
+<a id='L79' name='L79'></a>  79 <em class='sharp'>#if</em> <a href='../Y/2699.html' title='Multiple used in 147 places.'>_MIPS_SIM</a> == <a href='../S/8249.html#L57' title='Defined at 57 in sysdeps/mips/sgidefs.h.'>_ABIO32</a>
+<a id='L80' name='L80'></a>  80     PTR_L       a2,(FRAMESZ+PTRSIZE+PTRSIZE+16)(sp)
+<a id='L81' name='L81'></a>  81     PTR_S       a2,16(sp)
+<a id='L82' name='L82'></a>  82     PTR_L       a2,(FRAMESZ+16)(sp)
+<a id='L83' name='L83'></a>  83     PTR_L       a3,(FRAMESZ+PTRSIZE+16)(sp)
+<a id='L84' name='L84'></a>  84 <em class='sharp'>#else</em>
+<a id='L85' name='L85'></a>  85     move        a2,a4
+<a id='L86' name='L86'></a>  86     move        a3,a5
+<a id='L87' name='L87'></a>  87     move        a4,a6
+<a id='L88' name='L88'></a>  88 <em class='sharp'>#endif</em>
+<a id='L89' name='L89'></a>  89 
+<a id='L90' name='L90'></a>  90     <em class='comment'>/* Do the system call */</em>
+<a id='L91' name='L91'></a>  91     li      v0,__NR_clone
+<a id='L92' name='L92'></a>  92     cfi_endproc
+<a id='L93' name='L93'></a>  93     syscall
+<a id='L94' name='L94'></a>  94 
+<a id='L95' name='L95'></a>  95     bnez        a3,L(error)
+<a id='L96' name='L96'></a>  96     beqz        v0,L(thread_start)
+<a id='L97' name='L97'></a>  97 
+<a id='L98' name='L98'></a>  98     <em class='comment'>/* Successful return from the parent */</em>
+<a id='L99' name='L99'></a>  99     cfi_startproc
+<a id='L100' name='L100'></a> 100     cfi_adjust_cfa_offset (FRAMESZ)
+<a id='L101' name='L101'></a> 101     SETUP_GP64_STACK_CFI (GPOFF)
+<a id='L102' name='L102'></a> 102     cfi_remember_state
+<a id='L103' name='L103'></a> 103     RESTORE_GP64_STACK
+<a id='L104' name='L104'></a> 104     PTR_ADDU    sp, FRAMESZ
+<a id='L105' name='L105'></a> 105     cfi_adjust_cfa_offset (-FRAMESZ)
+<a id='L106' name='L106'></a> 106     ret
+<a id='L107' name='L107'></a> 107 
+<a id='L108' name='L108'></a> 108     <em class='comment'>/* Something bad happened -- no child created */</em>
+<a id='L109' name='L109'></a> 109 L(error):
+<a id='L110' name='L110'></a> 110     cfi_restore_state
+<a id='L111' name='L111'></a> 111 <em class='sharp'>#ifdef</em> <a href='../Y/3266.html' title='Multiple used in 116 places.'>__PIC__</a>
+<a id='L112' name='L112'></a> 112     PTR_LA      t9,__syscall_error
+<a id='L113' name='L113'></a> 113     RESTORE_GP64_STACK
+<a id='L114' name='L114'></a> 114     PTR_ADDU    sp, FRAMESZ
+<a id='L115' name='L115'></a> 115     cfi_adjust_cfa_offset (-FRAMESZ)
+<a id='L116' name='L116'></a> 116     jr      t9
+<a id='L117' name='L117'></a> 117 <em class='sharp'>#else</em>
+<a id='L118' name='L118'></a> 118     RESTORE_GP64_STACK
+<a id='L119' name='L119'></a> 119     PTR_ADDU    sp, FRAMESZ
+<a id='L120' name='L120'></a> 120     cfi_adjust_cfa_offset (-FRAMESZ)
+<a id='L121' name='L121'></a> 121     j       __syscall_error
+<a id='L122' name='L122'></a> 122 <em class='sharp'>#endif</em>
+<a id='L123' name='L123'></a> 123     END(__clone)
+<a id='L124' name='L124'></a> 124 
+<a id='L125' name='L125'></a> 125 <em class='comment'>/* Load up the arguments to the function.  Put this block of code in</em>
+<a id='L126' name='L126'></a> 126 <em class='comment'>   its own function so that we can terminate the stack trace with our</em>
+<a id='L127' name='L127'></a> 127 <em class='comment'>   debug info.  */</em>
+<a id='L128' name='L128'></a> 128 
+<a id='L129' name='L129'></a> 129 <a href='../D/3651.html' title='Multiple defined in 54 places.'>ENTRY</a>(__thread_start)
+<a id='L130' name='L130'></a> 130 L(thread_start):
+<a id='L131' name='L131'></a> 131     cfi_undefined ($31)
+<a id='L132' name='L132'></a> 132     <em class='comment'>/* cp is already loaded.  */</em>
+<a id='L133' name='L133'></a> 133     SAVE_GP (GPOFF)
+<a id='L134' name='L134'></a> 134     <em class='comment'>/* The stackframe has been created on entry of clone().  */</em>
+<a id='L135' name='L135'></a> 135 
+<a id='L136' name='L136'></a> 136     <em class='comment'>/* Restore the arg for user's function.  */</em>
+<a id='L137' name='L137'></a> 137     PTR_L       t9,0(sp)    <em class='comment'>/* Function pointer.  */</em>
+<a id='L138' name='L138'></a> 138     PTR_L       a0,PTRSIZE(sp)  <em class='comment'>/* Argument pointer.  */</em>
+<a id='L139' name='L139'></a> 139 
+<a id='L140' name='L140'></a> 140     <em class='comment'>/* Call the user's function.  */</em>
+<a id='L141' name='L141'></a> 141     jal     t9
+<a id='L142' name='L142'></a> 142 
+<a id='L143' name='L143'></a> 143     move        a0,v0
+<a id='L144' name='L144'></a> 144     li      v0,__NR_exit
+<a id='L145' name='L145'></a> 145     syscall
+<a id='L146' name='L146'></a> 146 
+<a id='L147' name='L147'></a> 147     END(__thread_start)
+<a id='L148' name='L148'></a> 148 
+<a id='L149' name='L149'></a> 149 libc_hidden_def (__clone)
+<a id='L150' name='L150'></a> 150 weak_alias (__clone, clone)
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;][^][v]<a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

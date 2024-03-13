@@ -1,0 +1,419 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>sysdeps/x86_64/fpu/multiarch/svml_s_atan2f16_core_avx512.S</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18977.html'>sysdeps</a>/<a href='../files/19391.html'>x86_64</a>/<a href='../files/19392.html'>fpu</a>/<a href='../files/19393.html'>multiarch</a>/svml_s_atan2f16_core_avx512.S</h2>
+<em class='comment'>/* [&lt;][&gt;][^][v][top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* Function atan2f vectorized with AVX-512.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   Copyright (C) 2021-2022 Free Software Foundation, Inc.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'></em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'></em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'></em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   License along with the GNU C Library; if not, see</em>
+<a id='L17' name='L17'></a>  17 <em class='comment'>   https://www.gnu.org/licenses/.  */</em>
+<a id='L18' name='L18'></a>  18 
+<a id='L19' name='L19'></a>  19 <em class='comment'>/*</em>
+<a id='L20' name='L20'></a>  20 <em class='comment'> * ALGORITHM DESCRIPTION:</em>
+<a id='L21' name='L21'></a>  21 <em class='comment'> *      For    0.0    &lt;= x &lt;=  7.0/16.0: atan(x) = atan(0.0) + atan(s), where s=(x-0.0)/(1.0+0.0*x)</em>
+<a id='L22' name='L22'></a>  22 <em class='comment'> *      For  7.0/16.0 &lt;= x &lt;= 11.0/16.0: atan(x) = atan(0.5) + atan(s), where s=(x-0.5)/(1.0+0.5*x)</em>
+<a id='L23' name='L23'></a>  23 <em class='comment'> *      For 11.0/16.0 &lt;= x &lt;= 19.0/16.0: atan(x) = atan(1.0) + atan(s), where s=(x-1.0)/(1.0+1.0*x)</em>
+<a id='L24' name='L24'></a>  24 <em class='comment'> *      For 19.0/16.0 &lt;= x &lt;= 39.0/16.0: atan(x) = atan(1.5) + atan(s), where s=(x-1.5)/(1.0+1.5*x)</em>
+<a id='L25' name='L25'></a>  25 <em class='comment'> *      For 39.0/16.0 &lt;= x &lt;=    inf   : atan(x) = atan(inf) + atan(s), where s=-1.0/x</em>
+<a id='L26' name='L26'></a>  26 <em class='comment'> *      Where atan(s) ~= s+s^3*Poly11(s^2) on interval |s|&lt;7.0/0.16.</em>
+<a id='L27' name='L27'></a>  27 <em class='comment'> *</em>
+<a id='L28' name='L28'></a>  28 <em class='comment'> *</em>
+<a id='L29' name='L29'></a>  29 <em class='comment'> */</em>
+<a id='L30' name='L30'></a>  30 
+<a id='L31' name='L31'></a>  31 <em class='comment'>/* Offsets for data table __svml_satan2_data_internal</em>
+<a id='L32' name='L32'></a>  32 <em class='comment'> */</em>
+<a id='L33' name='L33'></a>  33 <em class='sharp'>#define</em> sZERO                           0
+<a id='L34' name='L34'></a>  34 <em class='sharp'>#define</em> sONE                            64
+<a id='L35' name='L35'></a>  35 <em class='sharp'>#define</em> sSIGN_MASK                      128
+<a id='L36' name='L36'></a>  36 <em class='sharp'>#define</em> sABS_MASK                       192
+<a id='L37' name='L37'></a>  37 <em class='sharp'>#define</em> sPIO2                           256
+<a id='L38' name='L38'></a>  38 <em class='sharp'>#define</em> sPI                             320
+<a id='L39' name='L39'></a>  39 <em class='sharp'>#define</em> sPC8                            384
+<a id='L40' name='L40'></a>  40 <em class='sharp'>#define</em> sPC7                            448
+<a id='L41' name='L41'></a>  41 <em class='sharp'>#define</em> sPC6                            512
+<a id='L42' name='L42'></a>  42 <em class='sharp'>#define</em> sPC5                            576
+<a id='L43' name='L43'></a>  43 <em class='sharp'>#define</em> sPC4                            640
+<a id='L44' name='L44'></a>  44 <em class='sharp'>#define</em> sPC3                            704
+<a id='L45' name='L45'></a>  45 <em class='sharp'>#define</em> sPC2                            768
+<a id='L46' name='L46'></a>  46 <em class='sharp'>#define</em> sPC1                            832
+<a id='L47' name='L47'></a>  47 <em class='sharp'>#define</em> sPC0                            896
+<a id='L48' name='L48'></a>  48 <em class='sharp'>#define</em> iCHK_WORK_SUB                   960
+<a id='L49' name='L49'></a>  49 <em class='sharp'>#define</em> iCHK_WORK_CMP                   1024
+<a id='L50' name='L50'></a>  50 
+<a id='L51' name='L51'></a>  51 <em class='sharp'>#include</em> &lt;<a href='../I/5967.html'>sysdep.h</a>&gt;
+<a id='L52' name='L52'></a>  52 
+<a id='L53' name='L53'></a>  53         .text
+<a id='L54' name='L54'></a>  54     .section .text.exex512,"ax",@progbits
+<a id='L55' name='L55'></a>  55 <a href='../D/3651.html' title='Multiple defined in 54 places.'>ENTRY</a>(_ZGVeN16vv_atan2f_skx)
+<a id='L56' name='L56'></a>  56         pushq     %rbp
+<a id='L57' name='L57'></a>  57         cfi_def_cfa_offset(16)
+<a id='L58' name='L58'></a>  58         movq      %rsp, %rbp
+<a id='L59' name='L59'></a>  59         cfi_def_cfa(6, 16)
+<a id='L60' name='L60'></a>  60         cfi_offset(6, -16)
+<a id='L61' name='L61'></a>  61         andq      $-64, %rsp
+<a id='L62' name='L62'></a>  62         subq      $256, %rsp
+<a id='L63' name='L63'></a>  63         xorl      %edx, %edx
+<a id='L64' name='L64'></a>  64 
+<a id='L65' name='L65'></a>  65 <em class='comment'>/*</em>
+<a id='L66' name='L66'></a>  66 <em class='comment'> * #define NO_VECTOR_ZERO_ATAN2_ARGS</em>
+<a id='L67' name='L67'></a>  67 <em class='comment'> *  Declarations</em>
+<a id='L68' name='L68'></a>  68 <em class='comment'> * Variables</em>
+<a id='L69' name='L69'></a>  69 <em class='comment'> * Constants</em>
+<a id='L70' name='L70'></a>  70 <em class='comment'> *  The end of declarations</em>
+<a id='L71' name='L71'></a>  71 <em class='comment'> *  Implementation</em>
+<a id='L72' name='L72'></a>  72 <em class='comment'> * Arguments signs</em>
+<a id='L73' name='L73'></a>  73 <em class='comment'> */</em>
+<a id='L74' name='L74'></a>  74         vmovups   sABS_MASK+__svml_satan2_data_internal(%rip), %zmm6
+<a id='L75' name='L75'></a>  75         vmovups   sONE+__svml_satan2_data_internal(%rip), %zmm3
+<a id='L76' name='L76'></a>  76 
+<a id='L77' name='L77'></a>  77 <em class='comment'>/* Testing on working interval. */</em>
+<a id='L78' name='L78'></a>  78         vmovups   iCHK_WORK_SUB+__svml_satan2_data_internal(%rip), %zmm9
+<a id='L79' name='L79'></a>  79         vmovups   iCHK_WORK_CMP+__svml_satan2_data_internal(%rip), %zmm14
+<a id='L80' name='L80'></a>  80 
+<a id='L81' name='L81'></a>  81 <em class='comment'>/*</em>
+<a id='L82' name='L82'></a>  82 <em class='comment'> * 1) If y&lt;x then a= y, b=x, PIO2=0</em>
+<a id='L83' name='L83'></a>  83 <em class='comment'> * 2) If y&gt;x then a=-x, b=y, PIO2=Pi/2</em>
+<a id='L84' name='L84'></a>  84 <em class='comment'> */</em>
+<a id='L85' name='L85'></a>  85         vmovups   sPIO2+__svml_satan2_data_internal(%rip), %zmm4
+<a id='L86' name='L86'></a>  86         vpternlogd $255, %zmm13, %zmm13, %zmm13
+<a id='L87' name='L87'></a>  87         vmovaps   %zmm1, %zmm8
+<a id='L88' name='L88'></a>  88         vandps    %zmm6, %zmm8, %zmm2
+<a id='L89' name='L89'></a>  89         vandps    %zmm6, %zmm0, %zmm1
+<a id='L90' name='L90'></a>  90         vorps     sSIGN_MASK+__svml_satan2_data_internal(%rip), %zmm2, %zmm5
+<a id='L91' name='L91'></a>  91         vpsubd    %zmm9, %zmm2, %zmm10
+<a id='L92' name='L92'></a>  92         vpsubd    %zmm9, %zmm1, %zmm12
+<a id='L93' name='L93'></a>  93         vxorps    %zmm2, %zmm8, %zmm7
+<a id='L94' name='L94'></a>  94         vxorps    %zmm1, %zmm0, %zmm6
+<a id='L95' name='L95'></a>  95         vcmpps    $17, <em class='brace'>{</em>sae<em class='brace'>}</em>, %zmm2, %zmm1, %k1
+<a id='L96' name='L96'></a>  96         vpcmpgtd  %zmm10, %zmm14, %k2
+<a id='L97' name='L97'></a>  97         vpcmpgtd  %zmm12, %zmm14, %k3
+<a id='L98' name='L98'></a>  98         vmovups   sPC6+__svml_satan2_data_internal(%rip), %zmm14
+<a id='L99' name='L99'></a>  99         vblendmps %zmm1, %zmm5, %zmm11<em class='brace'>{</em>%k1<em class='brace'>}</em>
+<a id='L100' name='L100'></a> 100         vblendmps %zmm2, %zmm1, %zmm5<em class='brace'>{</em>%k1<em class='brace'>}</em>
+<a id='L101' name='L101'></a> 101         vxorps    %zmm4, %zmm4, %zmm4<em class='brace'>{</em>%k1<em class='brace'>}</em>
+<a id='L102' name='L102'></a> 102 
+<a id='L103' name='L103'></a> 103 <em class='comment'>/*</em>
+<a id='L104' name='L104'></a> 104 <em class='comment'> * Division a/b.</em>
+<a id='L105' name='L105'></a> 105 <em class='comment'> * Enabled when FMA is available and</em>
+<a id='L106' name='L106'></a> 106 <em class='comment'> * performance is better with NR iteration</em>
+<a id='L107' name='L107'></a> 107 <em class='comment'> */</em>
+<a id='L108' name='L108'></a> 108         vrcp14ps  %zmm5, %zmm15
+<a id='L109' name='L109'></a> 109         vfnmadd231ps <em class='brace'>{</em>rn-sae<em class='brace'>}</em>, %zmm5, %zmm15, %zmm3
+<a id='L110' name='L110'></a> 110         vfmadd213ps <em class='brace'>{</em>rn-sae<em class='brace'>}</em>, %zmm15, %zmm3, %zmm15
+<a id='L111' name='L111'></a> 111         vmulps    <em class='brace'>{</em>rn-sae<em class='brace'>}</em>, %zmm15, %zmm11, %zmm3
+<a id='L112' name='L112'></a> 112         vfnmadd231ps <em class='brace'>{</em>rn-sae<em class='brace'>}</em>, %zmm5, %zmm3, %zmm11
+<a id='L113' name='L113'></a> 113         vfmadd213ps <em class='brace'>{</em>rn-sae<em class='brace'>}</em>, %zmm3, %zmm11, %zmm15
+<a id='L114' name='L114'></a> 114         vmovups   sPC8+__svml_satan2_data_internal(%rip), %zmm11
+<a id='L115' name='L115'></a> 115         vpternlogd $255, %zmm3, %zmm3, %zmm3
+<a id='L116' name='L116'></a> 116 
+<a id='L117' name='L117'></a> 117 <em class='comment'>/* Polynomial. */</em>
+<a id='L118' name='L118'></a> 118         vmulps    <em class='brace'>{</em>rn-sae<em class='brace'>}</em>, %zmm15, %zmm15, %zmm9
+<a id='L119' name='L119'></a> 119         vpandnd   %zmm10, %zmm10, %zmm13<em class='brace'>{</em>%k2<em class='brace'>}</em>
+<a id='L120' name='L120'></a> 120         vmulps    <em class='brace'>{</em>rn-sae<em class='brace'>}</em>, %zmm9, %zmm9, %zmm10
+<a id='L121' name='L121'></a> 121         vfmadd231ps <em class='brace'>{</em>rn-sae<em class='brace'>}</em>, %zmm10, %zmm11, %zmm14
+<a id='L122' name='L122'></a> 122         vmovups   sPC5+__svml_satan2_data_internal(%rip), %zmm11
+<a id='L123' name='L123'></a> 123         vpandnd   %zmm12, %zmm12, %zmm3<em class='brace'>{</em>%k3<em class='brace'>}</em>
+<a id='L124' name='L124'></a> 124         vpord     %zmm3, %zmm13, %zmm3
+<a id='L125' name='L125'></a> 125         vmovups   sPC4+__svml_satan2_data_internal(%rip), %zmm13
+<a id='L126' name='L126'></a> 126         vmovups   sPC7+__svml_satan2_data_internal(%rip), %zmm12
+<a id='L127' name='L127'></a> 127         vptestmd  %zmm3, %zmm3, %k0
+<a id='L128' name='L128'></a> 128         vfmadd213ps <em class='brace'>{</em>rn-sae<em class='brace'>}</em>, %zmm13, %zmm10, %zmm14
+<a id='L129' name='L129'></a> 129         vfmadd231ps <em class='brace'>{</em>rn-sae<em class='brace'>}</em>, %zmm10, %zmm12, %zmm11
+<a id='L130' name='L130'></a> 130         vmovups   sPC3+__svml_satan2_data_internal(%rip), %zmm12
+<a id='L131' name='L131'></a> 131         vmovups   sPC2+__svml_satan2_data_internal(%rip), %zmm13
+<a id='L132' name='L132'></a> 132 
+<a id='L133' name='L133'></a> 133 <em class='comment'>/*  Special branch for fast (vector) processing of zero arguments  */</em>
+<a id='L134' name='L134'></a> 134         kortestw  %k0, %k0
+<a id='L135' name='L135'></a> 135         vfmadd213ps <em class='brace'>{</em>rn-sae<em class='brace'>}</em>, %zmm12, %zmm10, %zmm11
+<a id='L136' name='L136'></a> 136         vmovups   sPC1+__svml_satan2_data_internal(%rip), %zmm12
+<a id='L137' name='L137'></a> 137         vfmadd213ps <em class='brace'>{</em>rn-sae<em class='brace'>}</em>, %zmm13, %zmm10, %zmm14
+<a id='L138' name='L138'></a> 138         vmovups   sPC0+__svml_satan2_data_internal(%rip), %zmm13
+<a id='L139' name='L139'></a> 139         vfmadd213ps <em class='brace'>{</em>rn-sae<em class='brace'>}</em>, %zmm12, %zmm10, %zmm11
+<a id='L140' name='L140'></a> 140         vfmadd213ps <em class='brace'>{</em>rn-sae<em class='brace'>}</em>, %zmm13, %zmm10, %zmm14
+<a id='L141' name='L141'></a> 141         vfmadd213ps <em class='brace'>{</em>rn-sae<em class='brace'>}</em>, %zmm14, %zmm9, %zmm11
+<a id='L142' name='L142'></a> 142 
+<a id='L143' name='L143'></a> 143 <em class='comment'>/* Reconstruction. */</em>
+<a id='L144' name='L144'></a> 144         vfmadd213ps <em class='brace'>{</em>rn-sae<em class='brace'>}</em>, %zmm4, %zmm15, %zmm11
+<a id='L145' name='L145'></a> 145 
+<a id='L146' name='L146'></a> 146 <em class='comment'>/* if x&lt;0, sPI = Pi, else sPI =0 */</em>
+<a id='L147' name='L147'></a> 147         vmovups   __svml_satan2_data_internal(%rip), %zmm15
+<a id='L148' name='L148'></a> 148         vorps     %zmm7, %zmm11, %zmm9
+<a id='L149' name='L149'></a> 149         vcmpps    $18, <em class='brace'>{</em>sae<em class='brace'>}</em>, %zmm15, %zmm8, %k4
+<a id='L150' name='L150'></a> 150         vmovups   sPI+__svml_satan2_data_internal(%rip), %zmm11
+<a id='L151' name='L151'></a> 151         vaddps    <em class='brace'>{</em>rn-sae<em class='brace'>}</em>, %zmm11, %zmm9, %zmm9<em class='brace'>{</em>%k4<em class='brace'>}</em>
+<a id='L152' name='L152'></a> 152         vorps     %zmm6, %zmm9, %zmm10
+<a id='L153' name='L153'></a> 153 
+<a id='L154' name='L154'></a> 154 <em class='comment'>/* Go to auxilary branch */</em>
+<a id='L155' name='L155'></a> 155         jne       L(AUX_BRANCH)
+<a id='L156' name='L156'></a> 156 <em class='comment'>                                # LOE rbx r12 r13 r14 r15 edx zmm0 zmm1 zmm2 zmm3 zmm4 zmm5 zmm6 zmm7 zmm8 zmm10 zmm11</em>
+<a id='L157' name='L157'></a> 157 
+<a id='L158' name='L158'></a> 158 <em class='comment'>/* Return from auxilary branch</em>
+<a id='L159' name='L159'></a> 159 <em class='comment'> * for out of main path inputs</em>
+<a id='L160' name='L160'></a> 160 <em class='comment'> */</em>
+<a id='L161' name='L161'></a> 161 
+<a id='L162' name='L162'></a> 162 L(AUX_BRANCH_RETURN):
+<a id='L163' name='L163'></a> 163 <em class='comment'>/*</em>
+<a id='L164' name='L164'></a> 164 <em class='comment'> *  Special branch for fast (vector) processing of zero arguments</em>
+<a id='L165' name='L165'></a> 165 <em class='comment'> *  The end of implementation</em>
+<a id='L166' name='L166'></a> 166 <em class='comment'> */</em>
+<a id='L167' name='L167'></a> 167         testl     %edx, %edx
+<a id='L168' name='L168'></a> 168 
+<a id='L169' name='L169'></a> 169 <em class='comment'>/* Go to special inputs processing branch */</em>
+<a id='L170' name='L170'></a> 170         jne       L(SPECIAL_VALUES_BRANCH)
+<a id='L171' name='L171'></a> 171 <em class='comment'>                                # LOE rbx r12 r13 r14 r15 edx zmm0 zmm8 zmm10</em>
+<a id='L172' name='L172'></a> 172 
+<a id='L173' name='L173'></a> 173 <em class='comment'>/* Restore registers</em>
+<a id='L174' name='L174'></a> 174 <em class='comment'> * and exit the function</em>
+<a id='L175' name='L175'></a> 175 <em class='comment'> */</em>
+<a id='L176' name='L176'></a> 176 
+<a id='L177' name='L177'></a> 177 L(EXIT):
+<a id='L178' name='L178'></a> 178         vmovaps   %zmm10, %zmm0
+<a id='L179' name='L179'></a> 179         movq      %rbp, %rsp
+<a id='L180' name='L180'></a> 180         popq      %rbp
+<a id='L181' name='L181'></a> 181         cfi_def_cfa(7, 8)
+<a id='L182' name='L182'></a> 182         cfi_restore(6)
+<a id='L183' name='L183'></a> 183         ret
+<a id='L184' name='L184'></a> 184         cfi_def_cfa(6, 16)
+<a id='L185' name='L185'></a> 185         cfi_offset(6, -16)
+<a id='L186' name='L186'></a> 186 
+<a id='L187' name='L187'></a> 187 <em class='comment'>/* Branch to process</em>
+<a id='L188' name='L188'></a> 188 <em class='comment'> * special inputs</em>
+<a id='L189' name='L189'></a> 189 <em class='comment'> */</em>
+<a id='L190' name='L190'></a> 190 
+<a id='L191' name='L191'></a> 191 L(SPECIAL_VALUES_BRANCH):
+<a id='L192' name='L192'></a> 192         vmovups   %zmm0, 64(%rsp)
+<a id='L193' name='L193'></a> 193         vmovups   %zmm8, 128(%rsp)
+<a id='L194' name='L194'></a> 194         vmovups   %zmm10, 192(%rsp)
+<a id='L195' name='L195'></a> 195 <em class='comment'>                                # LOE rbx r12 r13 r14 r15 edx zmm10</em>
+<a id='L196' name='L196'></a> 196 
+<a id='L197' name='L197'></a> 197         xorl      %eax, %eax
+<a id='L198' name='L198'></a> 198 <em class='comment'>                                # LOE rbx r12 r13 r14 r15 eax edx</em>
+<a id='L199' name='L199'></a> 199 
+<a id='L200' name='L200'></a> 200         vzeroupper
+<a id='L201' name='L201'></a> 201         movq      %r12, 16(%rsp)
+<a id='L202' name='L202'></a> 202         <em class='comment'>/*  DW_CFA_expression: r12 (r12) (DW_OP_lit8; DW_OP_minus; DW_OP_const4s: -64; DW_OP_and; DW_OP_const4s: -240; DW_OP_plus)  */</em>
+<a id='L203' name='L203'></a> 203         .cfi_escape 0x10, 0x0c, 0x0e, 0x38, 0x1c, 0x0d, 0xc0, 0xff, 0xff, 0xff, 0x1a, 0x0d, 0x10, 0xff, 0xff, 0xff, 0x22
+<a id='L204' name='L204'></a> 204         movl      %eax, %r12d
+<a id='L205' name='L205'></a> 205         movq      %r13, 8(%rsp)
+<a id='L206' name='L206'></a> 206         <em class='comment'>/*  DW_CFA_expression: r13 (r13) (DW_OP_lit8; DW_OP_minus; DW_OP_const4s: -64; DW_OP_and; DW_OP_const4s: -248; DW_OP_plus)  */</em>
+<a id='L207' name='L207'></a> 207         .cfi_escape 0x10, 0x0d, 0x0e, 0x38, 0x1c, 0x0d, 0xc0, 0xff, 0xff, 0xff, 0x1a, 0x0d, 0x08, 0xff, 0xff, 0xff, 0x22
+<a id='L208' name='L208'></a> 208         movl      %edx, %r13d
+<a id='L209' name='L209'></a> 209         movq      %r14, (%rsp)
+<a id='L210' name='L210'></a> 210         <em class='comment'>/*  DW_CFA_expression: r14 (r14) (DW_OP_lit8; DW_OP_minus; DW_OP_const4s: -64; DW_OP_and; DW_OP_const4s: -256; DW_OP_plus)  */</em>
+<a id='L211' name='L211'></a> 211         .cfi_escape 0x10, 0x0e, 0x0e, 0x38, 0x1c, 0x0d, 0xc0, 0xff, 0xff, 0xff, 0x1a, 0x0d, 0x00, 0xff, 0xff, 0xff, 0x22
+<a id='L212' name='L212'></a> 212 <em class='comment'>                                # LOE rbx r15 r12d r13d</em>
+<a id='L213' name='L213'></a> 213 
+<a id='L214' name='L214'></a> 214 <em class='comment'>/* Range mask</em>
+<a id='L215' name='L215'></a> 215 <em class='comment'> * bits check</em>
+<a id='L216' name='L216'></a> 216 <em class='comment'> */</em>
+<a id='L217' name='L217'></a> 217 
+<a id='L218' name='L218'></a> 218 L(RANGEMASK_CHECK):
+<a id='L219' name='L219'></a> 219         btl       %r12d, %r13d
+<a id='L220' name='L220'></a> 220 
+<a id='L221' name='L221'></a> 221 <em class='comment'>/* Call scalar math function */</em>
+<a id='L222' name='L222'></a> 222         jc        L(SCALAR_MATH_CALL)
+<a id='L223' name='L223'></a> 223 <em class='comment'>                                # LOE rbx r15 r12d r13d</em>
+<a id='L224' name='L224'></a> 224 
+<a id='L225' name='L225'></a> 225 <em class='comment'>/* Special inputs</em>
+<a id='L226' name='L226'></a> 226 <em class='comment'> * processing loop</em>
+<a id='L227' name='L227'></a> 227 <em class='comment'> */</em>
+<a id='L228' name='L228'></a> 228 
+<a id='L229' name='L229'></a> 229 L(SPECIAL_VALUES_LOOP):
+<a id='L230' name='L230'></a> 230         incl      %r12d
+<a id='L231' name='L231'></a> 231         cmpl      $16, %r12d
+<a id='L232' name='L232'></a> 232 
+<a id='L233' name='L233'></a> 233 <em class='comment'>/* Check bits in range mask */</em>
+<a id='L234' name='L234'></a> 234         jl        L(RANGEMASK_CHECK)
+<a id='L235' name='L235'></a> 235 <em class='comment'>                                # LOE rbx r15 r12d r13d</em>
+<a id='L236' name='L236'></a> 236 
+<a id='L237' name='L237'></a> 237         movq      16(%rsp), %r12
+<a id='L238' name='L238'></a> 238         cfi_restore(12)
+<a id='L239' name='L239'></a> 239         movq      8(%rsp), %r13
+<a id='L240' name='L240'></a> 240         cfi_restore(13)
+<a id='L241' name='L241'></a> 241         movq      (%rsp), %r14
+<a id='L242' name='L242'></a> 242         cfi_restore(14)
+<a id='L243' name='L243'></a> 243         vmovups   192(%rsp), %zmm10
+<a id='L244' name='L244'></a> 244 
+<a id='L245' name='L245'></a> 245 <em class='comment'>/* Go to exit */</em>
+<a id='L246' name='L246'></a> 246         jmp       L(EXIT)
+<a id='L247' name='L247'></a> 247         <em class='comment'>/*  DW_CFA_expression: r12 (r12) (DW_OP_lit8; DW_OP_minus; DW_OP_const4s: -64; DW_OP_and; DW_OP_const4s: -240; DW_OP_plus)  */</em>
+<a id='L248' name='L248'></a> 248         .cfi_escape 0x10, 0x0c, 0x0e, 0x38, 0x1c, 0x0d, 0xc0, 0xff, 0xff, 0xff, 0x1a, 0x0d, 0x10, 0xff, 0xff, 0xff, 0x22
+<a id='L249' name='L249'></a> 249         <em class='comment'>/*  DW_CFA_expression: r13 (r13) (DW_OP_lit8; DW_OP_minus; DW_OP_const4s: -64; DW_OP_and; DW_OP_const4s: -248; DW_OP_plus)  */</em>
+<a id='L250' name='L250'></a> 250         .cfi_escape 0x10, 0x0d, 0x0e, 0x38, 0x1c, 0x0d, 0xc0, 0xff, 0xff, 0xff, 0x1a, 0x0d, 0x08, 0xff, 0xff, 0xff, 0x22
+<a id='L251' name='L251'></a> 251         <em class='comment'>/*  DW_CFA_expression: r14 (r14) (DW_OP_lit8; DW_OP_minus; DW_OP_const4s: -64; DW_OP_and; DW_OP_const4s: -256; DW_OP_plus)  */</em>
+<a id='L252' name='L252'></a> 252         .cfi_escape 0x10, 0x0e, 0x0e, 0x38, 0x1c, 0x0d, 0xc0, 0xff, 0xff, 0xff, 0x1a, 0x0d, 0x00, 0xff, 0xff, 0xff, 0x22
+<a id='L253' name='L253'></a> 253 <em class='comment'>                                # LOE rbx r12 r13 r14 r15 zmm10</em>
+<a id='L254' name='L254'></a> 254 
+<a id='L255' name='L255'></a> 255 <em class='comment'>/* Scalar math fucntion call</em>
+<a id='L256' name='L256'></a> 256 <em class='comment'> * to process special input</em>
+<a id='L257' name='L257'></a> 257 <em class='comment'> */</em>
+<a id='L258' name='L258'></a> 258 
+<a id='L259' name='L259'></a> 259 L(SCALAR_MATH_CALL):
+<a id='L260' name='L260'></a> 260         movl      %r12d, %r14d
+<a id='L261' name='L261'></a> 261         movss     64(%rsp,%r14,4), %xmm0
+<a id='L262' name='L262'></a> 262         movss     128(%rsp,%r14,4), %xmm1
+<a id='L263' name='L263'></a> 263         call      atan2f@PLT
+<a id='L264' name='L264'></a> 264 <em class='comment'>                                # LOE rbx r14 r15 r12d r13d xmm0</em>
+<a id='L265' name='L265'></a> 265 
+<a id='L266' name='L266'></a> 266         movss     %xmm0, 192(%rsp,%r14,4)
+<a id='L267' name='L267'></a> 267 
+<a id='L268' name='L268'></a> 268 <em class='comment'>/* Process special inputs in loop */</em>
+<a id='L269' name='L269'></a> 269         jmp       L(SPECIAL_VALUES_LOOP)
+<a id='L270' name='L270'></a> 270         cfi_restore(12)
+<a id='L271' name='L271'></a> 271         cfi_restore(13)
+<a id='L272' name='L272'></a> 272         cfi_restore(14)
+<a id='L273' name='L273'></a> 273 <em class='comment'>                                # LOE rbx r15 r12d r13d</em>
+<a id='L274' name='L274'></a> 274 
+<a id='L275' name='L275'></a> 275 <em class='comment'>/* Auxilary branch</em>
+<a id='L276' name='L276'></a> 276 <em class='comment'> * for out of main path inputs</em>
+<a id='L277' name='L277'></a> 277 <em class='comment'> */</em>
+<a id='L278' name='L278'></a> 278 
+<a id='L279' name='L279'></a> 279 L(AUX_BRANCH):
+<a id='L280' name='L280'></a> 280 <em class='comment'>/* Check if at least on of Y or Y is zero: iAXAYZERO */</em>
+<a id='L281' name='L281'></a> 281         vmovups   __svml_satan2_data_internal(%rip), %zmm9
+<a id='L282' name='L282'></a> 282 
+<a id='L283' name='L283'></a> 283 <em class='comment'>/* Check if both X &amp; Y are not NaNs:  iXYnotNAN */</em>
+<a id='L284' name='L284'></a> 284         vcmpps    $3, <em class='brace'>{</em>sae<em class='brace'>}</em>, %zmm8, %zmm8, %k1
+<a id='L285' name='L285'></a> 285         vcmpps    $3, <em class='brace'>{</em>sae<em class='brace'>}</em>, %zmm0, %zmm0, %k2
+<a id='L286' name='L286'></a> 286         vpcmpd    $4, %zmm9, %zmm2, %k3
+<a id='L287' name='L287'></a> 287         vpcmpd    $4, %zmm9, %zmm1, %k4
+<a id='L288' name='L288'></a> 288 
+<a id='L289' name='L289'></a> 289 <em class='comment'>/*</em>
+<a id='L290' name='L290'></a> 290 <em class='comment'> *  Path for zero arguments (at least one of both)</em>
+<a id='L291' name='L291'></a> 291 <em class='comment'> * Check if both args are zeros (den. is zero)</em>
+<a id='L292' name='L292'></a> 292 <em class='comment'> */</em>
+<a id='L293' name='L293'></a> 293         vcmpps    $4, <em class='brace'>{</em>sae<em class='brace'>}</em>, %zmm9, %zmm5, %k5
+<a id='L294' name='L294'></a> 294 
+<a id='L295' name='L295'></a> 295 <em class='comment'>/* Res = sign(Y)*(X&lt;0)?(PIO2+PI):PIO2 */</em>
+<a id='L296' name='L296'></a> 296         vpcmpgtd  %zmm8, %zmm9, %k6
+<a id='L297' name='L297'></a> 297         vpternlogd $255, %zmm14, %zmm14, %zmm14
+<a id='L298' name='L298'></a> 298         vpternlogd $255, %zmm12, %zmm12, %zmm12
+<a id='L299' name='L299'></a> 299         vpternlogd $255, %zmm13, %zmm13, %zmm13
+<a id='L300' name='L300'></a> 300         vpandnd   %zmm2, %zmm2, %zmm14<em class='brace'>{</em>%k3<em class='brace'>}</em>
+<a id='L301' name='L301'></a> 301         vpternlogd $255, %zmm2, %zmm2, %zmm2
+<a id='L302' name='L302'></a> 302         vpandnd   %zmm1, %zmm1, %zmm2<em class='brace'>{</em>%k4<em class='brace'>}</em>
+<a id='L303' name='L303'></a> 303         vpord     %zmm2, %zmm14, %zmm15
+<a id='L304' name='L304'></a> 304         vpternlogd $255, %zmm2, %zmm2, %zmm2
+<a id='L305' name='L305'></a> 305         vpandnd   %zmm5, %zmm5, %zmm2<em class='brace'>{</em>%k5<em class='brace'>}</em>
+<a id='L306' name='L306'></a> 306 
+<a id='L307' name='L307'></a> 307 <em class='comment'>/* Set sPIO2 to zero if den. is zero */</em>
+<a id='L308' name='L308'></a> 308         vpandnd   %zmm4, %zmm2, %zmm4
+<a id='L309' name='L309'></a> 309         vpandd    %zmm2, %zmm9, %zmm5
+<a id='L310' name='L310'></a> 310         vpord     %zmm5, %zmm4, %zmm2
+<a id='L311' name='L311'></a> 311         vorps     %zmm7, %zmm2, %zmm7
+<a id='L312' name='L312'></a> 312         vaddps    <em class='brace'>{</em>rn-sae<em class='brace'>}</em>, %zmm11, %zmm7, %zmm7<em class='brace'>{</em>%k6<em class='brace'>}</em>
+<a id='L313' name='L313'></a> 313         vorps     %zmm6, %zmm7, %zmm6
+<a id='L314' name='L314'></a> 314         vpandnd   %zmm8, %zmm8, %zmm12<em class='brace'>{</em>%k1<em class='brace'>}</em>
+<a id='L315' name='L315'></a> 315         vpandnd   %zmm0, %zmm0, %zmm13<em class='brace'>{</em>%k2<em class='brace'>}</em>
+<a id='L316' name='L316'></a> 316         vandps    %zmm13, %zmm12, %zmm12
+<a id='L317' name='L317'></a> 317 
+<a id='L318' name='L318'></a> 318 <em class='comment'>/* Check if at least on of Y or Y is zero and not NaN: iAXAYZEROnotNAN */</em>
+<a id='L319' name='L319'></a> 319         vpandd    %zmm12, %zmm15, %zmm1
+<a id='L320' name='L320'></a> 320 
+<a id='L321' name='L321'></a> 321 <em class='comment'>/* Exclude from previous callout mask zero (and not NaN) arguments */</em>
+<a id='L322' name='L322'></a> 322         vpandnd   %zmm3, %zmm1, %zmm3
+<a id='L323' name='L323'></a> 323 
+<a id='L324' name='L324'></a> 324 <em class='comment'>/* Go to callout */</em>
+<a id='L325' name='L325'></a> 325         vptestmd  %zmm3, %zmm3, %k0
+<a id='L326' name='L326'></a> 326         kmovw     %k0, %edx
+<a id='L327' name='L327'></a> 327 
+<a id='L328' name='L328'></a> 328 <em class='comment'>/* Merge results from main and spec path */</em>
+<a id='L329' name='L329'></a> 329         vpandnd   %zmm10, %zmm1, %zmm10
+<a id='L330' name='L330'></a> 330         vpandd    %zmm1, %zmm6, %zmm11
+<a id='L331' name='L331'></a> 331         vpord     %zmm11, %zmm10, %zmm10
+<a id='L332' name='L332'></a> 332 
+<a id='L333' name='L333'></a> 333 <em class='comment'>/* Return to main vector processing path */</em>
+<a id='L334' name='L334'></a> 334         jmp       L(AUX_BRANCH_RETURN)
+<a id='L335' name='L335'></a> 335 <em class='comment'>                                # LOE rbx r12 r13 r14 r15 edx zmm0 zmm8 zmm10</em>
+<a id='L336' name='L336'></a> 336 END(_ZGVeN16vv_atan2f_skx)
+<a id='L337' name='L337'></a> 337 
+<a id='L338' name='L338'></a> 338         .section .rodata, "a"
+<a id='L339' name='L339'></a> 339         .align 64
+<a id='L340' name='L340'></a> 340 
+<a id='L341' name='L341'></a> 341 <em class='sharp'>#ifdef</em> <a href='../Y/7962.html' title='Multiple used in 3 places.'>__svml_satan2_data_internal_typedef</a>
+<a id='L342' name='L342'></a> 342 typedef unsigned int VUINT32;
+<a id='L343' name='L343'></a> 343 typedef struct <em class='brace'>{</em>
+<a id='L344' name='L344'></a> 344         __declspec(align(64)) VUINT32 sZERO[16][1];
+<a id='L345' name='L345'></a> 345         __declspec(align(64)) VUINT32 sONE[16][1];
+<a id='L346' name='L346'></a> 346         __declspec(align(64)) VUINT32 sSIGN_MASK[16][1];
+<a id='L347' name='L347'></a> 347         __declspec(align(64)) VUINT32 sABS_MASK[16][1];
+<a id='L348' name='L348'></a> 348         __declspec(align(64)) VUINT32 sPIO2[16][1];
+<a id='L349' name='L349'></a> 349         __declspec(align(64)) VUINT32 sPI[16][1];
+<a id='L350' name='L350'></a> 350         __declspec(align(64)) VUINT32 sPC8[16][1];
+<a id='L351' name='L351'></a> 351         __declspec(align(64)) VUINT32 sPC7[16][1];
+<a id='L352' name='L352'></a> 352         __declspec(align(64)) VUINT32 sPC6[16][1];
+<a id='L353' name='L353'></a> 353         __declspec(align(64)) VUINT32 sPC5[16][1];
+<a id='L354' name='L354'></a> 354         __declspec(align(64)) VUINT32 sPC4[16][1];
+<a id='L355' name='L355'></a> 355         __declspec(align(64)) VUINT32 sPC3[16][1];
+<a id='L356' name='L356'></a> 356         __declspec(align(64)) VUINT32 sPC2[16][1];
+<a id='L357' name='L357'></a> 357         __declspec(align(64)) VUINT32 sPC1[16][1];
+<a id='L358' name='L358'></a> 358         __declspec(align(64)) VUINT32 sPC0[16][1];
+<a id='L359' name='L359'></a> 359         __declspec(align(64)) VUINT32 iCHK_WORK_SUB[16][1];
+<a id='L360' name='L360'></a> 360         __declspec(align(64)) VUINT32 iCHK_WORK_CMP[16][1];
+<a id='L361' name='L361'></a> 361 <em class='brace'>}</em> __svml_satan2_data_internal;
+<a id='L362' name='L362'></a> 362 <em class='sharp'>#endif</em>
+<a id='L363' name='L363'></a> 363 __svml_satan2_data_internal:
+<a id='L364' name='L364'></a> 364         .long 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000 <em class='comment'>// sZERO</em>
+<a id='L365' name='L365'></a> 365         .align 64
+<a id='L366' name='L366'></a> 366         .long 0x3f800000, 0x3f800000, 0x3f800000, 0x3f800000, 0x3f800000, 0x3f800000, 0x3f800000, 0x3f800000, 0x3f800000, 0x3f800000, 0x3f800000, 0x3f800000, 0x3f800000, 0x3f800000, 0x3f800000, 0x3f800000 <em class='comment'>// sONE</em>
+<a id='L367' name='L367'></a> 367         .align 64
+<a id='L368' name='L368'></a> 368         .long 0x80000000, 0x80000000, 0x80000000, 0x80000000, 0x80000000, 0x80000000, 0x80000000, 0x80000000, 0x80000000, 0x80000000, 0x80000000, 0x80000000, 0x80000000, 0x80000000, 0x80000000, 0x80000000 <em class='comment'>// sSIGN_MASK</em>
+<a id='L369' name='L369'></a> 369         .align 64
+<a id='L370' name='L370'></a> 370         .long 0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF <em class='comment'>// sABS_MASK</em>
+<a id='L371' name='L371'></a> 371         .align 64
+<a id='L372' name='L372'></a> 372         .long 0x3FC90FDB, 0x3FC90FDB, 0x3FC90FDB, 0x3FC90FDB, 0x3FC90FDB, 0x3FC90FDB, 0x3FC90FDB, 0x3FC90FDB, 0x3FC90FDB, 0x3FC90FDB, 0x3FC90FDB, 0x3FC90FDB, 0x3FC90FDB, 0x3FC90FDB, 0x3FC90FDB, 0x3FC90FDB <em class='comment'>// sPIO2</em>
+<a id='L373' name='L373'></a> 373         .align 64
+<a id='L374' name='L374'></a> 374         .long 0x40490FDB, 0x40490FDB, 0x40490FDB, 0x40490FDB, 0x40490FDB, 0x40490FDB, 0x40490FDB, 0x40490FDB, 0x40490FDB, 0x40490FDB, 0x40490FDB, 0x40490FDB, 0x40490FDB, 0x40490FDB, 0x40490FDB, 0x40490FDB <em class='comment'>// sPI</em>
+<a id='L375' name='L375'></a> 375         .align 64
+<a id='L376' name='L376'></a> 376         .long 0x3B322CC0, 0x3B322CC0, 0x3B322CC0, 0x3B322CC0, 0x3B322CC0, 0x3B322CC0, 0x3B322CC0, 0x3B322CC0, 0x3B322CC0, 0x3B322CC0, 0x3B322CC0, 0x3B322CC0, 0x3B322CC0, 0x3B322CC0, 0x3B322CC0, 0x3B322CC0 <em class='comment'>// sA08</em>
+<a id='L377' name='L377'></a> 377         .align 64
+<a id='L378' name='L378'></a> 378         .long 0xBC7F2631, 0xBC7F2631, 0xBC7F2631, 0xBC7F2631, 0xBC7F2631, 0xBC7F2631, 0xBC7F2631, 0xBC7F2631, 0xBC7F2631, 0xBC7F2631, 0xBC7F2631, 0xBC7F2631, 0xBC7F2631, 0xBC7F2631, 0xBC7F2631, 0xBC7F2631 <em class='comment'>// sA07</em>
+<a id='L379' name='L379'></a> 379         .align 64
+<a id='L380' name='L380'></a> 380         .long 0x3D2BC384, 0x3D2BC384, 0x3D2BC384, 0x3D2BC384, 0x3D2BC384, 0x3D2BC384, 0x3D2BC384, 0x3D2BC384, 0x3D2BC384, 0x3D2BC384, 0x3D2BC384, 0x3D2BC384, 0x3D2BC384, 0x3D2BC384, 0x3D2BC384, 0x3D2BC384 <em class='comment'>// sA06</em>
+<a id='L381' name='L381'></a> 381         .align 64
+<a id='L382' name='L382'></a> 382         .long 0xBD987629, 0xBD987629, 0xBD987629, 0xBD987629, 0xBD987629, 0xBD987629, 0xBD987629, 0xBD987629, 0xBD987629, 0xBD987629, 0xBD987629, 0xBD987629, 0xBD987629, 0xBD987629, 0xBD987629, 0xBD987629 <em class='comment'>// sA05</em>
+<a id='L383' name='L383'></a> 383         .align 64
+<a id='L384' name='L384'></a> 384         .long 0x3DD96474, 0x3DD96474, 0x3DD96474, 0x3DD96474, 0x3DD96474, 0x3DD96474, 0x3DD96474, 0x3DD96474, 0x3DD96474, 0x3DD96474, 0x3DD96474, 0x3DD96474, 0x3DD96474, 0x3DD96474, 0x3DD96474, 0x3DD96474 <em class='comment'>// sA04</em>
+<a id='L385' name='L385'></a> 385         .align 64
+<a id='L386' name='L386'></a> 386         .long 0xBE1161F8, 0xBE1161F8, 0xBE1161F8, 0xBE1161F8, 0xBE1161F8, 0xBE1161F8, 0xBE1161F8, 0xBE1161F8, 0xBE1161F8, 0xBE1161F8, 0xBE1161F8, 0xBE1161F8, 0xBE1161F8, 0xBE1161F8, 0xBE1161F8, 0xBE1161F8 <em class='comment'>// sA03</em>
+<a id='L387' name='L387'></a> 387         .align 64
+<a id='L388' name='L388'></a> 388         .long 0x3E4CB79F, 0x3E4CB79F, 0x3E4CB79F, 0x3E4CB79F, 0x3E4CB79F, 0x3E4CB79F, 0x3E4CB79F, 0x3E4CB79F, 0x3E4CB79F, 0x3E4CB79F, 0x3E4CB79F, 0x3E4CB79F, 0x3E4CB79F, 0x3E4CB79F, 0x3E4CB79F, 0x3E4CB79F <em class='comment'>// sA02</em>
+<a id='L389' name='L389'></a> 389         .align 64
+<a id='L390' name='L390'></a> 390         .long 0xBEAAAA49, 0xBEAAAA49, 0xBEAAAA49, 0xBEAAAA49, 0xBEAAAA49, 0xBEAAAA49, 0xBEAAAA49, 0xBEAAAA49, 0xBEAAAA49, 0xBEAAAA49, 0xBEAAAA49, 0xBEAAAA49, 0xBEAAAA49, 0xBEAAAA49, 0xBEAAAA49, 0xBEAAAA49 <em class='comment'>// sA01</em>
+<a id='L391' name='L391'></a> 391         .align 64
+<a id='L392' name='L392'></a> 392         .long 0x3F800000, 0x3F800000, 0x3F800000, 0x3F800000, 0x3F800000, 0x3F800000, 0x3F800000, 0x3F800000, 0x3F800000, 0x3F800000, 0x3F800000, 0x3F800000, 0x3F800000, 0x3F800000, 0x3F800000, 0x3F800000 <em class='comment'>// sA00</em>
+<a id='L393' name='L393'></a> 393         .align 64
+<a id='L394' name='L394'></a> 394         .long 0x81000000, 0x81000000, 0x81000000, 0x81000000, 0x81000000, 0x81000000, 0x81000000, 0x81000000, 0x81000000, 0x81000000, 0x81000000, 0x81000000, 0x81000000, 0x81000000, 0x81000000, 0x81000000 <em class='comment'>//iCHK_WORK_SUB</em>
+<a id='L395' name='L395'></a> 395         .align 64
+<a id='L396' name='L396'></a> 396         .long 0xFC000000, 0xFC000000, 0xFC000000, 0xFC000000, 0xFC000000, 0xFC000000, 0xFC000000, 0xFC000000, 0xFC000000, 0xFC000000, 0xFC000000, 0xFC000000, 0xFC000000, 0xFC000000, 0xFC000000, 0xFC000000 <em class='comment'>//iCHK_WORK_CMP</em>
+<a id='L397' name='L397'></a> 397         .align 64
+<a id='L398' name='L398'></a> 398         .type   __svml_satan2_data_internal,@object
+<a id='L399' name='L399'></a> 399         .size   __svml_satan2_data_internal,.-__svml_satan2_data_internal
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;][^][v]<a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

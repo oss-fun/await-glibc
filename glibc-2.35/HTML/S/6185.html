@@ -1,0 +1,422 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>stdio-common/tst-printf.c</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18967.html'>stdio-common</a>/tst-printf.c</h2>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L47'>[^]</a><a href='#L370'>[v]</a>[top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<h2 class='header'>DEFINITIONS</h2>
+This source file includes following definitions.
+<ol>
+<li><a href='#L47' title='Defined at 47.'>fmtchk</a></li>
+<li><a href='#L56' title='Defined at 56.'>fmtst1chk</a></li>
+<li><a href='#L65' title='Defined at 65.'>fmtst2chk</a></li>
+<li><a href='#L74' title='Defined at 74.'>do_test</a></li>
+<li><a href='#L291' title='Defined at 291.'>rfg1</a></li>
+<li><a href='#L322' title='Defined at 322.'>rfg2</a></li>
+<li><a href='#L370' title='Defined at 370.'>rfg3</a></li>
+</ol>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* Copyright (C) 1991-2022 Free Software Foundation, Inc.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'></em>
+<a id='L4' name='L4'></a>   4 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'></em>
+<a id='L9' name='L9'></a>   9 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'></em>
+<a id='L14' name='L14'></a>  14 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   License along with the GNU C Library; if not, see</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L17' name='L17'></a>  17 
+<a id='L18' name='L18'></a>  18 <em class='sharp'>#ifdef</em>  <a href='../S/13864.html#L63' title='Defined at 63 in sysdeps/mach/hurd/bits/param.h.'>BSD</a>
+<a id='L19' name='L19'></a>  19 <em class='sharp'>#include</em> &lt;<a href='../I/1776.html'>/usr/include/stdio.h</a>&gt;
+<a id='L20' name='L20'></a>  20 <em class='sharp'>#define</em> <a href='../R/2252.html' title='Multiple referred from 145 places.'>EXIT_SUCCESS</a> 0
+<a id='L21' name='L21'></a>  21 <em class='sharp'>#else</em>
+<a id='L22' name='L22'></a>  22 <em class='sharp'>#include</em> &lt;<a href='18175.html'>limits.h</a>&gt;
+<a id='L23' name='L23'></a>  23 <em class='sharp'>#include</em> &lt;<a href='../I/1776.html'>stdio.h</a>&gt;
+<a id='L24' name='L24'></a>  24 <em class='sharp'>#include</em> &lt;<a href='../I/1780.html'>stdlib.h</a>&gt;
+<a id='L25' name='L25'></a>  25 <em class='sharp'>#include</em> &lt;<a href='../I/1973.html'>string.h</a>&gt;
+<a id='L26' name='L26'></a>  26 <em class='sharp'>#endif</em>
+<a id='L27' name='L27'></a>  27 
+<a id='L28' name='L28'></a>  28 <em class='sharp'>#include</em> &lt;<a href='18104.html'>float.h</a>&gt;
+<a id='L29' name='L29'></a>  29 <em class='sharp'>#include</em> &lt;<a href='18147.html'>libc-diag.h</a>&gt;
+<a id='L30' name='L30'></a>  30 
+<a id='L31' name='L31'></a>  31 <em class='comment'>/* This whole file is picayune tests of corner cases of printf format strings.</em>
+<a id='L32' name='L32'></a>  32 <em class='comment'>   The compiler warnings are not useful here.  */</em>
+<a id='L33' name='L33'></a>  33 <a href='../S/18147.html#L56' title='Defined at 56 in include/libc-diag.h.'>DIAG_IGNORE_NEEDS_COMMENT</a> (4.9, "-Wformat");
+<a id='L34' name='L34'></a>  34 
+<a id='L35' name='L35'></a>  35 <em class='sharp'>#if</em> <a href='../D/21626.html' title='Multiple defined in 2 places.'>__GNUC_PREREQ</a> (7, 0)
+<a id='L36' name='L36'></a>  36 <em class='comment'>/* Compiler warnings about snprintf output truncation should also be</em>
+<a id='L37' name='L37'></a>  37 <em class='comment'>   ignored.  */</em>
+<a id='L38' name='L38'></a>  38 <a href='../S/18147.html#L56' title='Defined at 56 in include/libc-diag.h.'>DIAG_IGNORE_NEEDS_COMMENT</a> (7.0, "-Wformat-truncation");
+<a id='L39' name='L39'></a>  39 <em class='sharp'>#endif</em>
+<a id='L40' name='L40'></a>  40 
+<a id='L41' name='L41'></a>  41 <strong class='reserved'>static</strong> <strong class='reserved'>void</strong> <a href='../S/6185.html#L291' title='Defined at 291 in stdio-common/tst-printf.c.'>rfg1</a> (<strong class='reserved'>void</strong>);
+<a id='L42' name='L42'></a>  42 <strong class='reserved'>static</strong> <strong class='reserved'>void</strong> <a href='../S/6185.html#L322' title='Defined at 322 in stdio-common/tst-printf.c.'>rfg2</a> (<strong class='reserved'>void</strong>);
+<a id='L43' name='L43'></a>  43 <strong class='reserved'>static</strong> <strong class='reserved'>void</strong> <a href='../S/6185.html#L370' title='Defined at 370 in stdio-common/tst-printf.c.'>rfg3</a> (<strong class='reserved'>void</strong>);
+<a id='L44' name='L44'></a>  44 
+<a id='L45' name='L45'></a>  45 
+<a id='L46' name='L46'></a>  46 <strong class='reserved'>static</strong> <strong class='reserved'>void</strong>
+<a id='L47' name='L47'></a>  47 <a href='../R/19566.html' title='Multiple referred from 6 places.'>fmtchk</a> (<strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../S/6618.html#L121' title='Defined at 121 in stdlib/gen-tst-strtod-round.c.'>fmt</a>)
+<a id='L48' name='L48'></a>  48 <em class='brace'>{</em>
+<a id='L49' name='L49'></a>  49   (<strong class='reserved'>void</strong>) <a href='../S/17955.html#L201' title='Defined at 201 in include/stdio.h.'>fputs</a>(<a href='../S/6618.html#L121' title='Defined at 121 in stdlib/gen-tst-strtod-round.c.'>fmt</a>, <a href='../D/37041.html' title='Multiple defined in 3 places.'>stdout</a>);
+<a id='L50' name='L50'></a>  50   (<strong class='reserved'>void</strong>) <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a>(":\t`");
+<a id='L51' name='L51'></a>  51   (<strong class='reserved'>void</strong>) <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a>(<a href='../S/6618.html#L121' title='Defined at 121 in stdlib/gen-tst-strtod-round.c.'>fmt</a>, 0x12);
+<a id='L52' name='L52'></a>  52   (<strong class='reserved'>void</strong>) <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a>("'\n");
+<a id='L53' name='L53'></a>  53 <em class='brace'>}</em>
+<a id='L54' name='L54'></a>  54 
+<a id='L55' name='L55'></a>  55 <strong class='reserved'>static</strong> <strong class='reserved'>void</strong>
+<a id='L56' name='L56'></a>  56 <a href='../R/19568.html' title='Multiple referred from 2 places.'>fmtst1chk</a> (<strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../S/6618.html#L121' title='Defined at 121 in stdlib/gen-tst-strtod-round.c.'>fmt</a>)
+<a id='L57' name='L57'></a>  57 <em class='brace'>{</em>
+<a id='L58' name='L58'></a>  58   (<strong class='reserved'>void</strong>) <a href='../S/17955.html#L201' title='Defined at 201 in include/stdio.h.'>fputs</a>(<a href='../S/6618.html#L121' title='Defined at 121 in stdlib/gen-tst-strtod-round.c.'>fmt</a>, <a href='../D/37041.html' title='Multiple defined in 3 places.'>stdout</a>);
+<a id='L59' name='L59'></a>  59   (<strong class='reserved'>void</strong>) <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a>(":\t`");
+<a id='L60' name='L60'></a>  60   (<strong class='reserved'>void</strong>) <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a>(<a href='../S/6618.html#L121' title='Defined at 121 in stdlib/gen-tst-strtod-round.c.'>fmt</a>, 4, 0x12);
+<a id='L61' name='L61'></a>  61   (<strong class='reserved'>void</strong>) <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a>("'\n");
+<a id='L62' name='L62'></a>  62 <em class='brace'>}</em>
+<a id='L63' name='L63'></a>  63 
+<a id='L64' name='L64'></a>  64 <strong class='reserved'>static</strong> <strong class='reserved'>void</strong>
+<a id='L65' name='L65'></a>  65 <a href='../R/19569.html' title='Multiple referred from 2 places.'>fmtst2chk</a> (<strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../S/6618.html#L121' title='Defined at 121 in stdlib/gen-tst-strtod-round.c.'>fmt</a>)
+<a id='L66' name='L66'></a>  66 <em class='brace'>{</em>
+<a id='L67' name='L67'></a>  67   (<strong class='reserved'>void</strong>) <a href='../S/17955.html#L201' title='Defined at 201 in include/stdio.h.'>fputs</a>(<a href='../S/6618.html#L121' title='Defined at 121 in stdlib/gen-tst-strtod-round.c.'>fmt</a>, <a href='../D/37041.html' title='Multiple defined in 3 places.'>stdout</a>);
+<a id='L68' name='L68'></a>  68   (<strong class='reserved'>void</strong>) <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a>(":\t`");
+<a id='L69' name='L69'></a>  69   (<strong class='reserved'>void</strong>) <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a>(<a href='../S/6618.html#L121' title='Defined at 121 in stdlib/gen-tst-strtod-round.c.'>fmt</a>, 4, 4, 0x12);
+<a id='L70' name='L70'></a>  70   (<strong class='reserved'>void</strong>) <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a>("'\n");
+<a id='L71' name='L71'></a>  71 <em class='brace'>}</em>
+<a id='L72' name='L72'></a>  72 
+<a id='L73' name='L73'></a>  73 <strong class='reserved'>static</strong> <strong class='reserved'>int</strong>
+<a id='L74' name='L74'></a>  74 <a href='../R/18782.html' title='Multiple referred from 1850 places.'>do_test</a> (<strong class='reserved'>void</strong>)
+<a id='L75' name='L75'></a>  75 <em class='brace'>{</em>
+<a id='L76' name='L76'></a>  76   <strong class='reserved'>static</strong> <strong class='reserved'>char</strong> <a href='../Y/25318.html' title='Multiple used in 5 places.'>shortstr</a>[] = "Hi, Z.";
+<a id='L77' name='L77'></a>  77   <strong class='reserved'>static</strong> <strong class='reserved'>char</strong> <a href='../Y/18514.html' title='Multiple used in 2 places.'>longstr</a>[] = "Good morning, Doctor Chandra.  This is Hal.  \
+<a id='L78' name='L78'></a>  78 I am ready for my first lesson today.";
+<a id='L79' name='L79'></a>  79   <strong class='reserved'>int</strong> <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a> = 0;
+<a id='L80' name='L80'></a>  80 
+<a id='L81' name='L81'></a>  81   <a href='../S/6185.html#L47' title='Defined at 47 in stdio-common/tst-printf.c.'>fmtchk</a>("%.4x");
+<a id='L82' name='L82'></a>  82   <a href='../S/6185.html#L47' title='Defined at 47 in stdio-common/tst-printf.c.'>fmtchk</a>("%04x");
+<a id='L83' name='L83'></a>  83   <a href='../S/6185.html#L47' title='Defined at 47 in stdio-common/tst-printf.c.'>fmtchk</a>("%4.4x");
+<a id='L84' name='L84'></a>  84   <a href='../S/6185.html#L47' title='Defined at 47 in stdio-common/tst-printf.c.'>fmtchk</a>("%04.4x");
+<a id='L85' name='L85'></a>  85   <a href='../S/6185.html#L47' title='Defined at 47 in stdio-common/tst-printf.c.'>fmtchk</a>("%4.3x");
+<a id='L86' name='L86'></a>  86   <a href='../S/6185.html#L47' title='Defined at 47 in stdio-common/tst-printf.c.'>fmtchk</a>("%04.3x");
+<a id='L87' name='L87'></a>  87 
+<a id='L88' name='L88'></a>  88   <a href='../S/6185.html#L56' title='Defined at 56 in stdio-common/tst-printf.c.'>fmtst1chk</a>("%.*x");
+<a id='L89' name='L89'></a>  89   <a href='../S/6185.html#L56' title='Defined at 56 in stdio-common/tst-printf.c.'>fmtst1chk</a>("%0*x");
+<a id='L90' name='L90'></a>  90   <a href='../S/6185.html#L65' title='Defined at 65 in stdio-common/tst-printf.c.'>fmtst2chk</a>("%*.*x");
+<a id='L91' name='L91'></a>  91   <a href='../S/6185.html#L65' title='Defined at 65 in stdio-common/tst-printf.c.'>fmtst2chk</a>("%0*.*x");
+<a id='L92' name='L92'></a>  92 
+<a id='L93' name='L93'></a>  93 <em class='sharp'>#ifndef</em> <a href='../S/13864.html#L63' title='Defined at 63 in sysdeps/mach/hurd/bits/param.h.'>BSD</a>
+<a id='L94' name='L94'></a>  94   <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a>("bad format:\t\"%v\"\n");
+<a id='L95' name='L95'></a>  95   <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a>("nil pointer (padded):\t\"%10p\"\n", (<strong class='reserved'>void</strong> *) <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>);
+<a id='L96' name='L96'></a>  96 <em class='sharp'>#endif</em>
+<a id='L97' name='L97'></a>  97 
+<a id='L98' name='L98'></a>  98   <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a>("decimal negative:\t\"%d\"\n", -2345);
+<a id='L99' name='L99'></a>  99   <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a>("octal negative:\t\"%o\"\n", -2345);
+<a id='L100' name='L100'></a> 100   <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a>("hex negative:\t\"%x\"\n", -2345);
+<a id='L101' name='L101'></a> 101   <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a>("long decimal number:\t\"%ld\"\n", -123456L);
+<a id='L102' name='L102'></a> 102   <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a>("long octal negative:\t\"%lo\"\n", -2345L);
+<a id='L103' name='L103'></a> 103   <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a>("long unsigned decimal number:\t\"%lu\"\n", -123456L);
+<a id='L104' name='L104'></a> 104   <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a>("zero-padded LDN:\t\"%010ld\"\n", -123456L);
+<a id='L105' name='L105'></a> 105   <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a>("left-adjusted ZLDN:\t\"%-010ld\"\n", -123456L);
+<a id='L106' name='L106'></a> 106   <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a>("space-padded LDN:\t\"%10ld\"\n", -123456L);
+<a id='L107' name='L107'></a> 107   <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a>("left-adjusted SLDN:\t\"%-10ld\"\n", -123456L);
+<a id='L108' name='L108'></a> 108 
+<a id='L109' name='L109'></a> 109   <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a>("zero-padded string:\t\"%010s\"\n", <a href='../Y/25318.html' title='Multiple used in 5 places.'>shortstr</a>);
+<a id='L110' name='L110'></a> 110   <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a>("left-adjusted Z string:\t\"%-010s\"\n", <a href='../Y/25318.html' title='Multiple used in 5 places.'>shortstr</a>);
+<a id='L111' name='L111'></a> 111   <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a>("space-padded string:\t\"%10s\"\n", <a href='../Y/25318.html' title='Multiple used in 5 places.'>shortstr</a>);
+<a id='L112' name='L112'></a> 112   <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a>("left-adjusted S string:\t\"%-10s\"\n", <a href='../Y/25318.html' title='Multiple used in 5 places.'>shortstr</a>);
+<a id='L113' name='L113'></a> 113   <em class='comment'>/* GCC 9 warns about the NULL format argument; this is deliberately</em>
+<a id='L114' name='L114'></a> 114 <em class='comment'>     tested here.  */</em>
+<a id='L115' name='L115'></a> 115   <a href='../S/18147.html#L36' title='Defined at 36 in include/libc-diag.h.'>DIAG_PUSH_NEEDS_COMMENT</a>;
+<a id='L116' name='L116'></a> 116 <em class='sharp'>#if</em> <a href='../D/21626.html' title='Multiple defined in 2 places.'>__GNUC_PREREQ</a> (7, 0)
+<a id='L117' name='L117'></a> 117   <a href='../S/18147.html#L56' title='Defined at 56 in include/libc-diag.h.'>DIAG_IGNORE_NEEDS_COMMENT</a> (9, "-Wformat-overflow=");
+<a id='L118' name='L118'></a> 118 <em class='sharp'>#endif</em>
+<a id='L119' name='L119'></a> 119   <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a>("null string:\t\"%s\"\n", (<strong class='reserved'>char</strong> *)<a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>);
+<a id='L120' name='L120'></a> 120   <a href='../S/18147.html#L39' title='Defined at 39 in include/libc-diag.h.'>DIAG_POP_NEEDS_COMMENT</a>;
+<a id='L121' name='L121'></a> 121   <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a>("limited string:\t\"%.22s\"\n", <a href='../Y/18514.html' title='Multiple used in 2 places.'>longstr</a>);
+<a id='L122' name='L122'></a> 122 
+<a id='L123' name='L123'></a> 123   <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a>("a-style max:\t\"%a\"\n", <a href='../Y/259.html' title='Multiple used in 45 places.'>DBL_MAX</a>);
+<a id='L124' name='L124'></a> 124   <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a>("a-style -max:\t\"%a\"\n", -<a href='../Y/259.html' title='Multiple used in 45 places.'>DBL_MAX</a>);
+<a id='L125' name='L125'></a> 125   <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a>("e-style &gt;= 1:\t\"%e\"\n", 12.34);
+<a id='L126' name='L126'></a> 126   <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a>("e-style &gt;= .1:\t\"%e\"\n", 0.1234);
+<a id='L127' name='L127'></a> 127   <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a>("e-style &lt; .1:\t\"%e\"\n", 0.001234);
+<a id='L128' name='L128'></a> 128   <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a>("e-style big:\t\"%.60e\"\n", 1e20);
+<a id='L129' name='L129'></a> 129   <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("e-style == .1:\t\"%e\"\n", 0.1);
+<a id='L130' name='L130'></a> 130   <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a>("f-style == 0:\t\"%f\"\n", 0.0);
+<a id='L131' name='L131'></a> 131   <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a>("f-style &gt;= 1:\t\"%f\"\n", 12.34);
+<a id='L132' name='L132'></a> 132   <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a>("f-style &gt;= .1:\t\"%f\"\n", 0.1234);
+<a id='L133' name='L133'></a> 133   <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a>("f-style &lt; .1:\t\"%f\"\n", 0.001234);
+<a id='L134' name='L134'></a> 134   <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a>("g-style == 0:\t\"%g\"\n", 0.0);
+<a id='L135' name='L135'></a> 135   <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a>("g-style &gt;= 1:\t\"%g\"\n", 12.34);
+<a id='L136' name='L136'></a> 136   <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a>("g-style &gt;= .1:\t\"%g\"\n", 0.1234);
+<a id='L137' name='L137'></a> 137   <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a>("g-style &lt; .1:\t\"%g\"\n", 0.001234);
+<a id='L138' name='L138'></a> 138   <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a>("g-style big:\t\"%.60g\"\n", 1e20);
+<a id='L139' name='L139'></a> 139 
+<a id='L140' name='L140'></a> 140   <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a>("Lf-style == 0:\t\"%Lf\"\n", (<strong class='reserved'>long</strong> <strong class='reserved'>double</strong>) 0.0);
+<a id='L141' name='L141'></a> 141   <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a>("Lf-style &gt;= 1:\t\"%Lf\"\n", (<strong class='reserved'>long</strong> <strong class='reserved'>double</strong>) 12.34);
+<a id='L142' name='L142'></a> 142   <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a>("Lf-style &gt;= .1:\t\"%Lf\"\n", (<strong class='reserved'>long</strong> <strong class='reserved'>double</strong>) 0.1234);
+<a id='L143' name='L143'></a> 143   <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a>("Lf-style &lt; .1:\t\"%Lf\"\n", (<strong class='reserved'>long</strong> <strong class='reserved'>double</strong>) 0.001234);
+<a id='L144' name='L144'></a> 144   <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a>("Lg-style == 0:\t\"%Lg\"\n", (<strong class='reserved'>long</strong> <strong class='reserved'>double</strong>) 0.0);
+<a id='L145' name='L145'></a> 145   <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a>("Lg-style &gt;= 1:\t\"%Lg\"\n", (<strong class='reserved'>long</strong> <strong class='reserved'>double</strong>) 12.34);
+<a id='L146' name='L146'></a> 146   <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a>("Lg-style &gt;= .1:\t\"%Lg\"\n", (<strong class='reserved'>long</strong> <strong class='reserved'>double</strong>) 0.1234);
+<a id='L147' name='L147'></a> 147   <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a>("Lg-style &lt; .1:\t\"%Lg\"\n", (<strong class='reserved'>long</strong> <strong class='reserved'>double</strong>) 0.001234);
+<a id='L148' name='L148'></a> 148   <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a>("Lg-style big:\t\"%.60Lg\"\n", (<strong class='reserved'>long</strong> <strong class='reserved'>double</strong>) 1e20);
+<a id='L149' name='L149'></a> 149 
+<a id='L150' name='L150'></a> 150   <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> (" %6.5f\n", .099999999860301614);
+<a id='L151' name='L151'></a> 151   <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> (" %6.5f\n", .1);
+<a id='L152' name='L152'></a> 152   <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("x%5.4fx\n", .5);
+<a id='L153' name='L153'></a> 153 
+<a id='L154' name='L154'></a> 154   <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> (" %6.5Lf\n", (<strong class='reserved'>long</strong> <strong class='reserved'>double</strong>) .099999999860301614);
+<a id='L155' name='L155'></a> 155   <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> (" %6.5Lf\n", (<strong class='reserved'>long</strong> <strong class='reserved'>double</strong>) .1);
+<a id='L156' name='L156'></a> 156   <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("x%5.4Lfx\n", (<strong class='reserved'>long</strong> <strong class='reserved'>double</strong>) .5);
+<a id='L157' name='L157'></a> 157 
+<a id='L158' name='L158'></a> 158   <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("%#03x\n", 1);
+<a id='L159' name='L159'></a> 159 
+<a id='L160' name='L160'></a> 160   <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("something really insane: %.10000f\n", 1.0);
+<a id='L161' name='L161'></a> 161   <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("something really insane (long double): %.10000Lf\n",
+<a id='L162' name='L162'></a> 162       (<strong class='reserved'>long</strong> <strong class='reserved'>double</strong>) 1.0);
+<a id='L163' name='L163'></a> 163 
+<a id='L164' name='L164'></a> 164   <em class='brace'>{</em>
+<a id='L165' name='L165'></a> 165     <strong class='reserved'>double</strong> <a href='../D/29259.html' title='Multiple defined in 3 places.'>d</a> = <a href='../Y/515.html' title='Multiple used in 40 places.'>FLT_MIN</a>;
+<a id='L166' name='L166'></a> 166     <strong class='reserved'>int</strong> <a href='../Y/20903.html' title='Multiple used in 7 places.'>niter</a> = 17;
+<a id='L167' name='L167'></a> 167 
+<a id='L168' name='L168'></a> 168     <strong class='reserved'>while</strong> (<a href='../Y/20903.html' title='Multiple used in 7 places.'>niter</a>-- != 0)
+<a id='L169' name='L169'></a> 169       <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("%.17e\n", <a href='../D/29259.html' title='Multiple defined in 3 places.'>d</a> / 2);
+<a id='L170' name='L170'></a> 170     <a href='../D/30459.html' title='Multiple defined in 5 places.'>fflush</a> (<a href='../D/37041.html' title='Multiple defined in 3 places.'>stdout</a>);
+<a id='L171' name='L171'></a> 171   <em class='brace'>}</em>
+<a id='L172' name='L172'></a> 172 
+<a id='L173' name='L173'></a> 173   <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("%15.5e\n", 4.9406564584124654e-324);
+<a id='L174' name='L174'></a> 174 
+<a id='L175' name='L175'></a> 175 <em class='sharp'>#define</em> <a href='../R/2553.html' title='Multiple referred from 12 places.'>FORMAT</a> "|%12.4f|%12.4e|%12.4g|%12.4Lf|%12.4Lg|\n"
+<a id='L176' name='L176'></a> 176   <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> (<a href='../D/4355.html' title='Multiple defined in 2 places.'>FORMAT</a>, 0.0, 0.0, 0.0,
+<a id='L177' name='L177'></a> 177       (<strong class='reserved'>long</strong> <strong class='reserved'>double</strong>) 0.0, (<strong class='reserved'>long</strong> <strong class='reserved'>double</strong>) 0.0);
+<a id='L178' name='L178'></a> 178   <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> (<a href='../D/4355.html' title='Multiple defined in 2 places.'>FORMAT</a>, 1.0, 1.0, 1.0,
+<a id='L179' name='L179'></a> 179       (<strong class='reserved'>long</strong> <strong class='reserved'>double</strong>) 1.0, (<strong class='reserved'>long</strong> <strong class='reserved'>double</strong>) 1.0);
+<a id='L180' name='L180'></a> 180   <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> (<a href='../D/4355.html' title='Multiple defined in 2 places.'>FORMAT</a>, -1.0, -1.0, -1.0,
+<a id='L181' name='L181'></a> 181       (<strong class='reserved'>long</strong> <strong class='reserved'>double</strong>) -1.0, (<strong class='reserved'>long</strong> <strong class='reserved'>double</strong>) -1.0);
+<a id='L182' name='L182'></a> 182   <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> (<a href='../D/4355.html' title='Multiple defined in 2 places.'>FORMAT</a>, 100.0, 100.0, 100.0,
+<a id='L183' name='L183'></a> 183       (<strong class='reserved'>long</strong> <strong class='reserved'>double</strong>) 100.0, (<strong class='reserved'>long</strong> <strong class='reserved'>double</strong>) 100.0);
+<a id='L184' name='L184'></a> 184   <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> (<a href='../D/4355.html' title='Multiple defined in 2 places.'>FORMAT</a>, 1000.0, 1000.0, 1000.0,
+<a id='L185' name='L185'></a> 185       (<strong class='reserved'>long</strong> <strong class='reserved'>double</strong>) 1000.0, (<strong class='reserved'>long</strong> <strong class='reserved'>double</strong>) 1000.0);
+<a id='L186' name='L186'></a> 186   <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> (<a href='../D/4355.html' title='Multiple defined in 2 places.'>FORMAT</a>, 10000.0, 10000.0, 10000.0,
+<a id='L187' name='L187'></a> 187       (<strong class='reserved'>long</strong> <strong class='reserved'>double</strong>) 10000.0, (<strong class='reserved'>long</strong> <strong class='reserved'>double</strong>) 10000.0);
+<a id='L188' name='L188'></a> 188   <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> (<a href='../D/4355.html' title='Multiple defined in 2 places.'>FORMAT</a>, 12345.0, 12345.0, 12345.0,
+<a id='L189' name='L189'></a> 189       (<strong class='reserved'>long</strong> <strong class='reserved'>double</strong>) 12345.0, (<strong class='reserved'>long</strong> <strong class='reserved'>double</strong>) 12345.0);
+<a id='L190' name='L190'></a> 190   <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> (<a href='../D/4355.html' title='Multiple defined in 2 places.'>FORMAT</a>, 100000.0, 100000.0, 100000.0,
+<a id='L191' name='L191'></a> 191       (<strong class='reserved'>long</strong> <strong class='reserved'>double</strong>) 100000.0, (<strong class='reserved'>long</strong> <strong class='reserved'>double</strong>) 100000.0);
+<a id='L192' name='L192'></a> 192   <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> (<a href='../D/4355.html' title='Multiple defined in 2 places.'>FORMAT</a>, 123456.0, 123456.0, 123456.0,
+<a id='L193' name='L193'></a> 193       (<strong class='reserved'>long</strong> <strong class='reserved'>double</strong>) 123456.0, (<strong class='reserved'>long</strong> <strong class='reserved'>double</strong>) 123456.0);
+<a id='L194' name='L194'></a> 194 <em class='sharp'>#undef</em>  <a href='../R/2553.html' title='Multiple referred from 12 places.'>FORMAT</a>
+<a id='L195' name='L195'></a> 195 
+<a id='L196' name='L196'></a> 196   <em class='brace'>{</em>
+<a id='L197' name='L197'></a> 197     <strong class='reserved'>char</strong> <a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>[20];
+<a id='L198' name='L198'></a> 198     <strong class='reserved'>char</strong> <a href='../Y/11040.html' title='Multiple used in 265 places.'>buf2</a>[512];
+<a id='L199' name='L199'></a> 199     <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("snprintf (\"%%30s\", \"foo\") == %d, \"%.*s\"\n",
+<a id='L200' name='L200'></a> 200         <a href='../D/36842.html' title='Multiple defined in 3 places.'>snprintf</a> (<a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>, <strong class='reserved'>sizeof</strong> (<a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>), "%30s", "foo"), (<strong class='reserved'>int</strong>) <strong class='reserved'>sizeof</strong> (<a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>),
+<a id='L201' name='L201'></a> 201         <a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>);
+<a id='L202' name='L202'></a> 202     <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("snprintf (\"%%.999999u\", 10) == %d\n",
+<a id='L203' name='L203'></a> 203         <a href='../D/36842.html' title='Multiple defined in 3 places.'>snprintf</a> (<a href='../Y/11040.html' title='Multiple used in 265 places.'>buf2</a>, <strong class='reserved'>sizeof</strong> (<a href='../Y/11040.html' title='Multiple used in 265 places.'>buf2</a>), "%.999999u", 10));
+<a id='L204' name='L204'></a> 204   <em class='brace'>}</em>
+<a id='L205' name='L205'></a> 205 
+<a id='L206' name='L206'></a> 206   <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a>("%.8f\n", <a href='../Y/259.html' title='Multiple used in 45 places.'>DBL_MAX</a>);
+<a id='L207' name='L207'></a> 207   <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a>("%.8f\n", -<a href='../Y/259.html' title='Multiple used in 45 places.'>DBL_MAX</a>);
+<a id='L208' name='L208'></a> 208   <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("%e should be 1.234568e+06\n", 1234567.8);
+<a id='L209' name='L209'></a> 209   <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("%f should be 1234567.800000\n", 1234567.8);
+<a id='L210' name='L210'></a> 210   <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("%g should be 1.23457e+06\n", 1234567.8);
+<a id='L211' name='L211'></a> 211   <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("%g should be 123.456\n", 123.456);
+<a id='L212' name='L212'></a> 212   <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("%g should be 1e+06\n", 1000000.0);
+<a id='L213' name='L213'></a> 213   <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("%g should be 10\n", 10.0);
+<a id='L214' name='L214'></a> 214   <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("%g should be 0.02\n", 0.02);
+<a id='L215' name='L215'></a> 215 
+<a id='L216' name='L216'></a> 216 <em class='sharp'>#if</em> 0
+<a id='L217' name='L217'></a> 217   <em class='comment'>/* This test rather checks the way the compiler handles constant</em>
+<a id='L218' name='L218'></a> 218 <em class='comment'>     folding.  gcc behavior wrt to this changed in 3.2 so it is not a</em>
+<a id='L219' name='L219'></a> 219 <em class='comment'>     portable test.  */</em>
+<a id='L220' name='L220'></a> 220   <em class='brace'>{</em>
+<a id='L221' name='L221'></a> 221     <strong class='reserved'>double</strong> <a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a>=1.0;
+<a id='L222' name='L222'></a> 222     <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a>("%.17f\n",(1.0/<a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a>/10.0+1.0)*<a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a>-<a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a>);
+<a id='L223' name='L223'></a> 223   <em class='brace'>}</em>
+<a id='L224' name='L224'></a> 224 <em class='sharp'>#endif</em>
+<a id='L225' name='L225'></a> 225 
+<a id='L226' name='L226'></a> 226   <em class='brace'>{</em>
+<a id='L227' name='L227'></a> 227     <strong class='reserved'>char</strong> <a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>[200];
+<a id='L228' name='L228'></a> 228 
+<a id='L229' name='L229'></a> 229     <a href='../D/36942.html' title='Multiple defined in 2 places.'>sprintf</a>(<a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>,"%*s%*s%*s",-1,"one",-20,"two",-30,"three");
+<a id='L230' name='L230'></a> 230 
+<a id='L231' name='L231'></a> 231     <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a> |= <a href='../D/37067.html' title='Multiple defined in 17 places.'>strcmp</a> (<a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>,
+<a id='L232' name='L232'></a> 232               "onetwo                 three                         ");
+<a id='L233' name='L233'></a> 233 
+<a id='L234' name='L234'></a> 234     <a href='../Y/23144.html' title='Multiple used in 3983 places.'>puts</a> (<a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a> != 0 ? "Test failed!" : "Test ok.");
+<a id='L235' name='L235'></a> 235   <em class='brace'>}</em>
+<a id='L236' name='L236'></a> 236 
+<a id='L237' name='L237'></a> 237   <em class='brace'>{</em>
+<a id='L238' name='L238'></a> 238     <strong class='reserved'>char</strong> <a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>[200];
+<a id='L239' name='L239'></a> 239 
+<a id='L240' name='L240'></a> 240     <a href='../D/36942.html' title='Multiple defined in 2 places.'>sprintf</a> (<a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>, "%07Lo", 040000000000ll);
+<a id='L241' name='L241'></a> 241     <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("sprintf (buf, \"%%07Lo\", 040000000000ll) = %s", <a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>);
+<a id='L242' name='L242'></a> 242 
+<a id='L243' name='L243'></a> 243     <strong class='reserved'>if</strong> (<a href='../D/37067.html' title='Multiple defined in 17 places.'>strcmp</a> (<a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>, "40000000000") != 0)
+<a id='L244' name='L244'></a> 244       <em class='brace'>{</em>
+<a id='L245' name='L245'></a> 245     <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a> = 1;
+<a id='L246' name='L246'></a> 246     <a href='../S/17955.html#L201' title='Defined at 201 in include/stdio.h.'>fputs</a> ("\tFAILED", <a href='../D/37041.html' title='Multiple defined in 3 places.'>stdout</a>);
+<a id='L247' name='L247'></a> 247       <em class='brace'>}</em>
+<a id='L248' name='L248'></a> 248     <a href='../Y/23144.html' title='Multiple used in 3983 places.'>puts</a> ("");
+<a id='L249' name='L249'></a> 249   <em class='brace'>}</em>
+<a id='L250' name='L250'></a> 250 
+<a id='L251' name='L251'></a> 251   <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("printf (\"%%hhu\", %u) = %hhu\n", <a href='../S/18175.html#L61' title='Defined at 61 in include/limits.h.'>UCHAR_MAX</a> + 2, <a href='../S/18175.html#L61' title='Defined at 61 in include/limits.h.'>UCHAR_MAX</a> + 2);
+<a id='L252' name='L252'></a> 252   <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("printf (\"%%hu\", %u) = %hu\n", <a href='../S/18175.html#L77' title='Defined at 77 in include/limits.h.'>USHRT_MAX</a> + 2, <a href='../S/18175.html#L77' title='Defined at 77 in include/limits.h.'>USHRT_MAX</a> + 2);
+<a id='L253' name='L253'></a> 253   <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("printf (\"%%hhi\", %i) = %hhi\n", <a href='../S/18175.html#L61' title='Defined at 61 in include/limits.h.'>UCHAR_MAX</a> + 2, <a href='../S/18175.html#L61' title='Defined at 61 in include/limits.h.'>UCHAR_MAX</a> + 2);
+<a id='L254' name='L254'></a> 254   <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("printf (\"%%hi\", %i) = %hi\n", <a href='../S/18175.html#L77' title='Defined at 77 in include/limits.h.'>USHRT_MAX</a> + 2, <a href='../S/18175.html#L77' title='Defined at 77 in include/limits.h.'>USHRT_MAX</a> + 2);
+<a id='L255' name='L255'></a> 255 
+<a id='L256' name='L256'></a> 256   <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("printf (\"%%1$hhu\", %2$u) = %1$hhu\n",
+<a id='L257' name='L257'></a> 257       <a href='../S/18175.html#L61' title='Defined at 61 in include/limits.h.'>UCHAR_MAX</a> + 2, <a href='../S/18175.html#L61' title='Defined at 61 in include/limits.h.'>UCHAR_MAX</a> + 2);
+<a id='L258' name='L258'></a> 258   <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("printf (\"%%1$hu\", %2$u) = %1$hu\n", <a href='../S/18175.html#L77' title='Defined at 77 in include/limits.h.'>USHRT_MAX</a> + 2, <a href='../S/18175.html#L77' title='Defined at 77 in include/limits.h.'>USHRT_MAX</a> + 2);
+<a id='L259' name='L259'></a> 259   <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("printf (\"%%1$hhi\", %2$i) = %1$hhi\n",
+<a id='L260' name='L260'></a> 260       <a href='../S/18175.html#L61' title='Defined at 61 in include/limits.h.'>UCHAR_MAX</a> + 2, <a href='../S/18175.html#L61' title='Defined at 61 in include/limits.h.'>UCHAR_MAX</a> + 2);
+<a id='L261' name='L261'></a> 261   <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("printf (\"%%1$hi\", %2$i) = %1$hi\n", <a href='../S/18175.html#L77' title='Defined at 77 in include/limits.h.'>USHRT_MAX</a> + 2, <a href='../S/18175.html#L77' title='Defined at 77 in include/limits.h.'>USHRT_MAX</a> + 2);
+<a id='L262' name='L262'></a> 262 
+<a id='L263' name='L263'></a> 263   <a href='../Y/23144.html' title='Multiple used in 3983 places.'>puts</a> ("--- Should be no further output. ---");
+<a id='L264' name='L264'></a> 264   <a href='../S/6185.html#L291' title='Defined at 291 in stdio-common/tst-printf.c.'>rfg1</a> ();
+<a id='L265' name='L265'></a> 265   <a href='../S/6185.html#L322' title='Defined at 322 in stdio-common/tst-printf.c.'>rfg2</a> ();
+<a id='L266' name='L266'></a> 266   <a href='../S/6185.html#L370' title='Defined at 370 in stdio-common/tst-printf.c.'>rfg3</a> ();
+<a id='L267' name='L267'></a> 267 
+<a id='L268' name='L268'></a> 268   <em class='brace'>{</em>
+<a id='L269' name='L269'></a> 269     <strong class='reserved'>char</strong> <a href='../Y/11126.html' title='Multiple used in 357 places.'>bytes</a>[7];
+<a id='L270' name='L270'></a> 270     <strong class='reserved'>char</strong> <a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>[20];
+<a id='L271' name='L271'></a> 271 
+<a id='L272' name='L272'></a> 272     <a href='../D/33462.html' title='Multiple defined in 30 places.'>memset</a> (<a href='../Y/11126.html' title='Multiple used in 357 places.'>bytes</a>, '\xff', <strong class='reserved'>sizeof</strong> <a href='../Y/11126.html' title='Multiple used in 357 places.'>bytes</a>);
+<a id='L273' name='L273'></a> 273     <a href='../D/36942.html' title='Multiple defined in 2 places.'>sprintf</a> (<a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>, "foo%hhn\n", &amp;<a href='../Y/11126.html' title='Multiple used in 357 places.'>bytes</a>[3]);
+<a id='L274' name='L274'></a> 274     <strong class='reserved'>if</strong> (<a href='../Y/11126.html' title='Multiple used in 357 places.'>bytes</a>[0] != '\xff' || <a href='../Y/11126.html' title='Multiple used in 357 places.'>bytes</a>[1] != '\xff' || <a href='../Y/11126.html' title='Multiple used in 357 places.'>bytes</a>[2] != '\xff'
+<a id='L275' name='L275'></a> 275     || <a href='../Y/11126.html' title='Multiple used in 357 places.'>bytes</a>[4] != '\xff' || <a href='../Y/11126.html' title='Multiple used in 357 places.'>bytes</a>[5] != '\xff' || <a href='../Y/11126.html' title='Multiple used in 357 places.'>bytes</a>[6] != '\xff')
+<a id='L276' name='L276'></a> 276       <em class='brace'>{</em>
+<a id='L277' name='L277'></a> 277     <a href='../Y/23144.html' title='Multiple used in 3983 places.'>puts</a> ("%hhn overwrite more bytes");
+<a id='L278' name='L278'></a> 278     <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a> = 1;
+<a id='L279' name='L279'></a> 279       <em class='brace'>}</em>
+<a id='L280' name='L280'></a> 280     <strong class='reserved'>if</strong> (<a href='../Y/11126.html' title='Multiple used in 357 places.'>bytes</a>[3] != 3)
+<a id='L281' name='L281'></a> 281       <em class='brace'>{</em>
+<a id='L282' name='L282'></a> 282     <a href='../Y/23144.html' title='Multiple used in 3983 places.'>puts</a> ("%hhn wrote incorrect value");
+<a id='L283' name='L283'></a> 283     <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a> = 1;
+<a id='L284' name='L284'></a> 284       <em class='brace'>}</em>
+<a id='L285' name='L285'></a> 285   <em class='brace'>}</em>
+<a id='L286' name='L286'></a> 286 
+<a id='L287' name='L287'></a> 287   <strong class='reserved'>return</strong> <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a> != 0;
+<a id='L288' name='L288'></a> 288 <em class='brace'>}</em>
+<a id='L289' name='L289'></a> 289 
+<a id='L290' name='L290'></a> 290 <strong class='reserved'>static</strong> <strong class='reserved'>void</strong>
+<a id='L291' name='L291'></a> 291 <a href='../R/23875.html' title='Multiple referred from 2 places.'>rfg1</a> (<strong class='reserved'>void</strong>)
+<a id='L292' name='L292'></a> 292 <em class='brace'>{</em>
+<a id='L293' name='L293'></a> 293   <strong class='reserved'>char</strong> <a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>[100];
+<a id='L294' name='L294'></a> 294 
+<a id='L295' name='L295'></a> 295   <a href='../D/36942.html' title='Multiple defined in 2 places.'>sprintf</a> (<a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>, "%5.s", "xyz");
+<a id='L296' name='L296'></a> 296   <strong class='reserved'>if</strong> (<a href='../D/37067.html' title='Multiple defined in 17 places.'>strcmp</a> (<a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>, "     ") != 0)
+<a id='L297' name='L297'></a> 297     <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("got: '%s', expected: '%s'\n", <a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>, "     ");
+<a id='L298' name='L298'></a> 298   <a href='../D/36942.html' title='Multiple defined in 2 places.'>sprintf</a> (<a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>, "%5.f", 33.3);
+<a id='L299' name='L299'></a> 299   <strong class='reserved'>if</strong> (<a href='../D/37067.html' title='Multiple defined in 17 places.'>strcmp</a> (<a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>, "   33") != 0)
+<a id='L300' name='L300'></a> 300     <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("got: '%s', expected: '%s'\n", <a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>, "   33");
+<a id='L301' name='L301'></a> 301   <a href='../D/36942.html' title='Multiple defined in 2 places.'>sprintf</a> (<a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>, "%5.Lf", (<strong class='reserved'>long</strong> <strong class='reserved'>double</strong>) 33.3);
+<a id='L302' name='L302'></a> 302   <strong class='reserved'>if</strong> (<a href='../D/37067.html' title='Multiple defined in 17 places.'>strcmp</a> (<a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>, "   33") != 0)
+<a id='L303' name='L303'></a> 303     <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("got: '%s', expected: '%s'\n", <a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>, "   33");
+<a id='L304' name='L304'></a> 304   <a href='../D/36942.html' title='Multiple defined in 2 places.'>sprintf</a> (<a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>, "%8.e", 33.3e7);
+<a id='L305' name='L305'></a> 305   <strong class='reserved'>if</strong> (<a href='../D/37067.html' title='Multiple defined in 17 places.'>strcmp</a> (<a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>, "   3e+08") != 0)
+<a id='L306' name='L306'></a> 306     <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("got: '%s', expected: '%s'\n", <a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>, "   3e+08");
+<a id='L307' name='L307'></a> 307   <a href='../D/36942.html' title='Multiple defined in 2 places.'>sprintf</a> (<a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>, "%8.E", 33.3e7);
+<a id='L308' name='L308'></a> 308   <strong class='reserved'>if</strong> (<a href='../D/37067.html' title='Multiple defined in 17 places.'>strcmp</a> (<a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>, "   3E+08") != 0)
+<a id='L309' name='L309'></a> 309     <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("got: '%s', expected: '%s'\n", <a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>, "   3E+08");
+<a id='L310' name='L310'></a> 310   <a href='../D/36942.html' title='Multiple defined in 2 places.'>sprintf</a> (<a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>, "%.g", 33.3);
+<a id='L311' name='L311'></a> 311   <strong class='reserved'>if</strong> (<a href='../D/37067.html' title='Multiple defined in 17 places.'>strcmp</a> (<a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>, "3e+01") != 0)
+<a id='L312' name='L312'></a> 312     <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("got: '%s', expected: '%s'\n", <a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>, "3e+01");
+<a id='L313' name='L313'></a> 313   <a href='../D/36942.html' title='Multiple defined in 2 places.'>sprintf</a> (<a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>, "%.Lg", (<strong class='reserved'>long</strong> <strong class='reserved'>double</strong>) 33.3);
+<a id='L314' name='L314'></a> 314   <strong class='reserved'>if</strong> (<a href='../D/37067.html' title='Multiple defined in 17 places.'>strcmp</a> (<a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>, "3e+01") != 0)
+<a id='L315' name='L315'></a> 315     <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("got: '%s', expected: '%s'\n", <a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>, "3e+01");
+<a id='L316' name='L316'></a> 316   <a href='../D/36942.html' title='Multiple defined in 2 places.'>sprintf</a> (<a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>, "%.G", 33.3);
+<a id='L317' name='L317'></a> 317   <strong class='reserved'>if</strong> (<a href='../D/37067.html' title='Multiple defined in 17 places.'>strcmp</a> (<a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>, "3E+01") != 0)
+<a id='L318' name='L318'></a> 318     <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("got: '%s', expected: '%s'\n", <a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>, "3E+01");
+<a id='L319' name='L319'></a> 319 <em class='brace'>}</em>
+<a id='L320' name='L320'></a> 320 
+<a id='L321' name='L321'></a> 321 <strong class='reserved'>static</strong> <strong class='reserved'>void</strong>
+<a id='L322' name='L322'></a> 322 <a href='../R/23876.html' title='Multiple referred from 2 places.'>rfg2</a> (<strong class='reserved'>void</strong>)
+<a id='L323' name='L323'></a> 323 <em class='brace'>{</em>
+<a id='L324' name='L324'></a> 324   <strong class='reserved'>int</strong> <a href='../Y/22682.html' title='Multiple used in 100 places.'>prec</a>;
+<a id='L325' name='L325'></a> 325   <strong class='reserved'>char</strong> <a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>[100];
+<a id='L326' name='L326'></a> 326 
+<a id='L327' name='L327'></a> 327   <a href='../Y/22682.html' title='Multiple used in 100 places.'>prec</a> = 0;
+<a id='L328' name='L328'></a> 328   <a href='../D/36942.html' title='Multiple defined in 2 places.'>sprintf</a> (<a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>, "%.*g", <a href='../Y/22682.html' title='Multiple used in 100 places.'>prec</a>, 3.3);
+<a id='L329' name='L329'></a> 329   <strong class='reserved'>if</strong> (<a href='../D/37067.html' title='Multiple defined in 17 places.'>strcmp</a> (<a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>, "3") != 0)
+<a id='L330' name='L330'></a> 330     <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("got: '%s', expected: '%s'\n", <a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>, "3");
+<a id='L331' name='L331'></a> 331   <a href='../Y/22682.html' title='Multiple used in 100 places.'>prec</a> = 0;
+<a id='L332' name='L332'></a> 332   <a href='../D/36942.html' title='Multiple defined in 2 places.'>sprintf</a> (<a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>, "%.*G", <a href='../Y/22682.html' title='Multiple used in 100 places.'>prec</a>, 3.3);
+<a id='L333' name='L333'></a> 333   <strong class='reserved'>if</strong> (<a href='../D/37067.html' title='Multiple defined in 17 places.'>strcmp</a> (<a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>, "3") != 0)
+<a id='L334' name='L334'></a> 334     <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("got: '%s', expected: '%s'\n", <a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>, "3");
+<a id='L335' name='L335'></a> 335   <a href='../Y/22682.html' title='Multiple used in 100 places.'>prec</a> = 0;
+<a id='L336' name='L336'></a> 336   <a href='../D/36942.html' title='Multiple defined in 2 places.'>sprintf</a> (<a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>, "%7.*G", <a href='../Y/22682.html' title='Multiple used in 100 places.'>prec</a>, 3.33);
+<a id='L337' name='L337'></a> 337   <strong class='reserved'>if</strong> (<a href='../D/37067.html' title='Multiple defined in 17 places.'>strcmp</a> (<a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>, "      3") != 0)
+<a id='L338' name='L338'></a> 338     <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("got: '%s', expected: '%s'\n", <a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>, "      3");
+<a id='L339' name='L339'></a> 339   <a href='../Y/22682.html' title='Multiple used in 100 places.'>prec</a> = 0;
+<a id='L340' name='L340'></a> 340   <a href='../D/36942.html' title='Multiple defined in 2 places.'>sprintf</a> (<a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>, "%.*Lg", <a href='../Y/22682.html' title='Multiple used in 100 places.'>prec</a>, (<strong class='reserved'>long</strong> <strong class='reserved'>double</strong>) 3.3);
+<a id='L341' name='L341'></a> 341   <strong class='reserved'>if</strong> (<a href='../D/37067.html' title='Multiple defined in 17 places.'>strcmp</a> (<a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>, "3") != 0)
+<a id='L342' name='L342'></a> 342     <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("got: '%s', expected: '%s'\n", <a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>, "3");
+<a id='L343' name='L343'></a> 343   <a href='../Y/22682.html' title='Multiple used in 100 places.'>prec</a> = 0;
+<a id='L344' name='L344'></a> 344   <a href='../D/36942.html' title='Multiple defined in 2 places.'>sprintf</a> (<a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>, "%.*LG", <a href='../Y/22682.html' title='Multiple used in 100 places.'>prec</a>, (<strong class='reserved'>long</strong> <strong class='reserved'>double</strong>) 3.3);
+<a id='L345' name='L345'></a> 345   <strong class='reserved'>if</strong> (<a href='../D/37067.html' title='Multiple defined in 17 places.'>strcmp</a> (<a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>, "3") != 0)
+<a id='L346' name='L346'></a> 346     <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("got: '%s', expected: '%s'\n", <a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>, "3");
+<a id='L347' name='L347'></a> 347   <a href='../Y/22682.html' title='Multiple used in 100 places.'>prec</a> = 0;
+<a id='L348' name='L348'></a> 348   <a href='../D/36942.html' title='Multiple defined in 2 places.'>sprintf</a> (<a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>, "%7.*LG", <a href='../Y/22682.html' title='Multiple used in 100 places.'>prec</a>, (<strong class='reserved'>long</strong> <strong class='reserved'>double</strong>) 3.33);
+<a id='L349' name='L349'></a> 349   <strong class='reserved'>if</strong> (<a href='../D/37067.html' title='Multiple defined in 17 places.'>strcmp</a> (<a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>, "      3") != 0)
+<a id='L350' name='L350'></a> 350     <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("got: '%s', expected: '%s'\n", <a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>, "      3");
+<a id='L351' name='L351'></a> 351   <a href='../Y/22682.html' title='Multiple used in 100 places.'>prec</a> = 3;
+<a id='L352' name='L352'></a> 352   <a href='../D/36942.html' title='Multiple defined in 2 places.'>sprintf</a> (<a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>, "%04.*o", <a href='../Y/22682.html' title='Multiple used in 100 places.'>prec</a>, 33);
+<a id='L353' name='L353'></a> 353   <strong class='reserved'>if</strong> (<a href='../D/37067.html' title='Multiple defined in 17 places.'>strcmp</a> (<a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>, " 041") != 0)
+<a id='L354' name='L354'></a> 354     <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("got: '%s', expected: '%s'\n", <a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>, " 041");
+<a id='L355' name='L355'></a> 355   <a href='../Y/22682.html' title='Multiple used in 100 places.'>prec</a> = 7;
+<a id='L356' name='L356'></a> 356   <a href='../D/36942.html' title='Multiple defined in 2 places.'>sprintf</a> (<a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>, "%09.*u", <a href='../Y/22682.html' title='Multiple used in 100 places.'>prec</a>, 33);
+<a id='L357' name='L357'></a> 357   <strong class='reserved'>if</strong> (<a href='../D/37067.html' title='Multiple defined in 17 places.'>strcmp</a> (<a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>, "  0000033") != 0)
+<a id='L358' name='L358'></a> 358     <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("got: '%s', expected: '%s'\n", <a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>, "  0000033");
+<a id='L359' name='L359'></a> 359   <a href='../Y/22682.html' title='Multiple used in 100 places.'>prec</a> = 3;
+<a id='L360' name='L360'></a> 360   <a href='../D/36942.html' title='Multiple defined in 2 places.'>sprintf</a> (<a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>, "%04.*x", <a href='../Y/22682.html' title='Multiple used in 100 places.'>prec</a>, 33);
+<a id='L361' name='L361'></a> 361   <strong class='reserved'>if</strong> (<a href='../D/37067.html' title='Multiple defined in 17 places.'>strcmp</a> (<a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>, " 021") != 0)
+<a id='L362' name='L362'></a> 362     <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("got: '%s', expected: '%s'\n", <a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>, " 021");
+<a id='L363' name='L363'></a> 363   <a href='../Y/22682.html' title='Multiple used in 100 places.'>prec</a> = 3;
+<a id='L364' name='L364'></a> 364   <a href='../D/36942.html' title='Multiple defined in 2 places.'>sprintf</a> (<a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>, "%04.*X", <a href='../Y/22682.html' title='Multiple used in 100 places.'>prec</a>, 33);
+<a id='L365' name='L365'></a> 365   <strong class='reserved'>if</strong> (<a href='../D/37067.html' title='Multiple defined in 17 places.'>strcmp</a> (<a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>, " 021") != 0)
+<a id='L366' name='L366'></a> 366     <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("got: '%s', expected: '%s'\n", <a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>, " 021");
+<a id='L367' name='L367'></a> 367 <em class='brace'>}</em>
+<a id='L368' name='L368'></a> 368 
+<a id='L369' name='L369'></a> 369 <strong class='reserved'>static</strong> <strong class='reserved'>void</strong>
+<a id='L370' name='L370'></a> 370 <a href='../R/23877.html' title='Multiple referred from 2 places.'>rfg3</a> (<strong class='reserved'>void</strong>)
+<a id='L371' name='L371'></a> 371 <em class='brace'>{</em>
+<a id='L372' name='L372'></a> 372   <strong class='reserved'>char</strong> <a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>[100];
+<a id='L373' name='L373'></a> 373   <strong class='reserved'>double</strong> <a href='../Y/15314.html' title='Multiple used in 283 places.'>g</a> = 5.0000001;
+<a id='L374' name='L374'></a> 374   <strong class='reserved'>unsigned</strong> <strong class='reserved'>long</strong> <a href='../D/32486.html' title='Multiple defined in 3 places.'>l</a> = 1234567890;
+<a id='L375' name='L375'></a> 375   <strong class='reserved'>double</strong> <a href='../D/29259.html' title='Multiple defined in 3 places.'>d</a> = 321.7654321;
+<a id='L376' name='L376'></a> 376   <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> <a href='../D/36247.html' title='Multiple defined in 13 places.'>s</a>[] = "test-string";
+<a id='L377' name='L377'></a> 377   <strong class='reserved'>int</strong> <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> = 12345;
+<a id='L378' name='L378'></a> 378   <strong class='reserved'>int</strong> <a href='../D/31427.html' title='Multiple defined in 6 places.'>h</a> = 1234;
+<a id='L379' name='L379'></a> 379 
+<a id='L380' name='L380'></a> 380   <a href='../D/36942.html' title='Multiple defined in 2 places.'>sprintf</a> (<a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>,
+<a id='L381' name='L381'></a> 381        "%1$*5$d %2$*6$hi %3$*7$lo %4$*8$f %9$*12$e %10$*13$g %11$*14$s",
+<a id='L382' name='L382'></a> 382        <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>, <a href='../D/31427.html' title='Multiple defined in 6 places.'>h</a>, <a href='../D/32486.html' title='Multiple defined in 3 places.'>l</a>, <a href='../D/29259.html' title='Multiple defined in 3 places.'>d</a>, 8, 5, 14, 14, <a href='../D/29259.html' title='Multiple defined in 3 places.'>d</a>, <a href='../Y/15314.html' title='Multiple used in 283 places.'>g</a>, <a href='../D/36247.html' title='Multiple defined in 13 places.'>s</a>, 14, 3, 14);
+<a id='L383' name='L383'></a> 383   <strong class='reserved'>if</strong> (<a href='../D/37067.html' title='Multiple defined in 17 places.'>strcmp</a> (<a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>,
+<a id='L384' name='L384'></a> 384           "   12345  1234    11145401322     321.765432   3.217654e+02   5    test-string") != 0)
+<a id='L385' name='L385'></a> 385     <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("got: '%s', expected: '%s'\n", <a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>,
+<a id='L386' name='L386'></a> 386         "   12345  1234    11145401322     321.765432   3.217654e+02   5    test-string");
+<a id='L387' name='L387'></a> 387 <em class='brace'>}</em>
+<a id='L388' name='L388'></a> 388 
+<a id='L389' name='L389'></a> 389 <em class='sharp'>#define</em> <a href='../R/8619.html' title='Multiple referred from 7 places.'>TEST_FUNCTION</a> <a href='../D/29701.html' title='Multiple defined in 1421 places.'>do_test</a> ()
+<a id='L390' name='L390'></a> 390 <em class='sharp'>#include</em> "../test-skeleton.c"
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L47'>[^]</a><a href='#L370'>[v]</a><a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

@@ -1,0 +1,109 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>nptl/tst-sem13.c</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18931.html'>nptl</a>/tst-sem13.c</h2>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L16'>[^]</a><a href='#L68'>[v]</a>[top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<h2 class='header'>DEFINITIONS</h2>
+This source file includes following definitions.
+<ol>
+<li><a href='#L16' title='Defined at 16.'>do_test_wait</a></li>
+<li><a href='#L53' title='Defined at 53.'>test_sem_timedwait</a></li>
+<li><a href='#L58' title='Defined at 58.'>test_sem_clockwait_monotonic</a></li>
+<li><a href='#L63' title='Defined at 63.'>test_sem_clockwait_realtime</a></li>
+<li><a href='#L68' title='Defined at 68.'>do_test</a></li>
+</ol>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='sharp'>#include</em> &lt;<a href='../I/116.html'>errno.h</a>&gt;
+<a id='L2' name='L2'></a>   2 <em class='sharp'>#include</em> &lt;<a href='../I/5945.html'>semaphore.h</a>&gt;
+<a id='L3' name='L3'></a>   3 <em class='sharp'>#include</em> &lt;<a href='../I/1776.html'>stdio.h</a>&gt;
+<a id='L4' name='L4'></a>   4 <em class='sharp'>#include</em> &lt;<a href='../I/1819.html'>unistd.h</a>&gt;
+<a id='L5' name='L5'></a>   5 <em class='sharp'>#include</em> &lt;<a href='../I/1919.html'>pthread.h</a>&gt;
+<a id='L6' name='L6'></a>   6 <em class='sharp'>#include</em> &lt;<a href='17831.html'>internaltypes.h</a>&gt;
+<a id='L7' name='L7'></a>   7 <em class='sharp'>#include</em> &lt;<a href='5739.html'>support/check.h</a>&gt;
+<a id='L8' name='L8'></a>   8 
+<a id='L9' name='L9'></a>   9 <em class='comment'>/* A bogus clock value that tells run_test to use sem_timedwait rather than</em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   sem_clockwait.  */</em>
+<a id='L11' name='L11'></a>  11 <em class='sharp'>#define</em> <a href='../R/887.html' title='Multiple referred from 3 places.'>CLOCK_USE_TIMEDWAIT</a> (-1)
+<a id='L12' name='L12'></a>  12 
+<a id='L13' name='L13'></a>  13 <strong class='reserved'>typedef</strong> <strong class='reserved'>int</strong> (*<a href='../Y/28827.html' title='Multiple used in 2 places.'>waitfn_t</a>)(<a href='../D/36445.html' title='Multiple defined in 5 places.'>sem_t</a> *, <strong class='reserved'>struct</strong> <a href='../D/38153.html' title='Multiple defined in 6 places.'>timespec</a> *);
+<a id='L14' name='L14'></a>  14 
+<a id='L15' name='L15'></a>  15 <strong class='reserved'>static</strong> <strong class='reserved'>void</strong>
+<a id='L16' name='L16'></a>  16 <a href='../R/18830.html' title='Multiple referred from 8 places.'>do_test_wait</a> (<a href='../Y/28827.html' title='Multiple used in 2 places.'>waitfn_t</a> <a href='../Y/28826.html' title='Multiple used in 3 places.'>waitfn</a>, <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../Y/14750.html' title='Multiple used in 30 places.'>fnname</a>)
+<a id='L17' name='L17'></a>  17 <em class='brace'>{</em>
+<a id='L18' name='L18'></a>  18   <strong class='reserved'>union</strong>
+<a id='L19' name='L19'></a>  19   <em class='brace'>{</em>
+<a id='L20' name='L20'></a>  20     <a href='../D/36445.html' title='Multiple defined in 5 places.'>sem_t</a> <a href='../D/36247.html' title='Multiple defined in 13 places.'>s</a>;
+<a id='L21' name='L21'></a>  21     <strong class='reserved'>struct</strong> <a href='../D/33930.html' title='Multiple defined in 2 places.'>new_sem</a> <a href='../Y/21179.html' title='Multiple used in 174 places.'>ns</a>;
+<a id='L22' name='L22'></a>  22   <em class='brace'>}</em> <a href='../S/9112.html#L29' title='Defined at 29 in sysdeps/ieee754/ldbl-128ibm/test-fmodrem-ldbl-128ibm.c.'>u</a>;
+<a id='L23' name='L23'></a>  23 
+<a id='L24' name='L24'></a>  24   <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("do_test_wait: %s\n", <a href='../Y/14750.html' title='Multiple used in 30 places.'>fnname</a>);
+<a id='L25' name='L25'></a>  25 
+<a id='L26' name='L26'></a>  26   <a href='../S/5739.html#L101' title='Defined at 101 in support/check.h.'>TEST_COMPARE</a> (<a href='../Y/24940.html' title='Multiple used in 34 places.'>sem_init</a> (&amp;<a href='../S/9112.html#L29' title='Defined at 29 in sysdeps/ieee754/ldbl-128ibm/test-fmodrem-ldbl-128ibm.c.'>u</a>.<a href='../D/36247.html' title='Multiple defined in 13 places.'>s</a>, 0, 0), 0);
+<a id='L27' name='L27'></a>  27 
+<a id='L28' name='L28'></a>  28   <strong class='reserved'>struct</strong> <a href='../D/38153.html' title='Multiple defined in 6 places.'>timespec</a> <a href='../Y/27832.html' title='Multiple used in 718 places.'>ts</a> = <em class='brace'>{</em> 0, 1000000001 <em class='brace'>}</em>;   <em class='comment'>/* Invalid.  */</em>
+<a id='L29' name='L29'></a>  29   <a href='../D/30023.html' title='Multiple defined in 13 places.'>errno</a> = 0;
+<a id='L30' name='L30'></a>  30   <a href='../S/5739.html#L59' title='Defined at 59 in support/check.h.'>TEST_VERIFY_EXIT</a> (<a href='../Y/28826.html' title='Multiple used in 3 places.'>waitfn</a> (&amp;<a href='../S/9112.html#L29' title='Defined at 29 in sysdeps/ieee754/ldbl-128ibm/test-fmodrem-ldbl-128ibm.c.'>u</a>.<a href='../D/36247.html' title='Multiple defined in 13 places.'>s</a>, &amp;<a href='../Y/27832.html' title='Multiple used in 718 places.'>ts</a>) &lt; 0);
+<a id='L31' name='L31'></a>  31   <a href='../S/5739.html#L101' title='Defined at 101 in support/check.h.'>TEST_COMPARE</a> (<a href='../D/30023.html' title='Multiple defined in 13 places.'>errno</a>, <a href='../D/3156.html' title='Multiple defined in 3 places.'>EINVAL</a>);
+<a id='L32' name='L32'></a>  32 
+<a id='L33' name='L33'></a>  33 <em class='sharp'>#if</em> <a href='../D/21639.html' title='Multiple defined in 25 places.'>__HAVE_64B_ATOMICS</a>
+<a id='L34' name='L34'></a>  34   <strong class='reserved'>unsigned</strong> <strong class='reserved'>int</strong> <a href='../Y/21392.html' title='Multiple used in 20 places.'>nwaiters</a> = (<a href='../S/9112.html#L29' title='Defined at 29 in sysdeps/ieee754/ldbl-128ibm/test-fmodrem-ldbl-128ibm.c.'>u</a>.<a href='../Y/21179.html' title='Multiple used in 174 places.'>ns</a>.<a href='../D/29309.html' title='Multiple defined in 3 places.'>data</a> &gt;&gt; <a href='../D/13758.html' title='Multiple defined in 2 places.'>SEM_NWAITERS_SHIFT</a>);
+<a id='L35' name='L35'></a>  35 <em class='sharp'>#else</em>
+<a id='L36' name='L36'></a>  36   <strong class='reserved'>unsigned</strong> <strong class='reserved'>int</strong> <a href='../Y/21392.html' title='Multiple used in 20 places.'>nwaiters</a> = <a href='../S/9112.html#L29' title='Defined at 29 in sysdeps/ieee754/ldbl-128ibm/test-fmodrem-ldbl-128ibm.c.'>u</a>.<a href='../Y/21179.html' title='Multiple used in 174 places.'>ns</a>.<a href='../Y/21392.html' title='Multiple used in 20 places.'>nwaiters</a>;
+<a id='L37' name='L37'></a>  37 <em class='sharp'>#endif</em>
+<a id='L38' name='L38'></a>  38   <a href='../S/5739.html#L101' title='Defined at 101 in support/check.h.'>TEST_COMPARE</a> (<a href='../Y/21392.html' title='Multiple used in 20 places.'>nwaiters</a>, 0);
+<a id='L39' name='L39'></a>  39 
+<a id='L40' name='L40'></a>  40   <a href='../Y/27832.html' title='Multiple used in 718 places.'>ts</a>.<a href='../Y/27976.html' title='Multiple used in 803 places.'>tv_sec</a> = <em class='comment'>/* Invalid.  */</em> -2;
+<a id='L41' name='L41'></a>  41   <a href='../Y/27832.html' title='Multiple used in 718 places.'>ts</a>.<a href='../Y/27975.html' title='Multiple used in 531 places.'>tv_nsec</a> = 0;
+<a id='L42' name='L42'></a>  42   <a href='../D/30023.html' title='Multiple defined in 13 places.'>errno</a> = 0;
+<a id='L43' name='L43'></a>  43   <a href='../S/5739.html#L59' title='Defined at 59 in support/check.h.'>TEST_VERIFY_EXIT</a> (<a href='../Y/28826.html' title='Multiple used in 3 places.'>waitfn</a> (&amp;<a href='../S/9112.html#L29' title='Defined at 29 in sysdeps/ieee754/ldbl-128ibm/test-fmodrem-ldbl-128ibm.c.'>u</a>.<a href='../D/36247.html' title='Multiple defined in 13 places.'>s</a>, &amp;<a href='../Y/27832.html' title='Multiple used in 718 places.'>ts</a>) &lt; 0);
+<a id='L44' name='L44'></a>  44   <a href='../S/5739.html#L101' title='Defined at 101 in support/check.h.'>TEST_COMPARE</a> (<a href='../D/30023.html' title='Multiple defined in 13 places.'>errno</a>, <a href='../D/3829.html' title='Multiple defined in 2 places.'>ETIMEDOUT</a>);
+<a id='L45' name='L45'></a>  45 <em class='sharp'>#if</em> <a href='../D/21639.html' title='Multiple defined in 25 places.'>__HAVE_64B_ATOMICS</a>
+<a id='L46' name='L46'></a>  46   <a href='../Y/21392.html' title='Multiple used in 20 places.'>nwaiters</a> = (<a href='../S/9112.html#L29' title='Defined at 29 in sysdeps/ieee754/ldbl-128ibm/test-fmodrem-ldbl-128ibm.c.'>u</a>.<a href='../Y/21179.html' title='Multiple used in 174 places.'>ns</a>.<a href='../D/29309.html' title='Multiple defined in 3 places.'>data</a> &gt;&gt; <a href='../D/13758.html' title='Multiple defined in 2 places.'>SEM_NWAITERS_SHIFT</a>);
+<a id='L47' name='L47'></a>  47 <em class='sharp'>#else</em>
+<a id='L48' name='L48'></a>  48   <a href='../Y/21392.html' title='Multiple used in 20 places.'>nwaiters</a> = <a href='../S/9112.html#L29' title='Defined at 29 in sysdeps/ieee754/ldbl-128ibm/test-fmodrem-ldbl-128ibm.c.'>u</a>.<a href='../Y/21179.html' title='Multiple used in 174 places.'>ns</a>.<a href='../Y/21392.html' title='Multiple used in 20 places.'>nwaiters</a>;
+<a id='L49' name='L49'></a>  49 <em class='sharp'>#endif</em>
+<a id='L50' name='L50'></a>  50   <a href='../S/5739.html#L101' title='Defined at 101 in support/check.h.'>TEST_COMPARE</a> (<a href='../Y/21392.html' title='Multiple used in 20 places.'>nwaiters</a>, 0);
+<a id='L51' name='L51'></a>  51 <em class='brace'>}</em>
+<a id='L52' name='L52'></a>  52 
+<a id='L53' name='L53'></a>  53 <strong class='reserved'>int</strong> <a href='../S/18390.html#L70' title='Referred from 70 in nptl/tst-sem13.c.'>test_sem_timedwait</a> (<a href='../D/36445.html' title='Multiple defined in 5 places.'>sem_t</a> *<a href='../Y/24932.html' title='Multiple used in 179 places.'>sem</a>, <strong class='reserved'>struct</strong> <a href='../D/38153.html' title='Multiple defined in 6 places.'>timespec</a> *<a href='../Y/27832.html' title='Multiple used in 718 places.'>ts</a>)
+<a id='L54' name='L54'></a>  54 <em class='brace'>{</em>
+<a id='L55' name='L55'></a>  55   <strong class='reserved'>return</strong> <a href='../S/16178.html#L74' title='Defined at 74 in sysdeps/pthread/semaphore.h.'>sem_timedwait</a> (<a href='../Y/24932.html' title='Multiple used in 179 places.'>sem</a>, <a href='../Y/27832.html' title='Multiple used in 718 places.'>ts</a>);
+<a id='L56' name='L56'></a>  56 <em class='brace'>}</em>
+<a id='L57' name='L57'></a>  57 
+<a id='L58' name='L58'></a>  58 <strong class='reserved'>int</strong> <a href='../S/18390.html#L72' title='Referred from 72 in nptl/tst-sem13.c.'>test_sem_clockwait_monotonic</a> (<a href='../D/36445.html' title='Multiple defined in 5 places.'>sem_t</a> *<a href='../Y/24932.html' title='Multiple used in 179 places.'>sem</a>, <strong class='reserved'>struct</strong> <a href='../D/38153.html' title='Multiple defined in 6 places.'>timespec</a> *<a href='../Y/27832.html' title='Multiple used in 718 places.'>ts</a>)
+<a id='L59' name='L59'></a>  59 <em class='brace'>{</em>
+<a id='L60' name='L60'></a>  60   <strong class='reserved'>return</strong> <a href='../S/16178.html#L94' title='Defined at 94 in sysdeps/pthread/semaphore.h.'>sem_clockwait</a> (<a href='../Y/24932.html' title='Multiple used in 179 places.'>sem</a>, <a href='../D/1324.html' title='Multiple defined in 2 places.'>CLOCK_MONOTONIC</a>, <a href='../Y/27832.html' title='Multiple used in 718 places.'>ts</a>);
+<a id='L61' name='L61'></a>  61 <em class='brace'>}</em>
+<a id='L62' name='L62'></a>  62 
+<a id='L63' name='L63'></a>  63 <strong class='reserved'>int</strong> <a href='../S/18390.html#L74' title='Referred from 74 in nptl/tst-sem13.c.'>test_sem_clockwait_realtime</a> (<a href='../D/36445.html' title='Multiple defined in 5 places.'>sem_t</a> *<a href='../Y/24932.html' title='Multiple used in 179 places.'>sem</a>, <strong class='reserved'>struct</strong> <a href='../D/38153.html' title='Multiple defined in 6 places.'>timespec</a> *<a href='../Y/27832.html' title='Multiple used in 718 places.'>ts</a>)
+<a id='L64' name='L64'></a>  64 <em class='brace'>{</em>
+<a id='L65' name='L65'></a>  65   <strong class='reserved'>return</strong> <a href='../S/16178.html#L94' title='Defined at 94 in sysdeps/pthread/semaphore.h.'>sem_clockwait</a> (<a href='../Y/24932.html' title='Multiple used in 179 places.'>sem</a>, <a href='../D/1328.html' title='Multiple defined in 2 places.'>CLOCK_REALTIME</a>, <a href='../Y/27832.html' title='Multiple used in 718 places.'>ts</a>);
+<a id='L66' name='L66'></a>  66 <em class='brace'>}</em>
+<a id='L67' name='L67'></a>  67 
+<a id='L68' name='L68'></a>  68 <strong class='reserved'>static</strong> <strong class='reserved'>int</strong> <a href='../R/18782.html' title='Multiple referred from 1850 places.'>do_test</a> (<strong class='reserved'>void</strong>)
+<a id='L69' name='L69'></a>  69 <em class='brace'>{</em>
+<a id='L70' name='L70'></a>  70   <a href='../D/29749.html' title='Multiple defined in 4 places.'>do_test_wait</a> (&amp;<a href='../S/18390.html#L53' title='Defined at 53 in nptl/tst-sem13.c.'>test_sem_timedwait</a>,
+<a id='L71' name='L71'></a>  71                 "sem_timedwait");
+<a id='L72' name='L72'></a>  72   <a href='../D/29749.html' title='Multiple defined in 4 places.'>do_test_wait</a> (&amp;<a href='../S/18390.html#L58' title='Defined at 58 in nptl/tst-sem13.c.'>test_sem_clockwait_monotonic</a>,
+<a id='L73' name='L73'></a>  73                 "sem_clockwait(monotonic)");
+<a id='L74' name='L74'></a>  74   <a href='../D/29749.html' title='Multiple defined in 4 places.'>do_test_wait</a> (&amp;<a href='../S/18390.html#L63' title='Defined at 63 in nptl/tst-sem13.c.'>test_sem_clockwait_realtime</a>,
+<a id='L75' name='L75'></a>  75                 "sem_clockwait(realtime)");
+<a id='L76' name='L76'></a>  76   <strong class='reserved'>return</strong> 0;
+<a id='L77' name='L77'></a>  77 <em class='brace'>}</em>
+<a id='L78' name='L78'></a>  78 
+<a id='L79' name='L79'></a>  79 <em class='sharp'>#include</em> &lt;support/test-driver.c&gt;
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L16'>[^]</a><a href='#L68'>[v]</a><a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

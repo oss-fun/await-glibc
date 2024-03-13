@@ -1,0 +1,1682 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>sysdeps/x86_64/fpu/svml_d_log_data.S</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18977.html'>sysdeps</a>/<a href='../files/19391.html'>x86_64</a>/<a href='../files/19392.html'>fpu</a>/svml_d_log_data.S</h2>
+<em class='comment'>/* [&lt;][&gt;][^][v][top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* Data for function log.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   Copyright (C) 2014-2022 Free Software Foundation, Inc.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'></em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'></em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'></em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   License along with the GNU C Library; if not, see</em>
+<a id='L17' name='L17'></a>  17 <em class='comment'>   &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L18' name='L18'></a>  18 
+<a id='L19' name='L19'></a>  19 <em class='sharp'>#include</em> "<a href='15575.html'>svml_d_log_data.h</a>"
+<a id='L20' name='L20'></a>  20 
+<a id='L21' name='L21'></a>  21     .section .rodata, "a"
+<a id='L22' name='L22'></a>  22     .align 64
+<a id='L23' name='L23'></a>  23 
+<a id='L24' name='L24'></a>  24 <em class='comment'>/* Data table for vector implementations of function log.</em>
+<a id='L25' name='L25'></a>  25 <em class='comment'>   The table may contain polynomial, reduction, lookup coefficients</em>
+<a id='L26' name='L26'></a>  26 <em class='comment'>   and other constants obtained through different methods</em>
+<a id='L27' name='L27'></a>  27 <em class='comment'>   of research and experimental work.  */</em>
+<a id='L28' name='L28'></a>  28     .globl __svml_dlog_data
+<a id='L29' name='L29'></a>  29 __svml_dlog_data:
+<a id='L30' name='L30'></a>  30 
+<a id='L31' name='L31'></a>  31 <em class='comment'>/* Lookup table in high+low parts and 9-bit index for</em>
+<a id='L32' name='L32'></a>  32 <em class='comment'>   -log(mRcp), where mRcp is mantissa of 1/x 9-bit accurate reciprocal:  */</em>
+<a id='L33' name='L33'></a>  33 .if .-__svml_dlog_data != _Log_HA_table
+<a id='L34' name='L34'></a>  34 .err
+<a id='L35' name='L35'></a>  35 .endif
+<a id='L36' name='L36'></a>  36     .quad   0xc086232bdd7a8300
+<a id='L37' name='L37'></a>  37     .quad   0xbe1ce91eef3fb100
+<a id='L38' name='L38'></a>  38     .quad   0xc086232fdc7ad828
+<a id='L39' name='L39'></a>  39     .quad   0xbe1cefcffda73b6a
+<a id='L40' name='L40'></a>  40     .quad   0xc0862333d97d2ba0
+<a id='L41' name='L41'></a>  41     .quad   0xbe1cef406748f1ff
+<a id='L42' name='L42'></a>  42     .quad   0xc0862337d48378e0
+<a id='L43' name='L43'></a>  43     .quad   0xbe1cef2a9429925a
+<a id='L44' name='L44'></a>  44     .quad   0xc086233bcd8fb878
+<a id='L45' name='L45'></a>  45     .quad   0xbe1cf138d17ebecb
+<a id='L46' name='L46'></a>  46     .quad   0xc086233fc4a3e018
+<a id='L47' name='L47'></a>  47     .quad   0xbe1ceff2dbbbb29e
+<a id='L48' name='L48'></a>  48     .quad   0xc0862343b9c1e270
+<a id='L49' name='L49'></a>  49     .quad   0xbe1cf1a42aae437b
+<a id='L50' name='L50'></a>  50     .quad   0xc0862347acebaf68
+<a id='L51' name='L51'></a>  51     .quad   0xbe1cef3b152048af
+<a id='L52' name='L52'></a>  52     .quad   0xc086234b9e2333f0
+<a id='L53' name='L53'></a>  53     .quad   0xbe1cef20e127805e
+<a id='L54' name='L54'></a>  54     .quad   0xc086234f8d6a5a30
+<a id='L55' name='L55'></a>  55     .quad   0xbe1cf00ad6052cf4
+<a id='L56' name='L56'></a>  56     .quad   0xc08623537ac30980
+<a id='L57' name='L57'></a>  57     .quad   0xbe1cefc4642ee597
+<a id='L58' name='L58'></a>  58     .quad   0xc0862357662f2660
+<a id='L59' name='L59'></a>  59     .quad   0xbe1cf1f277d36e16
+<a id='L60' name='L60'></a>  60     .quad   0xc086235b4fb092a0
+<a id='L61' name='L61'></a>  61     .quad   0xbe1ceed009e8d8e6
+<a id='L62' name='L62'></a>  62     .quad   0xc086235f37492d28
+<a id='L63' name='L63'></a>  63     .quad   0xbe1cf1e4038cb362
+<a id='L64' name='L64'></a>  64     .quad   0xc08623631cfad250
+<a id='L65' name='L65'></a>  65     .quad   0xbe1cf0b0873b8557
+<a id='L66' name='L66'></a>  66     .quad   0xc086236700c75b98
+<a id='L67' name='L67'></a>  67     .quad   0xbe1cf15bb3227c0b
+<a id='L68' name='L68'></a>  68     .quad   0xc086236ae2b09fe0
+<a id='L69' name='L69'></a>  69     .quad   0xbe1cf151ef8ca9ed
+<a id='L70' name='L70'></a>  70     .quad   0xc086236ec2b87358
+<a id='L71' name='L71'></a>  71     .quad   0xbe1cefe1dc2cd2ed
+<a id='L72' name='L72'></a>  72     .quad   0xc0862372a0e0a780
+<a id='L73' name='L73'></a>  73     .quad   0xbe1cf0d1eec5454f
+<a id='L74' name='L74'></a>  74     .quad   0xc08623767d2b0b48
+<a id='L75' name='L75'></a>  75     .quad   0xbe1ceeefd570bbce
+<a id='L76' name='L76'></a>  76     .quad   0xc086237a57996af0
+<a id='L77' name='L77'></a>  77     .quad   0xbe1cee99ae91b3a7
+<a id='L78' name='L78'></a>  78     .quad   0xc086237e302d9028
+<a id='L79' name='L79'></a>  79     .quad   0xbe1cf0412830fbd1
+<a id='L80' name='L80'></a>  80     .quad   0xc086238206e94218
+<a id='L81' name='L81'></a>  81     .quad   0xbe1ceee898588610
+<a id='L82' name='L82'></a>  82     .quad   0xc0862385dbce4548
+<a id='L83' name='L83'></a>  83     .quad   0xbe1cee9a1fbcaaea
+<a id='L84' name='L84'></a>  84     .quad   0xc0862389aede5bc0
+<a id='L85' name='L85'></a>  85     .quad   0xbe1ceed8e7cc1ad6
+<a id='L86' name='L86'></a>  86     .quad   0xc086238d801b4500
+<a id='L87' name='L87'></a>  87     .quad   0xbe1cf10c8d059da6
+<a id='L88' name='L88'></a>  88     .quad   0xc08623914f86be18
+<a id='L89' name='L89'></a>  89     .quad   0xbe1ceee6c63a8165
+<a id='L90' name='L90'></a>  90     .quad   0xc08623951d228180
+<a id='L91' name='L91'></a>  91     .quad   0xbe1cf0c3592d2ff1
+<a id='L92' name='L92'></a>  92     .quad   0xc0862398e8f04758
+<a id='L93' name='L93'></a>  93     .quad   0xbe1cf0026cc4cb1b
+<a id='L94' name='L94'></a>  94     .quad   0xc086239cb2f1c538
+<a id='L95' name='L95'></a>  95     .quad   0xbe1cf15d48d8e670
+<a id='L96' name='L96'></a>  96     .quad   0xc08623a07b28ae60
+<a id='L97' name='L97'></a>  97     .quad   0xbe1cef359363787c
+<a id='L98' name='L98'></a>  98     .quad   0xc08623a44196b390
+<a id='L99' name='L99'></a>  99     .quad   0xbe1cefdf1ab2e82c
+<a id='L100' name='L100'></a> 100     .quad   0xc08623a8063d8338
+<a id='L101' name='L101'></a> 101     .quad   0xbe1cefe43c02aa84
+<a id='L102' name='L102'></a> 102     .quad   0xc08623abc91ec960
+<a id='L103' name='L103'></a> 103     .quad   0xbe1cf044f5ae35b7
+<a id='L104' name='L104'></a> 104     .quad   0xc08623af8a3c2fb8
+<a id='L105' name='L105'></a> 105     .quad   0xbe1cf0b0b4001e1b
+<a id='L106' name='L106'></a> 106     .quad   0xc08623b349975d98
+<a id='L107' name='L107'></a> 107     .quad   0xbe1cf1bae76dfbcf
+<a id='L108' name='L108'></a> 108     .quad   0xc08623b70731f810
+<a id='L109' name='L109'></a> 109     .quad   0xbe1cef0a72e13a62
+<a id='L110' name='L110'></a> 110     .quad   0xc08623bac30da1c8
+<a id='L111' name='L111'></a> 111     .quad   0xbe1cf184007d2b6b
+<a id='L112' name='L112'></a> 112     .quad   0xc08623be7d2bfb40
+<a id='L113' name='L113'></a> 113     .quad   0xbe1cf16f4b239e98
+<a id='L114' name='L114'></a> 114     .quad   0xc08623c2358ea2a0
+<a id='L115' name='L115'></a> 115     .quad   0xbe1cf0976acada87
+<a id='L116' name='L116'></a> 116     .quad   0xc08623c5ec3733d0
+<a id='L117' name='L117'></a> 117     .quad   0xbe1cf066318a16ff
+<a id='L118' name='L118'></a> 118     .quad   0xc08623c9a1274880
+<a id='L119' name='L119'></a> 119     .quad   0xbe1ceffaa7148798
+<a id='L120' name='L120'></a> 120     .quad   0xc08623cd54607820
+<a id='L121' name='L121'></a> 121     .quad   0xbe1cf23ab02e9b6e
+<a id='L122' name='L122'></a> 122     .quad   0xc08623d105e45800
+<a id='L123' name='L123'></a> 123     .quad   0xbe1cefdfef7d4fde
+<a id='L124' name='L124'></a> 124     .quad   0xc08623d4b5b47b20
+<a id='L125' name='L125'></a> 125     .quad   0xbe1cf17fece44f2b
+<a id='L126' name='L126'></a> 126     .quad   0xc08623d863d27270
+<a id='L127' name='L127'></a> 127     .quad   0xbe1cf18f907d0d7c
+<a id='L128' name='L128'></a> 128     .quad   0xc08623dc103fccb0
+<a id='L129' name='L129'></a> 129     .quad   0xbe1cee61fe072c98
+<a id='L130' name='L130'></a> 130     .quad   0xc08623dfbafe1668
+<a id='L131' name='L131'></a> 131     .quad   0xbe1cf022dd891e2f
+<a id='L132' name='L132'></a> 132     .quad   0xc08623e3640eda20
+<a id='L133' name='L133'></a> 133     .quad   0xbe1ceecc1daf4358
+<a id='L134' name='L134'></a> 134     .quad   0xc08623e70b73a028
+<a id='L135' name='L135'></a> 135     .quad   0xbe1cf0173c4fa380
+<a id='L136' name='L136'></a> 136     .quad   0xc08623eab12deec8
+<a id='L137' name='L137'></a> 137     .quad   0xbe1cf16a2150c2f4
+<a id='L138' name='L138'></a> 138     .quad   0xc08623ee553f4a30
+<a id='L139' name='L139'></a> 139     .quad   0xbe1cf1bf980b1f4b
+<a id='L140' name='L140'></a> 140     .quad   0xc08623f1f7a93480
+<a id='L141' name='L141'></a> 141     .quad   0xbe1cef8b731663c2
+<a id='L142' name='L142'></a> 142     .quad   0xc08623f5986d2dc0
+<a id='L143' name='L143'></a> 143     .quad   0xbe1cee9a664d7ef4
+<a id='L144' name='L144'></a> 144     .quad   0xc08623f9378cb3f0
+<a id='L145' name='L145'></a> 145     .quad   0xbe1cf1eda2af6400
+<a id='L146' name='L146'></a> 146     .quad   0xc08623fcd5094320
+<a id='L147' name='L147'></a> 147     .quad   0xbe1cf1923f9d68d7
+<a id='L148' name='L148'></a> 148     .quad   0xc086240070e45548
+<a id='L149' name='L149'></a> 149     .quad   0xbe1cf0747cd3e03a
+<a id='L150' name='L150'></a> 150     .quad   0xc08624040b1f6260
+<a id='L151' name='L151'></a> 151     .quad   0xbe1cf22ee855bd6d
+<a id='L152' name='L152'></a> 152     .quad   0xc0862407a3bbe078
+<a id='L153' name='L153'></a> 153     .quad   0xbe1cf0d57360c00b
+<a id='L154' name='L154'></a> 154     .quad   0xc086240b3abb4398
+<a id='L155' name='L155'></a> 155     .quad   0xbe1ceebc815cd575
+<a id='L156' name='L156'></a> 156     .quad   0xc086240ed01efdd0
+<a id='L157' name='L157'></a> 157     .quad   0xbe1cf03bfb970951
+<a id='L158' name='L158'></a> 158     .quad   0xc086241263e87f50
+<a id='L159' name='L159'></a> 159     .quad   0xbe1cf16e74768529
+<a id='L160' name='L160'></a> 160     .quad   0xc0862415f6193658
+<a id='L161' name='L161'></a> 161     .quad   0xbe1cefec64b8becb
+<a id='L162' name='L162'></a> 162     .quad   0xc086241986b28f30
+<a id='L163' name='L163'></a> 163     .quad   0xbe1cf0838d210baa
+<a id='L164' name='L164'></a> 164     .quad   0xc086241d15b5f448
+<a id='L165' name='L165'></a> 165     .quad   0xbe1cf0ea86e75b11
+<a id='L166' name='L166'></a> 166     .quad   0xc0862420a324ce28
+<a id='L167' name='L167'></a> 167     .quad   0xbe1cf1708d11d805
+<a id='L168' name='L168'></a> 168     .quad   0xc08624242f008380
+<a id='L169' name='L169'></a> 169     .quad   0xbe1ceea988c5a417
+<a id='L170' name='L170'></a> 170     .quad   0xc0862427b94a7910
+<a id='L171' name='L171'></a> 171     .quad   0xbe1cef166a7bbca5
+<a id='L172' name='L172'></a> 172     .quad   0xc086242b420411d0
+<a id='L173' name='L173'></a> 173     .quad   0xbe1cf0c9d9e86a38
+<a id='L174' name='L174'></a> 174     .quad   0xc086242ec92eaee8
+<a id='L175' name='L175'></a> 175     .quad   0xbe1cef0946455411
+<a id='L176' name='L176'></a> 176     .quad   0xc08624324ecbaf98
+<a id='L177' name='L177'></a> 177     .quad   0xbe1cefea60907739
+<a id='L178' name='L178'></a> 178     .quad   0xc0862435d2dc7160
+<a id='L179' name='L179'></a> 179     .quad   0xbe1cf1ed0934ce42
+<a id='L180' name='L180'></a> 180     .quad   0xc086243955624ff8
+<a id='L181' name='L181'></a> 181     .quad   0xbe1cf191ba746c7d
+<a id='L182' name='L182'></a> 182     .quad   0xc086243cd65ea548
+<a id='L183' name='L183'></a> 183     .quad   0xbe1ceeec78cf2a7e
+<a id='L184' name='L184'></a> 184     .quad   0xc086244055d2c968
+<a id='L185' name='L185'></a> 185     .quad   0xbe1cef345284c119
+<a id='L186' name='L186'></a> 186     .quad   0xc0862443d3c012b8
+<a id='L187' name='L187'></a> 187     .quad   0xbe1cf24f77355219
+<a id='L188' name='L188'></a> 188     .quad   0xc08624475027d5e8
+<a id='L189' name='L189'></a> 189     .quad   0xbe1cf05bf087e114
+<a id='L190' name='L190'></a> 190     .quad   0xc086244acb0b65d0
+<a id='L191' name='L191'></a> 191     .quad   0xbe1cef3504a32189
+<a id='L192' name='L192'></a> 192     .quad   0xc086244e446c1398
+<a id='L193' name='L193'></a> 193     .quad   0xbe1ceff54b2a406f
+<a id='L194' name='L194'></a> 194     .quad   0xc0862451bc4b2eb8
+<a id='L195' name='L195'></a> 195     .quad   0xbe1cf0757d54ed4f
+<a id='L196' name='L196'></a> 196     .quad   0xc086245532aa04f0
+<a id='L197' name='L197'></a> 197     .quad   0xbe1cf0c8099fdfd5
+<a id='L198' name='L198'></a> 198     .quad   0xc0862458a789e250
+<a id='L199' name='L199'></a> 199     .quad   0xbe1cf0b173796a31
+<a id='L200' name='L200'></a> 200     .quad   0xc086245c1aec1138
+<a id='L201' name='L201'></a> 201     .quad   0xbe1cf11d8734540d
+<a id='L202' name='L202'></a> 202     .quad   0xc086245f8cd1da60
+<a id='L203' name='L203'></a> 203     .quad   0xbe1cf1916a723ceb
+<a id='L204' name='L204'></a> 204     .quad   0xc0862462fd3c84d8
+<a id='L205' name='L205'></a> 205     .quad   0xbe1cf19a911e1da7
+<a id='L206' name='L206'></a> 206     .quad   0xc08624666c2d5608
+<a id='L207' name='L207'></a> 207     .quad   0xbe1cf23a9ef72e4f
+<a id='L208' name='L208'></a> 208     .quad   0xc0862469d9a591c0
+<a id='L209' name='L209'></a> 209     .quad   0xbe1cef503d947663
+<a id='L210' name='L210'></a> 210     .quad   0xc086246d45a67a18
+<a id='L211' name='L211'></a> 211     .quad   0xbe1cf0fceeb1a0b2
+<a id='L212' name='L212'></a> 212     .quad   0xc0862470b0314fa8
+<a id='L213' name='L213'></a> 213     .quad   0xbe1cf107e27e4fbc
+<a id='L214' name='L214'></a> 214     .quad   0xc086247419475160
+<a id='L215' name='L215'></a> 215     .quad   0xbe1cf03dd9922331
+<a id='L216' name='L216'></a> 216     .quad   0xc086247780e9bc98
+<a id='L217' name='L217'></a> 217     .quad   0xbe1cefce1a10e129
+<a id='L218' name='L218'></a> 218     .quad   0xc086247ae719cd18
+<a id='L219' name='L219'></a> 219     .quad   0xbe1ceea47f73c4f6
+<a id='L220' name='L220'></a> 220     .quad   0xc086247e4bd8bd10
+<a id='L221' name='L221'></a> 221     .quad   0xbe1ceec0ac56d100
+<a id='L222' name='L222'></a> 222     .quad   0xc0862481af27c528
+<a id='L223' name='L223'></a> 223     .quad   0xbe1cee8a6593278a
+<a id='L224' name='L224'></a> 224     .quad   0xc086248511081c70
+<a id='L225' name='L225'></a> 225     .quad   0xbe1cf2231dd9dec7
+<a id='L226' name='L226'></a> 226     .quad   0xc0862488717af888
+<a id='L227' name='L227'></a> 227     .quad   0xbe1cf0b4b8ed7da8
+<a id='L228' name='L228'></a> 228     .quad   0xc086248bd0818d68
+<a id='L229' name='L229'></a> 229     .quad   0xbe1cf1bd8d835002
+<a id='L230' name='L230'></a> 230     .quad   0xc086248f2e1d0d98
+<a id='L231' name='L231'></a> 231     .quad   0xbe1cf259acc107f4
+<a id='L232' name='L232'></a> 232     .quad   0xc08624928a4eaa20
+<a id='L233' name='L233'></a> 233     .quad   0xbe1cee897636b00c
+<a id='L234' name='L234'></a> 234     .quad   0xc0862495e5179270
+<a id='L235' name='L235'></a> 235     .quad   0xbe1cee757f20c326
+<a id='L236' name='L236'></a> 236     .quad   0xc08624993e78f490
+<a id='L237' name='L237'></a> 237     .quad   0xbe1cefafd3aa54a4
+<a id='L238' name='L238'></a> 238     .quad   0xc086249c9673fd10
+<a id='L239' name='L239'></a> 239     .quad   0xbe1cee7298d38b97
+<a id='L240' name='L240'></a> 240     .quad   0xc086249fed09d6f8
+<a id='L241' name='L241'></a> 241     .quad   0xbe1ceedc158d4ceb
+<a id='L242' name='L242'></a> 242     .quad   0xc08624a3423babe0
+<a id='L243' name='L243'></a> 243     .quad   0xbe1cf2282987cb2e
+<a id='L244' name='L244'></a> 244     .quad   0xc08624a6960aa400
+<a id='L245' name='L245'></a> 245     .quad   0xbe1cefe7381ecc4b
+<a id='L246' name='L246'></a> 246     .quad   0xc08624a9e877e600
+<a id='L247' name='L247'></a> 247     .quad   0xbe1cef328dbbce80
+<a id='L248' name='L248'></a> 248     .quad   0xc08624ad39849728
+<a id='L249' name='L249'></a> 249     .quad   0xbe1cefde45f3cc71
+<a id='L250' name='L250'></a> 250     .quad   0xc08624b08931db58
+<a id='L251' name='L251'></a> 251     .quad   0xbe1cefa8b89433b9
+<a id='L252' name='L252'></a> 252     .quad   0xc08624b3d780d500
+<a id='L253' name='L253'></a> 253     .quad   0xbe1cef6773c0b139
+<a id='L254' name='L254'></a> 254     .quad   0xc08624b72472a528
+<a id='L255' name='L255'></a> 255     .quad   0xbe1cf031c931c11f
+<a id='L256' name='L256'></a> 256     .quad   0xc08624ba70086b78
+<a id='L257' name='L257'></a> 257     .quad   0xbe1cf088f49275e7
+<a id='L258' name='L258'></a> 258     .quad   0xc08624bdba434630
+<a id='L259' name='L259'></a> 259     .quad   0xbe1cf17de0eaa86d
+<a id='L260' name='L260'></a> 260     .quad   0xc08624c103245238
+<a id='L261' name='L261'></a> 261     .quad   0xbe1cefd492f1ba75
+<a id='L262' name='L262'></a> 262     .quad   0xc08624c44aacab08
+<a id='L263' name='L263'></a> 263     .quad   0xbe1cf1253e154466
+<a id='L264' name='L264'></a> 264     .quad   0xc08624c790dd6ad0
+<a id='L265' name='L265'></a> 265     .quad   0xbe1cf0fb09ee6d55
+<a id='L266' name='L266'></a> 266     .quad   0xc08624cad5b7aa58
+<a id='L267' name='L267'></a> 267     .quad   0xbe1cf1f08dd048fe
+<a id='L268' name='L268'></a> 268     .quad   0xc08624ce193c8120
+<a id='L269' name='L269'></a> 269     .quad   0xbe1ceeca0809697f
+<a id='L270' name='L270'></a> 270     .quad   0xc08624d15b6d0538
+<a id='L271' name='L271'></a> 271     .quad   0xbe1cef8d5662d968
+<a id='L272' name='L272'></a> 272     .quad   0xc08624d49c4a4b78
+<a id='L273' name='L273'></a> 273     .quad   0xbe1cee97b556ed78
+<a id='L274' name='L274'></a> 274     .quad   0xc08624d7dbd56750
+<a id='L275' name='L275'></a> 275     .quad   0xbe1cf1b14b6acb75
+<a id='L276' name='L276'></a> 276     .quad   0xc08624db1a0f6b00
+<a id='L277' name='L277'></a> 277     .quad   0xbe1cef1e860623f2
+<a id='L278' name='L278'></a> 278     .quad   0xc08624de56f96758
+<a id='L279' name='L279'></a> 279     .quad   0xbe1ceeaf4d156f3d
+<a id='L280' name='L280'></a> 280     .quad   0xc08624e192946bf0
+<a id='L281' name='L281'></a> 281     .quad   0xbe1ceecc12b400ed
+<a id='L282' name='L282'></a> 282     .quad   0xc08624e4cce18710
+<a id='L283' name='L283'></a> 283     .quad   0xbe1cf180c40c794f
+<a id='L284' name='L284'></a> 284     .quad   0xc08624e805e1c5c8
+<a id='L285' name='L285'></a> 285     .quad   0xbe1cf185a08f7f65
+<a id='L286' name='L286'></a> 286     .quad   0xc08624eb3d9633d8
+<a id='L287' name='L287'></a> 287     .quad   0xbe1cef45fc924078
+<a id='L288' name='L288'></a> 288     .quad   0xc08624ee73ffdbb0
+<a id='L289' name='L289'></a> 289     .quad   0xbe1cf1e4f457f32a
+<a id='L290' name='L290'></a> 290     .quad   0xc08624f1a91fc6a0
+<a id='L291' name='L291'></a> 291     .quad   0xbe1cf040147b8a5a
+<a id='L292' name='L292'></a> 292     .quad   0xc08624f4dcf6fc98
+<a id='L293' name='L293'></a> 293     .quad   0xbe1cf1effca0dfb2
+<a id='L294' name='L294'></a> 294     .quad   0xc08624f80f868468
+<a id='L295' name='L295'></a> 295     .quad   0xbe1cf0470146e5bc
+<a id='L296' name='L296'></a> 296     .quad   0xc08624fb40cf6390
+<a id='L297' name='L297'></a> 297     .quad   0xbe1cef4dd186e501
+<a id='L298' name='L298'></a> 298     .quad   0xc08624fe70d29e60
+<a id='L299' name='L299'></a> 299     .quad   0xbe1ceebe257f66c7
+<a id='L300' name='L300'></a> 300     .quad   0xc08625019f9137f0
+<a id='L301' name='L301'></a> 301     .quad   0xbe1ceefb7a1c395c
+<a id='L302' name='L302'></a> 302     .quad   0xc0862504cd0c3220
+<a id='L303' name='L303'></a> 303     .quad   0xbe1cf209dedfed8c
+<a id='L304' name='L304'></a> 304     .quad   0xc0862507f9448db0
+<a id='L305' name='L305'></a> 305     .quad   0xbe1cf082da464994
+<a id='L306' name='L306'></a> 306     .quad   0xc086250b243b4a18
+<a id='L307' name='L307'></a> 307     .quad   0xbe1cee88694a73cf
+<a id='L308' name='L308'></a> 308     .quad   0xc086250e4df165a0
+<a id='L309' name='L309'></a> 309     .quad   0xbe1cf0b61e8f0531
+<a id='L310' name='L310'></a> 310     .quad   0xc08625117667dd78
+<a id='L311' name='L311'></a> 311     .quad   0xbe1cf1106599c962
+<a id='L312' name='L312'></a> 312     .quad   0xc08625149d9fad98
+<a id='L313' name='L313'></a> 313     .quad   0xbe1ceff1ee88af1f
+<a id='L314' name='L314'></a> 314     .quad   0xc0862517c399d0c8
+<a id='L315' name='L315'></a> 315     .quad   0xbe1cf0f746994ef6
+<a id='L316' name='L316'></a> 316     .quad   0xc086251ae85740b8
+<a id='L317' name='L317'></a> 317     .quad   0xbe1cefe8a1d077e4
+<a id='L318' name='L318'></a> 318     .quad   0xc086251e0bd8f5e0
+<a id='L319' name='L319'></a> 319     .quad   0xbe1cf1a1da036092
+<a id='L320' name='L320'></a> 320     .quad   0xc08625212e1fe7a8
+<a id='L321' name='L321'></a> 321     .quad   0xbe1cf0f8a7786fcd
+<a id='L322' name='L322'></a> 322     .quad   0xc08625244f2d0c48
+<a id='L323' name='L323'></a> 323     .quad   0xbe1cefa1174a07a7
+<a id='L324' name='L324'></a> 324     .quad   0xc08625276f0158d8
+<a id='L325' name='L325'></a> 325     .quad   0xbe1cef1043aa5b25
+<a id='L326' name='L326'></a> 326     .quad   0xc086252a8d9dc150
+<a id='L327' name='L327'></a> 327     .quad   0xbe1cf15d521c169d
+<a id='L328' name='L328'></a> 328     .quad   0xc086252dab033898
+<a id='L329' name='L329'></a> 329     .quad   0xbe1cf220bba8861f
+<a id='L330' name='L330'></a> 330     .quad   0xc0862530c732b078
+<a id='L331' name='L331'></a> 331     .quad   0xbe1cef51e310eae2
+<a id='L332' name='L332'></a> 332     .quad   0xc0862533e22d1988
+<a id='L333' name='L333'></a> 333     .quad   0xbe1cf222fcedd8ae
+<a id='L334' name='L334'></a> 334     .quad   0xc0862536fbf36370
+<a id='L335' name='L335'></a> 335     .quad   0xbe1cefdb4da4bda8
+<a id='L336' name='L336'></a> 336     .quad   0xc086253a14867ca0
+<a id='L337' name='L337'></a> 337     .quad   0xbe1ceeafc1112171
+<a id='L338' name='L338'></a> 338     .quad   0xc086253d2be75280
+<a id='L339' name='L339'></a> 339     .quad   0xbe1cee99dfb4b408
+<a id='L340' name='L340'></a> 340     .quad   0xc08625404216d160
+<a id='L341' name='L341'></a> 341     .quad   0xbe1cf22d2536f06b
+<a id='L342' name='L342'></a> 342     .quad   0xc08625435715e498
+<a id='L343' name='L343'></a> 343     .quad   0xbe1cef6abbf2e268
+<a id='L344' name='L344'></a> 344     .quad   0xc08625466ae57648
+<a id='L345' name='L345'></a> 345     .quad   0xbe1cf093a14789f5
+<a id='L346' name='L346'></a> 346     .quad   0xc08625497d866fa0
+<a id='L347' name='L347'></a> 347     .quad   0xbe1cf0f93655603c
+<a id='L348' name='L348'></a> 348     .quad   0xc086254c8ef9b8b8
+<a id='L349' name='L349'></a> 349     .quad   0xbe1cf1cc40c9aafc
+<a id='L350' name='L350'></a> 350     .quad   0xc086254f9f4038a8
+<a id='L351' name='L351'></a> 351     .quad   0xbe1ceeea5f4e9157
+<a id='L352' name='L352'></a> 352     .quad   0xc0862552ae5ad568
+<a id='L353' name='L353'></a> 353     .quad   0xbe1cefa9f52d4997
+<a id='L354' name='L354'></a> 354     .quad   0xc0862555bc4a7400
+<a id='L355' name='L355'></a> 355     .quad   0xbe1cefa490a638ff
+<a id='L356' name='L356'></a> 356     .quad   0xc0862558c90ff868
+<a id='L357' name='L357'></a> 357     .quad   0xbe1cef7fcf797d6f
+<a id='L358' name='L358'></a> 358     .quad   0xc086255bd4ac4590
+<a id='L359' name='L359'></a> 359     .quad   0xbe1cf1b4c51113c9
+<a id='L360' name='L360'></a> 360     .quad   0xc086255edf203d78
+<a id='L361' name='L361'></a> 361     .quad   0xbe1cef55e5b4a55d
+<a id='L362' name='L362'></a> 362     .quad   0xc0862561e86cc100
+<a id='L363' name='L363'></a> 363     .quad   0xbe1cf0d37a25f9dc
+<a id='L364' name='L364'></a> 364     .quad   0xc0862564f092b028
+<a id='L365' name='L365'></a> 365     .quad   0xbe1ceebe9efc19d9
+<a id='L366' name='L366'></a> 366     .quad   0xc0862567f792e9d8
+<a id='L367' name='L367'></a> 367     .quad   0xbe1cee8ad30a57b5
+<a id='L368' name='L368'></a> 368     .quad   0xc086256afd6e4c08
+<a id='L369' name='L369'></a> 369     .quad   0xbe1cef4e1817b90b
+<a id='L370' name='L370'></a> 370     .quad   0xc086256e0225b3b8
+<a id='L371' name='L371'></a> 371     .quad   0xbe1cee7fa9229996
+<a id='L372' name='L372'></a> 372     .quad   0xc086257105b9fce0
+<a id='L373' name='L373'></a> 373     .quad   0xbe1cf0b54963d945
+<a id='L374' name='L374'></a> 374     .quad   0xc0862574082c0298
+<a id='L375' name='L375'></a> 375     .quad   0xbe1cee5f2f3c7995
+<a id='L376' name='L376'></a> 376     .quad   0xc0862577097c9ee0
+<a id='L377' name='L377'></a> 377     .quad   0xbe1cf0828e303a2c
+<a id='L378' name='L378'></a> 378     .quad   0xc086257a09acaae0
+<a id='L379' name='L379'></a> 379     .quad   0xbe1cf172c3078947
+<a id='L380' name='L380'></a> 380     .quad   0xc086257d08bcfec0
+<a id='L381' name='L381'></a> 381     .quad   0xbe1cf189252afa22
+<a id='L382' name='L382'></a> 382     .quad   0xc086258006ae71b8
+<a id='L383' name='L383'></a> 383     .quad   0xbe1cefdb80426923
+<a id='L384' name='L384'></a> 384     .quad   0xc08625830381da08
+<a id='L385' name='L385'></a> 385     .quad   0xbe1ceef1391a0372
+<a id='L386' name='L386'></a> 386     .quad   0xc0862585ff380d00
+<a id='L387' name='L387'></a> 387     .quad   0xbe1cf17720c78d13
+<a id='L388' name='L388'></a> 388     .quad   0xc0862588f9d1df18
+<a id='L389' name='L389'></a> 389     .quad   0xbe1ceef1f9027d83
+<a id='L390' name='L390'></a> 390     .quad   0xc086258bf35023b8
+<a id='L391' name='L391'></a> 391     .quad   0xbe1cf06fac99dec9
+<a id='L392' name='L392'></a> 392     .quad   0xc086258eebb3ad78
+<a id='L393' name='L393'></a> 393     .quad   0xbe1cf1373eeb45c0
+<a id='L394' name='L394'></a> 394     .quad   0xc0862591e2fd4e00
+<a id='L395' name='L395'></a> 395     .quad   0xbe1cef777536bb81
+<a id='L396' name='L396'></a> 396     .quad   0xc0862594d92dd600
+<a id='L397' name='L397'></a> 397     .quad   0xbe1cf0f43ca40766
+<a id='L398' name='L398'></a> 398     .quad   0xc0862597ce461558
+<a id='L399' name='L399'></a> 399     .quad   0xbe1cefb2cfc6766b
+<a id='L400' name='L400'></a> 400     .quad   0xc086259ac246daf0
+<a id='L401' name='L401'></a> 401     .quad   0xbe1ceea49e64ffa2
+<a id='L402' name='L402'></a> 402     .quad   0xc086259db530f4c8
+<a id='L403' name='L403'></a> 403     .quad   0xbe1cf250fa457dec
+<a id='L404' name='L404'></a> 404     .quad   0xc08625a0a7053018
+<a id='L405' name='L405'></a> 405     .quad   0xbe1cf17d8bb2a44e
+<a id='L406' name='L406'></a> 406     .quad   0xc08625a397c45918
+<a id='L407' name='L407'></a> 407     .quad   0xbe1cf1d5906d54b7
+<a id='L408' name='L408'></a> 408     .quad   0xc08625a6876f3b30
+<a id='L409' name='L409'></a> 409     .quad   0xbe1cf08fe7b31780
+<a id='L410' name='L410'></a> 410     .quad   0xc08625a97606a0e0
+<a id='L411' name='L411'></a> 411     .quad   0xbe1cef13edfc9d11
+<a id='L412' name='L412'></a> 412     .quad   0xc08625ac638b53c8
+<a id='L413' name='L413'></a> 413     .quad   0xbe1cef9d2b107219
+<a id='L414' name='L414'></a> 414     .quad   0xc08625af4ffe1cb0
+<a id='L415' name='L415'></a> 415     .quad   0xbe1cf1ddd4ff6160
+<a id='L416' name='L416'></a> 416     .quad   0xc08625b23b5fc390
+<a id='L417' name='L417'></a> 417     .quad   0xbe1cefa02a996495
+<a id='L418' name='L418'></a> 418     .quad   0xc08625b525b10f68
+<a id='L419' name='L419'></a> 419     .quad   0xbe1cf166a7e37ee5
+<a id='L420' name='L420'></a> 420     .quad   0xc08625b80ef2c680
+<a id='L421' name='L421'></a> 421     .quad   0xbe1cef0b171068a5
+<a id='L422' name='L422'></a> 422     .quad   0xc08625baf725ae28
+<a id='L423' name='L423'></a> 423     .quad   0xbe1cf05c80779283
+<a id='L424' name='L424'></a> 424     .quad   0xc08625bdde4a8af0
+<a id='L425' name='L425'></a> 425     .quad   0xbe1cf1bbfbffb889
+<a id='L426' name='L426'></a> 426     .quad   0xc08625c0c4622090
+<a id='L427' name='L427'></a> 427     .quad   0xbe1cf0b8666c0124
+<a id='L428' name='L428'></a> 428     .quad   0xc08625c3a96d31e0
+<a id='L429' name='L429'></a> 429     .quad   0xbe1cf0a8fcf47a86
+<a id='L430' name='L430'></a> 430     .quad   0xc08625c68d6c80f0
+<a id='L431' name='L431'></a> 431     .quad   0xbe1cef46e18cb092
+<a id='L432' name='L432'></a> 432     .quad   0xc08625c97060cef0
+<a id='L433' name='L433'></a> 433     .quad   0xbe1cf1458a350efb
+<a id='L434' name='L434'></a> 434     .quad   0xc08625cc524adc58
+<a id='L435' name='L435'></a> 435     .quad   0xbe1ceeea1dadce12
+<a id='L436' name='L436'></a> 436     .quad   0xc08625cf332b68b0
+<a id='L437' name='L437'></a> 437     .quad   0xbe1cf0a1bfdc44c7
+<a id='L438' name='L438'></a> 438     .quad   0xc08625d2130332d0
+<a id='L439' name='L439'></a> 439     .quad   0xbe1cef96d02da73e
+<a id='L440' name='L440'></a> 440     .quad   0xc08625d4f1d2f8a8
+<a id='L441' name='L441'></a> 441     .quad   0xbe1cf2451c3c7701
+<a id='L442' name='L442'></a> 442     .quad   0xc08625d7cf9b7778
+<a id='L443' name='L443'></a> 443     .quad   0xbe1cf10d08f83812
+<a id='L444' name='L444'></a> 444     .quad   0xc08625daac5d6ba0
+<a id='L445' name='L445'></a> 445     .quad   0xbe1ceec5b4895c5e
+<a id='L446' name='L446'></a> 446     .quad   0xc08625dd881990b0
+<a id='L447' name='L447'></a> 447     .quad   0xbe1cf14e1325c5e4
+<a id='L448' name='L448'></a> 448     .quad   0xc08625e062d0a188
+<a id='L449' name='L449'></a> 449     .quad   0xbe1cf21d0904be12
+<a id='L450' name='L450'></a> 450     .quad   0xc08625e33c835838
+<a id='L451' name='L451'></a> 451     .quad   0xbe1ceed0839bcf21
+<a id='L452' name='L452'></a> 452     .quad   0xc08625e615326df0
+<a id='L453' name='L453'></a> 453     .quad   0xbe1cf1bb944889d2
+<a id='L454' name='L454'></a> 454     .quad   0xc08625e8ecde9b48
+<a id='L455' name='L455'></a> 455     .quad   0xbe1cee738e85eece
+<a id='L456' name='L456'></a> 456     .quad   0xc08625ebc38897e0
+<a id='L457' name='L457'></a> 457     .quad   0xbe1cf25c2bc6ef12
+<a id='L458' name='L458'></a> 458     .quad   0xc08625ee99311ac8
+<a id='L459' name='L459'></a> 459     .quad   0xbe1cf132b70a41ad
+<a id='L460' name='L460'></a> 460     .quad   0xc08625f16dd8da28
+<a id='L461' name='L461'></a> 461     .quad   0xbe1cf1984236a6e3
+<a id='L462' name='L462'></a> 462     .quad   0xc08625f441808b78
+<a id='L463' name='L463'></a> 463     .quad   0xbe1cf19ae74998f9
+<a id='L464' name='L464'></a> 464     .quad   0xc08625f71428e370
+<a id='L465' name='L465'></a> 465     .quad   0xbe1cef3e175d61a1
+<a id='L466' name='L466'></a> 466     .quad   0xc08625f9e5d295f8
+<a id='L467' name='L467'></a> 467     .quad   0xbe1cf101f9868fd9
+<a id='L468' name='L468'></a> 468     .quad   0xc08625fcb67e5658
+<a id='L469' name='L469'></a> 469     .quad   0xbe1cee69db83dcd2
+<a id='L470' name='L470'></a> 470     .quad   0xc08625ff862cd6f8
+<a id='L471' name='L471'></a> 471     .quad   0xbe1cf081b636af51
+<a id='L472' name='L472'></a> 472     .quad   0xc086260254dec9a8
+<a id='L473' name='L473'></a> 473     .quad   0xbe1cee62c7d59b3e
+<a id='L474' name='L474'></a> 474     .quad   0xc08626052294df58
+<a id='L475' name='L475'></a> 475     .quad   0xbe1cf1b745c57716
+<a id='L476' name='L476'></a> 476     .quad   0xc0862607ef4fc868
+<a id='L477' name='L477'></a> 477     .quad   0xbe1cef3d2800ea23
+<a id='L478' name='L478'></a> 478     .quad   0xc086260abb103458
+<a id='L479' name='L479'></a> 479     .quad   0xbe1cef480ff1acd2
+<a id='L480' name='L480'></a> 480     .quad   0xc086260d85d6d200
+<a id='L481' name='L481'></a> 481     .quad   0xbe1cf2424c9a17ef
+<a id='L482' name='L482'></a> 482     .quad   0xc08626104fa44f90
+<a id='L483' name='L483'></a> 483     .quad   0xbe1cf12cfde90fd5
+<a id='L484' name='L484'></a> 484     .quad   0xc086261318795a68
+<a id='L485' name='L485'></a> 485     .quad   0xbe1cf21f590dd5b6
+<a id='L486' name='L486'></a> 486     .quad   0xc0862615e0569f48
+<a id='L487' name='L487'></a> 487     .quad   0xbe1cf0c50f9cd28a
+<a id='L488' name='L488'></a> 488     .quad   0xc0862618a73cca30
+<a id='L489' name='L489'></a> 489     .quad   0xbe1ceedbdb520545
+<a id='L490' name='L490'></a> 490     .quad   0xc086261b6d2c8668
+<a id='L491' name='L491'></a> 491     .quad   0xbe1cf0b030396011
+<a id='L492' name='L492'></a> 492     .quad   0xc086261e32267e98
+<a id='L493' name='L493'></a> 493     .quad   0xbe1cf19917010e96
+<a id='L494' name='L494'></a> 494     .quad   0xc0862620f62b5cb0
+<a id='L495' name='L495'></a> 495     .quad   0xbe1cf07331355985
+<a id='L496' name='L496'></a> 496     .quad   0xc0862623b93bc9e8
+<a id='L497' name='L497'></a> 497     .quad   0xbe1cf01ae921a1c3
+<a id='L498' name='L498'></a> 498     .quad   0xc08626267b586ed0
+<a id='L499' name='L499'></a> 499     .quad   0xbe1cefe5cf0dbf0c
+<a id='L500' name='L500'></a> 500     .quad   0xc08626293c81f348
+<a id='L501' name='L501'></a> 501     .quad   0xbe1cf01b258aeb50
+<a id='L502' name='L502'></a> 502     .quad   0xc086262bfcb8fe88
+<a id='L503' name='L503'></a> 503     .quad   0xbe1cee6b9e7f4c68
+<a id='L504' name='L504'></a> 504     .quad   0xc086262ebbfe3710
+<a id='L505' name='L505'></a> 505     .quad   0xbe1cee684a9b21c9
+<a id='L506' name='L506'></a> 506     .quad   0xc08626317a5242b8
+<a id='L507' name='L507'></a> 507     .quad   0xbe1cf1f8bcde9a8b
+<a id='L508' name='L508'></a> 508     .quad   0xc086263437b5c6c0
+<a id='L509' name='L509'></a> 509     .quad   0xbe1cf1d063d36238
+<a id='L510' name='L510'></a> 510     .quad   0xc0862636f42967a8
+<a id='L511' name='L511'></a> 511     .quad   0xbe1cf1e31a19075e
+<a id='L512' name='L512'></a> 512     .quad   0xc0862639afadc950
+<a id='L513' name='L513'></a> 513     .quad   0xbe1cf1d8efdf7e7d
+<a id='L514' name='L514'></a> 514     .quad   0xc086263c6a438ef0
+<a id='L515' name='L515'></a> 515     .quad   0xbe1cf1812ee72dba
+<a id='L516' name='L516'></a> 516     .quad   0xc086263f23eb5b18
+<a id='L517' name='L517'></a> 517     .quad   0xbe1cf1449a9a2279
+<a id='L518' name='L518'></a> 518     .quad   0xc0862641dca5cfb8
+<a id='L519' name='L519'></a> 519     .quad   0xbe1cee96edce5085
+<a id='L520' name='L520'></a> 520     .quad   0xc086264494738e08
+<a id='L521' name='L521'></a> 521     .quad   0xbe1cf06797bd03b2
+<a id='L522' name='L522'></a> 522     .quad   0xc08626474b5536b8
+<a id='L523' name='L523'></a> 523     .quad   0xbe1cef91b9b7ffc1
+<a id='L524' name='L524'></a> 524     .quad   0xc086264a014b69c0
+<a id='L525' name='L525'></a> 525     .quad   0xbe1cef4b6721278f
+<a id='L526' name='L526'></a> 526     .quad   0xc086264cb656c678
+<a id='L527' name='L527'></a> 527     .quad   0xbe1cf1942925eb4a
+<a id='L528' name='L528'></a> 528     .quad   0xc086264f6a77eba8
+<a id='L529' name='L529'></a> 529     .quad   0xbe1cefa2c7bc2e39
+<a id='L530' name='L530'></a> 530     .quad   0xc08626521daf7758
+<a id='L531' name='L531'></a> 531     .quad   0xbe1cf252595aceb3
+<a id='L532' name='L532'></a> 532     .quad   0xc0862654cffe0718
+<a id='L533' name='L533'></a> 533     .quad   0xbe1cee8e9ae47ec2
+<a id='L534' name='L534'></a> 534     .quad   0xc0862657816437a8
+<a id='L535' name='L535'></a> 535     .quad   0xbe1cf1bf913828fa
+<a id='L536' name='L536'></a> 536     .quad   0xc086265a31e2a558
+<a id='L537' name='L537'></a> 537     .quad   0xbe1cf23475d6b366
+<a id='L538' name='L538'></a> 538     .quad   0xc086265ce179ebc8
+<a id='L539' name='L539'></a> 539     .quad   0xbe1cef8df00a922b
+<a id='L540' name='L540'></a> 540     .quad   0xc086265f902aa5f0
+<a id='L541' name='L541'></a> 541     .quad   0xbe1cef279bfa43e0
+<a id='L542' name='L542'></a> 542     .quad   0xc08626623df56e38
+<a id='L543' name='L543'></a> 543     .quad   0xbe1cf080e10b8365
+<a id='L544' name='L544'></a> 544     .quad   0xc0862664eadade70
+<a id='L545' name='L545'></a> 545     .quad   0xbe1cf1a518f9b544
+<a id='L546' name='L546'></a> 546     .quad   0xc086266796db8fd0
+<a id='L547' name='L547'></a> 547     .quad   0xbe1cef9308fed9e9
+<a id='L548' name='L548'></a> 548     .quad   0xc086266a41f81ae8
+<a id='L549' name='L549'></a> 549     .quad   0xbe1ceea3ae6b19c9
+<a id='L550' name='L550'></a> 550     .quad   0xc086266cec3117b8
+<a id='L551' name='L551'></a> 551     .quad   0xbe1ceef06003d4c2
+<a id='L552' name='L552'></a> 552     .quad   0xc086266f95871da8
+<a id='L553' name='L553'></a> 553     .quad   0xbe1cf0b8457ffb0c
+<a id='L554' name='L554'></a> 554     .quad   0xc08626723dfac390
+<a id='L555' name='L555'></a> 555     .quad   0xbe1cf0c526745ad6
+<a id='L556' name='L556'></a> 556     .quad   0xc0862674e58c9fa8
+<a id='L557' name='L557'></a> 557     .quad   0xbe1cf0cf91ff7b5d
+<a id='L558' name='L558'></a> 558     .quad   0xc08626778c3d4798
+<a id='L559' name='L559'></a> 559     .quad   0xbe1cefe260819380
+<a id='L560' name='L560'></a> 560     .quad   0xc086267a320d5070
+<a id='L561' name='L561'></a> 561     .quad   0xbe1ceebd90aa27a3
+<a id='L562' name='L562'></a> 562     .quad   0xc086267cd6fd4ea8
+<a id='L563' name='L563'></a> 563     .quad   0xbe1cf0388121dffa
+<a id='L564' name='L564'></a> 564     .quad   0xc086267f7b0dd630
+<a id='L565' name='L565'></a> 565     .quad   0xbe1cf1a3881435f1
+<a id='L566' name='L566'></a> 566     .quad   0xc08626821e3f7a68
+<a id='L567' name='L567'></a> 567     .quad   0xbe1cef28e9d9ac52
+<a id='L568' name='L568'></a> 568     .quad   0xc0862684c092ce08
+<a id='L569' name='L569'></a> 569     .quad   0xbe1cf02d300062dd
+<a id='L570' name='L570'></a> 570     .quad   0xc086268762086350
+<a id='L571' name='L571'></a> 571     .quad   0xbe1cefaee1edfa35
+<a id='L572' name='L572'></a> 572     .quad   0xc086268a02a0cbe0
+<a id='L573' name='L573'></a> 573     .quad   0xbe1cf0a5a052e936
+<a id='L574' name='L574'></a> 574     .quad   0xc086268ca25c98d8
+<a id='L575' name='L575'></a> 575     .quad   0xbe1cee60a4a497ed
+<a id='L576' name='L576'></a> 576     .quad   0xc086268f413c5ab0
+<a id='L577' name='L577'></a> 577     .quad   0xbe1cf0e4a5d0cf49
+<a id='L578' name='L578'></a> 578     .quad   0xc0862691df40a170
+<a id='L579' name='L579'></a> 579     .quad   0xbe1cf149235a4e6e
+<a id='L580' name='L580'></a> 580     .quad   0xc08626947c69fc80
+<a id='L581' name='L581'></a> 581     .quad   0xbe1cf215180b9fcc
+<a id='L582' name='L582'></a> 582     .quad   0xc086269718b8fac8
+<a id='L583' name='L583'></a> 583     .quad   0xbe1cef9b156a9840
+<a id='L584' name='L584'></a> 584     .quad   0xc0862699b42e2a90
+<a id='L585' name='L585'></a> 585     .quad   0xbe1cf054c91441be
+<a id='L586' name='L586'></a> 586     .quad   0xc086269c4eca19a8
+<a id='L587' name='L587'></a> 587     .quad   0xbe1cf13ded26512c
+<a id='L588' name='L588'></a> 588     .quad   0xc086269ee88d5550
+<a id='L589' name='L589'></a> 589     .quad   0xbe1cf22ea4d8ac06
+<a id='L590' name='L590'></a> 590     .quad   0xc08626a181786a40
+<a id='L591' name='L591'></a> 591     .quad   0xbe1cf2354666ee2e
+<a id='L592' name='L592'></a> 592     .quad   0xc08626a4198be4a8
+<a id='L593' name='L593'></a> 593     .quad   0xbe1cefef936752b3
+<a id='L594' name='L594'></a> 594     .quad   0xc08626a6b0c85020
+<a id='L595' name='L595'></a> 595     .quad   0xbe1cf1e360a9db68
+<a id='L596' name='L596'></a> 596     .quad   0xc08626a9472e37d8
+<a id='L597' name='L597'></a> 597     .quad   0xbe1ceed6aeb812c5
+<a id='L598' name='L598'></a> 598     .quad   0xc08626abdcbe2650
+<a id='L599' name='L599'></a> 599     .quad   0xbe1cf227340b4986
+<a id='L600' name='L600'></a> 600     .quad   0xc08626ae7178a5b0
+<a id='L601' name='L601'></a> 601     .quad   0xbe1cf0215a0cbe0d
+<a id='L602' name='L602'></a> 602     .quad   0xc08626b1055e3f70
+<a id='L603' name='L603'></a> 603     .quad   0xbe1cf256adf0ae26
+<a id='L604' name='L604'></a> 604     .quad   0xc08626b3986f7ca8
+<a id='L605' name='L605'></a> 605     .quad   0xbe1ceff3c67aed06
+<a id='L606' name='L606'></a> 606     .quad   0xc08626b62aace5c8
+<a id='L607' name='L607'></a> 607     .quad   0xbe1cf2159fb93652
+<a id='L608' name='L608'></a> 608     .quad   0xc08626b8bc1702e0
+<a id='L609' name='L609'></a> 609     .quad   0xbe1cf01e6dbd1c7f
+<a id='L610' name='L610'></a> 610     .quad   0xc08626bb4cae5b60
+<a id='L611' name='L611'></a> 611     .quad   0xbe1cf009e75d1c0c
+<a id='L612' name='L612'></a> 612     .quad   0xc08626bddc737648
+<a id='L613' name='L613'></a> 613     .quad   0xbe1ceec10a020e73
+<a id='L614' name='L614'></a> 614     .quad   0xc08626c06b66da08
+<a id='L615' name='L615'></a> 615     .quad   0xbe1cf06d5783eee7
+<a id='L616' name='L616'></a> 616     .quad   0xc08626c2f9890ca0
+<a id='L617' name='L617'></a> 617     .quad   0xbe1cf0cb8f169ffe
+<a id='L618' name='L618'></a> 618     .quad   0xc08626c586da9388
+<a id='L619' name='L619'></a> 619     .quad   0xbe1cef7de2452430
+<a id='L620' name='L620'></a> 620     .quad   0xc08626c8135bf3b0
+<a id='L621' name='L621'></a> 621     .quad   0xbe1cf05da6f783ae
+<a id='L622' name='L622'></a> 622     .quad   0xc08626ca9f0db198
+<a id='L623' name='L623'></a> 623     .quad   0xbe1cefcc877d681d
+<a id='L624' name='L624'></a> 624     .quad   0xc08626cd29f05138
+<a id='L625' name='L625'></a> 625     .quad   0xbe1cef0531954ab3
+<a id='L626' name='L626'></a> 626     .quad   0xc08626cfb4045608
+<a id='L627' name='L627'></a> 627     .quad   0xbe1cf06b8565ea3d
+<a id='L628' name='L628'></a> 628     .quad   0xc08626d23d4a4310
+<a id='L629' name='L629'></a> 629     .quad   0xbe1cefdc455d9d7e
+<a id='L630' name='L630'></a> 630     .quad   0xc08626d4c5c29ad0
+<a id='L631' name='L631'></a> 631     .quad   0xbe1ceefc47e8fa64
+<a id='L632' name='L632'></a> 632     .quad   0xc08626d74d6ddf48
+<a id='L633' name='L633'></a> 633     .quad   0xbe1cf1872bf033f2
+<a id='L634' name='L634'></a> 634     .quad   0xc08626d9d44c9210
+<a id='L635' name='L635'></a> 635     .quad   0xbe1cf19d91087f9d
+<a id='L636' name='L636'></a> 636     .quad   0xc08626dc5a5f3438
+<a id='L637' name='L637'></a> 637     .quad   0xbe1cf012d444c6ab
+<a id='L638' name='L638'></a> 638     .quad   0xc08626dedfa64650
+<a id='L639' name='L639'></a> 639     .quad   0xbe1cf0ba528ee153
+<a id='L640' name='L640'></a> 640     .quad   0xc08626e164224880
+<a id='L641' name='L641'></a> 641     .quad   0xbe1ceeb431709788
+<a id='L642' name='L642'></a> 642     .quad   0xc08626e3e7d3ba60
+<a id='L643' name='L643'></a> 643     .quad   0xbe1cf0b9af31a6a5
+<a id='L644' name='L644'></a> 644     .quad   0xc08626e66abb1b28
+<a id='L645' name='L645'></a> 645     .quad   0xbe1cf168fb2e135b
+<a id='L646' name='L646'></a> 646     .quad   0xc08626e8ecd8e990
+<a id='L647' name='L647'></a> 647     .quad   0xbe1cef9097461c93
+<a id='L648' name='L648'></a> 648     .quad   0xc08626eb6e2da3d0
+<a id='L649' name='L649'></a> 649     .quad   0xbe1cee7a434735d8
+<a id='L650' name='L650'></a> 650     .quad   0xc08626edeeb9c7a8
+<a id='L651' name='L651'></a> 651     .quad   0xbe1cf235732b86f2
+<a id='L652' name='L652'></a> 652     .quad   0xc08626f06e7dd280
+<a id='L653' name='L653'></a> 653     .quad   0xbe1cefe1510b89e6
+<a id='L654' name='L654'></a> 654     .quad   0xc08626f2ed7a4120
+<a id='L655' name='L655'></a> 655     .quad   0xbe1cf1f64b9b80ef
+<a id='L656' name='L656'></a> 656     .quad   0xc08626f56baf9000
+<a id='L657' name='L657'></a> 657     .quad   0xbe1cf08f320ca339
+<a id='L658' name='L658'></a> 658     .quad   0xc08626f7e91e3b08
+<a id='L659' name='L659'></a> 659     .quad   0xbe1cf1b1de2808a1
+<a id='L660' name='L660'></a> 660     .quad   0xc08626fa65c6bdc0
+<a id='L661' name='L661'></a> 661     .quad   0xbe1cf1976d778b28
+<a id='L662' name='L662'></a> 662     .quad   0xc08626fce1a99338
+<a id='L663' name='L663'></a> 663     .quad   0xbe1ceef40a4f076f
+<a id='L664' name='L664'></a> 664     .quad   0xc08626ff5cc73600
+<a id='L665' name='L665'></a> 665     .quad   0xbe1cef3e45869ce3
+<a id='L666' name='L666'></a> 666     .quad   0xc0862701d7202048
+<a id='L667' name='L667'></a> 667     .quad   0xbe1ceef601b4c9d6
+<a id='L668' name='L668'></a> 668     .quad   0xc086270450b4cbc0
+<a id='L669' name='L669'></a> 669     .quad   0xbe1cf1eaf0b57fd6
+<a id='L670' name='L670'></a> 670     .quad   0xc0862706c985b1c0
+<a id='L671' name='L671'></a> 671     .quad   0xbe1cef82a44990f3
+<a id='L672' name='L672'></a> 672     .quad   0xc086270941934b10
+<a id='L673' name='L673'></a> 673     .quad   0xbe1ceefe32981f2c
+<a id='L674' name='L674'></a> 674     .quad   0xc086270bb8de1018
+<a id='L675' name='L675'></a> 675     .quad   0xbe1cefbf6f5a0445
+<a id='L676' name='L676'></a> 676     .quad   0xc086270e2f6678d0
+<a id='L677' name='L677'></a> 677     .quad   0xbe1cf18dba75792c
+<a id='L678' name='L678'></a> 678     .quad   0xc0862710a52cfcc8
+<a id='L679' name='L679'></a> 679     .quad   0xbe1cf0da64ce995f
+<a id='L680' name='L680'></a> 680     .quad   0xc08627131a321318
+<a id='L681' name='L681'></a> 681     .quad   0xbe1cef04ac0fb802
+<a id='L682' name='L682'></a> 682     .quad   0xc08627158e763268
+<a id='L683' name='L683'></a> 683     .quad   0xbe1cee9d4e2ad9bd
+<a id='L684' name='L684'></a> 684     .quad   0xc086271801f9d0f8
+<a id='L685' name='L685'></a> 685     .quad   0xbe1cefa9b55407b5
+<a id='L686' name='L686'></a> 686     .quad   0xc086271a74bd64a0
+<a id='L687' name='L687'></a> 687     .quad   0xbe1cefe6bd329570
+<a id='L688' name='L688'></a> 688     .quad   0xc086271ce6c162c8
+<a id='L689' name='L689'></a> 689     .quad   0xbe1cef0b1205dc85
+<a id='L690' name='L690'></a> 690     .quad   0xc086271f58064068
+<a id='L691' name='L691'></a> 691     .quad   0xbe1cef092a785e3f
+<a id='L692' name='L692'></a> 692     .quad   0xc0862721c88c7210
+<a id='L693' name='L693'></a> 693     .quad   0xbe1cf050dcdaac30
+<a id='L694' name='L694'></a> 694     .quad   0xc086272438546be8
+<a id='L695' name='L695'></a> 695     .quad   0xbe1cf210907ded8b
+<a id='L696' name='L696'></a> 696     .quad   0xc0862726a75ea1b8
+<a id='L697' name='L697'></a> 697     .quad   0xbe1cee760be44f99
+<a id='L698' name='L698'></a> 698     .quad   0xc086272915ab86c0
+<a id='L699' name='L699'></a> 699     .quad   0xbe1ceeeee07c2bcc
+<a id='L700' name='L700'></a> 700     .quad   0xc086272b833b8df0
+<a id='L701' name='L701'></a> 701     .quad   0xbe1cf06874992df5
+<a id='L702' name='L702'></a> 702     .quad   0xc086272df00f29d0
+<a id='L703' name='L703'></a> 703     .quad   0xbe1cef8fac5d4899
+<a id='L704' name='L704'></a> 704     .quad   0xc08627305c26cc70
+<a id='L705' name='L705'></a> 705     .quad   0xbe1cf1103241cc99
+<a id='L706' name='L706'></a> 706     .quad   0xc0862732c782e788
+<a id='L707' name='L707'></a> 707     .quad   0xbe1cf1d35fef83fe
+<a id='L708' name='L708'></a> 708     .quad   0xc08627353223ec68
+<a id='L709' name='L709'></a> 709     .quad   0xbe1cef3ec8133e1d
+<a id='L710' name='L710'></a> 710     .quad   0xc08627379c0a4be8
+<a id='L711' name='L711'></a> 711     .quad   0xbe1cef7261daccd8
+<a id='L712' name='L712'></a> 712     .quad   0xc086273a05367688
+<a id='L713' name='L713'></a> 713     .quad   0xbe1cf18656c50806
+<a id='L714' name='L714'></a> 714     .quad   0xc086273c6da8dc68
+<a id='L715' name='L715'></a> 715     .quad   0xbe1cf1c8736e049a
+<a id='L716' name='L716'></a> 716     .quad   0xc086273ed561ed38
+<a id='L717' name='L717'></a> 717     .quad   0xbe1cf1f93bff4911
+<a id='L718' name='L718'></a> 718     .quad   0xc08627413c621848
+<a id='L719' name='L719'></a> 719     .quad   0xbe1cf188a4ea680c
+<a id='L720' name='L720'></a> 720     .quad   0xc0862743a2a9cc80
+<a id='L721' name='L721'></a> 721     .quad   0xbe1cf1d270930c80
+<a id='L722' name='L722'></a> 722     .quad   0xc086274608397868
+<a id='L723' name='L723'></a> 723     .quad   0xbe1cf25a328c28e2
+<a id='L724' name='L724'></a> 724     .quad   0xc08627486d118a28
+<a id='L725' name='L725'></a> 725     .quad   0xbe1cf106f90aa3b8
+<a id='L726' name='L726'></a> 726     .quad   0xc086274ad1326f80
+<a id='L727' name='L727'></a> 727     .quad   0xbe1cee5e9d2e885a
+<a id='L728' name='L728'></a> 728     .quad   0xc086274d349c95c0
+<a id='L729' name='L729'></a> 729     .quad   0xbe1cf1c0bac27228
+<a id='L730' name='L730'></a> 730     .quad   0xc086274f975069f8
+<a id='L731' name='L731'></a> 731     .quad   0xbe1cf1a1500f9b1c
+<a id='L732' name='L732'></a> 732     .quad   0xc0862751f94e58c0
+<a id='L733' name='L733'></a> 733     .quad   0xbe1cefc30663ac44
+<a id='L734' name='L734'></a> 734     .quad   0xc08627545a96ce48
+<a id='L735' name='L735'></a> 735     .quad   0xbe1cf17123e427a2
+<a id='L736' name='L736'></a> 736     .quad   0xc0862756bb2a3678
+<a id='L737' name='L737'></a> 737     .quad   0xbe1cefb92749fea4
+<a id='L738' name='L738'></a> 738     .quad   0xc08627591b08fcc0
+<a id='L739' name='L739'></a> 739     .quad   0xbe1cefa40e1ea74a
+<a id='L740' name='L740'></a> 740     .quad   0xc086275b7a338c40
+<a id='L741' name='L741'></a> 741     .quad   0xbe1cee6f4612c3e9
+<a id='L742' name='L742'></a> 742     .quad   0xc086275dd8aa4fa8
+<a id='L743' name='L743'></a> 743     .quad   0xbe1cf1c54a053627
+<a id='L744' name='L744'></a> 744     .quad   0xc0862760366db168
+<a id='L745' name='L745'></a> 745     .quad   0xbe1ceff5eb503d9e
+<a id='L746' name='L746'></a> 746     .quad   0xc0862762937e1b70
+<a id='L747' name='L747'></a> 747     .quad   0xbe1cf02e47f10cee
+<a id='L748' name='L748'></a> 748     .quad   0xc0862764efdbf768
+<a id='L749' name='L749'></a> 749     .quad   0xbe1ceeb06e1d0dad
+<a id='L750' name='L750'></a> 750     .quad   0xc08627674b87ae88
+<a id='L751' name='L751'></a> 751     .quad   0xbe1cf10aadd6dba5
+<a id='L752' name='L752'></a> 752     .quad   0xc0862769a681a9c0
+<a id='L753' name='L753'></a> 753     .quad   0xbe1cf24e9913d30f
+<a id='L754' name='L754'></a> 754     .quad   0xc086276c00ca51a0
+<a id='L755' name='L755'></a> 755     .quad   0xbe1cef47b301e312
+<a id='L756' name='L756'></a> 756     .quad   0xc086276e5a620e48
+<a id='L757' name='L757'></a> 757     .quad   0xbe1ceeb1cefc2e85
+<a id='L758' name='L758'></a> 758     .quad   0xc0862770b3494788
+<a id='L759' name='L759'></a> 759     .quad   0xbe1cf16f1fbbe011
+<a id='L760' name='L760'></a> 760     .quad   0xc08627730b8064e8
+<a id='L761' name='L761'></a> 761     .quad   0xbe1ceebdf75174c7
+<a id='L762' name='L762'></a> 762     .quad   0xc08627756307cd70
+<a id='L763' name='L763'></a> 763     .quad   0xbe1cf06e3871a0da
+<a id='L764' name='L764'></a> 764     .quad   0xc0862777b9dfe7f0
+<a id='L765' name='L765'></a> 765     .quad   0xbe1cef16799fd554
+<a id='L766' name='L766'></a> 766     .quad   0xc086277a10091ac0
+<a id='L767' name='L767'></a> 767     .quad   0xbe1cf248dabf5377
+<a id='L768' name='L768'></a> 768     .quad   0xc086277c6583cc00
+<a id='L769' name='L769'></a> 769     .quad   0xbe1cf0c78d92a2cd
+<a id='L770' name='L770'></a> 770     .quad   0xc086277eba506158
+<a id='L771' name='L771'></a> 771     .quad   0xbe1cf0b911b029f0
+<a id='L772' name='L772'></a> 772     .quad   0xc08627810e6f4028
+<a id='L773' name='L773'></a> 773     .quad   0xbe1cefdc24719766
+<a id='L774' name='L774'></a> 774     .quad   0xc086278361e0cd70
+<a id='L775' name='L775'></a> 775     .quad   0xbe1cefbb6562b7e7
+<a id='L776' name='L776'></a> 776     .quad   0xc0862785b4a56dd8
+<a id='L777' name='L777'></a> 777     .quad   0xbe1cf1e0afb349ec
+<a id='L778' name='L778'></a> 778     .quad   0xc086278806bd85c0
+<a id='L779' name='L779'></a> 779     .quad   0xbe1cf008292e52fc
+<a id='L780' name='L780'></a> 780     .quad   0xc086278a58297918
+<a id='L781' name='L781'></a> 781     .quad   0xbe1cf053073872bf
+<a id='L782' name='L782'></a> 782     .quad   0xc086278ca8e9ab88
+<a id='L783' name='L783'></a> 783     .quad   0xbe1cf17a0a55a947
+<a id='L784' name='L784'></a> 784     .quad   0xc086278ef8fe8068
+<a id='L785' name='L785'></a> 785     .quad   0xbe1ceeffb0b60234
+<a id='L786' name='L786'></a> 786     .quad   0xc086279148685aa0
+<a id='L787' name='L787'></a> 787     .quad   0xbe1cf162204794a8
+<a id='L788' name='L788'></a> 788     .quad   0xc086279397279ce0
+<a id='L789' name='L789'></a> 789     .quad   0xbe1cf24cc8cb48ac
+<a id='L790' name='L790'></a> 790     .quad   0xc0862795e53ca978
+<a id='L791' name='L791'></a> 791     .quad   0xbe1cf0c9be68d5c3
+<a id='L792' name='L792'></a> 792     .quad   0xc086279832a7e258
+<a id='L793' name='L793'></a> 793     .quad   0xbe1cf172cd3d7388
+<a id='L794' name='L794'></a> 794     .quad   0xc086279a7f69a930
+<a id='L795' name='L795'></a> 795     .quad   0xbe1ceea2465fbce5
+<a id='L796' name='L796'></a> 796     .quad   0xc086279ccb825f40
+<a id='L797' name='L797'></a> 797     .quad   0xbe1cf0a386d2500f
+<a id='L798' name='L798'></a> 798     .quad   0xc086279f16f26590
+<a id='L799' name='L799'></a> 799     .quad   0xbe1cf1e338ddc18a
+<a id='L800' name='L800'></a> 800     .quad   0xc08627a161ba1cd0
+<a id='L801' name='L801'></a> 801     .quad   0xbe1cef1f5049867f
+<a id='L802' name='L802'></a> 802     .quad   0xc08627a3abd9e548
+<a id='L803' name='L803'></a> 803     .quad   0xbe1cef96c1ea8b1f
+<a id='L804' name='L804'></a> 804     .quad   0xc08627a5f5521f00
+<a id='L805' name='L805'></a> 805     .quad   0xbe1cf138f6fd3c26
+<a id='L806' name='L806'></a> 806     .quad   0xc08627a83e2329b0
+<a id='L807' name='L807'></a> 807     .quad   0xbe1cf0d4fcbfdf3a
+<a id='L808' name='L808'></a> 808     .quad   0xc08627aa864d64b0
+<a id='L809' name='L809'></a> 809     .quad   0xbe1cf24870c12c81
+<a id='L810' name='L810'></a> 810     .quad   0xc08627accdd12f18
+<a id='L811' name='L811'></a> 811     .quad   0xbe1cf0ae2a56348d
+<a id='L812' name='L812'></a> 812     .quad   0xc08627af14aee7a0
+<a id='L813' name='L813'></a> 813     .quad   0xbe1cee8ca1a9b893
+<a id='L814' name='L814'></a> 814     .quad   0xc08627b15ae6eca8
+<a id='L815' name='L815'></a> 815     .quad   0xbe1cf20414d637b0
+<a id='L816' name='L816'></a> 816     .quad   0xc08627b3a0799c60
+<a id='L817' name='L817'></a> 817     .quad   0xbe1cf0fc6b7b12d8
+<a id='L818' name='L818'></a> 818     .quad   0xc08627b5e5675488
+<a id='L819' name='L819'></a> 819     .quad   0xbe1cf152d93c4a00
+<a id='L820' name='L820'></a> 820     .quad   0xc08627b829b072a0
+<a id='L821' name='L821'></a> 821     .quad   0xbe1cf1073f9b77c2
+<a id='L822' name='L822'></a> 822     .quad   0xc08627ba6d5553d8
+<a id='L823' name='L823'></a> 823     .quad   0xbe1cee694f97d5a4
+<a id='L824' name='L824'></a> 824     .quad   0xc08627bcb0565500
+<a id='L825' name='L825'></a> 825     .quad   0xbe1cf0456b8239d7
+<a id='L826' name='L826'></a> 826     .quad   0xc08627bef2b3d2b0
+<a id='L827' name='L827'></a> 827     .quad   0xbe1cf211497127e3
+<a id='L828' name='L828'></a> 828     .quad   0xc08627c1346e2930
+<a id='L829' name='L829'></a> 829     .quad   0xbe1cf01856c0384d
+<a id='L830' name='L830'></a> 830     .quad   0xc08627c37585b468
+<a id='L831' name='L831'></a> 831     .quad   0xbe1cefa7dd05479e
+<a id='L832' name='L832'></a> 832     .quad   0xc08627c5b5fad000
+<a id='L833' name='L833'></a> 833     .quad   0xbe1cef3ae8e50b93
+<a id='L834' name='L834'></a> 834     .quad   0xc08627c7f5cdd750
+<a id='L835' name='L835'></a> 835     .quad   0xbe1ceea5f32fdd3a
+<a id='L836' name='L836'></a> 836     .quad   0xc08627ca34ff2560
+<a id='L837' name='L837'></a> 837     .quad   0xbe1cef424caeb8d9
+<a id='L838' name='L838'></a> 838     .quad   0xc08627cc738f14f0
+<a id='L839' name='L839'></a> 839     .quad   0xbe1cf0194d07a81f
+<a id='L840' name='L840'></a> 840     .quad   0xc08627ceb17e0070
+<a id='L841' name='L841'></a> 841     .quad   0xbe1cf20f452000c1
+<a id='L842' name='L842'></a> 842     .quad   0xc08627d0eecc4210
+<a id='L843' name='L843'></a> 843     .quad   0xbe1cf00e356218e4
+<a id='L844' name='L844'></a> 844     .quad   0xc08627d32b7a33a0
+<a id='L845' name='L845'></a> 845     .quad   0xbe1cef30484b4bcb
+<a id='L846' name='L846'></a> 846     .quad   0xc08627d567882eb0
+<a id='L847' name='L847'></a> 847     .quad   0xbe1ceeea11a6641b
+<a id='L848' name='L848'></a> 848     .quad   0xc08627d7a2f68c80
+<a id='L849' name='L849'></a> 849     .quad   0xbe1cf13492d5bd7b
+<a id='L850' name='L850'></a> 850     .quad   0xc08627d9ddc5a618
+<a id='L851' name='L851'></a> 851     .quad   0xbe1ceeb7048fad96
+<a id='L852' name='L852'></a> 852     .quad   0xc08627dc17f5d418
+<a id='L853' name='L853'></a> 853     .quad   0xbe1ceef0666f0477
+<a id='L854' name='L854'></a> 854     .quad   0xc08627de51876ee8
+<a id='L855' name='L855'></a> 855     .quad   0xbe1cf060d4b8b5c2
+<a id='L856' name='L856'></a> 856     .quad   0xc08627e08a7acea8
+<a id='L857' name='L857'></a> 857     .quad   0xbe1cf0b2a4b6ff8c
+<a id='L858' name='L858'></a> 858     .quad   0xc08627e2c2d04b28
+<a id='L859' name='L859'></a> 859     .quad   0xbe1cf0e34809a875
+<a id='L860' name='L860'></a> 860     .quad   0xc08627e4fa883bf0
+<a id='L861' name='L861'></a> 861     .quad   0xbe1cf16bf74a3522
+<a id='L862' name='L862'></a> 862     .quad   0xc08627e731a2f848
+<a id='L863' name='L863'></a> 863     .quad   0xbe1cee6a24623d57
+<a id='L864' name='L864'></a> 864     .quad   0xc08627e96820d718
+<a id='L865' name='L865'></a> 865     .quad   0xbe1cefc7b4f1528e
+<a id='L866' name='L866'></a> 866     .quad   0xc08627eb9e022f18
+<a id='L867' name='L867'></a> 867     .quad   0xbe1cf163051f3548
+<a id='L868' name='L868'></a> 868     .quad   0xc08627edd34756b8
+<a id='L869' name='L869'></a> 869     .quad   0xbe1cef36b3366305
+<a id='L870' name='L870'></a> 870     .quad   0xc08627f007f0a408
+<a id='L871' name='L871'></a> 871     .quad   0xbe1cf18134625550
+<a id='L872' name='L872'></a> 872     .quad   0xc08627f23bfe6cf0
+<a id='L873' name='L873'></a> 873     .quad   0xbe1cf0ec32ec1a11
+<a id='L874' name='L874'></a> 874     .quad   0xc08627f46f710700
+<a id='L875' name='L875'></a> 875     .quad   0xbe1ceeb3b64f3edc
+<a id='L876' name='L876'></a> 876     .quad   0xc08627f6a248c778
+<a id='L877' name='L877'></a> 877     .quad   0xbe1cf0cd15805bc8
+<a id='L878' name='L878'></a> 878     .quad   0xc08627f8d4860368
+<a id='L879' name='L879'></a> 879     .quad   0xbe1cf20db3bddebe
+<a id='L880' name='L880'></a> 880     .quad   0xc08627fb06290f90
+<a id='L881' name='L881'></a> 881     .quad   0xbe1cf25188430e25
+<a id='L882' name='L882'></a> 882     .quad   0xc08627fd37324070
+<a id='L883' name='L883'></a> 883     .quad   0xbe1ceea1713490f9
+<a id='L884' name='L884'></a> 884     .quad   0xc08627ff67a1ea28
+<a id='L885' name='L885'></a> 885     .quad   0xbe1cf159521d234c
+<a id='L886' name='L886'></a> 886     .quad   0xc0862801977860b8
+<a id='L887' name='L887'></a> 887     .quad   0xbe1cf24dfe50783b
+<a id='L888' name='L888'></a> 888     .quad   0xc0862803c6b5f7d0
+<a id='L889' name='L889'></a> 889     .quad   0xbe1ceef2ef89a60b
+<a id='L890' name='L890'></a> 890     .quad   0xc0862805f55b02c8
+<a id='L891' name='L891'></a> 891     .quad   0xbe1cee7fc919d62c
+<a id='L892' name='L892'></a> 892     .quad   0xc08628082367d4c0
+<a id='L893' name='L893'></a> 893     .quad   0xbe1cf215a7fb513a
+<a id='L894' name='L894'></a> 894     .quad   0xc086280a50dcc0a8
+<a id='L895' name='L895'></a> 895     .quad   0xbe1cf0e4401c5ed4
+<a id='L896' name='L896'></a> 896     .quad   0xc086280c7dba1910
+<a id='L897' name='L897'></a> 897     .quad   0xbe1cf04ec734d256
+<a id='L898' name='L898'></a> 898     .quad   0xc086280eaa003050
+<a id='L899' name='L899'></a> 899     .quad   0xbe1cf010ad787fea
+<a id='L900' name='L900'></a> 900     .quad   0xc0862810d5af5880
+<a id='L901' name='L901'></a> 901     .quad   0xbe1cee622478393d
+<a id='L902' name='L902'></a> 902     .quad   0xc086281300c7e368
+<a id='L903' name='L903'></a> 903     .quad   0xbe1cf01c7482564f
+<a id='L904' name='L904'></a> 904     .quad   0xc08628152b4a22a0
+<a id='L905' name='L905'></a> 905     .quad   0xbe1cf0de20d33536
+<a id='L906' name='L906'></a> 906     .quad   0xc086281755366778
+<a id='L907' name='L907'></a> 907     .quad   0xbe1cef2edae5837d
+<a id='L908' name='L908'></a> 908     .quad   0xc08628197e8d02f0
+<a id='L909' name='L909'></a> 909     .quad   0xbe1cf0a345318cc9
+<a id='L910' name='L910'></a> 910     .quad   0xc086281ba74e45d8
+<a id='L911' name='L911'></a> 911     .quad   0xbe1cf20085aa34b8
+<a id='L912' name='L912'></a> 912     .quad   0xc086281dcf7a80c0
+<a id='L913' name='L913'></a> 913     .quad   0xbe1cef5fa845ad83
+<a id='L914' name='L914'></a> 914     .quad   0xc086281ff71203e0
+<a id='L915' name='L915'></a> 915     .quad   0xbe1cf050d1df69c4
+<a id='L916' name='L916'></a> 916     .quad   0xc08628221e151f48
+<a id='L917' name='L917'></a> 917     .quad   0xbe1ceffe43c035b9
+<a id='L918' name='L918'></a> 918     .quad   0xc0862824448422b8
+<a id='L919' name='L919'></a> 919     .quad   0xbe1cf14f3018d3c2
+<a id='L920' name='L920'></a> 920     .quad   0xc08628266a5f5dc0
+<a id='L921' name='L921'></a> 921     .quad   0xbe1cef0a5fbae83d
+<a id='L922' name='L922'></a> 922     .quad   0xc08628288fa71f98
+<a id='L923' name='L923'></a> 923     .quad   0xbe1ceff8a95b72a1
+<a id='L924' name='L924'></a> 924     .quad   0xc086282ab45bb750
+<a id='L925' name='L925'></a> 925     .quad   0xbe1cef073aa9849b
+<a id='L926' name='L926'></a> 926     .quad   0xc086282cd87d73a8
+<a id='L927' name='L927'></a> 927     .quad   0xbe1cef69b3835c02
+<a id='L928' name='L928'></a> 928     .quad   0xc086282efc0ca328
+<a id='L929' name='L929'></a> 929     .quad   0xbe1cf0bc139379a9
+<a id='L930' name='L930'></a> 930     .quad   0xc08628311f099420
+<a id='L931' name='L931'></a> 931     .quad   0xbe1cef247a9ec596
+<a id='L932' name='L932'></a> 932     .quad   0xc086283341749490
+<a id='L933' name='L933'></a> 933     .quad   0xbe1cef74bbcc488a
+<a id='L934' name='L934'></a> 934     .quad   0xc0862835634df248
+<a id='L935' name='L935'></a> 935     .quad   0xbe1cef4bc42e7b8e
+<a id='L936' name='L936'></a> 936     .quad   0xc08628378495fad0
+<a id='L937' name='L937'></a> 937     .quad   0xbe1cf136d4d5a810
+<a id='L938' name='L938'></a> 938     .quad   0xc0862839a54cfb80
+<a id='L939' name='L939'></a> 939     .quad   0xbe1cf0d290b24dd8
+<a id='L940' name='L940'></a> 940     .quad   0xc086283bc5734168
+<a id='L941' name='L941'></a> 941     .quad   0xbe1ceeebde8e0065
+<a id='L942' name='L942'></a> 942     .quad   0xc086283de5091950
+<a id='L943' name='L943'></a> 943     .quad   0xbe1cf1a09f60aa1e
+<a id='L944' name='L944'></a> 944     .quad   0xc0862840040ecfe0
+<a id='L945' name='L945'></a> 945     .quad   0xbe1cf0803947a234
+<a id='L946' name='L946'></a> 946     .quad   0xc08628422284b168
+<a id='L947' name='L947'></a> 947     .quad   0xbe1cf0abf7638127
+<a id='L948' name='L948'></a> 948     .quad   0xc0862844406b0a08
+<a id='L949' name='L949'></a> 949     .quad   0xbe1cf0f73ee12058
+<a id='L950' name='L950'></a> 950     .quad   0xc08628465dc225a0
+<a id='L951' name='L951'></a> 951     .quad   0xbe1cf2079971b26c
+<a id='L952' name='L952'></a> 952     .quad   0xc08628487a8a4fe0
+<a id='L953' name='L953'></a> 953     .quad   0xbe1cee74957564b1
+<a id='L954' name='L954'></a> 954     .quad   0xc086284a96c3d420
+<a id='L955' name='L955'></a> 955     .quad   0xbe1ceee77c1b7d43
+<a id='L956' name='L956'></a> 956     .quad   0xc086284cb26efd90
+<a id='L957' name='L957'></a> 957     .quad   0xbe1cf23addba6e09
+<a id='L958' name='L958'></a> 958     .quad   0xc086284ecd8c1730
+<a id='L959' name='L959'></a> 959     .quad   0xbe1cf199f4a1da60
+<a id='L960' name='L960'></a> 960     .quad   0xc0862850e81b6bb0
+<a id='L961' name='L961'></a> 961     .quad   0xbe1cf09fdea81393
+<a id='L962' name='L962'></a> 962     .quad   0xc0862853021d4588
+<a id='L963' name='L963'></a> 963     .quad   0xbe1cf176adb417f7
+<a id='L964' name='L964'></a> 964     .quad   0xc08628551b91ef00
+<a id='L965' name='L965'></a> 965     .quad   0xbe1cf0f64f84a8da
+<a id='L966' name='L966'></a> 966     .quad   0xc08628573479b220
+<a id='L967' name='L967'></a> 967     .quad   0xbe1ceec34cf49523
+<a id='L968' name='L968'></a> 968     .quad   0xc08628594cd4d8a8
+<a id='L969' name='L969'></a> 969     .quad   0xbe1cf16d60fbe0bb
+<a id='L970' name='L970'></a> 970     .quad   0xc086285b64a3ac40
+<a id='L971' name='L971'></a> 971     .quad   0xbe1cee8de7acfc7b
+<a id='L972' name='L972'></a> 972     .quad   0xc086285d7be67630
+<a id='L973' name='L973'></a> 973     .quad   0xbe1ceee6256cce8d
+<a id='L974' name='L974'></a> 974     .quad   0xc086285f929d7fa0
+<a id='L975' name='L975'></a> 975     .quad   0xbe1cee7d66a3d8a5
+<a id='L976' name='L976'></a> 976     .quad   0xc0862861a8c91170
+<a id='L977' name='L977'></a> 977     .quad   0xbe1cf0bef8265792
+<a id='L978' name='L978'></a> 978     .quad   0xc0862863be697458
+<a id='L979' name='L979'></a> 979     .quad   0xbe1cf097f890c6f8
+<a id='L980' name='L980'></a> 980     .quad   0xc0862865d37ef0c8
+<a id='L981' name='L981'></a> 981     .quad   0xbe1cf09502d5c3fc
+<a id='L982' name='L982'></a> 982     .quad   0xc0862867e809cf00
+<a id='L983' name='L983'></a> 983     .quad   0xbe1ceeffb239dac7
+<a id='L984' name='L984'></a> 984     .quad   0xc0862869fc0a56f8
+<a id='L985' name='L985'></a> 985     .quad   0xbe1cf1fbfff95c98
+<a id='L986' name='L986'></a> 986     .quad   0xc086286c0f80d090
+<a id='L987' name='L987'></a> 987     .quad   0xbe1cefa57ad3eef7
+<a id='L988' name='L988'></a> 988     .quad   0xc086286e226d8348
+<a id='L989' name='L989'></a> 989     .quad   0xbe1cf22c58b9183d
+<a id='L990' name='L990'></a> 990     .quad   0xc086287034d0b690
+<a id='L991' name='L991'></a> 991     .quad   0xbe1ceff262d0a248
+<a id='L992' name='L992'></a> 992     .quad   0xc086287246aab180
+<a id='L993' name='L993'></a> 993     .quad   0xbe1cefa7bc194186
+<a id='L994' name='L994'></a> 994     .quad   0xc086287457fbbb08
+<a id='L995' name='L995'></a> 995     .quad   0xbe1cf06782d784d9
+<a id='L996' name='L996'></a> 996     .quad   0xc086287668c419e0
+<a id='L997' name='L997'></a> 997     .quad   0xbe1cf1d44d0eaa07
+<a id='L998' name='L998'></a> 998     .quad   0xc086287879041490
+<a id='L999' name='L999'></a> 999     .quad   0xbe1cf034803c8a48
+<a id='L1000' name='L1000'></a>1000     .quad   0xc086287a88bbf158
+<a id='L1001' name='L1001'></a>1001     .quad   0xbe1cf08e84916b6f
+<a id='L1002' name='L1002'></a>1002     .quad   0xc086287c97ebf650
+<a id='L1003' name='L1003'></a>1003     .quad   0xbe1cf0c4d3dc1bc7
+<a id='L1004' name='L1004'></a>1004     .quad   0xc086287ea6946958
+<a id='L1005' name='L1005'></a>1005     .quad   0xbe1cefb1e4625943
+<a id='L1006' name='L1006'></a>1006     .quad   0xc0862880b4b59010
+<a id='L1007' name='L1007'></a>1007     .quad   0xbe1cf143efdd1fd0
+<a id='L1008' name='L1008'></a>1008     .quad   0xc0862882c24faff8
+<a id='L1009' name='L1009'></a>1009     .quad   0xbe1cee9896d016da
+<a id='L1010' name='L1010'></a>1010     .quad   0xc0862884cf630e38
+<a id='L1011' name='L1011'></a>1011     .quad   0xbe1cf2186072f2cc
+<a id='L1012' name='L1012'></a>1012     .quad   0xc0862886dbefeff0
+<a id='L1013' name='L1013'></a>1013     .quad   0xbe1cef9217633d34
+<a id='L1014' name='L1014'></a>1014     .quad   0xc0862888e7f699e0
+<a id='L1015' name='L1015'></a>1015     .quad   0xbe1cf05603549486
+<a id='L1016' name='L1016'></a>1016     .quad   0xc086288af37750b0
+<a id='L1017' name='L1017'></a>1017     .quad   0xbe1cef50fff513d3
+<a id='L1018' name='L1018'></a>1018     .quad   0xc086288cfe7258c0
+<a id='L1019' name='L1019'></a>1019     .quad   0xbe1cf127713b32d0
+<a id='L1020' name='L1020'></a>1020     .quad   0xc086288f08e7f650
+<a id='L1021' name='L1021'></a>1021     .quad   0xbe1cf05015520f3d
+<a id='L1022' name='L1022'></a>1022     .quad   0xc086289112d86d58
+<a id='L1023' name='L1023'></a>1023     .quad   0xbe1cf12eb458b26f
+<a id='L1024' name='L1024'></a>1024     .quad   0xc08628931c4401a8
+<a id='L1025' name='L1025'></a>1025     .quad   0xbe1cf22eae2887ed
+<a id='L1026' name='L1026'></a>1026     .quad   0xc0862895252af6e0
+<a id='L1027' name='L1027'></a>1027     .quad   0xbe1cefdd6656dd2d
+<a id='L1028' name='L1028'></a>1028     .quad   0xc08628972d8d9058
+<a id='L1029' name='L1029'></a>1029     .quad   0xbe1cf1048ea4e646
+<a id='L1030' name='L1030'></a>1030     .quad   0xc0862899356c1150
+<a id='L1031' name='L1031'></a>1031     .quad   0xbe1ceec4501167e9
+<a id='L1032' name='L1032'></a>1032     .quad   0xc086289b3cc6bcb8
+<a id='L1033' name='L1033'></a>1033     .quad   0xbe1cf0ad52becc3f
+<a id='L1034' name='L1034'></a>1034     .quad   0xc086289d439dd568
+<a id='L1035' name='L1035'></a>1035     .quad   0xbe1cf0daa4e00e35
+<a id='L1036' name='L1036'></a>1036     .quad   0xc086289f49f19df8
+<a id='L1037' name='L1037'></a>1037     .quad   0xbe1cf00b80de8d6a
+<a id='L1038' name='L1038'></a>1038     .quad   0xc08628a14fc258c8
+<a id='L1039' name='L1039'></a>1039     .quad   0xbe1cf1bcf2ea8464
+<a id='L1040' name='L1040'></a>1040     .quad   0xc08628a355104818
+<a id='L1041' name='L1041'></a>1041     .quad   0xbe1cf0435e2782b0
+<a id='L1042' name='L1042'></a>1042     .quad   0xc08628a559dbade0
+<a id='L1043' name='L1043'></a>1043     .quad   0xbe1cf0e3e1a5f56c
+<a id='L1044' name='L1044'></a>1044     .quad   0xc08628a75e24cbf8
+<a id='L1045' name='L1045'></a>1045     .quad   0xbe1cefed9d5a721d
+<a id='L1046' name='L1046'></a>1046     .quad   0xc08628a961ebe3f8
+<a id='L1047' name='L1047'></a>1047     .quad   0xbe1cf0d2d74321e2
+<a id='L1048' name='L1048'></a>1048     .quad   0xc08628ab65313750
+<a id='L1049' name='L1049'></a>1049     .quad   0xbe1cf24200eb55e9
+<a id='L1050' name='L1050'></a>1050     .quad   0xc08628ad67f50740
+<a id='L1051' name='L1051'></a>1051     .quad   0xbe1cf23e9d7cf979
+<a id='L1052' name='L1052'></a>1052     .quad   0xc08628af6a3794d0
+<a id='L1053' name='L1053'></a>1053     .quad   0xbe1cf23a088f421c
+<a id='L1054' name='L1054'></a>1054     .quad   0xc08628b16bf920e0
+<a id='L1055' name='L1055'></a>1055     .quad   0xbe1cef2c1de1ab32
+<a id='L1056' name='L1056'></a>1056     .quad   0xc08628b36d39ec08
+<a id='L1057' name='L1057'></a>1057     .quad   0xbe1cf1abc231f7b2
+<a id='L1058' name='L1058'></a>1058     .quad   0xc08628b56dfa36d0
+<a id='L1059' name='L1059'></a>1059     .quad   0xbe1cf2074d5ba303
+<a id='L1060' name='L1060'></a>1060     .quad   0xc08628b76e3a4180
+<a id='L1061' name='L1061'></a>1061     .quad   0xbe1cf05cd5eed880
+<a id='L1062' name='L1062'></a>1062     .rept   48
+<a id='L1063' name='L1063'></a>1063     .byte   0
+<a id='L1064' name='L1064'></a>1064     .endr
+<a id='L1065' name='L1065'></a>1065 
+<a id='L1066' name='L1066'></a>1066 <em class='comment'>/* Lookup table with 9-bit index for</em>
+<a id='L1067' name='L1067'></a>1067 <em class='comment'>   -log(mRcp), where mRcp is mantissa of 1/x 9-bit accurate reciprocal:</em>
+<a id='L1068' name='L1068'></a>1068 <em class='comment'> */</em>
+<a id='L1069' name='L1069'></a>1069 .if .-__svml_dlog_data != _Log_LA_table
+<a id='L1070' name='L1070'></a>1070 .err
+<a id='L1071' name='L1071'></a>1071 .endif
+<a id='L1072' name='L1072'></a>1072     .quad   0x8000000000000000
+<a id='L1073' name='L1073'></a>1073     .quad   0xbf5ff802a9ab10e6
+<a id='L1074' name='L1074'></a>1074     .quad   0xbf6ff00aa2b10bc0
+<a id='L1075' name='L1075'></a>1075     .quad   0xbf77ee11ebd82e94
+<a id='L1076' name='L1076'></a>1076     .quad   0xbf7fe02a6b106789
+<a id='L1077' name='L1077'></a>1077     .quad   0xbf83e7295d25a7d9
+<a id='L1078' name='L1078'></a>1078     .quad   0xbf87dc475f810a77
+<a id='L1079' name='L1079'></a>1079     .quad   0xbf8bcf712c74384c
+<a id='L1080' name='L1080'></a>1080     .quad   0xbf8fc0a8b0fc03e4
+<a id='L1081' name='L1081'></a>1081     .quad   0xbf91d7f7eb9eebe7
+<a id='L1082' name='L1082'></a>1082     .quad   0xbf93cea44346a575
+<a id='L1083' name='L1083'></a>1083     .quad   0xbf95c45a51b8d389
+<a id='L1084' name='L1084'></a>1084     .quad   0xbf97b91b07d5b11b
+<a id='L1085' name='L1085'></a>1085     .quad   0xbf99ace7551cc514
+<a id='L1086' name='L1086'></a>1086     .quad   0xbf9b9fc027af9198
+<a id='L1087' name='L1087'></a>1087     .quad   0xbf9d91a66c543cc4
+<a id='L1088' name='L1088'></a>1088     .quad   0xbf9f829b0e783300
+<a id='L1089' name='L1089'></a>1089     .quad   0xbfa0b94f7c196176
+<a id='L1090' name='L1090'></a>1090     .quad   0xbfa1b0d98923d980
+<a id='L1091' name='L1091'></a>1091     .quad   0xbfa2a7ec2214e873
+<a id='L1092' name='L1092'></a>1092     .quad   0xbfa39e87b9febd60
+<a id='L1093' name='L1093'></a>1093     .quad   0xbfa494acc34d911c
+<a id='L1094' name='L1094'></a>1094     .quad   0xbfa58a5bafc8e4d5
+<a id='L1095' name='L1095'></a>1095     .quad   0xbfa67f94f094bd98
+<a id='L1096' name='L1096'></a>1096     .quad   0xbfa77458f632dcfc
+<a id='L1097' name='L1097'></a>1097     .quad   0xbfa868a83083f6cf
+<a id='L1098' name='L1098'></a>1098     .quad   0xbfa95c830ec8e3eb
+<a id='L1099' name='L1099'></a>1099     .quad   0xbfaa4fe9ffa3d235
+<a id='L1100' name='L1100'></a>1100     .quad   0xbfab42dd711971bf
+<a id='L1101' name='L1101'></a>1101     .quad   0xbfac355dd0921f2d
+<a id='L1102' name='L1102'></a>1102     .quad   0xbfad276b8adb0b52
+<a id='L1103' name='L1103'></a>1103     .quad   0xbfae19070c276016
+<a id='L1104' name='L1104'></a>1104     .quad   0xbfaf0a30c01162a6
+<a id='L1105' name='L1105'></a>1105     .quad   0xbfaffae9119b9303
+<a id='L1106' name='L1106'></a>1106     .quad   0xbfb075983598e471
+<a id='L1107' name='L1107'></a>1107     .quad   0xbfb0ed839b5526fe
+<a id='L1108' name='L1108'></a>1108     .quad   0xbfb16536eea37ae1
+<a id='L1109' name='L1109'></a>1109     .quad   0xbfb1dcb263db1944
+<a id='L1110' name='L1110'></a>1110     .quad   0xbfb253f62f0a1417
+<a id='L1111' name='L1111'></a>1111     .quad   0xbfb2cb0283f5de1f
+<a id='L1112' name='L1112'></a>1112     .quad   0xbfb341d7961bd1d1
+<a id='L1113' name='L1113'></a>1113     .quad   0xbfb3b87598b1b6ee
+<a id='L1114' name='L1114'></a>1114     .quad   0xbfb42edcbea646f0
+<a id='L1115' name='L1115'></a>1115     .quad   0xbfb4a50d3aa1b040
+<a id='L1116' name='L1116'></a>1116     .quad   0xbfb51b073f06183f
+<a id='L1117' name='L1117'></a>1117     .quad   0xbfb590cafdf01c28
+<a id='L1118' name='L1118'></a>1118     .quad   0xbfb60658a93750c4
+<a id='L1119' name='L1119'></a>1119     .quad   0xbfb67bb0726ec0fc
+<a id='L1120' name='L1120'></a>1120     .quad   0xbfb6f0d28ae56b4c
+<a id='L1121' name='L1121'></a>1121     .quad   0xbfb765bf23a6be13
+<a id='L1122' name='L1122'></a>1122     .quad   0xbfb7da766d7b12cd
+<a id='L1123' name='L1123'></a>1123     .quad   0xbfb84ef898e8282a
+<a id='L1124' name='L1124'></a>1124     .quad   0xbfb8c345d6319b21
+<a id='L1125' name='L1125'></a>1125     .quad   0xbfb9375e55595ede
+<a id='L1126' name='L1126'></a>1126     .quad   0xbfb9ab42462033ad
+<a id='L1127' name='L1127'></a>1127     .quad   0xbfba1ef1d8061cd4
+<a id='L1128' name='L1128'></a>1128     .quad   0xbfba926d3a4ad563
+<a id='L1129' name='L1129'></a>1129     .quad   0xbfbb05b49bee43fe
+<a id='L1130' name='L1130'></a>1130     .quad   0xbfbb78c82bb0eda1
+<a id='L1131' name='L1131'></a>1131     .quad   0xbfbbeba818146765
+<a id='L1132' name='L1132'></a>1132     .quad   0xbfbc5e548f5bc743
+<a id='L1133' name='L1133'></a>1133     .quad   0xbfbcd0cdbf8c13e1
+<a id='L1134' name='L1134'></a>1134     .quad   0xbfbd4313d66cb35d
+<a id='L1135' name='L1135'></a>1135     .quad   0xbfbdb5270187d927
+<a id='L1136' name='L1136'></a>1136     .quad   0xbfbe27076e2af2e6
+<a id='L1137' name='L1137'></a>1137     .quad   0xbfbe98b549671467
+<a id='L1138' name='L1138'></a>1138     .quad   0xbfbf0a30c01162a6
+<a id='L1139' name='L1139'></a>1139     .quad   0xbfbf7b79fec37ddf
+<a id='L1140' name='L1140'></a>1140     .quad   0xbfbfec9131dbeabb
+<a id='L1141' name='L1141'></a>1141     .quad   0xbfc02ebb42bf3d4b
+<a id='L1142' name='L1142'></a>1142     .quad   0xbfc0671512ca596e
+<a id='L1143' name='L1143'></a>1143     .quad   0xbfc09f561ee719c3
+<a id='L1144' name='L1144'></a>1144     .quad   0xbfc0d77e7cd08e59
+<a id='L1145' name='L1145'></a>1145     .quad   0xbfc10f8e422539b1
+<a id='L1146' name='L1146'></a>1146     .quad   0xbfc14785846742ac
+<a id='L1147' name='L1147'></a>1147     .quad   0xbfc17f6458fca611
+<a id='L1148' name='L1148'></a>1148     .quad   0xbfc1b72ad52f67a0
+<a id='L1149' name='L1149'></a>1149     .quad   0xbfc1eed90e2dc2c3
+<a id='L1150' name='L1150'></a>1150     .quad   0xbfc2266f190a5acb
+<a id='L1151' name='L1151'></a>1151     .quad   0xbfc25ded0abc6ad2
+<a id='L1152' name='L1152'></a>1152     .quad   0xbfc29552f81ff523
+<a id='L1153' name='L1153'></a>1153     .quad   0xbfc2cca0f5f5f251
+<a id='L1154' name='L1154'></a>1154     .quad   0xbfc303d718e47fd3
+<a id='L1155' name='L1155'></a>1155     .quad   0xbfc33af575770e4f
+<a id='L1156' name='L1156'></a>1156     .quad   0xbfc371fc201e8f74
+<a id='L1157' name='L1157'></a>1157     .quad   0xbfc3a8eb2d31a376
+<a id='L1158' name='L1158'></a>1158     .quad   0xbfc3dfc2b0ecc62a
+<a id='L1159' name='L1159'></a>1159     .quad   0xbfc41682bf727bc0
+<a id='L1160' name='L1160'></a>1160     .quad   0xbfc44d2b6ccb7d1e
+<a id='L1161' name='L1161'></a>1161     .quad   0xbfc483bccce6e3dd
+<a id='L1162' name='L1162'></a>1162     .quad   0xbfc4ba36f39a55e5
+<a id='L1163' name='L1163'></a>1163     .quad   0xbfc4f099f4a230b2
+<a id='L1164' name='L1164'></a>1164     .quad   0xbfc526e5e3a1b438
+<a id='L1165' name='L1165'></a>1165     .quad   0xbfc55d1ad4232d6f
+<a id='L1166' name='L1166'></a>1166     .quad   0xbfc59338d9982086
+<a id='L1167' name='L1167'></a>1167     .quad   0xbfc5c940075972b9
+<a id='L1168' name='L1168'></a>1168     .quad   0xbfc5ff3070a793d4
+<a id='L1169' name='L1169'></a>1169     .quad   0xbfc6350a28aaa758
+<a id='L1170' name='L1170'></a>1170     .quad   0xbfc66acd4272ad51
+<a id='L1171' name='L1171'></a>1171     .quad   0xbfc6a079d0f7aad2
+<a id='L1172' name='L1172'></a>1172     .quad   0xbfc6d60fe719d21d
+<a id='L1173' name='L1173'></a>1173     .quad   0xbfc70b8f97a1aa75
+<a id='L1174' name='L1174'></a>1174     .quad   0xbfc740f8f54037a5
+<a id='L1175' name='L1175'></a>1175     .quad   0xbfc7764c128f2127
+<a id='L1176' name='L1176'></a>1176     .quad   0xbfc7ab890210d909
+<a id='L1177' name='L1177'></a>1177     .quad   0xbfc7e0afd630c274
+<a id='L1178' name='L1178'></a>1178     .quad   0xbfc815c0a14357eb
+<a id='L1179' name='L1179'></a>1179     .quad   0xbfc84abb75865139
+<a id='L1180' name='L1180'></a>1180     .quad   0xbfc87fa06520c911
+<a id='L1181' name='L1181'></a>1181     .quad   0xbfc8b46f8223625b
+<a id='L1182' name='L1182'></a>1182     .quad   0xbfc8e928de886d41
+<a id='L1183' name='L1183'></a>1183     .quad   0xbfc91dcc8c340bde
+<a id='L1184' name='L1184'></a>1184     .quad   0xbfc9525a9cf456b4
+<a id='L1185' name='L1185'></a>1185     .quad   0xbfc986d3228180ca
+<a id='L1186' name='L1186'></a>1186     .quad   0xbfc9bb362e7dfb83
+<a id='L1187' name='L1187'></a>1187     .quad   0xbfc9ef83d2769a34
+<a id='L1188' name='L1188'></a>1188     .quad   0xbfca23bc1fe2b563
+<a id='L1189' name='L1189'></a>1189     .quad   0xbfca57df28244dcd
+<a id='L1190' name='L1190'></a>1190     .quad   0xbfca8becfc882f19
+<a id='L1191' name='L1191'></a>1191     .quad   0xbfcabfe5ae46124c
+<a id='L1192' name='L1192'></a>1192     .quad   0xbfcaf3c94e80bff3
+<a id='L1193' name='L1193'></a>1193     .quad   0xbfcb2797ee46320c
+<a id='L1194' name='L1194'></a>1194     .quad   0xbfcb5b519e8fb5a4
+<a id='L1195' name='L1195'></a>1195     .quad   0xbfcb8ef670420c3b
+<a id='L1196' name='L1196'></a>1196     .quad   0xbfcbc286742d8cd6
+<a id='L1197' name='L1197'></a>1197     .quad   0xbfcbf601bb0e44e2
+<a id='L1198' name='L1198'></a>1198     .quad   0xbfcc2968558c18c1
+<a id='L1199' name='L1199'></a>1199     .quad   0xbfcc5cba543ae425
+<a id='L1200' name='L1200'></a>1200     .quad   0xbfcc8ff7c79a9a22
+<a id='L1201' name='L1201'></a>1201     .quad   0xbfccc320c0176502
+<a id='L1202' name='L1202'></a>1202     .quad   0xbfccf6354e09c5dc
+<a id='L1203' name='L1203'></a>1203     .quad   0xbfcd293581b6b3e7
+<a id='L1204' name='L1204'></a>1204     .quad   0xbfcd5c216b4fbb91
+<a id='L1205' name='L1205'></a>1205     .quad   0xbfcd8ef91af31d5e
+<a id='L1206' name='L1206'></a>1206     .quad   0xbfcdc1bca0abec7d
+<a id='L1207' name='L1207'></a>1207     .quad   0xbfcdf46c0c722d2f
+<a id='L1208' name='L1208'></a>1208     .quad   0xbfce27076e2af2e6
+<a id='L1209' name='L1209'></a>1209     .quad   0xbfce598ed5a87e2f
+<a id='L1210' name='L1210'></a>1210     .quad   0xbfce8c0252aa5a60
+<a id='L1211' name='L1211'></a>1211     .quad   0xbfcebe61f4dd7b0b
+<a id='L1212' name='L1212'></a>1212     .quad   0xbfcef0adcbdc5936
+<a id='L1213' name='L1213'></a>1213     .quad   0xbfcf22e5e72f105d
+<a id='L1214' name='L1214'></a>1214     .quad   0xbfcf550a564b7b37
+<a id='L1215' name='L1215'></a>1215     .quad   0xbfcf871b28955045
+<a id='L1216' name='L1216'></a>1216     .quad   0xbfcfb9186d5e3e2b
+<a id='L1217' name='L1217'></a>1217     .quad   0xbfcfeb0233e607cc
+<a id='L1218' name='L1218'></a>1218     .quad   0xbfd00e6c45ad501d
+<a id='L1219' name='L1219'></a>1219     .quad   0xbfd0274dc16c232f
+<a id='L1220' name='L1220'></a>1220     .quad   0xbfd0402594b4d041
+<a id='L1221' name='L1221'></a>1221     .quad   0xbfd058f3c703ebc6
+<a id='L1222' name='L1222'></a>1222     .quad   0xbfd071b85fcd590d
+<a id='L1223' name='L1223'></a>1223     .quad   0xbfd08a73667c57af
+<a id='L1224' name='L1224'></a>1224     .quad   0xbfd0a324e27390e3
+<a id='L1225' name='L1225'></a>1225     .quad   0xbfd0bbccdb0d24bd
+<a id='L1226' name='L1226'></a>1226     .quad   0xbfd0d46b579ab74b
+<a id='L1227' name='L1227'></a>1227     .quad   0xbfd0ed005f657da4
+<a id='L1228' name='L1228'></a>1228     .quad   0xbfd1058bf9ae4ad5
+<a id='L1229' name='L1229'></a>1229     .quad   0xbfd11e0e2dad9cb7
+<a id='L1230' name='L1230'></a>1230     .quad   0xbfd136870293a8b0
+<a id='L1231' name='L1231'></a>1231     .quad   0xbfd14ef67f88685a
+<a id='L1232' name='L1232'></a>1232     .quad   0xbfd1675cababa60e
+<a id='L1233' name='L1233'></a>1233     .quad   0xbfd17fb98e15095d
+<a id='L1234' name='L1234'></a>1234     .quad   0xbfd1980d2dd4236f
+<a id='L1235' name='L1235'></a>1235     .quad   0xbfd1b05791f07b49
+<a id='L1236' name='L1236'></a>1236     .quad   0xbfd1c898c16999fb
+<a id='L1237' name='L1237'></a>1237     .quad   0xbfd1e0d0c33716be
+<a id='L1238' name='L1238'></a>1238     .quad   0xbfd1f8ff9e48a2f3
+<a id='L1239' name='L1239'></a>1239     .quad   0xbfd211255986160c
+<a id='L1240' name='L1240'></a>1240     .quad   0xbfd22941fbcf7966
+<a id='L1241' name='L1241'></a>1241     .quad   0xbfd241558bfd1404
+<a id='L1242' name='L1242'></a>1242     .quad   0xbfd2596010df763a
+<a id='L1243' name='L1243'></a>1243     .quad   0xbfd27161913f853d
+<a id='L1244' name='L1244'></a>1244     .quad   0xbfd2895a13de86a3
+<a id='L1245' name='L1245'></a>1245     .quad   0xbfd2a1499f762bc9
+<a id='L1246' name='L1246'></a>1246     .quad   0xbfd2b9303ab89d25
+<a id='L1247' name='L1247'></a>1247     .quad   0xbfd2d10dec508583
+<a id='L1248' name='L1248'></a>1248     .quad   0xbfd2e8e2bae11d31
+<a id='L1249' name='L1249'></a>1249     .quad   0xbfd300aead06350c
+<a id='L1250' name='L1250'></a>1250     .quad   0xbfd31871c9544185
+<a id='L1251' name='L1251'></a>1251     .quad   0xbfd3302c16586588
+<a id='L1252' name='L1252'></a>1252     .quad   0xbfd347dd9a987d55
+<a id='L1253' name='L1253'></a>1253     .quad   0xbfd35f865c93293e
+<a id='L1254' name='L1254'></a>1254     .quad   0xbfd3772662bfd85b
+<a id='L1255' name='L1255'></a>1255     .quad   0xbfd38ebdb38ed321
+<a id='L1256' name='L1256'></a>1256     .quad   0xbfd3a64c556945ea
+<a id='L1257' name='L1257'></a>1257     .quad   0xbfd3bdd24eb14b6a
+<a id='L1258' name='L1258'></a>1258     .quad   0xbfd3d54fa5c1f710
+<a id='L1259' name='L1259'></a>1259     .quad   0xbfd3ecc460ef5f50
+<a id='L1260' name='L1260'></a>1260     .quad   0xbfd404308686a7e4
+<a id='L1261' name='L1261'></a>1261     .quad   0xbfd41b941cce0bee
+<a id='L1262' name='L1262'></a>1262     .quad   0xbfd432ef2a04e814
+<a id='L1263' name='L1263'></a>1263     .quad   0xbfd44a41b463c47c
+<a id='L1264' name='L1264'></a>1264     .quad   0xbfd4618bc21c5ec2
+<a id='L1265' name='L1265'></a>1265     .quad   0xbfd478cd5959b3d9
+<a id='L1266' name='L1266'></a>1266     .quad   0xbfd49006804009d1
+<a id='L1267' name='L1267'></a>1267     .quad   0xbfd4a7373cecf997
+<a id='L1268' name='L1268'></a>1268     .quad   0xbfd4be5f957778a1
+<a id='L1269' name='L1269'></a>1269     .quad   0xbfd4d57f8fefe27f
+<a id='L1270' name='L1270'></a>1270     .quad   0xbfd4ec973260026a
+<a id='L1271' name='L1271'></a>1271     .quad   0xbfd503a682cb1cb3
+<a id='L1272' name='L1272'></a>1272     .quad   0xbfd51aad872df82d
+<a id='L1273' name='L1273'></a>1273     .quad   0xbfd531ac457ee77e
+<a id='L1274' name='L1274'></a>1274     .quad   0xbfd548a2c3add263
+<a id='L1275' name='L1275'></a>1275     .quad   0xbfd55f9107a43ee2
+<a id='L1276' name='L1276'></a>1276     .quad   0xbfd5767717455a6c
+<a id='L1277' name='L1277'></a>1277     .quad   0xbfd58d54f86e02f2
+<a id='L1278' name='L1278'></a>1278     .quad   0xbfd5a42ab0f4cfe2
+<a id='L1279' name='L1279'></a>1279     .quad   0xbfd5baf846aa1b19
+<a id='L1280' name='L1280'></a>1280     .quad   0xbfd5d1bdbf5809ca
+<a id='L1281' name='L1281'></a>1281     .quad   0xbfd5e87b20c2954a
+<a id='L1282' name='L1282'></a>1282     .quad   0xbfd5ff3070a793d4
+<a id='L1283' name='L1283'></a>1283     .quad   0xbfd615ddb4bec13c
+<a id='L1284' name='L1284'></a>1284     .quad   0xbfd62c82f2b9c795
+<a id='L1285' name='L1285'></a>1285     .quad   0x3fd61965cdb02c1f
+<a id='L1286' name='L1286'></a>1286     .quad   0x3fd602d08af091ec
+<a id='L1287' name='L1287'></a>1287     .quad   0x3fd5ec433d5c35ae
+<a id='L1288' name='L1288'></a>1288     .quad   0x3fd5d5bddf595f30
+<a id='L1289' name='L1289'></a>1289     .quad   0x3fd5bf406b543db2
+<a id='L1290' name='L1290'></a>1290     .quad   0x3fd5a8cadbbedfa1
+<a id='L1291' name='L1291'></a>1291     .quad   0x3fd5925d2b112a59
+<a id='L1292' name='L1292'></a>1292     .quad   0x3fd57bf753c8d1fb
+<a id='L1293' name='L1293'></a>1293     .quad   0x3fd565995069514c
+<a id='L1294' name='L1294'></a>1294     .quad   0x3fd54f431b7be1a9
+<a id='L1295' name='L1295'></a>1295     .quad   0x3fd538f4af8f72fe
+<a id='L1296' name='L1296'></a>1296     .quad   0x3fd522ae0738a3d8
+<a id='L1297' name='L1297'></a>1297     .quad   0x3fd50c6f1d11b97c
+<a id='L1298' name='L1298'></a>1298     .quad   0x3fd4f637ebba9810
+<a id='L1299' name='L1299'></a>1299     .quad   0x3fd4e0086dd8baca
+<a id='L1300' name='L1300'></a>1300     .quad   0x3fd4c9e09e172c3c
+<a id='L1301' name='L1301'></a>1301     .quad   0x3fd4b3c077267e9a
+<a id='L1302' name='L1302'></a>1302     .quad   0x3fd49da7f3bcc41f
+<a id='L1303' name='L1303'></a>1303     .quad   0x3fd487970e958770
+<a id='L1304' name='L1304'></a>1304     .quad   0x3fd4718dc271c41b
+<a id='L1305' name='L1305'></a>1305     .quad   0x3fd45b8c0a17df13
+<a id='L1306' name='L1306'></a>1306     .quad   0x3fd44591e0539f49
+<a id='L1307' name='L1307'></a>1307     .quad   0x3fd42f9f3ff62642
+<a id='L1308' name='L1308'></a>1308     .quad   0x3fd419b423d5e8c7
+<a id='L1309' name='L1309'></a>1309     .quad   0x3fd403d086cea79c
+<a id='L1310' name='L1310'></a>1310     .quad   0x3fd3edf463c1683e
+<a id='L1311' name='L1311'></a>1311     .quad   0x3fd3d81fb5946dba
+<a id='L1312' name='L1312'></a>1312     .quad   0x3fd3c25277333184
+<a id='L1313' name='L1313'></a>1313     .quad   0x3fd3ac8ca38e5c5f
+<a id='L1314' name='L1314'></a>1314     .quad   0x3fd396ce359bbf54
+<a id='L1315' name='L1315'></a>1315     .quad   0x3fd3811728564cb2
+<a id='L1316' name='L1316'></a>1316     .quad   0x3fd36b6776be1117
+<a id='L1317' name='L1317'></a>1317     .quad   0x3fd355bf1bd82c8b
+<a id='L1318' name='L1318'></a>1318     .quad   0x3fd3401e12aecba1
+<a id='L1319' name='L1319'></a>1319     .quad   0x3fd32a84565120a8
+<a id='L1320' name='L1320'></a>1320     .quad   0x3fd314f1e1d35ce4
+<a id='L1321' name='L1321'></a>1321     .quad   0x3fd2ff66b04ea9d4
+<a id='L1322' name='L1322'></a>1322     .quad   0x3fd2e9e2bce12286
+<a id='L1323' name='L1323'></a>1323     .quad   0x3fd2d46602adccee
+<a id='L1324' name='L1324'></a>1324     .quad   0x3fd2bef07cdc9354
+<a id='L1325' name='L1325'></a>1325     .quad   0x3fd2a982269a3dbf
+<a id='L1326' name='L1326'></a>1326     .quad   0x3fd2941afb186b7c
+<a id='L1327' name='L1327'></a>1327     .quad   0x3fd27ebaf58d8c9d
+<a id='L1328' name='L1328'></a>1328     .quad   0x3fd269621134db92
+<a id='L1329' name='L1329'></a>1329     .quad   0x3fd25410494e56c7
+<a id='L1330' name='L1330'></a>1330     .quad   0x3fd23ec5991eba49
+<a id='L1331' name='L1331'></a>1331     .quad   0x3fd22981fbef797b
+<a id='L1332' name='L1332'></a>1332     .quad   0x3fd214456d0eb8d4
+<a id='L1333' name='L1333'></a>1333     .quad   0x3fd1ff0fe7cf47a7
+<a id='L1334' name='L1334'></a>1334     .quad   0x3fd1e9e1678899f4
+<a id='L1335' name='L1335'></a>1335     .quad   0x3fd1d4b9e796c245
+<a id='L1336' name='L1336'></a>1336     .quad   0x3fd1bf99635a6b95
+<a id='L1337' name='L1337'></a>1337     .quad   0x3fd1aa7fd638d33f
+<a id='L1338' name='L1338'></a>1338     .quad   0x3fd1956d3b9bc2fa
+<a id='L1339' name='L1339'></a>1339     .quad   0x3fd180618ef18adf
+<a id='L1340' name='L1340'></a>1340     .quad   0x3fd16b5ccbacfb73
+<a id='L1341' name='L1341'></a>1341     .quad   0x3fd1565eed455fc3
+<a id='L1342' name='L1342'></a>1342     .quad   0x3fd14167ef367783
+<a id='L1343' name='L1343'></a>1343     .quad   0x3fd12c77cd00713b
+<a id='L1344' name='L1344'></a>1344     .quad   0x3fd1178e8227e47c
+<a id='L1345' name='L1345'></a>1345     .quad   0x3fd102ac0a35cc1c
+<a id='L1346' name='L1346'></a>1346     .quad   0x3fd0edd060b78081
+<a id='L1347' name='L1347'></a>1347     .quad   0x3fd0d8fb813eb1ef
+<a id='L1348' name='L1348'></a>1348     .quad   0x3fd0c42d676162e3
+<a id='L1349' name='L1349'></a>1349     .quad   0x3fd0af660eb9e279
+<a id='L1350' name='L1350'></a>1350     .quad   0x3fd09aa572e6c6d4
+<a id='L1351' name='L1351'></a>1351     .quad   0x3fd085eb8f8ae797
+<a id='L1352' name='L1352'></a>1352     .quad   0x3fd07138604d5862
+<a id='L1353' name='L1353'></a>1353     .quad   0x3fd05c8be0d9635a
+<a id='L1354' name='L1354'></a>1354     .quad   0x3fd047e60cde83b8
+<a id='L1355' name='L1355'></a>1355     .quad   0x3fd03346e0106062
+<a id='L1356' name='L1356'></a>1356     .quad   0x3fd01eae5626c691
+<a id='L1357' name='L1357'></a>1357     .quad   0x3fd00a1c6adda473
+<a id='L1358' name='L1358'></a>1358     .quad   0x3fcfeb2233ea07cd
+<a id='L1359' name='L1359'></a>1359     .quad   0x3fcfc218be620a5e
+<a id='L1360' name='L1360'></a>1360     .quad   0x3fcf991c6cb3b379
+<a id='L1361' name='L1361'></a>1361     .quad   0x3fcf702d36777df0
+<a id='L1362' name='L1362'></a>1362     .quad   0x3fcf474b134df229
+<a id='L1363' name='L1363'></a>1363     .quad   0x3fcf1e75fadf9bde
+<a id='L1364' name='L1364'></a>1364     .quad   0x3fcef5ade4dcffe6
+<a id='L1365' name='L1365'></a>1365     .quad   0x3fceccf2c8fe920a
+<a id='L1366' name='L1366'></a>1366     .quad   0x3fcea4449f04aaf5
+<a id='L1367' name='L1367'></a>1367     .quad   0x3fce7ba35eb77e2a
+<a id='L1368' name='L1368'></a>1368     .quad   0x3fce530effe71012
+<a id='L1369' name='L1369'></a>1369     .quad   0x3fce2a877a6b2c12
+<a id='L1370' name='L1370'></a>1370     .quad   0x3fce020cc6235ab5
+<a id='L1371' name='L1371'></a>1371     .quad   0x3fcdd99edaf6d7e9
+<a id='L1372' name='L1372'></a>1372     .quad   0x3fcdb13db0d48940
+<a id='L1373' name='L1373'></a>1373     .quad   0x3fcd88e93fb2f450
+<a id='L1374' name='L1374'></a>1374     .quad   0x3fcd60a17f903515
+<a id='L1375' name='L1375'></a>1375     .quad   0x3fcd38666871f465
+<a id='L1376' name='L1376'></a>1376     .quad   0x3fcd1037f2655e7b
+<a id='L1377' name='L1377'></a>1377     .quad   0x3fcce816157f1988
+<a id='L1378' name='L1378'></a>1378     .quad   0x3fccc000c9db3c52
+<a id='L1379' name='L1379'></a>1379     .quad   0x3fcc97f8079d44ec
+<a id='L1380' name='L1380'></a>1380     .quad   0x3fcc6ffbc6f00f71
+<a id='L1381' name='L1381'></a>1381     .quad   0x3fcc480c0005ccd1
+<a id='L1382' name='L1382'></a>1382     .quad   0x3fcc2028ab17f9b4
+<a id='L1383' name='L1383'></a>1383     .quad   0x3fcbf851c067555f
+<a id='L1384' name='L1384'></a>1384     .quad   0x3fcbd087383bd8ad
+<a id='L1385' name='L1385'></a>1385     .quad   0x3fcba8c90ae4ad19
+<a id='L1386' name='L1386'></a>1386     .quad   0x3fcb811730b823d2
+<a id='L1387' name='L1387'></a>1387     .quad   0x3fcb5971a213acdb
+<a id='L1388' name='L1388'></a>1388     .quad   0x3fcb31d8575bce3d
+<a id='L1389' name='L1389'></a>1389     .quad   0x3fcb0a4b48fc1b46
+<a id='L1390' name='L1390'></a>1390     .quad   0x3fcae2ca6f672bd4
+<a id='L1391' name='L1391'></a>1391     .quad   0x3fcabb55c31693ad
+<a id='L1392' name='L1392'></a>1392     .quad   0x3fca93ed3c8ad9e3
+<a id='L1393' name='L1393'></a>1393     .quad   0x3fca6c90d44b704e
+<a id='L1394' name='L1394'></a>1394     .quad   0x3fca454082e6ab05
+<a id='L1395' name='L1395'></a>1395     .quad   0x3fca1dfc40f1b7f1
+<a id='L1396' name='L1396'></a>1396     .quad   0x3fc9f6c407089664
+<a id='L1397' name='L1397'></a>1397     .quad   0x3fc9cf97cdce0ec3
+<a id='L1398' name='L1398'></a>1398     .quad   0x3fc9a8778debaa38
+<a id='L1399' name='L1399'></a>1399     .quad   0x3fc981634011aa75
+<a id='L1400' name='L1400'></a>1400     .quad   0x3fc95a5adcf7017f
+<a id='L1401' name='L1401'></a>1401     .quad   0x3fc9335e5d594989
+<a id='L1402' name='L1402'></a>1402     .quad   0x3fc90c6db9fcbcd9
+<a id='L1403' name='L1403'></a>1403     .quad   0x3fc8e588ebac2dbf
+<a id='L1404' name='L1404'></a>1404     .quad   0x3fc8beafeb38fe8c
+<a id='L1405' name='L1405'></a>1405     .quad   0x3fc897e2b17b19a5
+<a id='L1406' name='L1406'></a>1406     .quad   0x3fc871213750e994
+<a id='L1407' name='L1407'></a>1407     .quad   0x3fc84a6b759f512f
+<a id='L1408' name='L1408'></a>1408     .quad   0x3fc823c16551a3c2
+<a id='L1409' name='L1409'></a>1409     .quad   0x3fc7fd22ff599d4f
+<a id='L1410' name='L1410'></a>1410     .quad   0x3fc7d6903caf5ad0
+<a id='L1411' name='L1411'></a>1411     .quad   0x3fc7b0091651528c
+<a id='L1412' name='L1412'></a>1412     .quad   0x3fc7898d85444c73
+<a id='L1413' name='L1413'></a>1413     .quad   0x3fc7631d82935a86
+<a id='L1414' name='L1414'></a>1414     .quad   0x3fc73cb9074fd14d
+<a id='L1415' name='L1415'></a>1415     .quad   0x3fc716600c914054
+<a id='L1416' name='L1416'></a>1416     .quad   0x3fc6f0128b756abc
+<a id='L1417' name='L1417'></a>1417     .quad   0x3fc6c9d07d203fc7
+<a id='L1418' name='L1418'></a>1418     .quad   0x3fc6a399dabbd383
+<a id='L1419' name='L1419'></a>1419     .quad   0x3fc67d6e9d785771
+<a id='L1420' name='L1420'></a>1420     .quad   0x3fc6574ebe8c133a
+<a id='L1421' name='L1421'></a>1421     .quad   0x3fc6313a37335d76
+<a id='L1422' name='L1422'></a>1422     .quad   0x3fc60b3100b09476
+<a id='L1423' name='L1423'></a>1423     .quad   0x3fc5e533144c1719
+<a id='L1424' name='L1424'></a>1424     .quad   0x3fc5bf406b543db2
+<a id='L1425' name='L1425'></a>1425     .quad   0x3fc59958ff1d52f1
+<a id='L1426' name='L1426'></a>1426     .quad   0x3fc5737cc9018cdd
+<a id='L1427' name='L1427'></a>1427     .quad   0x3fc54dabc26105d2
+<a id='L1428' name='L1428'></a>1428     .quad   0x3fc527e5e4a1b58d
+<a id='L1429' name='L1429'></a>1429     .quad   0x3fc5022b292f6a45
+<a id='L1430' name='L1430'></a>1430     .quad   0x3fc4dc7b897bc1c8
+<a id='L1431' name='L1431'></a>1431     .quad   0x3fc4b6d6fefe22a4
+<a id='L1432' name='L1432'></a>1432     .quad   0x3fc4913d8333b561
+<a id='L1433' name='L1433'></a>1433     .quad   0x3fc46baf0f9f5db7
+<a id='L1434' name='L1434'></a>1434     .quad   0x3fc4462b9dc9b3dc
+<a id='L1435' name='L1435'></a>1435     .quad   0x3fc420b32740fdd4
+<a id='L1436' name='L1436'></a>1436     .quad   0x3fc3fb45a59928cc
+<a id='L1437' name='L1437'></a>1437     .quad   0x3fc3d5e3126bc27f
+<a id='L1438' name='L1438'></a>1438     .quad   0x3fc3b08b6757f2a9
+<a id='L1439' name='L1439'></a>1439     .quad   0x3fc38b3e9e027479
+<a id='L1440' name='L1440'></a>1440     .quad   0x3fc365fcb0159016
+<a id='L1441' name='L1441'></a>1441     .quad   0x3fc340c59741142e
+<a id='L1442' name='L1442'></a>1442     .quad   0x3fc31b994d3a4f85
+<a id='L1443' name='L1443'></a>1443     .quad   0x3fc2f677cbbc0a96
+<a id='L1444' name='L1444'></a>1444     .quad   0x3fc2d1610c86813a
+<a id='L1445' name='L1445'></a>1445     .quad   0x3fc2ac55095f5c59
+<a id='L1446' name='L1446'></a>1446     .quad   0x3fc28753bc11aba5
+<a id='L1447' name='L1447'></a>1447     .quad   0x3fc2625d1e6ddf57
+<a id='L1448' name='L1448'></a>1448     .quad   0x3fc23d712a49c202
+<a id='L1449' name='L1449'></a>1449     .quad   0x3fc2188fd9807263
+<a id='L1450' name='L1450'></a>1450     .quad   0x3fc1f3b925f25d41
+<a id='L1451' name='L1451'></a>1451     .quad   0x3fc1ceed09853752
+<a id='L1452' name='L1452'></a>1452     .quad   0x3fc1aa2b7e23f72a
+<a id='L1453' name='L1453'></a>1453     .quad   0x3fc185747dbecf34
+<a id='L1454' name='L1454'></a>1454     .quad   0x3fc160c8024b27b1
+<a id='L1455' name='L1455'></a>1455     .quad   0x3fc13c2605c398c3
+<a id='L1456' name='L1456'></a>1456     .quad   0x3fc1178e8227e47c
+<a id='L1457' name='L1457'></a>1457     .quad   0x3fc0f301717cf0fb
+<a id='L1458' name='L1458'></a>1458     .quad   0x3fc0ce7ecdccc28d
+<a id='L1459' name='L1459'></a>1459     .quad   0x3fc0aa06912675d5
+<a id='L1460' name='L1460'></a>1460     .quad   0x3fc08598b59e3a07
+<a id='L1461' name='L1461'></a>1461     .quad   0x3fc06135354d4b18
+<a id='L1462' name='L1462'></a>1462     .quad   0x3fc03cdc0a51ec0d
+<a id='L1463' name='L1463'></a>1463     .quad   0x3fc0188d2ecf6140
+<a id='L1464' name='L1464'></a>1464     .quad   0x3fbfe89139dbd566
+<a id='L1465' name='L1465'></a>1465     .quad   0x3fbfa01c9db57ce2
+<a id='L1466' name='L1466'></a>1466     .quad   0x3fbf57bc7d9005db
+<a id='L1467' name='L1467'></a>1467     .quad   0x3fbf0f70cdd992e3
+<a id='L1468' name='L1468'></a>1468     .quad   0x3fbec739830a1120
+<a id='L1469' name='L1469'></a>1469     .quad   0x3fbe7f1691a32d3e
+<a id='L1470' name='L1470'></a>1470     .quad   0x3fbe3707ee30487b
+<a id='L1471' name='L1471'></a>1471     .quad   0x3fbdef0d8d466db9
+<a id='L1472' name='L1472'></a>1472     .quad   0x3fbda727638446a2
+<a id='L1473' name='L1473'></a>1473     .quad   0x3fbd5f55659210e2
+<a id='L1474' name='L1474'></a>1474     .quad   0x3fbd179788219364
+<a id='L1475' name='L1475'></a>1475     .quad   0x3fbccfedbfee13a8
+<a id='L1476' name='L1476'></a>1476     .quad   0x3fbc885801bc4b23
+<a id='L1477' name='L1477'></a>1477     .quad   0x3fbc40d6425a5cb1
+<a id='L1478' name='L1478'></a>1478     .quad   0x3fbbf968769fca11
+<a id='L1479' name='L1479'></a>1479     .quad   0x3fbbb20e936d6974
+<a id='L1480' name='L1480'></a>1480     .quad   0x3fbb6ac88dad5b1c
+<a id='L1481' name='L1481'></a>1481     .quad   0x3fbb23965a52ff00
+<a id='L1482' name='L1482'></a>1482     .quad   0x3fbadc77ee5aea8c
+<a id='L1483' name='L1483'></a>1483     .quad   0x3fba956d3ecade63
+<a id='L1484' name='L1484'></a>1484     .quad   0x3fba4e7640b1bc38
+<a id='L1485' name='L1485'></a>1485     .quad   0x3fba0792e9277cac
+<a id='L1486' name='L1486'></a>1486     .quad   0x3fb9c0c32d4d2548
+<a id='L1487' name='L1487'></a>1487     .quad   0x3fb97a07024cbe74
+<a id='L1488' name='L1488'></a>1488     .quad   0x3fb9335e5d594989
+<a id='L1489' name='L1489'></a>1489     .quad   0x3fb8ecc933aeb6e8
+<a id='L1490' name='L1490'></a>1490     .quad   0x3fb8a6477a91dc29
+<a id='L1491' name='L1491'></a>1491     .quad   0x3fb85fd927506a48
+<a id='L1492' name='L1492'></a>1492     .quad   0x3fb8197e2f40e3f0
+<a id='L1493' name='L1493'></a>1493     .quad   0x3fb7d33687c293c9
+<a id='L1494' name='L1494'></a>1494     .quad   0x3fb78d02263d82d3
+<a id='L1495' name='L1495'></a>1495     .quad   0x3fb746e100226ed9
+<a id='L1496' name='L1496'></a>1496     .quad   0x3fb700d30aeac0e1
+<a id='L1497' name='L1497'></a>1497     .quad   0x3fb6bad83c1883b6
+<a id='L1498' name='L1498'></a>1498     .quad   0x3fb674f089365a7a
+<a id='L1499' name='L1499'></a>1499     .quad   0x3fb62f1be7d77743
+<a id='L1500' name='L1500'></a>1500     .quad   0x3fb5e95a4d9791cb
+<a id='L1501' name='L1501'></a>1501     .quad   0x3fb5a3abb01ade25
+<a id='L1502' name='L1502'></a>1502     .quad   0x3fb55e10050e0384
+<a id='L1503' name='L1503'></a>1503     .quad   0x3fb518874226130a
+<a id='L1504' name='L1504'></a>1504     .quad   0x3fb4d3115d207eac
+<a id='L1505' name='L1505'></a>1505     .quad   0x3fb48dae4bc31018
+<a id='L1506' name='L1506'></a>1506     .quad   0x3fb4485e03dbdfad
+<a id='L1507' name='L1507'></a>1507     .quad   0x3fb403207b414b7f
+<a id='L1508' name='L1508'></a>1508     .quad   0x3fb3bdf5a7d1ee64
+<a id='L1509' name='L1509'></a>1509     .quad   0x3fb378dd7f749714
+<a id='L1510' name='L1510'></a>1510     .quad   0x3fb333d7f8183f4b
+<a id='L1511' name='L1511'></a>1511     .quad   0x3fb2eee507b40301
+<a id='L1512' name='L1512'></a>1512     .quad   0x3fb2aa04a44717a5
+<a id='L1513' name='L1513'></a>1513     .quad   0x3fb26536c3d8c369
+<a id='L1514' name='L1514'></a>1514     .quad   0x3fb2207b5c78549e
+<a id='L1515' name='L1515'></a>1515     .quad   0x3fb1dbd2643d190b
+<a id='L1516' name='L1516'></a>1516     .quad   0x3fb1973bd1465567
+<a id='L1517' name='L1517'></a>1517     .quad   0x3fb152b799bb3cc9
+<a id='L1518' name='L1518'></a>1518     .quad   0x3fb10e45b3cae831
+<a id='L1519' name='L1519'></a>1519     .quad   0x3fb0c9e615ac4e17
+<a id='L1520' name='L1520'></a>1520     .quad   0x3fb08598b59e3a07
+<a id='L1521' name='L1521'></a>1521     .quad   0x3fb0415d89e74444
+<a id='L1522' name='L1522'></a>1522     .quad   0x3faffa6911ab9301
+<a id='L1523' name='L1523'></a>1523     .quad   0x3faf723b517fc523
+<a id='L1524' name='L1524'></a>1524     .quad   0x3faeea31c006b87c
+<a id='L1525' name='L1525'></a>1525     .quad   0x3fae624c4a0b5e1b
+<a id='L1526' name='L1526'></a>1526     .quad   0x3fadda8adc67ee4e
+<a id='L1527' name='L1527'></a>1527     .quad   0x3fad52ed6405d86f
+<a id='L1528' name='L1528'></a>1528     .quad   0x3faccb73cdddb2cc
+<a id='L1529' name='L1529'></a>1529     .quad   0x3fac441e06f72a9e
+<a id='L1530' name='L1530'></a>1530     .quad   0x3fabbcebfc68f420
+<a id='L1531' name='L1531'></a>1531     .quad   0x3fab35dd9b58baad
+<a id='L1532' name='L1532'></a>1532     .quad   0x3faaaef2d0fb10fc
+<a id='L1533' name='L1533'></a>1533     .quad   0x3faa282b8a936171
+<a id='L1534' name='L1534'></a>1534     .quad   0x3fa9a187b573de7c
+<a id='L1535' name='L1535'></a>1535     .quad   0x3fa91b073efd7314
+<a id='L1536' name='L1536'></a>1536     .quad   0x3fa894aa149fb343
+<a id='L1537' name='L1537'></a>1537     .quad   0x3fa80e7023d8ccc4
+<a id='L1538' name='L1538'></a>1538     .quad   0x3fa788595a3577ba
+<a id='L1539' name='L1539'></a>1539     .quad   0x3fa70265a550e777
+<a id='L1540' name='L1540'></a>1540     .quad   0x3fa67c94f2d4bb58
+<a id='L1541' name='L1541'></a>1541     .quad   0x3fa5f6e73078efb8
+<a id='L1542' name='L1542'></a>1542     .quad   0x3fa5715c4c03ceef
+<a id='L1543' name='L1543'></a>1543     .quad   0x3fa4ebf43349e26f
+<a id='L1544' name='L1544'></a>1544     .quad   0x3fa466aed42de3ea
+<a id='L1545' name='L1545'></a>1545     .quad   0x3fa3e18c1ca0ae92
+<a id='L1546' name='L1546'></a>1546     .quad   0x3fa35c8bfaa1306b
+<a id='L1547' name='L1547'></a>1547     .quad   0x3fa2d7ae5c3c5bae
+<a id='L1548' name='L1548'></a>1548     .quad   0x3fa252f32f8d183f
+<a id='L1549' name='L1549'></a>1549     .quad   0x3fa1ce5a62bc353a
+<a id='L1550' name='L1550'></a>1550     .quad   0x3fa149e3e4005a8d
+<a id='L1551' name='L1551'></a>1551     .quad   0x3fa0c58fa19dfaaa
+<a id='L1552' name='L1552'></a>1552     .quad   0x3fa0415d89e74444
+<a id='L1553' name='L1553'></a>1553     .quad   0x3f9f7a9b16782856
+<a id='L1554' name='L1554'></a>1554     .quad   0x3f9e72bf2813ce51
+<a id='L1555' name='L1555'></a>1555     .quad   0x3f9d6b2725979802
+<a id='L1556' name='L1556'></a>1556     .quad   0x3f9c63d2ec14aaf2
+<a id='L1557' name='L1557'></a>1557     .quad   0x3f9b5cc258b718e6
+<a id='L1558' name='L1558'></a>1558     .quad   0x3f9a55f548c5c43f
+<a id='L1559' name='L1559'></a>1559     .quad   0x3f994f6b99a24475
+<a id='L1560' name='L1560'></a>1560     .quad   0x3f98492528c8cabf
+<a id='L1561' name='L1561'></a>1561     .quad   0x3f974321d3d006d3
+<a id='L1562' name='L1562'></a>1562     .quad   0x3f963d6178690bd6
+<a id='L1563' name='L1563'></a>1563     .quad   0x3f9537e3f45f3565
+<a id='L1564' name='L1564'></a>1564     .quad   0x3f9432a925980cc1
+<a id='L1565' name='L1565'></a>1565     .quad   0x3f932db0ea132e22
+<a id='L1566' name='L1566'></a>1566     .quad   0x3f9228fb1fea2e28
+<a id='L1567' name='L1567'></a>1567     .quad   0x3f912487a5507f70
+<a id='L1568' name='L1568'></a>1568     .quad   0x3f90205658935847
+<a id='L1569' name='L1569'></a>1569     .quad   0x3f8e38ce3033310c
+<a id='L1570' name='L1570'></a>1570     .quad   0x3f8c317384c75f06
+<a id='L1571' name='L1571'></a>1571     .quad   0x3f8a2a9c6c170462
+<a id='L1572' name='L1572'></a>1572     .quad   0x3f882448a388a2aa
+<a id='L1573' name='L1573'></a>1573     .quad   0x3f861e77e8b53fc6
+<a id='L1574' name='L1574'></a>1574     .quad   0x3f841929f96832f0
+<a id='L1575' name='L1575'></a>1575     .quad   0x3f82145e939ef1e9
+<a id='L1576' name='L1576'></a>1576     .quad   0x3f8010157588de71
+<a id='L1577' name='L1577'></a>1577     .quad   0x3f7c189cbb0e27fb
+<a id='L1578' name='L1578'></a>1578     .quad   0x3f78121214586b54
+<a id='L1579' name='L1579'></a>1579     .quad   0x3f740c8a747878e2
+<a id='L1580' name='L1580'></a>1580     .quad   0x3f70080559588b35
+<a id='L1581' name='L1581'></a>1581     .quad   0x3f680904828985c0
+<a id='L1582' name='L1582'></a>1582     .quad   0x3f60040155d5889e
+<a id='L1583' name='L1583'></a>1583     .quad   0x3f50020055655889
+<a id='L1584' name='L1584'></a>1584     .quad   0x0000000000000000
+<a id='L1585' name='L1585'></a>1585     .rept   56
+<a id='L1586' name='L1586'></a>1586     .byte   0
+<a id='L1587' name='L1587'></a>1587     .endr
+<a id='L1588' name='L1588'></a>1588 
+<a id='L1589' name='L1589'></a>1589 <em class='comment'>/* Polynomial coefficients: */</em>
+<a id='L1590' name='L1590'></a>1590 double_vector _poly_coeff_1 0x3fc9999cacdb4d0a
+<a id='L1591' name='L1591'></a>1591 double_vector _poly_coeff_2 0xbfd0000148058ee1
+<a id='L1592' name='L1592'></a>1592 double_vector _poly_coeff_3 0x3fd55555555543c5
+<a id='L1593' name='L1593'></a>1593 double_vector _poly_coeff_4 0xbfdffffffffff81f
+<a id='L1594' name='L1594'></a>1594 
+<a id='L1595' name='L1595'></a>1595 <em class='comment'>/* Exponent mask */</em>
+<a id='L1596' name='L1596'></a>1596 double_vector _ExpMask 0x000fffffffffffff
+<a id='L1597' name='L1597'></a>1597 
+<a id='L1598' name='L1598'></a>1598 <em class='comment'>/* 2^10 */</em>
+<a id='L1599' name='L1599'></a>1599 double_vector _Two10 0x3f50000000000000
+<a id='L1600' name='L1600'></a>1600 
+<a id='L1601' name='L1601'></a>1601 <em class='comment'>/* Minimum normal number */</em>
+<a id='L1602' name='L1602'></a>1602 double_vector _MinNorm 0x0010000000000000
+<a id='L1603' name='L1603'></a>1603 
+<a id='L1604' name='L1604'></a>1604 <em class='comment'>/* Maximum normal number */</em>
+<a id='L1605' name='L1605'></a>1605 double_vector _MaxNorm 0x7fefffffffffffff
+<a id='L1606' name='L1606'></a>1606 
+<a id='L1607' name='L1607'></a>1607 <em class='comment'>/* Half of mantissa mask */</em>
+<a id='L1608' name='L1608'></a>1608 double_vector _HalfMask 0xfffffffffc000000
+<a id='L1609' name='L1609'></a>1609 
+<a id='L1610' name='L1610'></a>1610 <em class='comment'>/* 1.0 */</em>
+<a id='L1611' name='L1611'></a>1611 double_vector _One 0x3ff0000000000000
+<a id='L1612' name='L1612'></a>1612 
+<a id='L1613' name='L1613'></a>1613 <em class='comment'>/* log(2) high part */</em>
+<a id='L1614' name='L1614'></a>1614 double_vector _L2H 0x3fe62e42fefa0000
+<a id='L1615' name='L1615'></a>1615 
+<a id='L1616' name='L1616'></a>1616 <em class='comment'>/* log(2) low part */</em>
+<a id='L1617' name='L1617'></a>1617 double_vector _L2L 0x3d7cf79abc9e0000
+<a id='L1618' name='L1618'></a>1618 
+<a id='L1619' name='L1619'></a>1619 <em class='comment'>/* Work range threshold = 724 */</em>
+<a id='L1620' name='L1620'></a>1620 double_vector _Threshold 0x4086a00000000000
+<a id='L1621' name='L1621'></a>1621 
+<a id='L1622' name='L1622'></a>1622 <em class='comment'>/* Bias */</em>
+<a id='L1623' name='L1623'></a>1623 double_vector _Bias 0x408ff80000000000
+<a id='L1624' name='L1624'></a>1624 
+<a id='L1625' name='L1625'></a>1625 <em class='comment'>/* Bias (-1 bit) */</em>
+<a id='L1626' name='L1626'></a>1626 double_vector _Bias1 0x408ff00000000000
+<a id='L1627' name='L1627'></a>1627 
+<a id='L1628' name='L1628'></a>1628 <em class='comment'>/* log(2) */</em>
+<a id='L1629' name='L1629'></a>1629 double_vector _L2 0x3fe62e42fefa39ef
+<a id='L1630' name='L1630'></a>1630 
+<a id='L1631' name='L1631'></a>1631 <em class='comment'>/* General purpose constants:</em>
+<a id='L1632' name='L1632'></a>1632 <em class='comment'>   DP infinities, +/-  */</em>
+<a id='L1633' name='L1633'></a>1633 .if .-__svml_dlog_data != _dInfs
+<a id='L1634' name='L1634'></a>1634 .err
+<a id='L1635' name='L1635'></a>1635 .endif
+<a id='L1636' name='L1636'></a>1636     .quad   0x7ff0000000000000
+<a id='L1637' name='L1637'></a>1637     .quad   0xfff0000000000000
+<a id='L1638' name='L1638'></a>1638     .rept   48
+<a id='L1639' name='L1639'></a>1639     .byte   0
+<a id='L1640' name='L1640'></a>1640     .endr
+<a id='L1641' name='L1641'></a>1641 
+<a id='L1642' name='L1642'></a>1642 <em class='comment'>/* DP 1.0, +/- */</em>
+<a id='L1643' name='L1643'></a>1643 .if .-__svml_dlog_data != _dOnes
+<a id='L1644' name='L1644'></a>1644 .err
+<a id='L1645' name='L1645'></a>1645 .endif
+<a id='L1646' name='L1646'></a>1646     .quad   0x3ff0000000000000
+<a id='L1647' name='L1647'></a>1647     .quad   0xbff0000000000000
+<a id='L1648' name='L1648'></a>1648     .rept   48
+<a id='L1649' name='L1649'></a>1649     .byte   0
+<a id='L1650' name='L1650'></a>1650     .endr
+<a id='L1651' name='L1651'></a>1651 
+<a id='L1652' name='L1652'></a>1652 <em class='comment'>/* DP 0.0, +/- */</em>
+<a id='L1653' name='L1653'></a>1653 .if .-__svml_dlog_data != _dZeros
+<a id='L1654' name='L1654'></a>1654 .err
+<a id='L1655' name='L1655'></a>1655 .endif
+<a id='L1656' name='L1656'></a>1656     .quad   0x0000000000000000
+<a id='L1657' name='L1657'></a>1657     .quad   0x8000000000000000
+<a id='L1658' name='L1658'></a>1658     .rept   48
+<a id='L1659' name='L1659'></a>1659     .byte   0
+<a id='L1660' name='L1660'></a>1660     .endr
+<a id='L1661' name='L1661'></a>1661     .type   __svml_dlog_data,@object
+<a id='L1662' name='L1662'></a>1662     .size __svml_dlog_data,.-__svml_dlog_data
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;][^][v]<a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

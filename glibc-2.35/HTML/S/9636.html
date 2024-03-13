@@ -1,0 +1,115 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>sysdeps/unix/sysv/linux/x86/tst-cet-vfork-1.c</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18977.html'>sysdeps</a>/<a href='../files/19246.html'>unix</a>/<a href='../files/19257.html'>sysv</a>/<a href='../files/19258.html'>linux</a>/<a href='../files/19365.html'>x86</a>/tst-cet-vfork-1.c</h2>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L33'>[^]</a><a href='#L76'>[v]</a>[top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<h2 class='header'>DEFINITIONS</h2>
+This source file includes following definitions.
+<ol>
+<li><a href='#L33' title='Defined at 33.'>do_test_1</a></li>
+<li><a href='#L76' title='Defined at 76.'>do_test</a></li>
+</ol>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* Verify that child of the vfork-calling function can't return when</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   shadow stack is in use.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'>   Copyright (C) 2020-2022 Free Software Foundation, Inc.</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L5' name='L5'></a>   5 <em class='comment'></em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L10' name='L10'></a>  10 <em class='comment'></em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L15' name='L15'></a>  15 <em class='comment'></em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L17' name='L17'></a>  17 <em class='comment'>   License along with the GNU C Library; if not, see</em>
+<a id='L18' name='L18'></a>  18 <em class='comment'>   &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L19' name='L19'></a>  19 
+<a id='L20' name='L20'></a>  20 <em class='sharp'>#include</em> &lt;<a href='../I/1776.html'>stdio.h</a>&gt;
+<a id='L21' name='L21'></a>  21 <em class='sharp'>#include</em> &lt;<a href='../I/1780.html'>stdlib.h</a>&gt;
+<a id='L22' name='L22'></a>  22 <em class='sharp'>#include</em> &lt;<a href='../I/1819.html'>unistd.h</a>&gt;
+<a id='L23' name='L23'></a>  23 <em class='sharp'>#include</em> &lt;<a href='../I/116.html'>errno.h</a>&gt;
+<a id='L24' name='L24'></a>  24 <em class='sharp'>#include</em> &lt;<a href='../I/1786.html'>sys/types.h</a>&gt;
+<a id='L25' name='L25'></a>  25 <em class='sharp'>#include</em> &lt;<a href='../I/2025.html'>sys/wait.h</a>&gt;
+<a id='L26' name='L26'></a>  26 <em class='sharp'>#include</em> &lt;x86intrin.h&gt;
+<a id='L27' name='L27'></a>  27 <em class='sharp'>#include</em> &lt;<a href='5902.html'>support/test-driver.h</a>&gt;
+<a id='L28' name='L28'></a>  28 <em class='sharp'>#include</em> &lt;<a href='5820.html'>support/xsignal.h</a>&gt;
+<a id='L29' name='L29'></a>  29 <em class='sharp'>#include</em> &lt;<a href='5899.html'>support/xunistd.h</a>&gt;
+<a id='L30' name='L30'></a>  30 
+<a id='L31' name='L31'></a>  31 <strong class='reserved'>__attribute__</strong> ((<a href='../Y/21007.html' title='Multiple used in 89 places.'>noclone</a>, <a href='../Y/21025.html' title='Multiple used in 150 places.'>noinline</a>))
+<a id='L32' name='L32'></a>  32 <strong class='reserved'>static</strong> <strong class='reserved'>void</strong>
+<a id='L33' name='L33'></a>  33 <a href='../R/18787.html' title='Multiple referred from 20 places.'>do_test_1</a> (<strong class='reserved'>void</strong>)
+<a id='L34' name='L34'></a>  34 <em class='brace'>{</em>
+<a id='L35' name='L35'></a>  35   <a href='../D/34727.html' title='Multiple defined in 11 places.'>pid_t</a> <a href='../Y/22054.html' title='Multiple used in 299 places.'>p1</a>;
+<a id='L36' name='L36'></a>  36   <strong class='reserved'>int</strong> <a href='../S/1663.html#L52' title='Defined at 52 in nscd/initgrcache.c.'>fd</a>[2];
+<a id='L37' name='L37'></a>  37 
+<a id='L38' name='L38'></a>  38   <strong class='reserved'>if</strong> (<a href='../Y/22438.html' title='Multiple used in 41 places.'>pipe</a> (<a href='../S/1663.html#L52' title='Defined at 52 in nscd/initgrcache.c.'>fd</a>) == -1)
+<a id='L39' name='L39'></a>  39     <em class='brace'>{</em>
+<a id='L40' name='L40'></a>  40       <a href='../Y/23144.html' title='Multiple used in 3983 places.'>puts</a> ("pipe failed");
+<a id='L41' name='L41'></a>  41       <a href='../D/26871.html' title='Multiple defined in 4 places.'>_exit</a> (<a href='../D/3872.html' title='Multiple defined in 4 places.'>EXIT_FAILURE</a>);
+<a id='L42' name='L42'></a>  42     <em class='brace'>}</em>
+<a id='L43' name='L43'></a>  43 
+<a id='L44' name='L44'></a>  44   <strong class='reserved'>if</strong> ((<a href='../Y/22054.html' title='Multiple used in 299 places.'>p1</a> = <a href='../Y/28679.html' title='Multiple used in 11 places.'>vfork</a> ()) == 0)
+<a id='L45' name='L45'></a>  45     <em class='brace'>{</em>
+<a id='L46' name='L46'></a>  46       <a href='../D/34727.html' title='Multiple defined in 11 places.'>pid_t</a> <a href='../S/2562.html#L29' title='Defined at 29 in elf/testobj2.c.'>p</a> = <a href='../S/2946.html#L10' title='Defined at 10 in elf/restest2.c.'>getpid</a> ();
+<a id='L47' name='L47'></a>  47       <a href='../S/1192.html#L1134' title='Defined at 1134 in posix/unistd.h.'>TEMP_FAILURE_RETRY</a> (<a href='../Y/29153.html' title='Multiple used in 258 places.'>write</a> (<a href='../S/1663.html#L52' title='Defined at 52 in nscd/initgrcache.c.'>fd</a>[1], &amp;<a href='../S/2562.html#L29' title='Defined at 29 in elf/testobj2.c.'>p</a>, <strong class='reserved'>sizeof</strong> (<a href='../S/2562.html#L29' title='Defined at 29 in elf/testobj2.c.'>p</a>)));
+<a id='L48' name='L48'></a>  48       <em class='comment'>/* Child return should trigger SIGSEGV.  */</em>
+<a id='L49' name='L49'></a>  49       <strong class='reserved'>return</strong>;
+<a id='L50' name='L50'></a>  50     <em class='brace'>}</em>
+<a id='L51' name='L51'></a>  51   <strong class='reserved'>else</strong> <strong class='reserved'>if</strong> (<a href='../Y/22054.html' title='Multiple used in 299 places.'>p1</a> == -1)
+<a id='L52' name='L52'></a>  52     <em class='brace'>{</em>
+<a id='L53' name='L53'></a>  53       <a href='../Y/23144.html' title='Multiple used in 3983 places.'>puts</a> ("vfork failed");
+<a id='L54' name='L54'></a>  54       <a href='../D/26871.html' title='Multiple defined in 4 places.'>_exit</a> (<a href='../D/3872.html' title='Multiple defined in 4 places.'>EXIT_FAILURE</a>);
+<a id='L55' name='L55'></a>  55     <em class='brace'>}</em>
+<a id='L56' name='L56'></a>  56 
+<a id='L57' name='L57'></a>  57   <a href='../D/34727.html' title='Multiple defined in 11 places.'>pid_t</a> <a href='../Y/22056.html' title='Multiple used in 351 places.'>p2</a> = 0;
+<a id='L58' name='L58'></a>  58   <strong class='reserved'>if</strong> (<a href='../S/1192.html#L1134' title='Defined at 1134 in posix/unistd.h.'>TEMP_FAILURE_RETRY</a> (<a href='../S/284.html#L450' title='Defined at 450 in intl/loadmsgcat.c.'>read</a> (<a href='../S/1663.html#L52' title='Defined at 52 in nscd/initgrcache.c.'>fd</a>[0], &amp;<a href='../Y/22056.html' title='Multiple used in 351 places.'>p2</a>, <strong class='reserved'>sizeof</strong> (<a href='../D/34727.html' title='Multiple defined in 11 places.'>pid_t</a>)))
+<a id='L59' name='L59'></a>  59       != <strong class='reserved'>sizeof</strong> (<a href='../D/34727.html' title='Multiple defined in 11 places.'>pid_t</a>))
+<a id='L60' name='L60'></a>  60     <a href='../Y/23144.html' title='Multiple used in 3983 places.'>puts</a> ("pipd read failed");
+<a id='L61' name='L61'></a>  61   <strong class='reserved'>else</strong>
+<a id='L62' name='L62'></a>  62     <em class='brace'>{</em>
+<a id='L63' name='L63'></a>  63       <strong class='reserved'>int</strong> <a href='../Y/23316.html' title='Multiple used in 3267 places.'>r</a>;
+<a id='L64' name='L64'></a>  64       <strong class='reserved'>if</strong> (<a href='../S/1192.html#L1134' title='Defined at 1134 in posix/unistd.h.'>TEMP_FAILURE_RETRY</a> (<a href='../Y/28832.html' title='Multiple used in 95 places.'>waitpid</a> (<a href='../Y/22054.html' title='Multiple used in 299 places.'>p1</a>, &amp;<a href='../Y/23316.html' title='Multiple used in 3267 places.'>r</a>, 0)) != <a href='../Y/22054.html' title='Multiple used in 299 places.'>p1</a>)
+<a id='L65' name='L65'></a>  65     <a href='../Y/23144.html' title='Multiple used in 3983 places.'>puts</a> ("waitpid failed");
+<a id='L66' name='L66'></a>  66       <strong class='reserved'>else</strong> <strong class='reserved'>if</strong> (<a href='../Y/23316.html' title='Multiple used in 3267 places.'>r</a> != 0)
+<a id='L67' name='L67'></a>  67     <a href='../Y/23144.html' title='Multiple used in 3983 places.'>puts</a> ("pip write in child failed");
+<a id='L68' name='L68'></a>  68     <em class='brace'>}</em>
+<a id='L69' name='L69'></a>  69 
+<a id='L70' name='L70'></a>  70   <em class='comment'>/* Parent exits immediately so that parent returns without triggering</em>
+<a id='L71' name='L71'></a>  71 <em class='comment'>     SIGSEGV when shadow stack isn't in use.  */</em>
+<a id='L72' name='L72'></a>  72   <a href='../D/26871.html' title='Multiple defined in 4 places.'>_exit</a> (<a href='../D/3872.html' title='Multiple defined in 4 places.'>EXIT_FAILURE</a>);
+<a id='L73' name='L73'></a>  73 <em class='brace'>}</em>
+<a id='L74' name='L74'></a>  74 
+<a id='L75' name='L75'></a>  75 <strong class='reserved'>static</strong> <strong class='reserved'>int</strong>
+<a id='L76' name='L76'></a>  76 <a href='../R/18782.html' title='Multiple referred from 1850 places.'>do_test</a> (<strong class='reserved'>void</strong>)
+<a id='L77' name='L77'></a>  77 <em class='brace'>{</em>
+<a id='L78' name='L78'></a>  78   <em class='comment'>/* NB: This test should trigger SIGSEGV with shadow stack enabled.  */</em>
+<a id='L79' name='L79'></a>  79   <strong class='reserved'>if</strong> (<a href='../Y/9062.html' title='Multiple used in 8 places.'>_get_ssp</a> () == 0)
+<a id='L80' name='L80'></a>  80     <strong class='reserved'>return</strong> <a href='../S/5902.html#L47' title='Defined at 47 in support/test-driver.h.'>EXIT_UNSUPPORTED</a>;
+<a id='L81' name='L81'></a>  81   <a href='../D/29706.html' title='Multiple defined in 5 places.'>do_test_1</a> ();
+<a id='L82' name='L82'></a>  82   <em class='comment'>/* Child exits immediately so that child returns without triggering</em>
+<a id='L83' name='L83'></a>  83 <em class='comment'>     SIGSEGV when shadow stack isn't in use.  */</em>
+<a id='L84' name='L84'></a>  84   <a href='../D/26871.html' title='Multiple defined in 4 places.'>_exit</a> (<a href='../D/3872.html' title='Multiple defined in 4 places.'>EXIT_FAILURE</a>);
+<a id='L85' name='L85'></a>  85 <em class='brace'>}</em>
+<a id='L86' name='L86'></a>  86 
+<a id='L87' name='L87'></a>  87 <em class='sharp'>#define</em> <a href='../R/2265.html' title='Multiple referred from 2 places.'>EXPECTED_SIGNAL</a> (<a href='../Y/9062.html' title='Multiple used in 8 places.'>_get_ssp</a> () == 0 ? 0 : <a href='../S/183.html#L52' title='Defined at 52 in bits/signum-generic.h.'>SIGSEGV</a>)
+<a id='L88' name='L88'></a>  88 <em class='sharp'>#include</em> &lt;support/test-driver.c&gt;
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L33'>[^]</a><a href='#L76'>[v]</a><a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

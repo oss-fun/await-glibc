@@ -1,0 +1,343 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>stdlib/tst-strtod-round-skeleton.c</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18969.html'>stdlib</a>/tst-strtod-round-skeleton.c</h2>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L261'>[^]</a><a href='#L291'>[v]</a>[top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<h2 class='header'>DEFINITIONS</h2>
+This source file includes following definitions.
+<ol>
+<li><a href='#L261' title='Defined at 261.'>test_in_one_mode</a></li>
+<li><a href='#L291' title='Defined at 291.'>do_test</a></li>
+</ol>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* Test for correct rounding of results of strtod and related</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   functions.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'>   Copyright (C) 2012-2022 Free Software Foundation, Inc.</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L5' name='L5'></a>   5 <em class='comment'></em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L10' name='L10'></a>  10 <em class='comment'></em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L15' name='L15'></a>  15 <em class='comment'></em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L17' name='L17'></a>  17 <em class='comment'>   License along with the GNU C Library; if not, see</em>
+<a id='L18' name='L18'></a>  18 <em class='comment'>   &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L19' name='L19'></a>  19 
+<a id='L20' name='L20'></a>  20 <em class='comment'>/* Defining _LIBC_TEST ensures long double math functions are</em>
+<a id='L21' name='L21'></a>  21 <em class='comment'>   declared in the headers.  */</em>
+<a id='L22' name='L22'></a>  22 <em class='sharp'>#define</em> <a href='../R/11062.html' title='Multiple referred from 2 places.'>_LIBC_TEST</a> 1
+<a id='L23' name='L23'></a>  23 <em class='sharp'>#define</em> <a href='../R/13141.html' title='Multiple referred from 2 places.'>__STDC_WANT_IEC_60559_TYPES_EXT__</a>
+<a id='L24' name='L24'></a>  24 <em class='sharp'>#include</em> &lt;<a href='../I/118.html'>fenv.h</a>&gt;
+<a id='L25' name='L25'></a>  25 <em class='sharp'>#include</em> &lt;<a href='18104.html'>float.h</a>&gt;
+<a id='L26' name='L26'></a>  26 <em class='sharp'>#include</em> &lt;<a href='../I/1890.html'>math.h</a>&gt;
+<a id='L27' name='L27'></a>  27 <em class='sharp'>#include</em> &lt;stdbool.h&gt;
+<a id='L28' name='L28'></a>  28 <em class='sharp'>#include</em> &lt;<a href='../I/1776.html'>stdio.h</a>&gt;
+<a id='L29' name='L29'></a>  29 <em class='sharp'>#include</em> &lt;<a href='../I/1780.html'>stdlib.h</a>&gt;
+<a id='L30' name='L30'></a>  30 <em class='sharp'>#include</em> &lt;<a href='../I/1973.html'>string.h</a>&gt;
+<a id='L31' name='L31'></a>  31 <em class='sharp'>#include</em> &lt;<a href='12175.html'>math-tests.h</a>&gt;
+<a id='L32' name='L32'></a>  32 
+<a id='L33' name='L33'></a>  33 <em class='sharp'>#include</em> "<a href='6756.html'>tst-strtod.h</a>"
+<a id='L34' name='L34'></a>  34 
+<a id='L35' name='L35'></a>  35 <em class='comment'>/* Non-standard macros expected to be externally defined:</em>
+<a id='L36' name='L36'></a>  36 <em class='comment'></em>
+<a id='L37' name='L37'></a>  37 <em class='comment'>   L_(str): Pastes the appropriate modifier to a string literal str.</em>
+<a id='L38' name='L38'></a>  38 <em class='comment'></em>
+<a id='L39' name='L39'></a>  39 <em class='comment'>   FNPFX: Expands to the correct prefix for the strtod equivalent</em>
+<a id='L40' name='L40'></a>  40 <em class='comment'>          of type CHAR. (e.g str or wcs).</em>
+<a id='L41' name='L41'></a>  41 <em class='comment'></em>
+<a id='L42' name='L42'></a>  42 <em class='comment'>   CHAR: Expands to the string type being tested (e.g wchar_t or char).</em>
+<a id='L43' name='L43'></a>  43 <em class='comment'></em>
+<a id='L44' name='L44'></a>  44 <em class='comment'>   STRM: Expands to a string literal suitable for printing CHAR* via</em>
+<a id='L45' name='L45'></a>  45 <em class='comment'>         printf (e.g "%s" or "%ls"). */</em>
+<a id='L46' name='L46'></a>  46 
+<a id='L47' name='L47'></a>  47 <em class='sharp'>#define</em> <a href='../R/10058.html' title='Multiple referred from 2 places.'>_CONCAT</a>(<a href='../Y/9676.html' title='Multiple used in 2513 places.'>a</a>, <a href='../S/5162.html#L61' title='Defined at 61 in ctype/ctype-info.c.'>b</a>) <a href='../Y/9676.html' title='Multiple used in 2513 places.'>a</a> ## <a href='../S/5162.html#L61' title='Defined at 61 in ctype/ctype-info.c.'>b</a>
+<a id='L48' name='L48'></a>  48 <em class='sharp'>#define</em> <a href='../R/1024.html' title='Multiple referred from 67 places.'>CONCAT</a>(<a href='../Y/9676.html' title='Multiple used in 2513 places.'>a</a>, <a href='../S/5162.html#L61' title='Defined at 61 in ctype/ctype-info.c.'>b</a>) <a href='../D/17882.html' title='Multiple defined in 2 places.'>_CONCAT</a> (<a href='../Y/9676.html' title='Multiple used in 2513 places.'>a</a>, <a href='../S/5162.html#L61' title='Defined at 61 in ctype/ctype-info.c.'>b</a>)
+<a id='L49' name='L49'></a>  49 
+<a id='L50' name='L50'></a>  50 <em class='sharp'>#define</em> <a href='../S/6726.html#L208' title='Referred from 208 in stdlib/tst-strtod-round-skeleton.c.'>STRTO</a>(<a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a>) <a href='../D/1496.html' title='Multiple defined in 30 places.'>CONCAT</a> (<a href='../D/1496.html' title='Multiple defined in 30 places.'>CONCAT</a> (<a href='../D/4346.html' title='Multiple defined in 8 places.'>FNPFX</a>, <a href='../Y/27480.html' title='Multiple used in 509 places.'>to</a>), <a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a>)
+<a id='L51' name='L51'></a>  51 
+<a id='L52' name='L52'></a>  52 <em class='sharp'>#if</em> <a href='../D/7056.html' title='Multiple defined in 2 places.'>LDBL_MANT_DIG</a> == 106 &amp;&amp; <a href='../D/7060.html' title='Multiple defined in 2 places.'>LDBL_MAX_EXP</a> == 1024
+<a id='L53' name='L53'></a>  53 <em class='comment'>/* This is a stupid hack for IBM long double.  This test ignores</em>
+<a id='L54' name='L54'></a>  54 <em class='comment'>   inexact values for long double due to the limitations of the</em>
+<a id='L55' name='L55'></a>  55 <em class='comment'>   format.  This ensures rounding tests are ignored.  */</em>
+<a id='L56' name='L56'></a>  56 <em class='sharp'># undef</em> ROUNDING_TESTS_long_double
+<a id='L57' name='L57'></a>  57 <em class='sharp'># define</em> ROUNDING_TESTS_long_double(<a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a>) 0
+<a id='L58' name='L58'></a>  58 <em class='sharp'>#endif</em>
+<a id='L59' name='L59'></a>  59 
+<a id='L60' name='L60'></a>  60 <em class='comment'>/* Generator to create an FTYPE member variabled named FSUF</em>
+<a id='L61' name='L61'></a>  61 <em class='comment'>   used to populate struct member variables.  */</em>
+<a id='L62' name='L62'></a>  62 <em class='sharp'>#define</em> <a href='../R/2870.html' title='Multiple referred from 2 places.'>FTYPE_MEMBER</a>(<a href='../Y/579.html' title='Multiple used in 52 places.'>FSUF</a>, <a href='../Y/620.html' title='Multiple used in 29 places.'>FTYPE</a>, <a href='../D/4749.html' title='Multiple defined in 8 places.'>FTOSTR</a>, <a href='../Y/1096.html' title='Multiple used in 17 places.'>LSUF</a>, <a href='../Y/226.html' title='Multiple used in 17 places.'>CSUF</a>)  \
+<a id='L63' name='L63'></a>  63        <a href='../Y/620.html' title='Multiple used in 29 places.'>FTYPE</a> <a href='../Y/579.html' title='Multiple used in 52 places.'>FSUF</a>;
+<a id='L64' name='L64'></a>  64 
+<a id='L65' name='L65'></a>  65 <em class='comment'>/* Likewise, but each member is of type bool.  */</em>
+<a id='L66' name='L66'></a>  66 <em class='sharp'>#define</em> <a href='../S/6726.html#L70' title='Referred from 70 in stdlib/tst-strtod-round-skeleton.c.'>BOOL_MEMBER</a>(<a href='../Y/579.html' title='Multiple used in 52 places.'>FSUF</a>, <a href='../Y/620.html' title='Multiple used in 29 places.'>FTYPE</a>, <a href='../D/4749.html' title='Multiple defined in 8 places.'>FTOSTR</a>, <a href='../Y/1096.html' title='Multiple used in 17 places.'>LSUF</a>, <a href='../Y/226.html' title='Multiple used in 17 places.'>CSUF</a>)  \
+<a id='L67' name='L67'></a>  67        <a href='../S/3749.html#L624' title='Defined at 624 in timezone/private.h.'>bool</a> <a href='../Y/579.html' title='Multiple used in 52 places.'>FSUF</a>;
+<a id='L68' name='L68'></a>  68 
+<a id='L69' name='L69'></a>  69 <em class='sharp'>#define</em> <a href='../R/8184.html' title='Multiple referred from 2 places.'>STRUCT_FOREACH_FLOAT_FTYPE</a> <a href='../D/4994.html' title='Multiple defined in 7 places.'>GEN_TEST_STRTOD_FOREACH</a> (<a href='../D/4782.html' title='Multiple defined in 2 places.'>FTYPE_MEMBER</a>)
+<a id='L70' name='L70'></a>  70 <em class='sharp'>#define</em> <a href='../R/8183.html' title='Multiple referred from 2 places.'>STRUCT_FOREACH_FLOAT_BOOL</a> <a href='../D/4994.html' title='Multiple defined in 7 places.'>GEN_TEST_STRTOD_FOREACH</a> (<a href='../S/6726.html#L66' title='Defined at 66 in stdlib/tst-strtod-round-skeleton.c.'>BOOL_MEMBER</a>)
+<a id='L71' name='L71'></a>  71 
+<a id='L72' name='L72'></a>  72 <em class='comment'>/* Define the long double choose (CHOOSE_ld) macro</em>
+<a id='L73' name='L73'></a>  73 <em class='comment'>   to select the appropriate generated long double</em>
+<a id='L74' name='L74'></a>  74 <em class='comment'>   value from the generated test data.  */</em>
+<a id='L75' name='L75'></a>  75 <em class='sharp'>#if</em> <a href='../D/7056.html' title='Multiple defined in 2 places.'>LDBL_MANT_DIG</a> == 53 &amp;&amp; <a href='../D/7060.html' title='Multiple defined in 2 places.'>LDBL_MAX_EXP</a> == 1024
+<a id='L76' name='L76'></a>  76 <em class='comment'>/* This is for the long double == double format.  */</em>
+<a id='L77' name='L77'></a>  77 <em class='sharp'># define</em> CHOOSE_ld(<a href='../D/30173.html' title='Multiple defined in 17 places.'>f</a>,<a href='../D/29259.html' title='Multiple defined in 3 places.'>d</a>,...) <a href='../D/29259.html' title='Multiple defined in 3 places.'>d</a>
+<a id='L78' name='L78'></a>  78 <em class='sharp'>#elif</em> <a href='../D/7056.html' title='Multiple defined in 2 places.'>LDBL_MANT_DIG</a> == 64 &amp;&amp; <a href='../D/7060.html' title='Multiple defined in 2 places.'>LDBL_MAX_EXP</a> == 16384 &amp;&amp; <a href='../D/7063.html' title='Multiple defined in 2 places.'>LDBL_MIN_EXP</a> == -16381
+<a id='L79' name='L79'></a>  79 <em class='comment'>/* This is for the Intel extended float format.  */</em>
+<a id='L80' name='L80'></a>  80 <em class='sharp'># define</em> CHOOSE_ld(<a href='../D/30173.html' title='Multiple defined in 17 places.'>f</a>,<a href='../D/29259.html' title='Multiple defined in 3 places.'>d</a>,<a href='../Y/17893.html' title='Multiple used in 7 places.'>ld64i</a>,...) <a href='../Y/17893.html' title='Multiple used in 7 places.'>ld64i</a>
+<a id='L81' name='L81'></a>  81 <em class='sharp'>#elif</em> <a href='../D/7056.html' title='Multiple defined in 2 places.'>LDBL_MANT_DIG</a> == 64 &amp;&amp; <a href='../D/7060.html' title='Multiple defined in 2 places.'>LDBL_MAX_EXP</a> == 16384 &amp;&amp; <a href='../D/7063.html' title='Multiple defined in 2 places.'>LDBL_MIN_EXP</a> == -16382
+<a id='L82' name='L82'></a>  82 <em class='comment'>/* This is for the Motorola extended float format.  */</em>
+<a id='L83' name='L83'></a>  83 <em class='sharp'># define</em> CHOOSE_ld(<a href='../D/30173.html' title='Multiple defined in 17 places.'>f</a>,<a href='../D/29259.html' title='Multiple defined in 3 places.'>d</a>,<a href='../Y/17893.html' title='Multiple used in 7 places.'>ld64i</a>,<a href='../Y/17903.html' title='Multiple used in 5 places.'>ld64m</a>,...) <a href='../Y/17903.html' title='Multiple used in 5 places.'>ld64m</a>
+<a id='L84' name='L84'></a>  84 <em class='sharp'>#elif</em> <a href='../D/7056.html' title='Multiple defined in 2 places.'>LDBL_MANT_DIG</a> == 106 &amp;&amp; <a href='../D/7060.html' title='Multiple defined in 2 places.'>LDBL_MAX_EXP</a> == 1024
+<a id='L85' name='L85'></a>  85 <em class='comment'>/* This is for the IBM extended double format.  */</em>
+<a id='L86' name='L86'></a>  86 <em class='sharp'># define</em> CHOOSE_ld(<a href='../D/30173.html' title='Multiple defined in 17 places.'>f</a>,<a href='../D/29259.html' title='Multiple defined in 3 places.'>d</a>,<a href='../Y/17893.html' title='Multiple used in 7 places.'>ld64i</a>,<a href='../Y/17903.html' title='Multiple used in 5 places.'>ld64m</a>,<a href='../Y/17869.html' title='Multiple used in 4 places.'>ld106</a>,...) <a href='../Y/17869.html' title='Multiple used in 4 places.'>ld106</a>
+<a id='L87' name='L87'></a>  87 <em class='sharp'>#elif</em> <a href='../D/7056.html' title='Multiple defined in 2 places.'>LDBL_MANT_DIG</a> == 113 &amp;&amp; <a href='../D/7060.html' title='Multiple defined in 2 places.'>LDBL_MAX_EXP</a> == 16384
+<a id='L88' name='L88'></a>  88 <em class='comment'>/* This is for the IEEE binary128 format.  */</em>
+<a id='L89' name='L89'></a>  89 <em class='sharp'># define</em> CHOOSE_ld(<a href='../D/30173.html' title='Multiple defined in 17 places.'>f</a>,<a href='../D/29259.html' title='Multiple defined in 3 places.'>d</a>,<a href='../Y/17893.html' title='Multiple used in 7 places.'>ld64i</a>,<a href='../Y/17903.html' title='Multiple used in 5 places.'>ld64m</a>,<a href='../Y/17869.html' title='Multiple used in 4 places.'>ld106</a>,<a href='../Y/17879.html' title='Multiple used in 3 places.'>ld113</a>,...) <a href='../Y/17879.html' title='Multiple used in 3 places.'>ld113</a>
+<a id='L90' name='L90'></a>  90 <em class='sharp'>#else</em>
+<a id='L91' name='L91'></a>  91 <em class='sharp'># error</em> "unknown long double format"
+<a id='L92' name='L92'></a>  92 <em class='sharp'>#endif</em>
+<a id='L93' name='L93'></a>  93 
+<a id='L94' name='L94'></a>  94 <em class='comment'>/* Add type specific choosing macros below.  */</em>
+<a id='L95' name='L95'></a>  95 <em class='sharp'>#define</em> CHOOSE_f(<a href='../D/30173.html' title='Multiple defined in 17 places.'>f</a>,...) <a href='../D/30173.html' title='Multiple defined in 17 places.'>f</a>
+<a id='L96' name='L96'></a>  96 <em class='sharp'>#define</em> CHOOSE_f32(<a href='../D/30173.html' title='Multiple defined in 17 places.'>f</a>,...) <a href='../D/30173.html' title='Multiple defined in 17 places.'>f</a>
+<a id='L97' name='L97'></a>  97 <em class='sharp'>#define</em> CHOOSE_d(<a href='../D/30173.html' title='Multiple defined in 17 places.'>f</a>,<a href='../D/29259.html' title='Multiple defined in 3 places.'>d</a>,...) <a href='../D/29259.html' title='Multiple defined in 3 places.'>d</a>
+<a id='L98' name='L98'></a>  98 <em class='sharp'>#define</em> CHOOSE_f64(<a href='../D/30173.html' title='Multiple defined in 17 places.'>f</a>,<a href='../D/29259.html' title='Multiple defined in 3 places.'>d</a>,...) <a href='../D/29259.html' title='Multiple defined in 3 places.'>d</a>
+<a id='L99' name='L99'></a>  99 <em class='sharp'>#define</em> CHOOSE_f32x(<a href='../D/30173.html' title='Multiple defined in 17 places.'>f</a>,<a href='../D/29259.html' title='Multiple defined in 3 places.'>d</a>,...) <a href='../D/29259.html' title='Multiple defined in 3 places.'>d</a>
+<a id='L100' name='L100'></a> 100 <em class='sharp'>#define</em> CHOOSE_f128(<a href='../D/30173.html' title='Multiple defined in 17 places.'>f</a>,<a href='../D/29259.html' title='Multiple defined in 3 places.'>d</a>,<a href='../Y/17893.html' title='Multiple used in 7 places.'>ld64i</a>,<a href='../Y/17903.html' title='Multiple used in 5 places.'>ld64m</a>,<a href='../Y/17869.html' title='Multiple used in 4 places.'>ld106</a>,<a href='../Y/17879.html' title='Multiple used in 3 places.'>ld113</a>,...) <a href='../Y/17879.html' title='Multiple used in 3 places.'>ld113</a>
+<a id='L101' name='L101'></a> 101 <em class='comment'>/* long double is special, and handled above.  _Float16 would require</em>
+<a id='L102' name='L102'></a> 102 <em class='comment'>   updates to the generator to generate appropriate expectations, and</em>
+<a id='L103' name='L103'></a> 103 <em class='comment'>   updates to the test inputs to cover difficult rounding cases for</em>
+<a id='L104' name='L104'></a> 104 <em class='comment'>   _Float16.  */</em>
+<a id='L105' name='L105'></a> 105 
+<a id='L106' name='L106'></a> 106 <em class='sharp'>#if</em> <a href='../D/21655.html' title='Multiple defined in 6 places.'>__HAVE_FLOAT64X</a>
+<a id='L107' name='L107'></a> 107 <em class='sharp'># if</em> <a href='../D/4300.html' title='Multiple defined in 2 places.'>FLT64X_MANT_DIG</a> == 113 &amp;&amp; <a href='../D/4303.html' title='Multiple defined in 2 places.'>FLT64X_MAX_EXP</a> == 16384
+<a id='L108' name='L108'></a> 108 <em class='sharp'>#  define</em> CHOOSE_f64x(<a href='../D/30173.html' title='Multiple defined in 17 places.'>f</a>,<a href='../D/29259.html' title='Multiple defined in 3 places.'>d</a>,<a href='../Y/17893.html' title='Multiple used in 7 places.'>ld64i</a>,<a href='../Y/17903.html' title='Multiple used in 5 places.'>ld64m</a>,<a href='../Y/17869.html' title='Multiple used in 4 places.'>ld106</a>,<a href='../Y/17879.html' title='Multiple used in 3 places.'>ld113</a>,...) <a href='../Y/17879.html' title='Multiple used in 3 places.'>ld113</a>
+<a id='L109' name='L109'></a> 109 <em class='sharp'># elif</em> (<a href='../D/4300.html' title='Multiple defined in 2 places.'>FLT64X_MANT_DIG</a> == 64           \
+<a id='L110' name='L110'></a> 110     &amp;&amp; <a href='../D/4303.html' title='Multiple defined in 2 places.'>FLT64X_MAX_EXP</a> == 16384      \
+<a id='L111' name='L111'></a> 111     &amp;&amp; <a href='../D/4306.html' title='Multiple defined in 2 places.'>FLT64X_MIN_EXP</a> == -16381)
+<a id='L112' name='L112'></a> 112 <em class='sharp'>#  define</em> CHOOSE_f64x(<a href='../D/30173.html' title='Multiple defined in 17 places.'>f</a>,<a href='../D/29259.html' title='Multiple defined in 3 places.'>d</a>,<a href='../Y/17893.html' title='Multiple used in 7 places.'>ld64i</a>,...) <a href='../Y/17893.html' title='Multiple used in 7 places.'>ld64i</a>
+<a id='L113' name='L113'></a> 113 <em class='sharp'># else</em>
+<a id='L114' name='L114'></a> 114 <em class='sharp'>#  error</em> "unknown _Float64x format"
+<a id='L115' name='L115'></a> 115 <em class='sharp'># endif</em>
+<a id='L116' name='L116'></a> 116 <em class='sharp'>#endif</em>
+<a id='L117' name='L117'></a> 117 
+<a id='L118' name='L118'></a> 118 <em class='comment'>/* Selector for expected result field of a given type.  */</em>
+<a id='L119' name='L119'></a> 119 <em class='sharp'>#define</em> <a href='../R/10210.html' title='Multiple referred from 4 places.'>_ENTRY</a>(<a href='../Y/579.html' title='Multiple used in 52 places.'>FSUF</a>, <a href='../Y/620.html' title='Multiple used in 29 places.'>FTYPE</a>, <a href='../D/4749.html' title='Multiple defined in 8 places.'>FTOSTR</a>, <a href='../Y/1096.html' title='Multiple used in 17 places.'>LSUF</a>, <a href='../Y/226.html' title='Multiple used in 17 places.'>CSUF</a>, ...)  \
+<a id='L120' name='L120'></a> 120   <a href='../D/1496.html' title='Multiple defined in 30 places.'>CONCAT</a> (<a href='../Y/191.html' title='Multiple used in 2 places.'>CHOOSE_</a> ## <a href='../Y/579.html' title='Multiple used in 52 places.'>FSUF</a> (<a href='../Y/3326.html' title='Multiple used in 135 places.'>__VA_ARGS__</a>), <a href='../Y/1096.html' title='Multiple used in 17 places.'>LSUF</a>),
+<a id='L121' name='L121'></a> 121 <em class='sharp'>#define</em> <a href='../R/2126.html' title='Multiple referred from 1534 places.'>ENTRY</a>(...) \
+<a id='L122' name='L122'></a> 122   <a href='../D/4994.html' title='Multiple defined in 7 places.'>GEN_TEST_STRTOD_FOREACH</a> (<a href='../D/18040.html' title='Multiple defined in 3 places.'>_ENTRY</a>, <a href='../Y/3326.html' title='Multiple used in 135 places.'>__VA_ARGS__</a>)
+<a id='L123' name='L123'></a> 123 
+<a id='L124' name='L124'></a> 124 <em class='comment'>/* Selector for boolean exact tag of expected results and that for</em>
+<a id='L125' name='L125'></a> 125 <em class='comment'>   overflow.  */</em>
+<a id='L126' name='L126'></a> 126 <em class='sharp'>#define</em> <a href='../S/6726.html#L129' title='Referred from 129 in stdlib/tst-strtod-round-skeleton.c.'>_XNTRY</a>(<a href='../Y/579.html' title='Multiple used in 52 places.'>FSUF</a>, <a href='../Y/620.html' title='Multiple used in 29 places.'>FTYPE</a>, <a href='../D/4749.html' title='Multiple defined in 8 places.'>FTOSTR</a>, <a href='../Y/1096.html' title='Multiple used in 17 places.'>LSUF</a>, <a href='../Y/226.html' title='Multiple used in 17 places.'>CSUF</a>, ...)  \
+<a id='L127' name='L127'></a> 127   <a href='../Y/191.html' title='Multiple used in 2 places.'>CHOOSE_</a> ## <a href='../Y/579.html' title='Multiple used in 52 places.'>FSUF</a> (<a href='../Y/3326.html' title='Multiple used in 135 places.'>__VA_ARGS__</a>),
+<a id='L128' name='L128'></a> 128 <em class='sharp'>#define</em> <a href='../R/9803.html' title='Multiple referred from 5 places.'>XNTRY</a>(...) \
+<a id='L129' name='L129'></a> 129   <a href='../D/4994.html' title='Multiple defined in 7 places.'>GEN_TEST_STRTOD_FOREACH</a> (<a href='../S/6726.html#L126' title='Defined at 126 in stdlib/tst-strtod-round-skeleton.c.'>_XNTRY</a>, <a href='../Y/3326.html' title='Multiple used in 135 places.'>__VA_ARGS__</a>)
+<a id='L130' name='L130'></a> 130 
+<a id='L131' name='L131'></a> 131 <em class='comment'>/* This is hacky way around the seemingly unavoidable macro</em>
+<a id='L132' name='L132'></a> 132 <em class='comment'>   expansion of the INFINITY or HUGE_VAL like macros in the</em>
+<a id='L133' name='L133'></a> 133 <em class='comment'>   above.  It is assumed the compiler will implicitly convert</em>
+<a id='L134' name='L134'></a> 134 <em class='comment'>   the infinity correctly.  */</em>
+<a id='L135' name='L135'></a> 135 <em class='sharp'>#define</em> <a href='../R/3714.html' title='Multiple referred from 219 places.'>INF</a> <a href='../D/6060.html' title='Multiple defined in 3 places.'>INFINITY</a> + 0.0
+<a id='L136' name='L136'></a> 136 
+<a id='L137' name='L137'></a> 137 <em class='comment'>/* This macro is used in conjunction with the output from the</em>
+<a id='L138' name='L138'></a> 138 <em class='comment'>   gen-tst-strtod-round utility to select the appropriately</em>
+<a id='L139' name='L139'></a> 139 <em class='comment'>   rounded long double value for a given format.  */</em>
+<a id='L140' name='L140'></a> 140 <em class='sharp'>#define</em> <a href='../R/8580.html' title='Multiple referred from 669 places.'>TEST</a>(<a href='../D/36247.html' title='Multiple defined in 13 places.'>s</a>,                         \
+<a id='L141' name='L141'></a> 141          <a href='../S/1432.html#L5' title='Defined at 5 in dlfcn/bug-atexit2-lib.c.'>fx</a>, <a href='../S/1663.html#L52' title='Defined at 52 in nscd/initgrcache.c.'>fd</a>, <a href='../Y/14482.html' title='Multiple used in 2 places.'>fdo</a>, <a href='../D/30646.html' title='Multiple defined in 5 places.'>fn</a>, <a href='../Y/14751.html' title='Multiple used in 2 places.'>fno</a>, <a href='../Y/15312.html' title='Multiple used in 4 places.'>fz</a>, <a href='../Y/15313.html' title='Multiple used in 2 places.'>fzo</a>, <a href='../Y/15244.html' title='Multiple used in 2 places.'>fu</a>, <a href='../Y/15295.html' title='Multiple used in 2 places.'>fuo</a>,        \
+<a id='L142' name='L142'></a> 142          <a href='../Y/13420.html' title='Multiple used in 38 places.'>dx</a>, <a href='../Y/12535.html' title='Multiple used in 8 places.'>dd</a>, <a href='../Y/12536.html' title='Multiple used in 2 places.'>ddo</a>, <a href='../Y/13038.html' title='Multiple used in 79 places.'>dn</a>, <a href='../Y/13044.html' title='Multiple used in 2 places.'>dno</a>, <a href='../Y/13487.html' title='Multiple used in 4 places.'>dz</a>, <a href='../Y/13488.html' title='Multiple used in 2 places.'>dzo</a>, <a href='../Y/13365.html' title='Multiple used in 13 places.'>du</a>, <a href='../Y/13380.html' title='Multiple used in 2 places.'>duo</a>,        \
+<a id='L143' name='L143'></a> 143          <a href='../Y/17900.html' title='Multiple used in 2 places.'>ld64ix</a>, <a href='../Y/17894.html' title='Multiple used in 2 places.'>ld64id</a>, <a href='../Y/17895.html' title='Multiple used in 2 places.'>ld64ido</a>, <a href='../Y/17896.html' title='Multiple used in 2 places.'>ld64in</a>, <a href='../Y/17897.html' title='Multiple used in 2 places.'>ld64ino</a>,      \
+<a id='L144' name='L144'></a> 144          <a href='../Y/17901.html' title='Multiple used in 2 places.'>ld64iz</a>, <a href='../Y/17902.html' title='Multiple used in 2 places.'>ld64izo</a>, <a href='../Y/17898.html' title='Multiple used in 2 places.'>ld64iu</a>, <a href='../Y/17899.html' title='Multiple used in 2 places.'>ld64iuo</a>,          \
+<a id='L145' name='L145'></a> 145          <a href='../Y/17910.html' title='Multiple used in 2 places.'>ld64mx</a>, <a href='../Y/17904.html' title='Multiple used in 2 places.'>ld64md</a>, <a href='../Y/17905.html' title='Multiple used in 2 places.'>ld64mdo</a>, <a href='../Y/17906.html' title='Multiple used in 2 places.'>ld64mn</a>, <a href='../Y/17907.html' title='Multiple used in 2 places.'>ld64mno</a>,      \
+<a id='L146' name='L146'></a> 146          <a href='../Y/17911.html' title='Multiple used in 2 places.'>ld64mz</a>, <a href='../Y/17912.html' title='Multiple used in 2 places.'>ld64mzo</a>, <a href='../Y/17908.html' title='Multiple used in 2 places.'>ld64mu</a>, <a href='../Y/17909.html' title='Multiple used in 2 places.'>ld64muo</a>,          \
+<a id='L147' name='L147'></a> 147          <a href='../Y/17876.html' title='Multiple used in 2 places.'>ld106x</a>, <a href='../Y/17870.html' title='Multiple used in 2 places.'>ld106d</a>, <a href='../Y/17871.html' title='Multiple used in 2 places.'>ld106do</a>, <a href='../Y/17872.html' title='Multiple used in 2 places.'>ld106n</a>, <a href='../Y/17873.html' title='Multiple used in 2 places.'>ld106no</a>,      \
+<a id='L148' name='L148'></a> 148          <a href='../Y/17877.html' title='Multiple used in 2 places.'>ld106z</a>, <a href='../Y/17878.html' title='Multiple used in 2 places.'>ld106zo</a>, <a href='../Y/17874.html' title='Multiple used in 2 places.'>ld106u</a>, <a href='../Y/17875.html' title='Multiple used in 2 places.'>ld106uo</a>,          \
+<a id='L149' name='L149'></a> 149          <a href='../Y/17886.html' title='Multiple used in 2 places.'>ld113x</a>, <a href='../Y/17880.html' title='Multiple used in 2 places.'>ld113d</a>, <a href='../Y/17881.html' title='Multiple used in 2 places.'>ld113do</a>, <a href='../Y/17882.html' title='Multiple used in 2 places.'>ld113n</a>, <a href='../Y/17883.html' title='Multiple used in 2 places.'>ld113no</a>,      \
+<a id='L150' name='L150'></a> 150          <a href='../Y/17887.html' title='Multiple used in 2 places.'>ld113z</a>, <a href='../Y/17888.html' title='Multiple used in 2 places.'>ld113zo</a>, <a href='../Y/17884.html' title='Multiple used in 2 places.'>ld113u</a>, <a href='../Y/17885.html' title='Multiple used in 2 places.'>ld113uo</a>)          \
+<a id='L151' name='L151'></a> 151   <em class='brace'>{</em>                             \
+<a id='L152' name='L152'></a> 152     <a href='../D/7461.html' title='Multiple defined in 37 places.'>L_</a> (<a href='../D/36247.html' title='Multiple defined in 13 places.'>s</a>),                         \
+<a id='L153' name='L153'></a> 153     <em class='brace'>{</em> <a href='../S/6726.html#L128' title='Defined at 128 in stdlib/tst-strtod-round-skeleton.c.'>XNTRY</a> (<a href='../S/1432.html#L5' title='Defined at 5 in dlfcn/bug-atexit2-lib.c.'>fx</a>, <a href='../Y/13420.html' title='Multiple used in 38 places.'>dx</a>, <a href='../Y/17900.html' title='Multiple used in 2 places.'>ld64ix</a>, <a href='../Y/17910.html' title='Multiple used in 2 places.'>ld64mx</a>, <a href='../Y/17876.html' title='Multiple used in 2 places.'>ld106x</a>, <a href='../Y/17886.html' title='Multiple used in 2 places.'>ld113x</a>) <em class='brace'>}</em>,     \
+<a id='L154' name='L154'></a> 154     <em class='brace'>{</em>                               \
+<a id='L155' name='L155'></a> 155     <em class='brace'>{</em> <a href='../D/3651.html' title='Multiple defined in 54 places.'>ENTRY</a> (<a href='../D/30646.html' title='Multiple defined in 5 places.'>fn</a>, <a href='../Y/13038.html' title='Multiple used in 79 places.'>dn</a>, <a href='../Y/17896.html' title='Multiple used in 2 places.'>ld64in</a>, <a href='../Y/17906.html' title='Multiple used in 2 places.'>ld64mn</a>, <a href='../Y/17872.html' title='Multiple used in 2 places.'>ld106n</a>, <a href='../Y/17882.html' title='Multiple used in 2 places.'>ld113n</a>) <em class='brace'>}</em>,     \
+<a id='L156' name='L156'></a> 156     <em class='brace'>{</em> <a href='../D/3651.html' title='Multiple defined in 54 places.'>ENTRY</a> (<a href='../S/1663.html#L52' title='Defined at 52 in nscd/initgrcache.c.'>fd</a>, <a href='../Y/12535.html' title='Multiple used in 8 places.'>dd</a>, <a href='../Y/17894.html' title='Multiple used in 2 places.'>ld64id</a>, <a href='../Y/17904.html' title='Multiple used in 2 places.'>ld64md</a>, <a href='../Y/17870.html' title='Multiple used in 2 places.'>ld106d</a>, <a href='../Y/17880.html' title='Multiple used in 2 places.'>ld113d</a>) <em class='brace'>}</em>,     \
+<a id='L157' name='L157'></a> 157     <em class='brace'>{</em> <a href='../D/3651.html' title='Multiple defined in 54 places.'>ENTRY</a> (<a href='../Y/15312.html' title='Multiple used in 4 places.'>fz</a>, <a href='../Y/13487.html' title='Multiple used in 4 places.'>dz</a>, <a href='../Y/17901.html' title='Multiple used in 2 places.'>ld64iz</a>, <a href='../Y/17911.html' title='Multiple used in 2 places.'>ld64mz</a>, <a href='../Y/17877.html' title='Multiple used in 2 places.'>ld106z</a>, <a href='../Y/17887.html' title='Multiple used in 2 places.'>ld113z</a>) <em class='brace'>}</em>,     \
+<a id='L158' name='L158'></a> 158     <em class='brace'>{</em> <a href='../D/3651.html' title='Multiple defined in 54 places.'>ENTRY</a> (<a href='../Y/15244.html' title='Multiple used in 2 places.'>fu</a>, <a href='../Y/13365.html' title='Multiple used in 13 places.'>du</a>, <a href='../Y/17898.html' title='Multiple used in 2 places.'>ld64iu</a>, <a href='../Y/17908.html' title='Multiple used in 2 places.'>ld64mu</a>, <a href='../Y/17874.html' title='Multiple used in 2 places.'>ld106u</a>, <a href='../Y/17884.html' title='Multiple used in 2 places.'>ld113u</a>) <em class='brace'>}</em>      \
+<a id='L159' name='L159'></a> 159     <em class='brace'>}</em>,                              \
+<a id='L160' name='L160'></a> 160     <em class='brace'>{</em>                               \
+<a id='L161' name='L161'></a> 161     <em class='brace'>{</em> <a href='../S/6726.html#L128' title='Defined at 128 in stdlib/tst-strtod-round-skeleton.c.'>XNTRY</a> (<a href='../Y/14751.html' title='Multiple used in 2 places.'>fno</a>, <a href='../Y/13044.html' title='Multiple used in 2 places.'>dno</a>, <a href='../Y/17897.html' title='Multiple used in 2 places.'>ld64ino</a>, <a href='../Y/17907.html' title='Multiple used in 2 places.'>ld64mno</a>, <a href='../Y/17873.html' title='Multiple used in 2 places.'>ld106no</a>, <a href='../Y/17883.html' title='Multiple used in 2 places.'>ld113no</a>) <em class='brace'>}</em>,   \
+<a id='L162' name='L162'></a> 162     <em class='brace'>{</em> <a href='../S/6726.html#L128' title='Defined at 128 in stdlib/tst-strtod-round-skeleton.c.'>XNTRY</a> (<a href='../Y/14482.html' title='Multiple used in 2 places.'>fdo</a>, <a href='../Y/12536.html' title='Multiple used in 2 places.'>ddo</a>, <a href='../Y/17895.html' title='Multiple used in 2 places.'>ld64ido</a>, <a href='../Y/17905.html' title='Multiple used in 2 places.'>ld64mdo</a>, <a href='../Y/17871.html' title='Multiple used in 2 places.'>ld106do</a>, <a href='../Y/17881.html' title='Multiple used in 2 places.'>ld113do</a>) <em class='brace'>}</em>,   \
+<a id='L163' name='L163'></a> 163     <em class='brace'>{</em> <a href='../S/6726.html#L128' title='Defined at 128 in stdlib/tst-strtod-round-skeleton.c.'>XNTRY</a> (<a href='../Y/15313.html' title='Multiple used in 2 places.'>fzo</a>, <a href='../Y/13488.html' title='Multiple used in 2 places.'>dzo</a>, <a href='../Y/17902.html' title='Multiple used in 2 places.'>ld64izo</a>, <a href='../Y/17912.html' title='Multiple used in 2 places.'>ld64mzo</a>, <a href='../Y/17878.html' title='Multiple used in 2 places.'>ld106zo</a>, <a href='../Y/17888.html' title='Multiple used in 2 places.'>ld113zo</a>) <em class='brace'>}</em>,   \
+<a id='L164' name='L164'></a> 164     <em class='brace'>{</em> <a href='../S/6726.html#L128' title='Defined at 128 in stdlib/tst-strtod-round-skeleton.c.'>XNTRY</a> (<a href='../Y/15295.html' title='Multiple used in 2 places.'>fuo</a>, <a href='../Y/13380.html' title='Multiple used in 2 places.'>duo</a>, <a href='../Y/17899.html' title='Multiple used in 2 places.'>ld64iuo</a>, <a href='../Y/17909.html' title='Multiple used in 2 places.'>ld64muo</a>, <a href='../Y/17875.html' title='Multiple used in 2 places.'>ld106uo</a>, <a href='../Y/17885.html' title='Multiple used in 2 places.'>ld113uo</a>) <em class='brace'>}</em>    \
+<a id='L165' name='L165'></a> 165     <em class='brace'>}</em>                               \
+<a id='L166' name='L166'></a> 166   <em class='brace'>}</em>
+<a id='L167' name='L167'></a> 167 
+<a id='L168' name='L168'></a> 168 <strong class='reserved'>struct</strong> <a href='../R/25256.html' title='Multiple referred from 2 places.'>test_exactness</a>
+<a id='L169' name='L169'></a> 169   <em class='brace'>{</em>
+<a id='L170' name='L170'></a> 170   <a href='../S/6726.html#L70' title='Defined at 70 in stdlib/tst-strtod-round-skeleton.c.'>STRUCT_FOREACH_FLOAT_BOOL</a>
+<a id='L171' name='L171'></a> 171   <em class='brace'>}</em>;
+<a id='L172' name='L172'></a> 172 
+<a id='L173' name='L173'></a> 173 <strong class='reserved'>struct</strong> <a href='../R/25387.html' title='Multiple referred from 2 places.'>test_results</a>
+<a id='L174' name='L174'></a> 174   <em class='brace'>{</em>
+<a id='L175' name='L175'></a> 175   <a href='../D/14979.html' title='Multiple defined in 2 places.'>STRUCT_FOREACH_FLOAT_FTYPE</a>
+<a id='L176' name='L176'></a> 176   <em class='brace'>}</em>;
+<a id='L177' name='L177'></a> 177 
+<a id='L178' name='L178'></a> 178 <strong class='reserved'>struct</strong> <a href='../R/25362.html' title='Multiple referred from 2 places.'>test_overflow</a>
+<a id='L179' name='L179'></a> 179   <em class='brace'>{</em>
+<a id='L180' name='L180'></a> 180   <a href='../S/6726.html#L70' title='Defined at 70 in stdlib/tst-strtod-round-skeleton.c.'>STRUCT_FOREACH_FLOAT_BOOL</a>
+<a id='L181' name='L181'></a> 181   <em class='brace'>}</em>;
+<a id='L182' name='L182'></a> 182 
+<a id='L183' name='L183'></a> 183 <strong class='reserved'>struct</strong> <a href='../R/25189.html' title='Multiple referred from 360 places.'>test</a> <em class='brace'>{</em>
+<a id='L184' name='L184'></a> 184   <strong class='reserved'>const</strong> <a href='../D/1156.html' title='Multiple defined in 81 places.'>CHAR</a> *<a href='../D/36247.html' title='Multiple defined in 13 places.'>s</a>;
+<a id='L185' name='L185'></a> 185   <strong class='reserved'>struct</strong> <a href='../S/6726.html#L168' title='Defined at 168 in stdlib/tst-strtod-round-skeleton.c.'>test_exactness</a> <a href='../Y/14025.html' title='Multiple used in 15 places.'>exact</a>;
+<a id='L186' name='L186'></a> 186   <strong class='reserved'>struct</strong> <a href='../S/6726.html#L173' title='Defined at 173 in stdlib/tst-strtod-round-skeleton.c.'>test_results</a> <a href='../Y/23316.html' title='Multiple used in 3267 places.'>r</a>[4];
+<a id='L187' name='L187'></a> 187   <strong class='reserved'>struct</strong> <a href='../S/6726.html#L178' title='Defined at 178 in stdlib/tst-strtod-round-skeleton.c.'>test_overflow</a> <a href='../Y/21408.html' title='Multiple used in 157 places.'>o</a>[4];
+<a id='L188' name='L188'></a> 188 <em class='brace'>}</em>;
+<a id='L189' name='L189'></a> 189 
+<a id='L190' name='L190'></a> 190 <em class='comment'>/* Include the generated test data.  */</em>
+<a id='L191' name='L191'></a> 191 <em class='sharp'>#include</em> "<a href='6620.html'>tst-strtod-round-data.h</a>"
+<a id='L192' name='L192'></a> 192 
+<a id='L193' name='L193'></a> 193 <em class='sharp'>#define</em> <a href='../R/8186.html' title='Multiple referred from 4 places.'>STRX</a>(<a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a>) #<a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a>
+<a id='L194' name='L194'></a> 194 <em class='sharp'>#define</em> <a href='../R/8058.html' title='Multiple referred from 25 places.'>STR</a>(<a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a>) <a href='../D/14984.html' title='Multiple defined in 4 places.'>STRX</a> (<a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a>)
+<a id='L195' name='L195'></a> 195 <em class='sharp'>#define</em> <a href='../R/2545.html' title='Multiple referred from 8 places.'>FNPFXS</a> <a href='../D/14847.html' title='Multiple defined in 26 places.'>STR</a> (<a href='../D/4346.html' title='Multiple defined in 8 places.'>FNPFX</a>)
+<a id='L196' name='L196'></a> 196 
+<a id='L197' name='L197'></a> 197 <em class='sharp'>#ifndef</em> <a href='../D/4141.html' title='Multiple defined in 19 places.'>FE_INEXACT</a>
+<a id='L198' name='L198'></a> 198 <em class='sharp'># define</em> <a href='../R/2410.html' title='Multiple referred from 169 places.'>FE_INEXACT</a> 0
+<a id='L199' name='L199'></a> 199 <em class='sharp'>#endif</em>
+<a id='L200' name='L200'></a> 200 
+<a id='L201' name='L201'></a> 201 <em class='sharp'>#ifndef</em> <a href='../D/4157.html' title='Multiple defined in 18 places.'>FE_OVERFLOW</a>
+<a id='L202' name='L202'></a> 202 <em class='sharp'># define</em> <a href='../R/2422.html' title='Multiple referred from 134 places.'>FE_OVERFLOW</a> 0
+<a id='L203' name='L203'></a> 203 <em class='sharp'>#endif</em>
+<a id='L204' name='L204'></a> 204 
+<a id='L205' name='L205'></a> 205 <em class='sharp'>#define</em> <a href='../S/6726.html#L267' title='Referred from 267 in stdlib/tst-strtod-round-skeleton.c.'>GEN_ONE_TEST</a>(<a href='../Y/579.html' title='Multiple used in 52 places.'>FSUF</a>, <a href='../Y/620.html' title='Multiple used in 29 places.'>FTYPE</a>, <a href='../D/4749.html' title='Multiple defined in 8 places.'>FTOSTR</a>, <a href='../Y/1096.html' title='Multiple used in 17 places.'>LSUF</a>, <a href='../Y/226.html' title='Multiple used in 17 places.'>CSUF</a>)       \
+<a id='L206' name='L206'></a> 206 <em class='brace'>{</em>                               \
+<a id='L207' name='L207'></a> 207   <a href='../D/30412.html' title='Multiple defined in 12 places.'>feclearexcept</a> (<a href='../D/4130.html' title='Multiple defined in 26 places.'>FE_ALL_EXCEPT</a>);                \
+<a id='L208' name='L208'></a> 208   <a href='../Y/620.html' title='Multiple used in 29 places.'>FTYPE</a> <a href='../D/30173.html' title='Multiple defined in 17 places.'>f</a> = <a href='../S/6726.html#L50' title='Defined at 50 in stdlib/tst-strtod-round-skeleton.c.'>STRTO</a> (<a href='../Y/579.html' title='Multiple used in 52 places.'>FSUF</a>) (<a href='../D/36247.html' title='Multiple defined in 13 places.'>s</a>, <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>);             \
+<a id='L209' name='L209'></a> 209   <strong class='reserved'>if</strong> (<a href='../D/30173.html' title='Multiple defined in 17 places.'>f</a> != <a href='../Y/14144.html' title='Multiple used in 879 places.'>expected</a>-&gt;<a href='../Y/579.html' title='Multiple used in 52 places.'>FSUF</a>                   \
+<a id='L210' name='L210'></a> 210       || (<a href='../S/3342.html#L853' title='Defined at 853 in math/tgmath.h.'>copysign</a> ## <a href='../Y/226.html' title='Multiple used in 17 places.'>CSUF</a>) (1.0 ## <a href='../Y/1096.html' title='Multiple used in 17 places.'>LSUF</a>, <a href='../D/30173.html' title='Multiple defined in 17 places.'>f</a>)            \
+<a id='L211' name='L211'></a> 211      != (<a href='../S/3342.html#L853' title='Defined at 853 in math/tgmath.h.'>copysign</a> ## <a href='../Y/226.html' title='Multiple used in 17 places.'>CSUF</a>) (1.0 ## <a href='../Y/1096.html' title='Multiple used in 17 places.'>LSUF</a>, <a href='../Y/14144.html' title='Multiple used in 879 places.'>expected</a>-&gt;<a href='../Y/579.html' title='Multiple used in 52 places.'>FSUF</a>))   \
+<a id='L212' name='L212'></a> 212     <em class='brace'>{</em>                               \
+<a id='L213' name='L213'></a> 213       <strong class='reserved'>char</strong> <a href='../Y/13590.html' title='Multiple used in 3 places.'>efstr</a>[<a href='../S/6756.html#L22' title='Defined at 22 in stdlib/tst-strtod.h.'>FSTRLENMAX</a>];                   \
+<a id='L214' name='L214'></a> 214       <strong class='reserved'>char</strong> <a href='../Y/15200.html' title='Multiple used in 23 places.'>fstr</a>[<a href='../S/6756.html#L22' title='Defined at 22 in stdlib/tst-strtod.h.'>FSTRLENMAX</a>];                    \
+<a id='L215' name='L215'></a> 215       <a href='../D/4749.html' title='Multiple defined in 8 places.'>FTOSTR</a> (<a href='../Y/13590.html' title='Multiple used in 3 places.'>efstr</a>, <a href='../S/6756.html#L22' title='Defined at 22 in stdlib/tst-strtod.h.'>FSTRLENMAX</a>, "%a", <a href='../Y/14144.html' title='Multiple used in 879 places.'>expected</a>-&gt;<a href='../Y/579.html' title='Multiple used in 52 places.'>FSUF</a>);     \
+<a id='L216' name='L216'></a> 216       <a href='../D/4749.html' title='Multiple defined in 8 places.'>FTOSTR</a> (<a href='../Y/15200.html' title='Multiple used in 23 places.'>fstr</a>, <a href='../S/6756.html#L22' title='Defined at 22 in stdlib/tst-strtod.h.'>FSTRLENMAX</a>, "%a", <a href='../D/30173.html' title='Multiple defined in 17 places.'>f</a>);           \
+<a id='L217' name='L217'></a> 217       <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> (<a href='../D/4347.html' title='Multiple defined in 3 places.'>FNPFXS</a> "to" #<a href='../Y/579.html' title='Multiple used in 52 places.'>FSUF</a>  " (" <a href='../D/14922.html' title='Multiple defined in 2 places.'>STRM</a> ") returned %s not " \
+<a id='L218' name='L218'></a> 218           "%s (%s)\n", <a href='../D/36247.html' title='Multiple defined in 13 places.'>s</a>, <a href='../Y/15200.html' title='Multiple used in 23 places.'>fstr</a>, <a href='../Y/13590.html' title='Multiple used in 3 places.'>efstr</a>, <a href='../Y/19503.html' title='Multiple used in 12 places.'>mode_name</a>);      \
+<a id='L219' name='L219'></a> 219       <strong class='reserved'>if</strong> (<a href='../S/12175.html#L39' title='Defined at 39 in sysdeps/generic/math-tests.h.'>ROUNDING_TESTS</a> (<a href='../Y/620.html' title='Multiple used in 29 places.'>FTYPE</a>, <a href='../Y/24131.html' title='Multiple used in 6 places.'>rnd_mode</a>) || <a href='../Y/14025.html' title='Multiple used in 15 places.'>exact</a>-&gt;<a href='../Y/579.html' title='Multiple used in 52 places.'>FSUF</a>)  \
+<a id='L220' name='L220'></a> 220     <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a> = 1;                     \
+<a id='L221' name='L221'></a> 221       <strong class='reserved'>else</strong>                          \
+<a id='L222' name='L222'></a> 222     <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("ignoring this inexact result\n");      \
+<a id='L223' name='L223'></a> 223     <em class='brace'>}</em>                               \
+<a id='L224' name='L224'></a> 224   <strong class='reserved'>else</strong>                              \
+<a id='L225' name='L225'></a> 225     <em class='brace'>{</em>                               \
+<a id='L226' name='L226'></a> 226       <strong class='reserved'>if</strong> (<a href='../D/4141.html' title='Multiple defined in 19 places.'>FE_INEXACT</a> != 0)                  \
+<a id='L227' name='L227'></a> 227     <em class='brace'>{</em>                           \
+<a id='L228' name='L228'></a> 228       <a href='../S/3749.html#L624' title='Defined at 624 in timezone/private.h.'>bool</a> <a href='../Y/16780.html' title='Multiple used in 3 places.'>inexact_raised</a> = <a href='../D/30450.html' title='Multiple defined in 20 places.'>fetestexcept</a> (<a href='../D/4141.html' title='Multiple defined in 19 places.'>FE_INEXACT</a>) != 0; \
+<a id='L229' name='L229'></a> 229       <strong class='reserved'>if</strong> (<a href='../Y/16780.html' title='Multiple used in 3 places.'>inexact_raised</a> != !<a href='../Y/14025.html' title='Multiple used in 15 places.'>exact</a>-&gt;<a href='../Y/579.html' title='Multiple used in 52 places.'>FSUF</a>)           \
+<a id='L230' name='L230'></a> 230         <em class='brace'>{</em>                           \
+<a id='L231' name='L231'></a> 231           <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> (<a href='../D/4347.html' title='Multiple defined in 3 places.'>FNPFXS</a> "to" #<a href='../Y/579.html' title='Multiple used in 52 places.'>FSUF</a>             \
+<a id='L232' name='L232'></a> 232               " (" <a href='../D/14922.html' title='Multiple defined in 2 places.'>STRM</a> ") inexact %d "         \
+<a id='L233' name='L233'></a> 233               "not %d\n", <a href='../D/36247.html' title='Multiple defined in 13 places.'>s</a>, <a href='../Y/16780.html' title='Multiple used in 3 places.'>inexact_raised</a>,        \
+<a id='L234' name='L234'></a> 234               !<a href='../Y/14025.html' title='Multiple used in 15 places.'>exact</a>-&gt;<a href='../Y/579.html' title='Multiple used in 52 places.'>FSUF</a>);                \
+<a id='L235' name='L235'></a> 235           <strong class='reserved'>if</strong> (<a href='../S/12175.html#L42' title='Defined at 42 in sysdeps/generic/math-tests.h.'>EXCEPTION_TESTS</a> (<a href='../Y/620.html' title='Multiple used in 29 places.'>FTYPE</a>))          \
+<a id='L236' name='L236'></a> 236         <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a> = 1;                 \
+<a id='L237' name='L237'></a> 237           <strong class='reserved'>else</strong>                      \
+<a id='L238' name='L238'></a> 238         <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("ignoring this exception error\n"); \
+<a id='L239' name='L239'></a> 239         <em class='brace'>}</em>                           \
+<a id='L240' name='L240'></a> 240     <em class='brace'>}</em>                           \
+<a id='L241' name='L241'></a> 241       <strong class='reserved'>if</strong> (<a href='../D/4157.html' title='Multiple defined in 18 places.'>FE_OVERFLOW</a> != 0)                 \
+<a id='L242' name='L242'></a> 242     <em class='brace'>{</em>                           \
+<a id='L243' name='L243'></a> 243       <a href='../S/3749.html#L624' title='Defined at 624 in timezone/private.h.'>bool</a> <a href='../Y/22039.html' title='Multiple used in 3 places.'>overflow_raised</a>                  \
+<a id='L244' name='L244'></a> 244         = <a href='../D/30450.html' title='Multiple defined in 20 places.'>fetestexcept</a> (<a href='../D/4157.html' title='Multiple defined in 18 places.'>FE_OVERFLOW</a>) != 0;          \
+<a id='L245' name='L245'></a> 245       <strong class='reserved'>if</strong> (<a href='../Y/22039.html' title='Multiple used in 3 places.'>overflow_raised</a> != <a href='../Y/22035.html' title='Multiple used in 107 places.'>overflow</a>-&gt;<a href='../Y/579.html' title='Multiple used in 52 places.'>FSUF</a>)        \
+<a id='L246' name='L246'></a> 246         <em class='brace'>{</em>                           \
+<a id='L247' name='L247'></a> 247           <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> (<a href='../D/4347.html' title='Multiple defined in 3 places.'>FNPFXS</a> "to" #<a href='../Y/579.html' title='Multiple used in 52 places.'>FSUF</a>             \
+<a id='L248' name='L248'></a> 248               " (" <a href='../D/14922.html' title='Multiple defined in 2 places.'>STRM</a> ") overflow %d "        \
+<a id='L249' name='L249'></a> 249               "not %d\n", <a href='../D/36247.html' title='Multiple defined in 13 places.'>s</a>, <a href='../Y/22039.html' title='Multiple used in 3 places.'>overflow_raised</a>,       \
+<a id='L250' name='L250'></a> 250               <a href='../Y/22035.html' title='Multiple used in 107 places.'>overflow</a>-&gt;<a href='../Y/579.html' title='Multiple used in 52 places.'>FSUF</a>);              \
+<a id='L251' name='L251'></a> 251           <strong class='reserved'>if</strong> (<a href='../S/12175.html#L42' title='Defined at 42 in sysdeps/generic/math-tests.h.'>EXCEPTION_TESTS</a> (<a href='../Y/620.html' title='Multiple used in 29 places.'>FTYPE</a>))          \
+<a id='L252' name='L252'></a> 252         <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a> = 1;                 \
+<a id='L253' name='L253'></a> 253           <strong class='reserved'>else</strong>                      \
+<a id='L254' name='L254'></a> 254         <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("ignoring this exception error\n"); \
+<a id='L255' name='L255'></a> 255         <em class='brace'>}</em>                           \
+<a id='L256' name='L256'></a> 256     <em class='brace'>}</em>                           \
+<a id='L257' name='L257'></a> 257     <em class='brace'>}</em>                               \
+<a id='L258' name='L258'></a> 258 <em class='brace'>}</em>
+<a id='L259' name='L259'></a> 259 
+<a id='L260' name='L260'></a> 260 <strong class='reserved'>static</strong> <strong class='reserved'>int</strong>
+<a id='L261' name='L261'></a> 261 <a href='../R/25303.html' title='Multiple referred from 6 places.'>test_in_one_mode</a> (<strong class='reserved'>const</strong> <a href='../D/1156.html' title='Multiple defined in 81 places.'>CHAR</a> *<a href='../D/36247.html' title='Multiple defined in 13 places.'>s</a>, <strong class='reserved'>const</strong> <strong class='reserved'>struct</strong> <a href='../S/6726.html#L173' title='Defined at 173 in stdlib/tst-strtod-round-skeleton.c.'>test_results</a> *<a href='../Y/14144.html' title='Multiple used in 879 places.'>expected</a>,
+<a id='L262' name='L262'></a> 262             <strong class='reserved'>const</strong> <strong class='reserved'>struct</strong> <a href='../S/6726.html#L168' title='Defined at 168 in stdlib/tst-strtod-round-skeleton.c.'>test_exactness</a> *<a href='../Y/14025.html' title='Multiple used in 15 places.'>exact</a>,
+<a id='L263' name='L263'></a> 263             <strong class='reserved'>const</strong> <strong class='reserved'>struct</strong> <a href='../S/6726.html#L178' title='Defined at 178 in stdlib/tst-strtod-round-skeleton.c.'>test_overflow</a> *<a href='../Y/22035.html' title='Multiple used in 107 places.'>overflow</a>,
+<a id='L264' name='L264'></a> 264             <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../Y/19503.html' title='Multiple used in 12 places.'>mode_name</a>, <strong class='reserved'>int</strong> <a href='../Y/24131.html' title='Multiple used in 6 places.'>rnd_mode</a>)
+<a id='L265' name='L265'></a> 265 <em class='brace'>{</em>
+<a id='L266' name='L266'></a> 266   <strong class='reserved'>int</strong> <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a> = 0;
+<a id='L267' name='L267'></a> 267   <a href='../D/4994.html' title='Multiple defined in 7 places.'>GEN_TEST_STRTOD_FOREACH</a> (<a href='../S/6726.html#L205' title='Defined at 205 in stdlib/tst-strtod-round-skeleton.c.'>GEN_ONE_TEST</a>)
+<a id='L268' name='L268'></a> 268   <strong class='reserved'>return</strong> <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a>;
+<a id='L269' name='L269'></a> 269 <em class='brace'>}</em>
+<a id='L270' name='L270'></a> 270 
+<a id='L271' name='L271'></a> 271 <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <strong class='reserved'>struct</strong> <a href='../S/6726.html#L300' title='Referred from 300 in stdlib/tst-strtod-round-skeleton.c.'>fetestmodes</a>
+<a id='L272' name='L272'></a> 272   <em class='brace'>{</em>
+<a id='L273' name='L273'></a> 273   <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../Y/19503.html' title='Multiple used in 12 places.'>mode_name</a>;
+<a id='L274' name='L274'></a> 274   <strong class='reserved'>int</strong> <a href='../Y/24131.html' title='Multiple used in 6 places.'>rnd_mode</a>;
+<a id='L275' name='L275'></a> 275   <strong class='reserved'>int</strong> <a href='../Y/24130.html' title='Multiple used in 5 places.'>rnd_i</a>; <em class='comment'>/* Corresponding index into r array of struct test.  */</em>
+<a id='L276' name='L276'></a> 276   <em class='brace'>}</em> <a href='../D/33578.html' title='Multiple defined in 2 places.'>modes</a>[] = <em class='brace'>{</em>
+<a id='L277' name='L277'></a> 277     <em class='brace'>{</em> "default rounding mode", <a href='../D/4159.html' title='Multiple defined in 23 places.'>FE_TONEAREST</a>, 0 <em class='brace'>}</em>,
+<a id='L278' name='L278'></a> 278 <em class='sharp'>#ifdef</em> <a href='../D/4137.html' title='Multiple defined in 17 places.'>FE_DOWNWARD</a>
+<a id='L279' name='L279'></a> 279     <em class='brace'>{</em> "FE_DOWNWARD", <a href='../D/4137.html' title='Multiple defined in 17 places.'>FE_DOWNWARD</a>, 1 <em class='brace'>}</em>,
+<a id='L280' name='L280'></a> 280 <em class='sharp'>#endif</em>
+<a id='L281' name='L281'></a> 281 <em class='sharp'>#ifdef</em> <a href='../D/4160.html' title='Multiple defined in 18 places.'>FE_TOWARDZERO</a>
+<a id='L282' name='L282'></a> 282     <em class='brace'>{</em> "FE_TOWARDZERO", <a href='../D/4160.html' title='Multiple defined in 18 places.'>FE_TOWARDZERO</a>, 2 <em class='brace'>}</em>,
+<a id='L283' name='L283'></a> 283 <em class='sharp'>#endif</em>
+<a id='L284' name='L284'></a> 284 <em class='sharp'>#ifdef</em> <a href='../D/4163.html' title='Multiple defined in 17 places.'>FE_UPWARD</a>
+<a id='L285' name='L285'></a> 285     <em class='brace'>{</em> "FE_UPWARD", <a href='../D/4163.html' title='Multiple defined in 17 places.'>FE_UPWARD</a>, 3 <em class='brace'>}</em>,
+<a id='L286' name='L286'></a> 286 <em class='sharp'>#endif</em>
+<a id='L287' name='L287'></a> 287     <em class='brace'>{</em><em class='brace'>}</em>
+<a id='L288' name='L288'></a> 288 <em class='brace'>}</em>;
+<a id='L289' name='L289'></a> 289 
+<a id='L290' name='L290'></a> 290 <strong class='reserved'>static</strong> <strong class='reserved'>int</strong>
+<a id='L291' name='L291'></a> 291 <a href='../R/18782.html' title='Multiple referred from 1850 places.'>do_test</a> (<strong class='reserved'>void</strong>)
+<a id='L292' name='L292'></a> 292 <em class='brace'>{</em>
+<a id='L293' name='L293'></a> 293   <strong class='reserved'>int</strong> <a href='../Y/24606.html' title='Multiple used in 21 places.'>save_round_mode</a> <strong class='reserved'>__attribute__</strong> ((<a href='../S/2757.html#L20' title='Defined at 20 in elf/tst-tlsalign-vars.c.'>unused</a>)) = <a href='../S/18179.html#L126' title='Defined at 126 in include/fenv.h.'>fegetround</a> ();
+<a id='L294' name='L294'></a> 294   <strong class='reserved'>int</strong> <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a> = 0;
+<a id='L295' name='L295'></a> 295   <strong class='reserved'>for</strong> (<a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> = 0; <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> &lt; <strong class='reserved'>sizeof</strong> (<a href='../D/37946.html' title='Multiple defined in 4 places.'>tests</a>) / <strong class='reserved'>sizeof</strong> (<a href='../D/37946.html' title='Multiple defined in 4 places.'>tests</a>[0]); <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>++)
+<a id='L296' name='L296'></a> 296     <em class='brace'>{</em>
+<a id='L297' name='L297'></a> 297       <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a> |= <a href='../D/37724.html' title='Multiple defined in 2 places.'>test_in_one_mode</a> (<a href='../D/37946.html' title='Multiple defined in 4 places.'>tests</a>[<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>].<a href='../D/36247.html' title='Multiple defined in 13 places.'>s</a>, &amp;<a href='../D/37946.html' title='Multiple defined in 4 places.'>tests</a>[<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>].<a href='../Y/23316.html' title='Multiple used in 3267 places.'>r</a>[<a href='../D/33578.html' title='Multiple defined in 2 places.'>modes</a>[0].<a href='../Y/24130.html' title='Multiple used in 5 places.'>rnd_i</a>],
+<a id='L298' name='L298'></a> 298                   &amp;<a href='../D/37946.html' title='Multiple defined in 4 places.'>tests</a>[<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>].<a href='../Y/14025.html' title='Multiple used in 15 places.'>exact</a>, &amp;<a href='../D/37946.html' title='Multiple defined in 4 places.'>tests</a>[<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>].<a href='../Y/21408.html' title='Multiple used in 157 places.'>o</a>[<a href='../D/33578.html' title='Multiple defined in 2 places.'>modes</a>[0].<a href='../Y/24130.html' title='Multiple used in 5 places.'>rnd_i</a>],
+<a id='L299' name='L299'></a> 299                   <a href='../D/33578.html' title='Multiple defined in 2 places.'>modes</a>[0].<a href='../Y/19503.html' title='Multiple used in 12 places.'>mode_name</a>, <a href='../D/33578.html' title='Multiple defined in 2 places.'>modes</a>[0].<a href='../Y/24131.html' title='Multiple used in 6 places.'>rnd_mode</a>);
+<a id='L300' name='L300'></a> 300       <strong class='reserved'>for</strong> (<strong class='reserved'>const</strong> <strong class='reserved'>struct</strong> <a href='../S/6726.html#L271' title='Defined at 271 in stdlib/tst-strtod-round-skeleton.c.'>fetestmodes</a> *<a href='../D/33231.html' title='Multiple defined in 2 places.'>m</a> = &amp;<a href='../D/33578.html' title='Multiple defined in 2 places.'>modes</a>[1]; <a href='../D/33231.html' title='Multiple defined in 2 places.'>m</a>-&gt;<a href='../Y/19503.html' title='Multiple used in 12 places.'>mode_name</a> != <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>; <a href='../D/33231.html' title='Multiple defined in 2 places.'>m</a>++)
+<a id='L301' name='L301'></a> 301     <em class='brace'>{</em>
+<a id='L302' name='L302'></a> 302       <strong class='reserved'>if</strong> (!<a href='../D/30447.html' title='Multiple defined in 2 places.'>fesetround</a> (<a href='../D/33231.html' title='Multiple defined in 2 places.'>m</a>-&gt;<a href='../Y/24131.html' title='Multiple used in 6 places.'>rnd_mode</a>))
+<a id='L303' name='L303'></a> 303         <em class='brace'>{</em>
+<a id='L304' name='L304'></a> 304           <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a> |= <a href='../D/37724.html' title='Multiple defined in 2 places.'>test_in_one_mode</a> (<a href='../D/37946.html' title='Multiple defined in 4 places.'>tests</a>[<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>].<a href='../D/36247.html' title='Multiple defined in 13 places.'>s</a>, &amp;<a href='../D/37946.html' title='Multiple defined in 4 places.'>tests</a>[<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>].<a href='../Y/23316.html' title='Multiple used in 3267 places.'>r</a>[<a href='../D/33231.html' title='Multiple defined in 2 places.'>m</a>-&gt;<a href='../Y/24130.html' title='Multiple used in 5 places.'>rnd_i</a>],
+<a id='L305' name='L305'></a> 305                       &amp;<a href='../D/37946.html' title='Multiple defined in 4 places.'>tests</a>[<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>].<a href='../Y/14025.html' title='Multiple used in 15 places.'>exact</a>,
+<a id='L306' name='L306'></a> 306                       &amp;<a href='../D/37946.html' title='Multiple defined in 4 places.'>tests</a>[<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>].<a href='../Y/21408.html' title='Multiple used in 157 places.'>o</a>[<a href='../D/33231.html' title='Multiple defined in 2 places.'>m</a>-&gt;<a href='../Y/24130.html' title='Multiple used in 5 places.'>rnd_i</a>], <a href='../D/33231.html' title='Multiple defined in 2 places.'>m</a>-&gt;<a href='../Y/19503.html' title='Multiple used in 12 places.'>mode_name</a>,
+<a id='L307' name='L307'></a> 307                       <a href='../D/33231.html' title='Multiple defined in 2 places.'>m</a>-&gt;<a href='../Y/24131.html' title='Multiple used in 6 places.'>rnd_mode</a>);
+<a id='L308' name='L308'></a> 308           <a href='../D/30447.html' title='Multiple defined in 2 places.'>fesetround</a> (<a href='../Y/24606.html' title='Multiple used in 21 places.'>save_round_mode</a>);
+<a id='L309' name='L309'></a> 309         <em class='brace'>}</em>
+<a id='L310' name='L310'></a> 310     <em class='brace'>}</em>
+<a id='L311' name='L311'></a> 311     <em class='brace'>}</em>
+<a id='L312' name='L312'></a> 312   <strong class='reserved'>return</strong> <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a>;
+<a id='L313' name='L313'></a> 313 <em class='brace'>}</em>
+<a id='L314' name='L314'></a> 314 
+<a id='L315' name='L315'></a> 315 <em class='sharp'>#define</em> <a href='../R/8619.html' title='Multiple referred from 7 places.'>TEST_FUNCTION</a> <a href='../D/29701.html' title='Multiple defined in 1421 places.'>do_test</a> ()
+<a id='L316' name='L316'></a> 316 <em class='sharp'>#include</em> "../test-skeleton.c"
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L261'>[^]</a><a href='#L291'>[v]</a><a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

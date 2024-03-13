@@ -1,0 +1,97 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>sysdeps/hppa/hppa1.1/udiv_qrnnd.S</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18977.html'>sysdeps</a>/<a href='../files/19025.html'>hppa</a>/<a href='../files/19029.html'>hppa1.1</a>/udiv_qrnnd.S</h2>
+<em class='comment'>/* [&lt;][&gt;][^][v][top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 ;! HP-PA  __udiv_qrnnd division support, used from longlong.h.
+<a id='L2' name='L2'></a>   2 ;! This version runs fast on PA 7000 and later.
+<a id='L3' name='L3'></a>   3 
+<a id='L4' name='L4'></a>   4 ;! Copyright (C) 1993-2022 Free Software Foundation, Inc.
+<a id='L5' name='L5'></a>   5 
+<a id='L6' name='L6'></a>   6 ;! This file is part of the GNU MP Library.
+<a id='L7' name='L7'></a>   7 
+<a id='L8' name='L8'></a>   8 ;! The GNU MP Library is free software; you can redistribute it and/or modify
+<a id='L9' name='L9'></a>   9 ;! it under the terms of the GNU Lesser General Public License as published by
+<a id='L10' name='L10'></a>  10 ;! the Free Software Foundation; either version 2.1 of the License, or (at your
+<a id='L11' name='L11'></a>  11 ;! option) any later version.
+<a id='L12' name='L12'></a>  12 
+<a id='L13' name='L13'></a>  13 ;! The GNU MP Library is distributed in the hope that it will be useful, but
+<a id='L14' name='L14'></a>  14 ;! WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+<a id='L15' name='L15'></a>  15 ;! or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public
+<a id='L16' name='L16'></a>  16 ;! License for more details.
+<a id='L17' name='L17'></a>  17 
+<a id='L18' name='L18'></a>  18 ;! You should have received a copy of the GNU Lesser General Public License
+<a id='L19' name='L19'></a>  19 ;! along with the GNU MP Library.  If not, see
+<a id='L20' name='L20'></a>  20 ;! &lt;https:<em class='comment'>//www.gnu.org/licenses/&gt;.</em>
+<a id='L21' name='L21'></a>  21 
+<a id='L22' name='L22'></a>  22 
+<a id='L23' name='L23'></a>  23 ;! INPUT PARAMETERS
+<a id='L24' name='L24'></a>  24 ;! rem_ptr  gr26
+<a id='L25' name='L25'></a>  25 ;! n1       gr25
+<a id='L26' name='L26'></a>  26 ;! n0       gr24
+<a id='L27' name='L27'></a>  27 ;! d        gr23
+<a id='L28' name='L28'></a>  28 
+<a id='L29' name='L29'></a>  29     .text
+<a id='L30' name='L30'></a>  30 L$0000:
+<a id='L31' name='L31'></a>  31     .word       0x43f00000
+<a id='L32' name='L32'></a>  32     .word       0x0
+<a id='L33' name='L33'></a>  33     .export     __udiv_qrnnd
+<a id='L34' name='L34'></a>  34 __udiv_qrnnd:
+<a id='L35' name='L35'></a>  35     .proc
+<a id='L36' name='L36'></a>  36     .callinfo   frame=64,no_calls
+<a id='L37' name='L37'></a>  37     .entry
+<a id='L38' name='L38'></a>  38     ldo     64(%r30),%r30
+<a id='L39' name='L39'></a>  39 
+<a id='L40' name='L40'></a>  40     stws        %r25,-16(%r30)  ;! n_hi
+<a id='L41' name='L41'></a>  41     stws        %r24,-12(%r30)  ;! n_lo
+<a id='L42' name='L42'></a>  42     b,l     L$0,%r1
+<a id='L43' name='L43'></a>  43     ldo     L$0000-L$0(%r1),%r1
+<a id='L44' name='L44'></a>  44 L$0:
+<a id='L45' name='L45'></a>  45     fldds       -16(%r30),%fr5
+<a id='L46' name='L46'></a>  46     stws        %r23,-12(%r30)
+<a id='L47' name='L47'></a>  47     comib,&lt;=    0,%r25,L$1
+<a id='L48' name='L48'></a>  48     fcnvxf,dbl,dbl  %fr5,%fr5
+<a id='L49' name='L49'></a>  49     fldds       0(%r1),%fr4
+<a id='L50' name='L50'></a>  50     fadd,dbl    %fr4,%fr5,%fr5
+<a id='L51' name='L51'></a>  51 L$1:
+<a id='L52' name='L52'></a>  52     fcpy,sgl    %fr0,%fr6L
+<a id='L53' name='L53'></a>  53     fldws       -12(%r30),%fr6R
+<a id='L54' name='L54'></a>  54     fcnvxf,dbl,dbl  %fr6,%fr4
+<a id='L55' name='L55'></a>  55 
+<a id='L56' name='L56'></a>  56     fdiv,dbl    %fr5,%fr4,%fr5
+<a id='L57' name='L57'></a>  57 
+<a id='L58' name='L58'></a>  58     fcnvfx,dbl,dbl  %fr5,%fr4
+<a id='L59' name='L59'></a>  59     fstws       %fr4R,-16(%r30)
+<a id='L60' name='L60'></a>  60     xmpyu       %fr4R,%fr6R,%fr6
+<a id='L61' name='L61'></a>  61     ldws        -16(%r30),%r28
+<a id='L62' name='L62'></a>  62     fstds       %fr6,-16(%r30)
+<a id='L63' name='L63'></a>  63     ldws        -12(%r30),%r21
+<a id='L64' name='L64'></a>  64     ldws        -16(%r30),%r20
+<a id='L65' name='L65'></a>  65     sub     %r24,%r21,%r22
+<a id='L66' name='L66'></a>  66     subb        %r25,%r20,%r1
+<a id='L67' name='L67'></a>  67     comib,=     0,%r1,L$2
+<a id='L68' name='L68'></a>  68     ldo     -64(%r30),%r30
+<a id='L69' name='L69'></a>  69 
+<a id='L70' name='L70'></a>  70     add     %r22,%r23,%r22
+<a id='L71' name='L71'></a>  71     ldo     -1(%r28),%r28
+<a id='L72' name='L72'></a>  72 L$2:
+<a id='L73' name='L73'></a>  73     bv      0(%r2)
+<a id='L74' name='L74'></a>  74     stws        %r22,0(%r26)
+<a id='L75' name='L75'></a>  75 
+<a id='L76' name='L76'></a>  76     .exit
+<a id='L77' name='L77'></a>  77     .procend
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;][^][v]<a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

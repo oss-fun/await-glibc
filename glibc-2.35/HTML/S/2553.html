@@ -1,0 +1,416 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>elf/dl-audit.c</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18868.html'>elf</a>/dl-audit.c</h2>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L27'>[^]</a><a href='#L340'>[v]</a>[top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<h2 class='header'>DEFINITIONS</h2>
+This source file includes following definitions.
+<ol>
+<li><a href='#L27' title='Defined at 27.'>_dl_audit_activity_map</a></li>
+<li><a href='#L39' title='Defined at 39.'>_dl_audit_activity_nsid</a></li>
+<li><a href='#L53' title='Defined at 53.'>_dl_audit_objsearch</a></li>
+<li><a href='#L75' title='Defined at 75.'>_dl_audit_objopen</a></li>
+<li><a href='#L95' title='Defined at 95.'>_dl_audit_objclose</a></li>
+<li><a href='#L116' title='Defined at 116.'>_dl_audit_preinit</a></li>
+<li><a href='#L131' title='Defined at 131.'>_dl_audit_symbind_alt</a></li>
+<li><a href='#L174' title='Defined at 174.'>rtld_hidden_def</a></li>
+<li><a href='#L264' title='Defined at 264.'>_dl_audit_pltenter</a></li>
+<li><a href='#L340' title='Defined at 340.'>_dl_audit_pltexit</a></li>
+</ol>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* Audit common functions.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   Copyright (C) 2021-2022 Free Software Foundation, Inc.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'></em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'></em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'></em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   License along with the GNU C Library; if not, see</em>
+<a id='L17' name='L17'></a>  17 <em class='comment'>   &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L18' name='L18'></a>  18 
+<a id='L19' name='L19'></a>  19 <em class='sharp'>#include</em> &lt;<a href='../I/23.html'>assert.h</a>&gt;
+<a id='L20' name='L20'></a>  20 <em class='sharp'>#include</em> &lt;<a href='../I/134.html'>link.h</a>&gt;
+<a id='L21' name='L21'></a>  21 <em class='sharp'>#include</em> &lt;<a href='../I/5906.html'>ldsodefs.h</a>&gt;
+<a id='L22' name='L22'></a>  22 <em class='sharp'>#include</em> &lt;<a href='../I/5852.html'>dl-machine.h</a>&gt;
+<a id='L23' name='L23'></a>  23 <em class='sharp'>#include</em> &lt;<a href='../I/527.html'>dl-runtime.h</a>&gt;
+<a id='L24' name='L24'></a>  24 <em class='sharp'>#include</em> &lt;<a href='../I/6437.html'>dl-fixup-attribute.h</a>&gt;
+<a id='L25' name='L25'></a>  25 
+<a id='L26' name='L26'></a>  26 <strong class='reserved'>void</strong>
+<a id='L27' name='L27'></a>  27 <a href='../R/16474.html' title='Multiple referred from 3 places.'>_dl_audit_activity_map</a> (<strong class='reserved'>struct</strong> <a href='../D/32945.html' title='Multiple defined in 4 places.'>link_map</a> *<a href='../D/32486.html' title='Multiple defined in 3 places.'>l</a>, <strong class='reserved'>int</strong> <a href='../D/27471.html' title='Multiple defined in 2 places.'>action</a>)
+<a id='L28' name='L28'></a>  28 <em class='brace'>{</em>
+<a id='L29' name='L29'></a>  29   <strong class='reserved'>struct</strong> <a href='../S/12128.html#L256' title='Defined at 256 in sysdeps/generic/ldsodefs.h.'>audit_ifaces</a> *<a href='../Y/10012.html' title='Multiple used in 41 places.'>afct</a> = <a href='../D/5109.html' title='Multiple defined in 6 places.'>GLRO</a>(<a href='../Y/12871.html' title='Multiple used in 11 places.'>dl_audit</a>);
+<a id='L30' name='L30'></a>  30   <strong class='reserved'>for</strong> (<strong class='reserved'>unsigned</strong> <strong class='reserved'>int</strong> <a href='../D/28982.html' title='Multiple defined in 8 places.'>cnt</a> = 0; <a href='../D/28982.html' title='Multiple defined in 8 places.'>cnt</a> &lt; <a href='../D/5109.html' title='Multiple defined in 6 places.'>GLRO</a>(<a href='../Y/12918.html' title='Multiple used in 27 places.'>dl_naudit</a>); ++<a href='../D/28982.html' title='Multiple defined in 8 places.'>cnt</a>)
+<a id='L31' name='L31'></a>  31     <em class='brace'>{</em>
+<a id='L32' name='L32'></a>  32       <strong class='reserved'>if</strong> (<a href='../Y/10012.html' title='Multiple used in 41 places.'>afct</a>-&gt;<a href='../Y/9886.html' title='Multiple used in 3 places.'>activity</a> != <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>)
+<a id='L33' name='L33'></a>  33     <a href='../Y/10012.html' title='Multiple used in 41 places.'>afct</a>-&gt;<a href='../Y/9886.html' title='Multiple used in 3 places.'>activity</a> (&amp;<a href='../S/12128.html#L1392' title='Defined at 1392 in sysdeps/generic/ldsodefs.h.'>link_map_audit_state</a> (<a href='../D/32486.html' title='Multiple defined in 3 places.'>l</a>, <a href='../D/28982.html' title='Multiple defined in 8 places.'>cnt</a>)-&gt;<a href='../Y/11993.html' title='Multiple used in 227 places.'>cookie</a>, <a href='../D/27471.html' title='Multiple defined in 2 places.'>action</a>);
+<a id='L34' name='L34'></a>  34       <a href='../Y/10012.html' title='Multiple used in 41 places.'>afct</a> = <a href='../Y/10012.html' title='Multiple used in 41 places.'>afct</a>-&gt;<a href='../Y/20703.html' title='Multiple used in 1000 places.'>next</a>;
+<a id='L35' name='L35'></a>  35     <em class='brace'>}</em>
+<a id='L36' name='L36'></a>  36 <em class='brace'>}</em>
+<a id='L37' name='L37'></a>  37 
+<a id='L38' name='L38'></a>  38 <strong class='reserved'>void</strong>
+<a id='L39' name='L39'></a>  39 <a href='../R/16475.html' title='Multiple referred from 8 places.'>_dl_audit_activity_nsid</a> (<a href='../S/1466.html#L46' title='Defined at 46 in dlfcn/dlfcn.h.'>Lmid_t</a> <a href='../Y/21224.html' title='Multiple used in 118 places.'>nsid</a>, <strong class='reserved'>int</strong> <a href='../D/27471.html' title='Multiple defined in 2 places.'>action</a>)
+<a id='L40' name='L40'></a>  40 <em class='brace'>{</em>
+<a id='L41' name='L41'></a>  41   <em class='comment'>/* If head is NULL, the namespace has become empty, and the audit interface</em>
+<a id='L42' name='L42'></a>  42 <em class='comment'>     does not give us a way to signal LA_ACT_CONSISTENT for it because the</em>
+<a id='L43' name='L43'></a>  43 <em class='comment'>     first loaded module is used to identify the namespace.  */</em>
+<a id='L44' name='L44'></a>  44   <strong class='reserved'>struct</strong> <a href='../D/32945.html' title='Multiple defined in 4 places.'>link_map</a> *<a href='../S/1663.html#L66' title='Defined at 66 in nscd/initgrcache.c.'>head</a> = <a href='../D/5057.html' title='Multiple defined in 6 places.'>GL</a>(<a href='../Y/12920.html' title='Multiple used in 103 places.'>dl_ns</a>)[<a href='../Y/21224.html' title='Multiple used in 118 places.'>nsid</a>].<a href='../Y/9379.html' title='Multiple used in 72 places.'>_ns_loaded</a>;
+<a id='L45' name='L45'></a>  45   <strong class='reserved'>if</strong> (<a href='../D/24195.html' title='Multiple defined in 2 places.'>__glibc_likely</a> (<a href='../D/5109.html' title='Multiple defined in 6 places.'>GLRO</a>(<a href='../Y/12918.html' title='Multiple used in 27 places.'>dl_naudit</a>) == 0)
+<a id='L46' name='L46'></a>  46       || <a href='../S/1663.html#L66' title='Defined at 66 in nscd/initgrcache.c.'>head</a> == <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a> || <a href='../S/1663.html#L66' title='Defined at 66 in nscd/initgrcache.c.'>head</a>-&gt;<a href='../Y/17585.html' title='Multiple used in 9 places.'>l_auditing</a>)
+<a id='L47' name='L47'></a>  47     <strong class='reserved'>return</strong>;
+<a id='L48' name='L48'></a>  48 
+<a id='L49' name='L49'></a>  49   <a href='../S/2553.html#L27' title='Defined at 27 in elf/dl-audit.c.'>_dl_audit_activity_map</a> (<a href='../S/1663.html#L66' title='Defined at 66 in nscd/initgrcache.c.'>head</a>, <a href='../D/27471.html' title='Multiple defined in 2 places.'>action</a>);
+<a id='L50' name='L50'></a>  50 <em class='brace'>}</em>
+<a id='L51' name='L51'></a>  51 
+<a id='L52' name='L52'></a>  52 <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *
+<a id='L53' name='L53'></a>  53 <a href='../R/16479.html' title='Multiple referred from 2 places.'>_dl_audit_objsearch</a> (<strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../D/33817.html' title='Multiple defined in 21 places.'>name</a>, <strong class='reserved'>struct</strong> <a href='../D/32945.html' title='Multiple defined in 4 places.'>link_map</a> *<a href='../D/32486.html' title='Multiple defined in 3 places.'>l</a>, <strong class='reserved'>unsigned</strong> <strong class='reserved'>int</strong> <a href='../Y/11807.html' title='Multiple used in 172 places.'>code</a>)
+<a id='L54' name='L54'></a>  54 <em class='brace'>{</em>
+<a id='L55' name='L55'></a>  55   <strong class='reserved'>if</strong> (<a href='../D/32486.html' title='Multiple defined in 3 places.'>l</a> == <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a> || <a href='../D/32486.html' title='Multiple defined in 3 places.'>l</a>-&gt;<a href='../Y/17585.html' title='Multiple used in 9 places.'>l_auditing</a> || <a href='../Y/11807.html' title='Multiple used in 172 places.'>code</a> == 0)
+<a id='L56' name='L56'></a>  56     <strong class='reserved'>return</strong> <a href='../D/33817.html' title='Multiple defined in 21 places.'>name</a>;
+<a id='L57' name='L57'></a>  57 
+<a id='L58' name='L58'></a>  58   <strong class='reserved'>struct</strong> <a href='../S/12128.html#L256' title='Defined at 256 in sysdeps/generic/ldsodefs.h.'>audit_ifaces</a> *<a href='../Y/10012.html' title='Multiple used in 41 places.'>afct</a> = <a href='../D/5109.html' title='Multiple defined in 6 places.'>GLRO</a>(<a href='../Y/12871.html' title='Multiple used in 11 places.'>dl_audit</a>);
+<a id='L59' name='L59'></a>  59   <strong class='reserved'>for</strong> (<strong class='reserved'>unsigned</strong> <strong class='reserved'>int</strong> <a href='../D/28982.html' title='Multiple defined in 8 places.'>cnt</a> = 0; <a href='../D/28982.html' title='Multiple defined in 8 places.'>cnt</a> &lt; <a href='../D/5109.html' title='Multiple defined in 6 places.'>GLRO</a>(<a href='../Y/12918.html' title='Multiple used in 27 places.'>dl_naudit</a>); ++<a href='../D/28982.html' title='Multiple defined in 8 places.'>cnt</a>)
+<a id='L60' name='L60'></a>  60     <em class='brace'>{</em>
+<a id='L61' name='L61'></a>  61       <strong class='reserved'>if</strong> (<a href='../Y/10012.html' title='Multiple used in 41 places.'>afct</a>-&gt;<a href='../Y/21471.html' title='Multiple used in 3 places.'>objsearch</a> != <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>)
+<a id='L62' name='L62'></a>  62     <em class='brace'>{</em>
+<a id='L63' name='L63'></a>  63       <strong class='reserved'>struct</strong> <a href='../S/18099.html#L360' title='Defined at 360 in include/link.h.'>auditstate</a> *<a href='../S/735.html#L29' title='Defined at 29 in iconvdata/tst-loading.c.'>state</a> = <a href='../S/12128.html#L1392' title='Defined at 1392 in sysdeps/generic/ldsodefs.h.'>link_map_audit_state</a> (<a href='../D/32486.html' title='Multiple defined in 3 places.'>l</a>, <a href='../D/28982.html' title='Multiple defined in 8 places.'>cnt</a>);
+<a id='L64' name='L64'></a>  64       <a href='../D/33817.html' title='Multiple defined in 21 places.'>name</a> = <a href='../Y/10012.html' title='Multiple used in 41 places.'>afct</a>-&gt;<a href='../Y/21471.html' title='Multiple used in 3 places.'>objsearch</a> (<a href='../D/33817.html' title='Multiple defined in 21 places.'>name</a>, &amp;<a href='../S/735.html#L29' title='Defined at 29 in iconvdata/tst-loading.c.'>state</a>-&gt;<a href='../Y/11993.html' title='Multiple used in 227 places.'>cookie</a>, <a href='../Y/11807.html' title='Multiple used in 172 places.'>code</a>);
+<a id='L65' name='L65'></a>  65       <strong class='reserved'>if</strong> (<a href='../D/33817.html' title='Multiple defined in 21 places.'>name</a> == <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>)
+<a id='L66' name='L66'></a>  66         <strong class='reserved'>return</strong> <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>;
+<a id='L67' name='L67'></a>  67     <em class='brace'>}</em>
+<a id='L68' name='L68'></a>  68       <a href='../Y/10012.html' title='Multiple used in 41 places.'>afct</a> = <a href='../Y/10012.html' title='Multiple used in 41 places.'>afct</a>-&gt;<a href='../Y/20703.html' title='Multiple used in 1000 places.'>next</a>;
+<a id='L69' name='L69'></a>  69    <em class='brace'>}</em>
+<a id='L70' name='L70'></a>  70 
+<a id='L71' name='L71'></a>  71   <strong class='reserved'>return</strong> <a href='../D/33817.html' title='Multiple defined in 21 places.'>name</a>;
+<a id='L72' name='L72'></a>  72 <em class='brace'>}</em>
+<a id='L73' name='L73'></a>  73 
+<a id='L74' name='L74'></a>  74 <strong class='reserved'>void</strong>
+<a id='L75' name='L75'></a>  75 <a href='../R/16478.html' title='Multiple referred from 5 places.'>_dl_audit_objopen</a> (<strong class='reserved'>struct</strong> <a href='../D/32945.html' title='Multiple defined in 4 places.'>link_map</a> *<a href='../D/32486.html' title='Multiple defined in 3 places.'>l</a>, <a href='../S/1466.html#L46' title='Defined at 46 in dlfcn/dlfcn.h.'>Lmid_t</a> <a href='../Y/21224.html' title='Multiple used in 118 places.'>nsid</a>)
+<a id='L76' name='L76'></a>  76 <em class='brace'>{</em>
+<a id='L77' name='L77'></a>  77   <strong class='reserved'>if</strong> (<a href='../D/24195.html' title='Multiple defined in 2 places.'>__glibc_likely</a> (<a href='../D/5109.html' title='Multiple defined in 6 places.'>GLRO</a>(<a href='../Y/12918.html' title='Multiple used in 27 places.'>dl_naudit</a>) == 0))
+<a id='L78' name='L78'></a>  78     <strong class='reserved'>return</strong>;
+<a id='L79' name='L79'></a>  79 
+<a id='L80' name='L80'></a>  80   <strong class='reserved'>struct</strong> <a href='../S/12128.html#L256' title='Defined at 256 in sysdeps/generic/ldsodefs.h.'>audit_ifaces</a> *<a href='../Y/10012.html' title='Multiple used in 41 places.'>afct</a> = <a href='../D/5109.html' title='Multiple defined in 6 places.'>GLRO</a>(<a href='../Y/12871.html' title='Multiple used in 11 places.'>dl_audit</a>);
+<a id='L81' name='L81'></a>  81   <strong class='reserved'>for</strong> (<strong class='reserved'>unsigned</strong> <strong class='reserved'>int</strong> <a href='../D/28982.html' title='Multiple defined in 8 places.'>cnt</a> = 0; <a href='../D/28982.html' title='Multiple defined in 8 places.'>cnt</a> &lt; <a href='../D/5109.html' title='Multiple defined in 6 places.'>GLRO</a>(<a href='../Y/12918.html' title='Multiple used in 27 places.'>dl_naudit</a>); ++<a href='../D/28982.html' title='Multiple defined in 8 places.'>cnt</a>)
+<a id='L82' name='L82'></a>  82     <em class='brace'>{</em>
+<a id='L83' name='L83'></a>  83       <strong class='reserved'>if</strong> (<a href='../Y/10012.html' title='Multiple used in 41 places.'>afct</a>-&gt;<a href='../Y/21467.html' title='Multiple used in 3 places.'>objopen</a> != <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>)
+<a id='L84' name='L84'></a>  84     <em class='brace'>{</em>
+<a id='L85' name='L85'></a>  85       <strong class='reserved'>struct</strong> <a href='../S/18099.html#L360' title='Defined at 360 in include/link.h.'>auditstate</a> *<a href='../S/735.html#L29' title='Defined at 29 in iconvdata/tst-loading.c.'>state</a> = <a href='../S/12128.html#L1392' title='Defined at 1392 in sysdeps/generic/ldsodefs.h.'>link_map_audit_state</a> (<a href='../D/32486.html' title='Multiple defined in 3 places.'>l</a>, <a href='../D/28982.html' title='Multiple defined in 8 places.'>cnt</a>);
+<a id='L86' name='L86'></a>  86       <a href='../S/735.html#L29' title='Defined at 29 in iconvdata/tst-loading.c.'>state</a>-&gt;<a href='../Y/10853.html' title='Multiple used in 7 places.'>bindflags</a> = <a href='../Y/10012.html' title='Multiple used in 41 places.'>afct</a>-&gt;<a href='../Y/21467.html' title='Multiple used in 3 places.'>objopen</a> (<a href='../D/32486.html' title='Multiple defined in 3 places.'>l</a>, <a href='../Y/21224.html' title='Multiple used in 118 places.'>nsid</a>, &amp;<a href='../S/735.html#L29' title='Defined at 29 in iconvdata/tst-loading.c.'>state</a>-&gt;<a href='../Y/11993.html' title='Multiple used in 227 places.'>cookie</a>);
+<a id='L87' name='L87'></a>  87       <a href='../D/32486.html' title='Multiple defined in 3 places.'>l</a>-&gt;<a href='../Y/17584.html' title='Multiple used in 4 places.'>l_audit_any_plt</a> |= <a href='../S/735.html#L29' title='Defined at 29 in iconvdata/tst-loading.c.'>state</a>-&gt;<a href='../Y/10853.html' title='Multiple used in 7 places.'>bindflags</a> != 0;
+<a id='L88' name='L88'></a>  88     <em class='brace'>}</em>
+<a id='L89' name='L89'></a>  89 
+<a id='L90' name='L90'></a>  90       <a href='../Y/10012.html' title='Multiple used in 41 places.'>afct</a> = <a href='../Y/10012.html' title='Multiple used in 41 places.'>afct</a>-&gt;<a href='../Y/20703.html' title='Multiple used in 1000 places.'>next</a>;
+<a id='L91' name='L91'></a>  91    <em class='brace'>}</em>
+<a id='L92' name='L92'></a>  92 <em class='brace'>}</em>
+<a id='L93' name='L93'></a>  93 
+<a id='L94' name='L94'></a>  94 <strong class='reserved'>void</strong>
+<a id='L95' name='L95'></a>  95 <a href='../R/16477.html' title='Multiple referred from 3 places.'>_dl_audit_objclose</a> (<strong class='reserved'>struct</strong> <a href='../D/32945.html' title='Multiple defined in 4 places.'>link_map</a> *<a href='../D/32486.html' title='Multiple defined in 3 places.'>l</a>)
+<a id='L96' name='L96'></a>  96 <em class='brace'>{</em>
+<a id='L97' name='L97'></a>  97   <strong class='reserved'>if</strong> (<a href='../D/24195.html' title='Multiple defined in 2 places.'>__glibc_likely</a> (<a href='../D/5109.html' title='Multiple defined in 6 places.'>GLRO</a>(<a href='../Y/12918.html' title='Multiple used in 27 places.'>dl_naudit</a>) == 0)
+<a id='L98' name='L98'></a>  98       || <a href='../D/5057.html' title='Multiple defined in 6 places.'>GL</a>(<a href='../Y/12920.html' title='Multiple used in 103 places.'>dl_ns</a>)[<a href='../D/32486.html' title='Multiple defined in 3 places.'>l</a>-&gt;<a href='../Y/17634.html' title='Multiple used in 49 places.'>l_ns</a>].<a href='../Y/9379.html' title='Multiple used in 72 places.'>_ns_loaded</a>-&gt;<a href='../Y/17585.html' title='Multiple used in 9 places.'>l_auditing</a>)
+<a id='L99' name='L99'></a>  99     <strong class='reserved'>return</strong>;
+<a id='L100' name='L100'></a> 100 
+<a id='L101' name='L101'></a> 101   <strong class='reserved'>struct</strong> <a href='../S/12128.html#L256' title='Defined at 256 in sysdeps/generic/ldsodefs.h.'>audit_ifaces</a> *<a href='../Y/10012.html' title='Multiple used in 41 places.'>afct</a> = <a href='../D/5109.html' title='Multiple defined in 6 places.'>GLRO</a>(<a href='../Y/12871.html' title='Multiple used in 11 places.'>dl_audit</a>);
+<a id='L102' name='L102'></a> 102   <strong class='reserved'>for</strong> (<strong class='reserved'>unsigned</strong> <strong class='reserved'>int</strong> <a href='../D/28982.html' title='Multiple defined in 8 places.'>cnt</a> = 0; <a href='../D/28982.html' title='Multiple defined in 8 places.'>cnt</a> &lt; <a href='../D/5109.html' title='Multiple defined in 6 places.'>GLRO</a>(<a href='../Y/12918.html' title='Multiple used in 27 places.'>dl_naudit</a>); ++<a href='../D/28982.html' title='Multiple defined in 8 places.'>cnt</a>)
+<a id='L103' name='L103'></a> 103     <em class='brace'>{</em>
+<a id='L104' name='L104'></a> 104       <strong class='reserved'>if</strong> (<a href='../Y/10012.html' title='Multiple used in 41 places.'>afct</a>-&gt;<a href='../Y/21453.html' title='Multiple used in 3 places.'>objclose</a> != <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>)
+<a id='L105' name='L105'></a> 105     <em class='brace'>{</em>
+<a id='L106' name='L106'></a> 106       <strong class='reserved'>struct</strong> <a href='../S/18099.html#L360' title='Defined at 360 in include/link.h.'>auditstate</a> *<a href='../S/735.html#L29' title='Defined at 29 in iconvdata/tst-loading.c.'>state</a>= <a href='../S/12128.html#L1392' title='Defined at 1392 in sysdeps/generic/ldsodefs.h.'>link_map_audit_state</a> (<a href='../D/32486.html' title='Multiple defined in 3 places.'>l</a>, <a href='../D/28982.html' title='Multiple defined in 8 places.'>cnt</a>);
+<a id='L107' name='L107'></a> 107       <em class='comment'>/* Return value is ignored.  */</em>
+<a id='L108' name='L108'></a> 108       <a href='../Y/10012.html' title='Multiple used in 41 places.'>afct</a>-&gt;<a href='../Y/21453.html' title='Multiple used in 3 places.'>objclose</a> (&amp;<a href='../S/735.html#L29' title='Defined at 29 in iconvdata/tst-loading.c.'>state</a>-&gt;<a href='../Y/11993.html' title='Multiple used in 227 places.'>cookie</a>);
+<a id='L109' name='L109'></a> 109     <em class='brace'>}</em>
+<a id='L110' name='L110'></a> 110 
+<a id='L111' name='L111'></a> 111       <a href='../Y/10012.html' title='Multiple used in 41 places.'>afct</a> = <a href='../Y/10012.html' title='Multiple used in 41 places.'>afct</a>-&gt;<a href='../Y/20703.html' title='Multiple used in 1000 places.'>next</a>;
+<a id='L112' name='L112'></a> 112     <em class='brace'>}</em>
+<a id='L113' name='L113'></a> 113 <em class='brace'>}</em>
+<a id='L114' name='L114'></a> 114 
+<a id='L115' name='L115'></a> 115 <strong class='reserved'>void</strong>
+<a id='L116' name='L116'></a> 116 <a href='../R/16482.html' title='Multiple referred from 2 places.'>_dl_audit_preinit</a> (<strong class='reserved'>struct</strong> <a href='../D/32945.html' title='Multiple defined in 4 places.'>link_map</a> *<a href='../D/32486.html' title='Multiple defined in 3 places.'>l</a>)
+<a id='L117' name='L117'></a> 117 <em class='brace'>{</em>
+<a id='L118' name='L118'></a> 118   <strong class='reserved'>if</strong> (<a href='../D/24195.html' title='Multiple defined in 2 places.'>__glibc_likely</a> (<a href='../D/5109.html' title='Multiple defined in 6 places.'>GLRO</a>(<a href='../Y/12918.html' title='Multiple used in 27 places.'>dl_naudit</a>) == 0))
+<a id='L119' name='L119'></a> 119     <strong class='reserved'>return</strong>;
+<a id='L120' name='L120'></a> 120 
+<a id='L121' name='L121'></a> 121   <strong class='reserved'>struct</strong> <a href='../S/12128.html#L256' title='Defined at 256 in sysdeps/generic/ldsodefs.h.'>audit_ifaces</a> *<a href='../Y/10012.html' title='Multiple used in 41 places.'>afct</a> = <a href='../D/5109.html' title='Multiple defined in 6 places.'>GLRO</a>(<a href='../Y/12871.html' title='Multiple used in 11 places.'>dl_audit</a>);
+<a id='L122' name='L122'></a> 122   <strong class='reserved'>for</strong> (<strong class='reserved'>unsigned</strong> <strong class='reserved'>int</strong> <a href='../D/28982.html' title='Multiple defined in 8 places.'>cnt</a> = 0; <a href='../D/28982.html' title='Multiple defined in 8 places.'>cnt</a> &lt; <a href='../D/5109.html' title='Multiple defined in 6 places.'>GLRO</a>(<a href='../Y/12918.html' title='Multiple used in 27 places.'>dl_naudit</a>); ++<a href='../D/28982.html' title='Multiple defined in 8 places.'>cnt</a>)
+<a id='L123' name='L123'></a> 123     <em class='brace'>{</em>
+<a id='L124' name='L124'></a> 124       <strong class='reserved'>if</strong> (<a href='../Y/10012.html' title='Multiple used in 41 places.'>afct</a>-&gt;<a href='../Y/22706.html' title='Multiple used in 24 places.'>preinit</a> != <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>)
+<a id='L125' name='L125'></a> 125     <a href='../Y/10012.html' title='Multiple used in 41 places.'>afct</a>-&gt;<a href='../Y/22706.html' title='Multiple used in 24 places.'>preinit</a> (&amp;<a href='../S/12128.html#L1392' title='Defined at 1392 in sysdeps/generic/ldsodefs.h.'>link_map_audit_state</a> (<a href='../D/32486.html' title='Multiple defined in 3 places.'>l</a>, <a href='../D/28982.html' title='Multiple defined in 8 places.'>cnt</a>)-&gt;<a href='../Y/11993.html' title='Multiple used in 227 places.'>cookie</a>);
+<a id='L126' name='L126'></a> 126       <a href='../Y/10012.html' title='Multiple used in 41 places.'>afct</a> = <a href='../Y/10012.html' title='Multiple used in 41 places.'>afct</a>-&gt;<a href='../Y/20703.html' title='Multiple used in 1000 places.'>next</a>;
+<a id='L127' name='L127'></a> 127     <em class='brace'>}</em>
+<a id='L128' name='L128'></a> 128 <em class='brace'>}</em>
+<a id='L129' name='L129'></a> 129 
+<a id='L130' name='L130'></a> 130 <strong class='reserved'>void</strong>
+<a id='L131' name='L131'></a> 131 <a href='../R/16483.html' title='Multiple referred from 4 places.'>_dl_audit_symbind_alt</a> (<strong class='reserved'>struct</strong> <a href='../D/32945.html' title='Multiple defined in 4 places.'>link_map</a> *<a href='../D/32486.html' title='Multiple defined in 3 places.'>l</a>, <strong class='reserved'>const</strong> <a href='../D/4051.html' title='Multiple defined in 85 places.'>ElfW</a>(<a href='../Y/1884.html' title='Multiple used in 235 places.'>Sym</a>) *<a href='../Y/23646.html' title='Multiple used in 211 places.'>ref</a>, <strong class='reserved'>void</strong> **<a href='../D/38921.html' title='Multiple defined in 7 places.'>value</a>,
+<a id='L132' name='L132'></a> 132                <a href='../S/12128.html#L93' title='Defined at 93 in sysdeps/generic/ldsodefs.h.'>lookup_t</a> <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a>)
+<a id='L133' name='L133'></a> 133 <em class='brace'>{</em>
+<a id='L134' name='L134'></a> 134   <strong class='reserved'>if</strong> ((<a href='../D/32486.html' title='Multiple defined in 3 places.'>l</a>-&gt;<a href='../Y/17584.html' title='Multiple used in 4 places.'>l_audit_any_plt</a> | <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a>-&gt;<a href='../Y/17584.html' title='Multiple used in 4 places.'>l_audit_any_plt</a>) == 0)
+<a id='L135' name='L135'></a> 135     <strong class='reserved'>return</strong>;
+<a id='L136' name='L136'></a> 136 
+<a id='L137' name='L137'></a> 137   <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../Y/26330.html' title='Multiple used in 190 places.'>strtab</a> = (<strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *) <a href='../S/12128.html#L89' title='Defined at 89 in sysdeps/generic/ldsodefs.h.'>D_PTR</a> (<a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a>, <a href='../Y/17609.html' title='Multiple used in 384 places.'>l_info</a>[<a href='../S/3101.html#L860' title='Defined at 860 in elf/elf.h.'>DT_STRTAB</a>]);
+<a id='L138' name='L138'></a> 138   <em class='comment'>/* Compute index of the symbol entry in the symbol table of the DSO with</em>
+<a id='L139' name='L139'></a> 139 <em class='comment'>     the definition.  */</em>
+<a id='L140' name='L140'></a> 140   <strong class='reserved'>unsigned</strong> <strong class='reserved'>int</strong> <a href='../Y/20336.html' title='Multiple used in 171 places.'>ndx</a> = (<a href='../Y/23646.html' title='Multiple used in 211 places.'>ref</a> - (<a href='../D/4051.html' title='Multiple defined in 85 places.'>ElfW</a>(<a href='../Y/1884.html' title='Multiple used in 235 places.'>Sym</a>) *) <a href='../S/12128.html#L89' title='Defined at 89 in sysdeps/generic/ldsodefs.h.'>D_PTR</a> (<a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a>, <a href='../Y/17609.html' title='Multiple used in 384 places.'>l_info</a>[<a href='../S/3101.html#L861' title='Defined at 861 in elf/elf.h.'>DT_SYMTAB</a>]));
+<a id='L141' name='L141'></a> 141 
+<a id='L142' name='L142'></a> 142   <strong class='reserved'>unsigned</strong> <strong class='reserved'>int</strong> <a href='../Y/10206.html' title='Multiple used in 3 places.'>altvalue</a> = 0;
+<a id='L143' name='L143'></a> 143   <em class='comment'>/* Synthesize a symbol record where the st_value field is the result.  */</em>
+<a id='L144' name='L144'></a> 144   <a href='../D/4051.html' title='Multiple defined in 85 places.'>ElfW</a>(<a href='../Y/1884.html' title='Multiple used in 235 places.'>Sym</a>) <a href='../Y/26589.html' title='Multiple used in 929 places.'>sym</a> = *<a href='../Y/23646.html' title='Multiple used in 211 places.'>ref</a>;
+<a id='L145' name='L145'></a> 145   <a href='../Y/26589.html' title='Multiple used in 929 places.'>sym</a>.<a href='../Y/26023.html' title='Multiple used in 219 places.'>st_value</a> = (<a href='../D/4051.html' title='Multiple defined in 85 places.'>ElfW</a>(<a href='../Y/109.html' title='Multiple used in 497 places.'>Addr</a>)) *<a href='../D/38921.html' title='Multiple defined in 7 places.'>value</a>;
+<a id='L146' name='L146'></a> 146 
+<a id='L147' name='L147'></a> 147   <strong class='reserved'>struct</strong> <a href='../S/12128.html#L256' title='Defined at 256 in sysdeps/generic/ldsodefs.h.'>audit_ifaces</a> *<a href='../Y/10012.html' title='Multiple used in 41 places.'>afct</a> = <a href='../D/5109.html' title='Multiple defined in 6 places.'>GLRO</a>(<a href='../Y/12871.html' title='Multiple used in 11 places.'>dl_audit</a>);
+<a id='L148' name='L148'></a> 148   <strong class='reserved'>for</strong> (<strong class='reserved'>unsigned</strong> <strong class='reserved'>int</strong> <a href='../D/28982.html' title='Multiple defined in 8 places.'>cnt</a> = 0; <a href='../D/28982.html' title='Multiple defined in 8 places.'>cnt</a> &lt; <a href='../D/5109.html' title='Multiple defined in 6 places.'>GLRO</a>(<a href='../Y/12918.html' title='Multiple used in 27 places.'>dl_naudit</a>); ++<a href='../D/28982.html' title='Multiple defined in 8 places.'>cnt</a>)
+<a id='L149' name='L149'></a> 149     <em class='brace'>{</em>
+<a id='L150' name='L150'></a> 150       <strong class='reserved'>struct</strong> <a href='../S/18099.html#L360' title='Defined at 360 in include/link.h.'>auditstate</a> *<a href='../Y/18983.html' title='Multiple used in 3 places.'>match_audit</a> = <a href='../S/12128.html#L1392' title='Defined at 1392 in sysdeps/generic/ldsodefs.h.'>link_map_audit_state</a> (<a href='../D/32486.html' title='Multiple defined in 3 places.'>l</a>, <a href='../D/28982.html' title='Multiple defined in 8 places.'>cnt</a>);
+<a id='L151' name='L151'></a> 151       <strong class='reserved'>struct</strong> <a href='../S/18099.html#L360' title='Defined at 360 in include/link.h.'>auditstate</a> *<a href='../Y/23933.html' title='Multiple used in 3 places.'>result_audit</a> = <a href='../S/12128.html#L1392' title='Defined at 1392 in sysdeps/generic/ldsodefs.h.'>link_map_audit_state</a> (<a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a>, <a href='../D/28982.html' title='Multiple defined in 8 places.'>cnt</a>);
+<a id='L152' name='L152'></a> 152       <strong class='reserved'>if</strong> (<a href='../Y/10012.html' title='Multiple used in 41 places.'>afct</a>-&gt;<a href='../D/37380.html' title='Multiple defined in 2 places.'>symbind</a> != <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>
+<a id='L153' name='L153'></a> 153       &amp;&amp; ((<a href='../Y/18983.html' title='Multiple used in 3 places.'>match_audit</a>-&gt;<a href='../Y/10853.html' title='Multiple used in 7 places.'>bindflags</a> &amp; <a href='../S/2902.html#L141' title='Defined at 141 in elf/link.h.'>LA_FLG_BINDFROM</a>) != 0
+<a id='L154' name='L154'></a> 154           || ((<a href='../Y/23933.html' title='Multiple used in 3 places.'>result_audit</a>-&gt;<a href='../Y/10853.html' title='Multiple used in 7 places.'>bindflags</a> &amp; <a href='../S/2902.html#L140' title='Defined at 140 in elf/link.h.'>LA_FLG_BINDTO</a>)
+<a id='L155' name='L155'></a> 155           != 0)))
+<a id='L156' name='L156'></a> 156     <em class='brace'>{</em>
+<a id='L157' name='L157'></a> 157       <strong class='reserved'>unsigned</strong> <strong class='reserved'>int</strong> <a href='../Y/14688.html' title='Multiple used in 1976 places.'>flags</a> = <a href='../Y/10206.html' title='Multiple used in 3 places.'>altvalue</a> | <a href='../S/2902.html#L150' title='Defined at 150 in elf/link.h.'>LA_SYMB_DLSYM</a>;
+<a id='L158' name='L158'></a> 158       <a href='../D/38692.html' title='Multiple defined in 2 places.'>uintptr_t</a> <a href='../Y/20611.html' title='Multiple used in 49 places.'>new_value</a> = <a href='../Y/10012.html' title='Multiple used in 41 places.'>afct</a>-&gt;<a href='../D/37380.html' title='Multiple defined in 2 places.'>symbind</a> (&amp;<a href='../Y/26589.html' title='Multiple used in 929 places.'>sym</a>, <a href='../Y/20336.html' title='Multiple used in 171 places.'>ndx</a>,
+<a id='L159' name='L159'></a> 159                            &amp;<a href='../Y/18983.html' title='Multiple used in 3 places.'>match_audit</a>-&gt;<a href='../Y/11993.html' title='Multiple used in 227 places.'>cookie</a>,
+<a id='L160' name='L160'></a> 160                            &amp;<a href='../Y/23933.html' title='Multiple used in 3 places.'>result_audit</a>-&gt;<a href='../Y/11993.html' title='Multiple used in 227 places.'>cookie</a>,
+<a id='L161' name='L161'></a> 161                            &amp;<a href='../Y/14688.html' title='Multiple used in 1976 places.'>flags</a>, <a href='../Y/26330.html' title='Multiple used in 190 places.'>strtab</a> + <a href='../Y/23646.html' title='Multiple used in 211 places.'>ref</a>-&gt;<a href='../Y/25999.html' title='Multiple used in 54 places.'>st_name</a>);
+<a id='L162' name='L162'></a> 162       <strong class='reserved'>if</strong> (<a href='../Y/20611.html' title='Multiple used in 49 places.'>new_value</a> != (<a href='../D/38692.html' title='Multiple defined in 2 places.'>uintptr_t</a>) <a href='../Y/26589.html' title='Multiple used in 929 places.'>sym</a>.<a href='../Y/26023.html' title='Multiple used in 219 places.'>st_value</a>)
+<a id='L163' name='L163'></a> 163         <em class='brace'>{</em>
+<a id='L164' name='L164'></a> 164           <a href='../Y/10206.html' title='Multiple used in 3 places.'>altvalue</a> = <a href='../S/2902.html#L151' title='Defined at 151 in elf/link.h.'>LA_SYMB_ALTVALUE</a>;
+<a id='L165' name='L165'></a> 165           <a href='../Y/26589.html' title='Multiple used in 929 places.'>sym</a>.<a href='../Y/26023.html' title='Multiple used in 219 places.'>st_value</a> = <a href='../Y/20611.html' title='Multiple used in 49 places.'>new_value</a>;
+<a id='L166' name='L166'></a> 166         <em class='brace'>}</em>
+<a id='L167' name='L167'></a> 167 
+<a id='L168' name='L168'></a> 168       <a href='../Y/10012.html' title='Multiple used in 41 places.'>afct</a> = <a href='../Y/10012.html' title='Multiple used in 41 places.'>afct</a>-&gt;<a href='../Y/20703.html' title='Multiple used in 1000 places.'>next</a>;
+<a id='L169' name='L169'></a> 169     <em class='brace'>}</em>
+<a id='L170' name='L170'></a> 170 
+<a id='L171' name='L171'></a> 171       *<a href='../D/38921.html' title='Multiple defined in 7 places.'>value</a> = (<strong class='reserved'>void</strong> *) <a href='../Y/26589.html' title='Multiple used in 929 places.'>sym</a>.<a href='../Y/26023.html' title='Multiple used in 219 places.'>st_value</a>;
+<a id='L172' name='L172'></a> 172     <em class='brace'>}</em>
+<a id='L173' name='L173'></a> 173 <em class='brace'>}</em>
+<a id='L174' name='L174'></a> 174 <a href='../R/23958.html' title='Multiple referred from 19 places.'>rtld_hidden_def</a> (<a href='../S/2553.html#L131' title='Defined at 131 in elf/dl-audit.c.'>_dl_audit_symbind_alt</a>)
+<a id='L175' name='L175'></a> 175 
+<a id='L176' name='L176'></a> 176 <strong class='reserved'>void</strong>
+<a id='L177' name='L177'></a> 177 <a href='../Y/8832.html' title='Multiple used in 6 places.'>_dl_audit_symbind</a> (<strong class='reserved'>struct</strong> <a href='../D/32945.html' title='Multiple defined in 4 places.'>link_map</a> *<a href='../D/32486.html' title='Multiple defined in 3 places.'>l</a>, <strong class='reserved'>struct</strong> <a href='../S/18099.html#L236' title='Defined at 236 in include/link.h.'>reloc_result</a> *<a href='../S/18099.html#L236' title='Defined at 236 in include/link.h.'>reloc_result</a>,
+<a id='L178' name='L178'></a> 178            <strong class='reserved'>const</strong> <a href='../D/4051.html' title='Multiple defined in 85 places.'>ElfW</a>(<a href='../Y/1884.html' title='Multiple used in 235 places.'>Sym</a>) *<a href='../Y/12618.html' title='Multiple used in 16 places.'>defsym</a>, <a href='../D/2126.html' title='Multiple defined in 4 places.'>DL_FIXUP_VALUE_TYPE</a> *<a href='../D/38921.html' title='Multiple defined in 7 places.'>value</a>,
+<a id='L179' name='L179'></a> 179            <a href='../S/12128.html#L93' title='Defined at 93 in sysdeps/generic/ldsodefs.h.'>lookup_t</a> <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a>)
+<a id='L180' name='L180'></a> 180 <em class='brace'>{</em>
+<a id='L181' name='L181'></a> 181   <a href='../S/3749.html#L624' title='Defined at 624 in timezone/private.h.'>bool</a> <a href='../Y/14780.html' title='Multiple used in 6 places.'>for_jmp_slot</a> = <a href='../S/18099.html#L236' title='Defined at 236 in include/link.h.'>reloc_result</a> == <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>;
+<a id='L182' name='L182'></a> 182 
+<a id='L183' name='L183'></a> 183   <em class='comment'>/* Compute index of the symbol entry in the symbol table of the DSO</em>
+<a id='L184' name='L184'></a> 184 <em class='comment'>     with the definition.  */</em>
+<a id='L185' name='L185'></a> 185   <strong class='reserved'>unsigned</strong> <strong class='reserved'>int</strong> <a href='../Y/10984.html' title='Multiple used in 8 places.'>boundndx</a> = <a href='../Y/12618.html' title='Multiple used in 16 places.'>defsym</a> - (<a href='../D/4051.html' title='Multiple defined in 85 places.'>ElfW</a>(<a href='../Y/1884.html' title='Multiple used in 235 places.'>Sym</a>) *) <a href='../S/12128.html#L89' title='Defined at 89 in sysdeps/generic/ldsodefs.h.'>D_PTR</a> (<a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a>,
+<a id='L186' name='L186'></a> 186                             <a href='../Y/17609.html' title='Multiple used in 384 places.'>l_info</a>[<a href='../S/3101.html#L861' title='Defined at 861 in elf/elf.h.'>DT_SYMTAB</a>]);
+<a id='L187' name='L187'></a> 187   <strong class='reserved'>if</strong> (!<a href='../Y/14780.html' title='Multiple used in 6 places.'>for_jmp_slot</a>)
+<a id='L188' name='L188'></a> 188     <em class='brace'>{</em>
+<a id='L189' name='L189'></a> 189       <a href='../S/18099.html#L236' title='Defined at 236 in include/link.h.'>reloc_result</a>-&gt;<a href='../Y/10980.html' title='Multiple used in 18 places.'>bound</a> = <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a>;
+<a id='L190' name='L190'></a> 190       <a href='../S/18099.html#L236' title='Defined at 236 in include/link.h.'>reloc_result</a>-&gt;<a href='../Y/10984.html' title='Multiple used in 8 places.'>boundndx</a> = <a href='../Y/10984.html' title='Multiple used in 8 places.'>boundndx</a>;
+<a id='L191' name='L191'></a> 191     <em class='brace'>}</em>
+<a id='L192' name='L192'></a> 192 
+<a id='L193' name='L193'></a> 193   <strong class='reserved'>if</strong> ((<a href='../D/32486.html' title='Multiple defined in 3 places.'>l</a>-&gt;<a href='../Y/17584.html' title='Multiple used in 4 places.'>l_audit_any_plt</a> | <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a>-&gt;<a href='../Y/17584.html' title='Multiple used in 4 places.'>l_audit_any_plt</a>) == 0)
+<a id='L194' name='L194'></a> 194     <em class='brace'>{</em>
+<a id='L195' name='L195'></a> 195       <em class='comment'>/* Set all bits since this symbol binding is not interesting.  */</em>
+<a id='L196' name='L196'></a> 196       <strong class='reserved'>if</strong> (!<a href='../Y/14780.html' title='Multiple used in 6 places.'>for_jmp_slot</a>)
+<a id='L197' name='L197'></a> 197     <a href='../S/18099.html#L236' title='Defined at 236 in include/link.h.'>reloc_result</a>-&gt;<a href='../Y/13776.html' title='Multiple used in 12 places.'>enterexit</a> = (1u &lt;&lt; <a href='../D/2131.html' title='Multiple defined in 2 places.'>DL_NNS</a>) - 1;
+<a id='L198' name='L198'></a> 198       <strong class='reserved'>return</strong>;
+<a id='L199' name='L199'></a> 199     <em class='brace'>}</em>
+<a id='L200' name='L200'></a> 200 
+<a id='L201' name='L201'></a> 201   <em class='comment'>/* Synthesize a symbol record where the st_value field is the result.  */</em>
+<a id='L202' name='L202'></a> 202   <a href='../D/4051.html' title='Multiple defined in 85 places.'>ElfW</a>(<a href='../Y/1884.html' title='Multiple used in 235 places.'>Sym</a>) <a href='../Y/26589.html' title='Multiple used in 929 places.'>sym</a> = *<a href='../Y/12618.html' title='Multiple used in 16 places.'>defsym</a>;
+<a id='L203' name='L203'></a> 203   <a href='../Y/26589.html' title='Multiple used in 929 places.'>sym</a>.<a href='../Y/26023.html' title='Multiple used in 219 places.'>st_value</a> = <a href='../D/2124.html' title='Multiple defined in 4 places.'>DL_FIXUP_VALUE_ADDR</a> (*<a href='../D/38921.html' title='Multiple defined in 7 places.'>value</a>);
+<a id='L204' name='L204'></a> 204 
+<a id='L205' name='L205'></a> 205   <em class='comment'>/* Keep track whether there is any interest in tracing the call in the lower</em>
+<a id='L206' name='L206'></a> 206 <em class='comment'>     two bits.  */</em>
+<a id='L207' name='L207'></a> 207   <a href='../D/27838.html' title='Multiple defined in 9 places.'>assert</a> (<a href='../D/2131.html' title='Multiple defined in 2 places.'>DL_NNS</a> * 2 &lt;= <strong class='reserved'>sizeof</strong> (<a href='../S/18099.html#L236' title='Defined at 236 in include/link.h.'>reloc_result</a>-&gt;<a href='../Y/14688.html' title='Multiple used in 1976 places.'>flags</a>) * 8);
+<a id='L208' name='L208'></a> 208   <a href='../D/27838.html' title='Multiple defined in 9 places.'>assert</a> ((<a href='../S/2902.html#L147' title='Defined at 147 in elf/link.h.'>LA_SYMB_NOPLTENTER</a> | <a href='../S/2902.html#L148' title='Defined at 148 in elf/link.h.'>LA_SYMB_NOPLTEXIT</a>) == 3);
+<a id='L209' name='L209'></a> 209   <a href='../S/223.html#L26' title='Defined at 26 in bits/stdint-uintn.h.'>uint32_t</a> <a href='../Y/13776.html' title='Multiple used in 12 places.'>enterexit</a> = <a href='../S/2902.html#L147' title='Defined at 147 in elf/link.h.'>LA_SYMB_NOPLTENTER</a> | <a href='../S/2902.html#L148' title='Defined at 148 in elf/link.h.'>LA_SYMB_NOPLTEXIT</a>;
+<a id='L210' name='L210'></a> 210 
+<a id='L211' name='L211'></a> 211   <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../Y/26331.html' title='Multiple used in 2 places.'>strtab2</a> = (<strong class='reserved'>const</strong> <strong class='reserved'>void</strong> *) <a href='../S/12128.html#L89' title='Defined at 89 in sysdeps/generic/ldsodefs.h.'>D_PTR</a> (<a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a>, <a href='../Y/17609.html' title='Multiple used in 384 places.'>l_info</a>[<a href='../S/3101.html#L860' title='Defined at 860 in elf/elf.h.'>DT_STRTAB</a>]);
+<a id='L212' name='L212'></a> 212 
+<a id='L213' name='L213'></a> 213   <strong class='reserved'>unsigned</strong> <strong class='reserved'>int</strong> <a href='../Y/14688.html' title='Multiple used in 1976 places.'>flags</a> = 0;
+<a id='L214' name='L214'></a> 214   <strong class='reserved'>struct</strong> <a href='../S/12128.html#L256' title='Defined at 256 in sysdeps/generic/ldsodefs.h.'>audit_ifaces</a> *<a href='../Y/10012.html' title='Multiple used in 41 places.'>afct</a> = <a href='../D/5109.html' title='Multiple defined in 6 places.'>GLRO</a>(<a href='../Y/12871.html' title='Multiple used in 11 places.'>dl_audit</a>);
+<a id='L215' name='L215'></a> 215   <a href='../D/38692.html' title='Multiple defined in 2 places.'>uintptr_t</a> <a href='../Y/20611.html' title='Multiple used in 49 places.'>new_value</a> = (<a href='../D/38692.html' title='Multiple defined in 2 places.'>uintptr_t</a>) <a href='../Y/26589.html' title='Multiple used in 929 places.'>sym</a>.<a href='../Y/26023.html' title='Multiple used in 219 places.'>st_value</a>;
+<a id='L216' name='L216'></a> 216   <strong class='reserved'>for</strong> (<strong class='reserved'>unsigned</strong> <strong class='reserved'>int</strong> <a href='../D/28982.html' title='Multiple defined in 8 places.'>cnt</a> = 0; <a href='../D/28982.html' title='Multiple defined in 8 places.'>cnt</a> &lt; <a href='../D/5109.html' title='Multiple defined in 6 places.'>GLRO</a>(<a href='../Y/12918.html' title='Multiple used in 27 places.'>dl_naudit</a>); ++<a href='../D/28982.html' title='Multiple defined in 8 places.'>cnt</a>)
+<a id='L217' name='L217'></a> 217     <em class='brace'>{</em>
+<a id='L218' name='L218'></a> 218       <em class='comment'>/* XXX Check whether both DSOs must request action or only one */</em>
+<a id='L219' name='L219'></a> 219       <strong class='reserved'>struct</strong> <a href='../S/18099.html#L360' title='Defined at 360 in include/link.h.'>auditstate</a> *<a href='../Y/17663.html' title='Multiple used in 7 places.'>l_state</a> = <a href='../S/12128.html#L1392' title='Defined at 1392 in sysdeps/generic/ldsodefs.h.'>link_map_audit_state</a> (<a href='../D/32486.html' title='Multiple defined in 3 places.'>l</a>, <a href='../D/28982.html' title='Multiple defined in 8 places.'>cnt</a>);
+<a id='L220' name='L220'></a> 220       <strong class='reserved'>struct</strong> <a href='../S/18099.html#L360' title='Defined at 360 in include/link.h.'>auditstate</a> *<a href='../Y/23947.html' title='Multiple used in 3 places.'>result_state</a> = <a href='../S/12128.html#L1392' title='Defined at 1392 in sysdeps/generic/ldsodefs.h.'>link_map_audit_state</a> (<a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a>, <a href='../D/28982.html' title='Multiple defined in 8 places.'>cnt</a>);
+<a id='L221' name='L221'></a> 221       <strong class='reserved'>if</strong> ((<a href='../Y/17663.html' title='Multiple used in 7 places.'>l_state</a>-&gt;<a href='../Y/10853.html' title='Multiple used in 7 places.'>bindflags</a> &amp; <a href='../S/2902.html#L141' title='Defined at 141 in elf/link.h.'>LA_FLG_BINDFROM</a>) != 0
+<a id='L222' name='L222'></a> 222       &amp;&amp; (<a href='../Y/23947.html' title='Multiple used in 3 places.'>result_state</a>-&gt;<a href='../Y/10853.html' title='Multiple used in 7 places.'>bindflags</a> &amp; <a href='../S/2902.html#L140' title='Defined at 140 in elf/link.h.'>LA_FLG_BINDTO</a>) != 0)
+<a id='L223' name='L223'></a> 223     <em class='brace'>{</em>
+<a id='L224' name='L224'></a> 224       <strong class='reserved'>if</strong> (<a href='../Y/10012.html' title='Multiple used in 41 places.'>afct</a>-&gt;<a href='../D/37380.html' title='Multiple defined in 2 places.'>symbind</a> != <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>)
+<a id='L225' name='L225'></a> 225         <em class='brace'>{</em>
+<a id='L226' name='L226'></a> 226           <a href='../Y/14688.html' title='Multiple used in 1976 places.'>flags</a> |= <a href='../Y/14780.html' title='Multiple used in 6 places.'>for_jmp_slot</a> ? <a href='../S/2902.html#L147' title='Defined at 147 in elf/link.h.'>LA_SYMB_NOPLTENTER</a> | <a href='../S/2902.html#L148' title='Defined at 148 in elf/link.h.'>LA_SYMB_NOPLTEXIT</a>
+<a id='L227' name='L227'></a> 227                     : 0;
+<a id='L228' name='L228'></a> 228           <a href='../Y/20611.html' title='Multiple used in 49 places.'>new_value</a> = <a href='../Y/10012.html' title='Multiple used in 41 places.'>afct</a>-&gt;<a href='../D/37380.html' title='Multiple defined in 2 places.'>symbind</a> (&amp;<a href='../Y/26589.html' title='Multiple used in 929 places.'>sym</a>, <a href='../Y/10984.html' title='Multiple used in 8 places.'>boundndx</a>,
+<a id='L229' name='L229'></a> 229                      &amp;<a href='../Y/17663.html' title='Multiple used in 7 places.'>l_state</a>-&gt;<a href='../Y/11993.html' title='Multiple used in 227 places.'>cookie</a>,
+<a id='L230' name='L230'></a> 230                      &amp;<a href='../Y/23947.html' title='Multiple used in 3 places.'>result_state</a>-&gt;<a href='../Y/11993.html' title='Multiple used in 227 places.'>cookie</a>, &amp;<a href='../Y/14688.html' title='Multiple used in 1976 places.'>flags</a>,
+<a id='L231' name='L231'></a> 231                      <a href='../Y/26331.html' title='Multiple used in 2 places.'>strtab2</a> + <a href='../Y/12618.html' title='Multiple used in 16 places.'>defsym</a>-&gt;<a href='../Y/25999.html' title='Multiple used in 54 places.'>st_name</a>);
+<a id='L232' name='L232'></a> 232           <strong class='reserved'>if</strong> (<a href='../Y/20611.html' title='Multiple used in 49 places.'>new_value</a> != (<a href='../D/38692.html' title='Multiple defined in 2 places.'>uintptr_t</a>) <a href='../Y/26589.html' title='Multiple used in 929 places.'>sym</a>.<a href='../Y/26023.html' title='Multiple used in 219 places.'>st_value</a>)
+<a id='L233' name='L233'></a> 233         <em class='brace'>{</em>
+<a id='L234' name='L234'></a> 234           <a href='../Y/14688.html' title='Multiple used in 1976 places.'>flags</a> |= <a href='../S/2902.html#L151' title='Defined at 151 in elf/link.h.'>LA_SYMB_ALTVALUE</a>;
+<a id='L235' name='L235'></a> 235           <a href='../Y/26589.html' title='Multiple used in 929 places.'>sym</a>.<a href='../Y/26023.html' title='Multiple used in 219 places.'>st_value</a> = <a href='../Y/14780.html' title='Multiple used in 6 places.'>for_jmp_slot</a>
+<a id='L236' name='L236'></a> 236             ? <a href='../D/2121.html' title='Multiple defined in 5 places.'>DL_FIXUP_BINDNOW_ADDR_VALUE</a> (<a href='../Y/20611.html' title='Multiple used in 49 places.'>new_value</a>) : <a href='../Y/20611.html' title='Multiple used in 49 places.'>new_value</a>;
+<a id='L237' name='L237'></a> 237         <em class='brace'>}</em>
+<a id='L238' name='L238'></a> 238         <em class='brace'>}</em>
+<a id='L239' name='L239'></a> 239 
+<a id='L240' name='L240'></a> 240       <em class='comment'>/* Remember the results for every audit library and store a summary</em>
+<a id='L241' name='L241'></a> 241 <em class='comment'>         in the first two bits.  */</em>
+<a id='L242' name='L242'></a> 242       <a href='../Y/13776.html' title='Multiple used in 12 places.'>enterexit</a> &amp;= <a href='../Y/14688.html' title='Multiple used in 1976 places.'>flags</a> &amp; (<a href='../S/2902.html#L147' title='Defined at 147 in elf/link.h.'>LA_SYMB_NOPLTENTER</a> | <a href='../S/2902.html#L148' title='Defined at 148 in elf/link.h.'>LA_SYMB_NOPLTEXIT</a>);
+<a id='L243' name='L243'></a> 243       <a href='../Y/13776.html' title='Multiple used in 12 places.'>enterexit</a> |= ((<a href='../Y/14688.html' title='Multiple used in 1976 places.'>flags</a> &amp; (<a href='../S/2902.html#L147' title='Defined at 147 in elf/link.h.'>LA_SYMB_NOPLTENTER</a> | <a href='../S/2902.html#L148' title='Defined at 148 in elf/link.h.'>LA_SYMB_NOPLTEXIT</a>))
+<a id='L244' name='L244'></a> 244             &lt;&lt; ((<a href='../D/28982.html' title='Multiple defined in 8 places.'>cnt</a> + 1) * 2));
+<a id='L245' name='L245'></a> 245     <em class='brace'>}</em>
+<a id='L246' name='L246'></a> 246       <strong class='reserved'>else</strong>
+<a id='L247' name='L247'></a> 247     <em class='comment'>/* If the bind flags say this auditor is not interested, set the bits</em>
+<a id='L248' name='L248'></a> 248 <em class='comment'>       manually.  */</em>
+<a id='L249' name='L249'></a> 249     <a href='../Y/13776.html' title='Multiple used in 12 places.'>enterexit</a> |= ((<a href='../S/2902.html#L147' title='Defined at 147 in elf/link.h.'>LA_SYMB_NOPLTENTER</a> | <a href='../S/2902.html#L148' title='Defined at 148 in elf/link.h.'>LA_SYMB_NOPLTEXIT</a>)
+<a id='L250' name='L250'></a> 250               &lt;&lt; ((<a href='../D/28982.html' title='Multiple defined in 8 places.'>cnt</a> + 1) * 2));
+<a id='L251' name='L251'></a> 251       <a href='../Y/10012.html' title='Multiple used in 41 places.'>afct</a> = <a href='../Y/10012.html' title='Multiple used in 41 places.'>afct</a>-&gt;<a href='../Y/20703.html' title='Multiple used in 1000 places.'>next</a>;
+<a id='L252' name='L252'></a> 252     <em class='brace'>}</em>
+<a id='L253' name='L253'></a> 253 
+<a id='L254' name='L254'></a> 254   <strong class='reserved'>if</strong> (!<a href='../Y/14780.html' title='Multiple used in 6 places.'>for_jmp_slot</a>)
+<a id='L255' name='L255'></a> 255     <em class='brace'>{</em>
+<a id='L256' name='L256'></a> 256       <a href='../S/18099.html#L236' title='Defined at 236 in include/link.h.'>reloc_result</a>-&gt;<a href='../Y/13776.html' title='Multiple used in 12 places.'>enterexit</a> = <a href='../Y/13776.html' title='Multiple used in 12 places.'>enterexit</a>;
+<a id='L257' name='L257'></a> 257       <a href='../S/18099.html#L236' title='Defined at 236 in include/link.h.'>reloc_result</a>-&gt;<a href='../Y/14688.html' title='Multiple used in 1976 places.'>flags</a> = <a href='../Y/14688.html' title='Multiple used in 1976 places.'>flags</a>;
+<a id='L258' name='L258'></a> 258     <em class='brace'>}</em>
+<a id='L259' name='L259'></a> 259 
+<a id='L260' name='L260'></a> 260   <a href='../D/2122.html' title='Multiple defined in 5 places.'>DL_FIXUP_BINDNOW_RELOC</a> (<a href='../D/38921.html' title='Multiple defined in 7 places.'>value</a>, <a href='../Y/20611.html' title='Multiple used in 49 places.'>new_value</a>, <a href='../Y/26589.html' title='Multiple used in 929 places.'>sym</a>.<a href='../Y/26023.html' title='Multiple used in 219 places.'>st_value</a>);
+<a id='L261' name='L261'></a> 261 <em class='brace'>}</em>
+<a id='L262' name='L262'></a> 262 
+<a id='L263' name='L263'></a> 263 <strong class='reserved'>void</strong>
+<a id='L264' name='L264'></a> 264 <a href='../R/16480.html' title='Multiple referred from 2 places.'>_dl_audit_pltenter</a> (<strong class='reserved'>struct</strong> <a href='../D/32945.html' title='Multiple defined in 4 places.'>link_map</a> *<a href='../D/32486.html' title='Multiple defined in 3 places.'>l</a>, <strong class='reserved'>struct</strong> <a href='../S/18099.html#L236' title='Defined at 236 in include/link.h.'>reloc_result</a> *<a href='../S/18099.html#L236' title='Defined at 236 in include/link.h.'>reloc_result</a>,
+<a id='L265' name='L265'></a> 265             <a href='../D/2126.html' title='Multiple defined in 4 places.'>DL_FIXUP_VALUE_TYPE</a> *<a href='../D/38921.html' title='Multiple defined in 7 places.'>value</a>, <strong class='reserved'>void</strong> *<a href='../S/13715.html#L23' title='Defined at 23 in sysdeps/aarch64/tst-vpcs.c.'>regs</a>, <strong class='reserved'>long</strong> <strong class='reserved'>int</strong> *<a href='../Y/14975.html' title='Multiple used in 27 places.'>framesize</a>)
+<a id='L266' name='L266'></a> 266 <em class='brace'>{</em>
+<a id='L267' name='L267'></a> 267   <em class='comment'>/* Don't do anything if no auditor wants to intercept this call.  */</em>
+<a id='L268' name='L268'></a> 268   <strong class='reserved'>if</strong> (<a href='../D/5109.html' title='Multiple defined in 6 places.'>GLRO</a>(<a href='../Y/12918.html' title='Multiple used in 27 places.'>dl_naudit</a>) == 0
+<a id='L269' name='L269'></a> 269       || (<a href='../S/18099.html#L236' title='Defined at 236 in include/link.h.'>reloc_result</a>-&gt;<a href='../Y/13776.html' title='Multiple used in 12 places.'>enterexit</a> &amp; <a href='../S/2902.html#L147' title='Defined at 147 in elf/link.h.'>LA_SYMB_NOPLTENTER</a>))
+<a id='L270' name='L270'></a> 270     <strong class='reserved'>return</strong>;
+<a id='L271' name='L271'></a> 271 
+<a id='L272' name='L272'></a> 272   <em class='comment'>/* Sanity check:  DL_FIXUP_VALUE_CODE_ADDR (value) should have been</em>
+<a id='L273' name='L273'></a> 273 <em class='comment'>     initialized earlier in this function or in another thread.  */</em>
+<a id='L274' name='L274'></a> 274   <a href='../D/27838.html' title='Multiple defined in 9 places.'>assert</a> (<a href='../D/2125.html' title='Multiple defined in 4 places.'>DL_FIXUP_VALUE_CODE_ADDR</a> (*<a href='../D/38921.html' title='Multiple defined in 7 places.'>value</a>) != 0);
+<a id='L275' name='L275'></a> 275   <a href='../D/4051.html' title='Multiple defined in 85 places.'>ElfW</a>(<a href='../Y/1884.html' title='Multiple used in 235 places.'>Sym</a>) *<a href='../Y/12618.html' title='Multiple used in 16 places.'>defsym</a> = ((<a href='../D/4051.html' title='Multiple defined in 85 places.'>ElfW</a>(<a href='../Y/1884.html' title='Multiple used in 235 places.'>Sym</a>) *) <a href='../S/12128.html#L89' title='Defined at 89 in sysdeps/generic/ldsodefs.h.'>D_PTR</a> (<a href='../S/18099.html#L236' title='Defined at 236 in include/link.h.'>reloc_result</a>-&gt;<a href='../Y/10980.html' title='Multiple used in 18 places.'>bound</a>,
+<a id='L276' name='L276'></a> 276                         <a href='../Y/17609.html' title='Multiple used in 384 places.'>l_info</a>[<a href='../S/3101.html#L861' title='Defined at 861 in elf/elf.h.'>DT_SYMTAB</a>])
+<a id='L277' name='L277'></a> 277                + <a href='../S/18099.html#L236' title='Defined at 236 in include/link.h.'>reloc_result</a>-&gt;<a href='../Y/10984.html' title='Multiple used in 8 places.'>boundndx</a>);
+<a id='L278' name='L278'></a> 278 
+<a id='L279' name='L279'></a> 279   <em class='comment'>/* Set up the sym parameter.  */</em>
+<a id='L280' name='L280'></a> 280   <a href='../D/4051.html' title='Multiple defined in 85 places.'>ElfW</a>(<a href='../Y/1884.html' title='Multiple used in 235 places.'>Sym</a>) <a href='../Y/26589.html' title='Multiple used in 929 places.'>sym</a> = *<a href='../Y/12618.html' title='Multiple used in 16 places.'>defsym</a>;
+<a id='L281' name='L281'></a> 281   <a href='../Y/26589.html' title='Multiple used in 929 places.'>sym</a>.<a href='../Y/26023.html' title='Multiple used in 219 places.'>st_value</a> = <a href='../D/2124.html' title='Multiple defined in 4 places.'>DL_FIXUP_VALUE_ADDR</a> (*<a href='../D/38921.html' title='Multiple defined in 7 places.'>value</a>);
+<a id='L282' name='L282'></a> 282 
+<a id='L283' name='L283'></a> 283   <em class='comment'>/* Get the symbol name.  */</em>
+<a id='L284' name='L284'></a> 284   <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../Y/26330.html' title='Multiple used in 190 places.'>strtab</a> = (<strong class='reserved'>const</strong> <strong class='reserved'>void</strong> *) <a href='../S/12128.html#L89' title='Defined at 89 in sysdeps/generic/ldsodefs.h.'>D_PTR</a> (<a href='../S/18099.html#L236' title='Defined at 236 in include/link.h.'>reloc_result</a>-&gt;<a href='../Y/10980.html' title='Multiple used in 18 places.'>bound</a>,
+<a id='L285' name='L285'></a> 285                          <a href='../Y/17609.html' title='Multiple used in 384 places.'>l_info</a>[<a href='../S/3101.html#L860' title='Defined at 860 in elf/elf.h.'>DT_STRTAB</a>]);
+<a id='L286' name='L286'></a> 286   <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../Y/26624.html' title='Multiple used in 244 places.'>symname</a> = <a href='../Y/26330.html' title='Multiple used in 190 places.'>strtab</a> + <a href='../Y/26589.html' title='Multiple used in 929 places.'>sym</a>.<a href='../Y/25999.html' title='Multiple used in 54 places.'>st_name</a>;
+<a id='L287' name='L287'></a> 287 
+<a id='L288' name='L288'></a> 288   <em class='comment'>/* Keep track of overwritten addresses.  */</em>
+<a id='L289' name='L289'></a> 289   <strong class='reserved'>unsigned</strong> <strong class='reserved'>int</strong> <a href='../Y/14688.html' title='Multiple used in 1976 places.'>flags</a> = <a href='../S/18099.html#L236' title='Defined at 236 in include/link.h.'>reloc_result</a>-&gt;<a href='../Y/14688.html' title='Multiple used in 1976 places.'>flags</a>;
+<a id='L290' name='L290'></a> 290 
+<a id='L291' name='L291'></a> 291   <strong class='reserved'>struct</strong> <a href='../S/12128.html#L256' title='Defined at 256 in sysdeps/generic/ldsodefs.h.'>audit_ifaces</a> *<a href='../Y/10012.html' title='Multiple used in 41 places.'>afct</a> = <a href='../D/5109.html' title='Multiple defined in 6 places.'>GLRO</a>(<a href='../Y/12871.html' title='Multiple used in 11 places.'>dl_audit</a>);
+<a id='L292' name='L292'></a> 292   <strong class='reserved'>for</strong> (<strong class='reserved'>unsigned</strong> <strong class='reserved'>int</strong> <a href='../D/28982.html' title='Multiple defined in 8 places.'>cnt</a> = 0; <a href='../D/28982.html' title='Multiple defined in 8 places.'>cnt</a> &lt; <a href='../D/5109.html' title='Multiple defined in 6 places.'>GLRO</a>(<a href='../Y/12918.html' title='Multiple used in 27 places.'>dl_naudit</a>); ++<a href='../D/28982.html' title='Multiple defined in 8 places.'>cnt</a>)
+<a id='L293' name='L293'></a> 293     <em class='brace'>{</em>
+<a id='L294' name='L294'></a> 294       <strong class='reserved'>if</strong> (<a href='../Y/10012.html' title='Multiple used in 41 places.'>afct</a>-&gt;<a href='../D/278.html' title='Multiple defined in 27 places.'>ARCH_LA_PLTENTER</a> != <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>
+<a id='L295' name='L295'></a> 295       &amp;&amp; (<a href='../S/18099.html#L236' title='Defined at 236 in include/link.h.'>reloc_result</a>-&gt;<a href='../Y/13776.html' title='Multiple used in 12 places.'>enterexit</a>
+<a id='L296' name='L296'></a> 296           &amp; (<a href='../S/2902.html#L147' title='Defined at 147 in elf/link.h.'>LA_SYMB_NOPLTENTER</a> &lt;&lt; (2 * (<a href='../D/28982.html' title='Multiple defined in 8 places.'>cnt</a> + 1)))) == 0)
+<a id='L297' name='L297'></a> 297     <em class='brace'>{</em>
+<a id='L298' name='L298'></a> 298       <strong class='reserved'>long</strong> <strong class='reserved'>int</strong> <a href='../Y/20515.html' title='Multiple used in 6 places.'>new_framesize</a> = -1;
+<a id='L299' name='L299'></a> 299       <strong class='reserved'>struct</strong> <a href='../S/18099.html#L360' title='Defined at 360 in include/link.h.'>auditstate</a> *<a href='../Y/17663.html' title='Multiple used in 7 places.'>l_state</a> = <a href='../S/12128.html#L1392' title='Defined at 1392 in sysdeps/generic/ldsodefs.h.'>link_map_audit_state</a> (<a href='../D/32486.html' title='Multiple defined in 3 places.'>l</a>, <a href='../D/28982.html' title='Multiple defined in 8 places.'>cnt</a>);
+<a id='L300' name='L300'></a> 300       <strong class='reserved'>struct</strong> <a href='../S/18099.html#L360' title='Defined at 360 in include/link.h.'>auditstate</a> *<a href='../Y/10981.html' title='Multiple used in 4 places.'>bound_state</a>
+<a id='L301' name='L301'></a> 301         = <a href='../S/12128.html#L1392' title='Defined at 1392 in sysdeps/generic/ldsodefs.h.'>link_map_audit_state</a> (<a href='../S/18099.html#L236' title='Defined at 236 in include/link.h.'>reloc_result</a>-&gt;<a href='../Y/10980.html' title='Multiple used in 18 places.'>bound</a>, <a href='../D/28982.html' title='Multiple defined in 8 places.'>cnt</a>);
+<a id='L302' name='L302'></a> 302       <a href='../D/38692.html' title='Multiple defined in 2 places.'>uintptr_t</a> <a href='../Y/20611.html' title='Multiple used in 49 places.'>new_value</a>
+<a id='L303' name='L303'></a> 303         = <a href='../Y/10012.html' title='Multiple used in 41 places.'>afct</a>-&gt;<a href='../D/278.html' title='Multiple defined in 27 places.'>ARCH_LA_PLTENTER</a> (&amp;<a href='../Y/26589.html' title='Multiple used in 929 places.'>sym</a>, <a href='../S/18099.html#L236' title='Defined at 236 in include/link.h.'>reloc_result</a>-&gt;<a href='../Y/10984.html' title='Multiple used in 8 places.'>boundndx</a>,
+<a id='L304' name='L304'></a> 304                       &amp;<a href='../Y/17663.html' title='Multiple used in 7 places.'>l_state</a>-&gt;<a href='../Y/11993.html' title='Multiple used in 227 places.'>cookie</a>, &amp;<a href='../Y/10981.html' title='Multiple used in 4 places.'>bound_state</a>-&gt;<a href='../Y/11993.html' title='Multiple used in 227 places.'>cookie</a>,
+<a id='L305' name='L305'></a> 305                       <a href='../S/13715.html#L23' title='Defined at 23 in sysdeps/aarch64/tst-vpcs.c.'>regs</a>, &amp;<a href='../Y/14688.html' title='Multiple used in 1976 places.'>flags</a>, <a href='../Y/26624.html' title='Multiple used in 244 places.'>symname</a>, &amp;<a href='../Y/20515.html' title='Multiple used in 6 places.'>new_framesize</a>);
+<a id='L306' name='L306'></a> 306       <strong class='reserved'>if</strong> (<a href='../Y/20611.html' title='Multiple used in 49 places.'>new_value</a> != (<a href='../D/38692.html' title='Multiple defined in 2 places.'>uintptr_t</a>) <a href='../Y/26589.html' title='Multiple used in 929 places.'>sym</a>.<a href='../Y/26023.html' title='Multiple used in 219 places.'>st_value</a>)
+<a id='L307' name='L307'></a> 307         <em class='brace'>{</em>
+<a id='L308' name='L308'></a> 308           <a href='../Y/14688.html' title='Multiple used in 1976 places.'>flags</a> |= <a href='../S/2902.html#L151' title='Defined at 151 in elf/link.h.'>LA_SYMB_ALTVALUE</a>;
+<a id='L309' name='L309'></a> 309           <a href='../Y/26589.html' title='Multiple used in 929 places.'>sym</a>.<a href='../Y/26023.html' title='Multiple used in 219 places.'>st_value</a> = <a href='../Y/20611.html' title='Multiple used in 49 places.'>new_value</a>;
+<a id='L310' name='L310'></a> 310         <em class='brace'>}</em>
+<a id='L311' name='L311'></a> 311 
+<a id='L312' name='L312'></a> 312       <em class='comment'>/* Remember the results for every audit library and store a summary</em>
+<a id='L313' name='L313'></a> 313 <em class='comment'>         in the first two bits.  */</em>
+<a id='L314' name='L314'></a> 314       <a href='../S/18099.html#L236' title='Defined at 236 in include/link.h.'>reloc_result</a>-&gt;<a href='../Y/13776.html' title='Multiple used in 12 places.'>enterexit</a> |= ((<a href='../Y/14688.html' title='Multiple used in 1976 places.'>flags</a> &amp; (<a href='../S/2902.html#L147' title='Defined at 147 in elf/link.h.'>LA_SYMB_NOPLTENTER</a>
+<a id='L315' name='L315'></a> 315                         | <a href='../S/2902.html#L148' title='Defined at 148 in elf/link.h.'>LA_SYMB_NOPLTEXIT</a>))
+<a id='L316' name='L316'></a> 316                       &lt;&lt; (2 * (<a href='../D/28982.html' title='Multiple defined in 8 places.'>cnt</a> + 1)));
+<a id='L317' name='L317'></a> 317 
+<a id='L318' name='L318'></a> 318       <strong class='reserved'>if</strong> ((<a href='../S/18099.html#L236' title='Defined at 236 in include/link.h.'>reloc_result</a>-&gt;<a href='../Y/13776.html' title='Multiple used in 12 places.'>enterexit</a> &amp; (<a href='../S/2902.html#L148' title='Defined at 148 in elf/link.h.'>LA_SYMB_NOPLTEXIT</a>
+<a id='L319' name='L319'></a> 319                       &lt;&lt; (2 * (<a href='../D/28982.html' title='Multiple defined in 8 places.'>cnt</a> + 1))))
+<a id='L320' name='L320'></a> 320           == 0 &amp;&amp; <a href='../Y/20515.html' title='Multiple used in 6 places.'>new_framesize</a> != -1 &amp;&amp; *<a href='../Y/14975.html' title='Multiple used in 27 places.'>framesize</a> != -2)
+<a id='L321' name='L321'></a> 321         <em class='brace'>{</em>
+<a id='L322' name='L322'></a> 322           <em class='comment'>/* If this is the first call providing information, use it.  */</em>
+<a id='L323' name='L323'></a> 323           <strong class='reserved'>if</strong> (*<a href='../Y/14975.html' title='Multiple used in 27 places.'>framesize</a> == -1)
+<a id='L324' name='L324'></a> 324         *<a href='../Y/14975.html' title='Multiple used in 27 places.'>framesize</a> = <a href='../Y/20515.html' title='Multiple used in 6 places.'>new_framesize</a>;
+<a id='L325' name='L325'></a> 325           <em class='comment'>/* If two pltenter calls provide conflicting information, use</em>
+<a id='L326' name='L326'></a> 326 <em class='comment'>         the larger value.  */</em>
+<a id='L327' name='L327'></a> 327           <strong class='reserved'>else</strong> <strong class='reserved'>if</strong> (<a href='../Y/20515.html' title='Multiple used in 6 places.'>new_framesize</a> != *<a href='../Y/14975.html' title='Multiple used in 27 places.'>framesize</a>)
+<a id='L328' name='L328'></a> 328         *<a href='../Y/14975.html' title='Multiple used in 27 places.'>framesize</a> = <a href='../D/7674.html' title='Multiple defined in 8 places.'>MAX</a> (<a href='../Y/20515.html' title='Multiple used in 6 places.'>new_framesize</a>, *<a href='../Y/14975.html' title='Multiple used in 27 places.'>framesize</a>);
+<a id='L329' name='L329'></a> 329         <em class='brace'>}</em>
+<a id='L330' name='L330'></a> 330     <em class='brace'>}</em>
+<a id='L331' name='L331'></a> 331 
+<a id='L332' name='L332'></a> 332       <a href='../Y/10012.html' title='Multiple used in 41 places.'>afct</a> = <a href='../Y/10012.html' title='Multiple used in 41 places.'>afct</a>-&gt;<a href='../Y/20703.html' title='Multiple used in 1000 places.'>next</a>;
+<a id='L333' name='L333'></a> 333     <em class='brace'>}</em>
+<a id='L334' name='L334'></a> 334 
+<a id='L335' name='L335'></a> 335   *<a href='../D/38921.html' title='Multiple defined in 7 places.'>value</a> = <a href='../D/2120.html' title='Multiple defined in 4 places.'>DL_FIXUP_ADDR_VALUE</a> (<a href='../Y/26589.html' title='Multiple used in 929 places.'>sym</a>.<a href='../Y/26023.html' title='Multiple used in 219 places.'>st_value</a>);
+<a id='L336' name='L336'></a> 336 <em class='brace'>}</em>
+<a id='L337' name='L337'></a> 337 
+<a id='L338' name='L338'></a> 338 <strong class='reserved'>void</strong>
+<a id='L339' name='L339'></a> 339 <a href='../D/2095.html' title='Multiple defined in 3 places.'>DL_ARCH_FIXUP_ATTRIBUTE</a>
+<a id='L340' name='L340'></a> 340 <a href='../R/16481.html' title='Multiple referred from 5 places.'>_dl_audit_pltexit</a> (<strong class='reserved'>struct</strong> <a href='../D/32945.html' title='Multiple defined in 4 places.'>link_map</a> *<a href='../D/32486.html' title='Multiple defined in 3 places.'>l</a>, <a href='../D/4051.html' title='Multiple defined in 85 places.'>ElfW</a>(<a href='../Y/2207.html' title='Multiple used in 67 places.'>Word</a>) <a href='../Y/23732.html' title='Multiple used in 16 places.'>reloc_arg</a>,
+<a id='L341' name='L341'></a> 341            <strong class='reserved'>const</strong> <strong class='reserved'>void</strong> *<a href='../Y/16922.html' title='Multiple used in 88 places.'>inregs</a>, <strong class='reserved'>void</strong> *<a href='../Y/22016.html' title='Multiple used in 91 places.'>outregs</a>)
+<a id='L342' name='L342'></a> 342 <em class='brace'>{</em>
+<a id='L343' name='L343'></a> 343   <strong class='reserved'>const</strong> <a href='../D/38692.html' title='Multiple defined in 2 places.'>uintptr_t</a> <a href='../S/17006.html#L82' title='Defined at 82 in sysdeps/alpha/dl-machine.h.'>pltgot</a> = (<a href='../D/38692.html' title='Multiple defined in 2 places.'>uintptr_t</a>) <a href='../S/12128.html#L89' title='Defined at 89 in sysdeps/generic/ldsodefs.h.'>D_PTR</a> (<a href='../D/32486.html' title='Multiple defined in 3 places.'>l</a>, <a href='../Y/17609.html' title='Multiple used in 384 places.'>l_info</a>[<a href='../S/3101.html#L858' title='Defined at 858 in elf/elf.h.'>DT_PLTGOT</a>]);
+<a id='L344' name='L344'></a> 344 
+<a id='L345' name='L345'></a> 345   <em class='comment'>/* This is the address in the array where we store the result of previous</em>
+<a id='L346' name='L346'></a> 346 <em class='comment'>     relocations.  */</em>
+<a id='L347' name='L347'></a> 347   <em class='comment'>// XXX Maybe the bound information must be stored on the stack since</em>
+<a id='L348' name='L348'></a> 348   <em class='comment'>// XXX with bind_not a new value could have been stored in the meantime.</em>
+<a id='L349' name='L349'></a> 349   <strong class='reserved'>struct</strong> <a href='../S/18099.html#L236' title='Defined at 236 in include/link.h.'>reloc_result</a> *<a href='../S/18099.html#L236' title='Defined at 236 in include/link.h.'>reloc_result</a> =
+<a id='L350' name='L350'></a> 350     &amp;<a href='../D/32486.html' title='Multiple defined in 3 places.'>l</a>-&gt;<a href='../Y/17648.html' title='Multiple used in 9 places.'>l_reloc_result</a>[<a href='../D/35883.html' title='Multiple defined in 4 places.'>reloc_index</a> (<a href='../S/17006.html#L82' title='Defined at 82 in sysdeps/alpha/dl-machine.h.'>pltgot</a>, <a href='../Y/23732.html' title='Multiple used in 16 places.'>reloc_arg</a>, <strong class='reserved'>sizeof</strong> (<a href='../D/9903.html' title='Multiple defined in 4 places.'>PLTREL</a>))];
+<a id='L351' name='L351'></a> 351   <a href='../D/4051.html' title='Multiple defined in 85 places.'>ElfW</a>(<a href='../Y/1884.html' title='Multiple used in 235 places.'>Sym</a>) *<a href='../Y/12618.html' title='Multiple used in 16 places.'>defsym</a> = ((<a href='../D/4051.html' title='Multiple defined in 85 places.'>ElfW</a>(<a href='../Y/1884.html' title='Multiple used in 235 places.'>Sym</a>) *) <a href='../S/12128.html#L89' title='Defined at 89 in sysdeps/generic/ldsodefs.h.'>D_PTR</a> (<a href='../S/18099.html#L236' title='Defined at 236 in include/link.h.'>reloc_result</a>-&gt;<a href='../Y/10980.html' title='Multiple used in 18 places.'>bound</a>,
+<a id='L352' name='L352'></a> 352                         <a href='../Y/17609.html' title='Multiple used in 384 places.'>l_info</a>[<a href='../S/3101.html#L861' title='Defined at 861 in elf/elf.h.'>DT_SYMTAB</a>])
+<a id='L353' name='L353'></a> 353                + <a href='../S/18099.html#L236' title='Defined at 236 in include/link.h.'>reloc_result</a>-&gt;<a href='../Y/10984.html' title='Multiple used in 8 places.'>boundndx</a>);
+<a id='L354' name='L354'></a> 354 
+<a id='L355' name='L355'></a> 355   <em class='comment'>/* Set up the sym parameter.  */</em>
+<a id='L356' name='L356'></a> 356   <a href='../D/4051.html' title='Multiple defined in 85 places.'>ElfW</a>(<a href='../Y/1884.html' title='Multiple used in 235 places.'>Sym</a>) <a href='../Y/26589.html' title='Multiple used in 929 places.'>sym</a> = *<a href='../Y/12618.html' title='Multiple used in 16 places.'>defsym</a>;
+<a id='L357' name='L357'></a> 357   <a href='../Y/26589.html' title='Multiple used in 929 places.'>sym</a>.<a href='../Y/26023.html' title='Multiple used in 219 places.'>st_value</a> = <a href='../D/2124.html' title='Multiple defined in 4 places.'>DL_FIXUP_VALUE_ADDR</a> (<a href='../S/18099.html#L236' title='Defined at 236 in include/link.h.'>reloc_result</a>-&gt;<a href='../S/2561.html#L5' title='Defined at 5 in elf/nodelmod3.c.'>addr</a>);
+<a id='L358' name='L358'></a> 358 
+<a id='L359' name='L359'></a> 359   <em class='comment'>/* Get the symbol name.  */</em>
+<a id='L360' name='L360'></a> 360   <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../Y/26330.html' title='Multiple used in 190 places.'>strtab</a> = (<strong class='reserved'>const</strong> <strong class='reserved'>void</strong> *) <a href='../S/12128.html#L89' title='Defined at 89 in sysdeps/generic/ldsodefs.h.'>D_PTR</a> (<a href='../S/18099.html#L236' title='Defined at 236 in include/link.h.'>reloc_result</a>-&gt;<a href='../Y/10980.html' title='Multiple used in 18 places.'>bound</a>,
+<a id='L361' name='L361'></a> 361                          <a href='../Y/17609.html' title='Multiple used in 384 places.'>l_info</a>[<a href='../S/3101.html#L860' title='Defined at 860 in elf/elf.h.'>DT_STRTAB</a>]);
+<a id='L362' name='L362'></a> 362   <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../Y/26624.html' title='Multiple used in 244 places.'>symname</a> = <a href='../Y/26330.html' title='Multiple used in 190 places.'>strtab</a> + <a href='../Y/26589.html' title='Multiple used in 929 places.'>sym</a>.<a href='../Y/25999.html' title='Multiple used in 54 places.'>st_name</a>;
+<a id='L363' name='L363'></a> 363 
+<a id='L364' name='L364'></a> 364   <strong class='reserved'>struct</strong> <a href='../S/12128.html#L256' title='Defined at 256 in sysdeps/generic/ldsodefs.h.'>audit_ifaces</a> *<a href='../Y/10012.html' title='Multiple used in 41 places.'>afct</a> = <a href='../D/5109.html' title='Multiple defined in 6 places.'>GLRO</a>(<a href='../Y/12871.html' title='Multiple used in 11 places.'>dl_audit</a>);
+<a id='L365' name='L365'></a> 365   <strong class='reserved'>for</strong> (<strong class='reserved'>unsigned</strong> <strong class='reserved'>int</strong> <a href='../D/28982.html' title='Multiple defined in 8 places.'>cnt</a> = 0; <a href='../D/28982.html' title='Multiple defined in 8 places.'>cnt</a> &lt; <a href='../D/5109.html' title='Multiple defined in 6 places.'>GLRO</a>(<a href='../Y/12918.html' title='Multiple used in 27 places.'>dl_naudit</a>); ++<a href='../D/28982.html' title='Multiple defined in 8 places.'>cnt</a>)
+<a id='L366' name='L366'></a> 366     <em class='brace'>{</em>
+<a id='L367' name='L367'></a> 367       <strong class='reserved'>if</strong> (<a href='../Y/10012.html' title='Multiple used in 41 places.'>afct</a>-&gt;<a href='../D/279.html' title='Multiple defined in 27 places.'>ARCH_LA_PLTEXIT</a> != <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>
+<a id='L368' name='L368'></a> 368       &amp;&amp; (<a href='../S/18099.html#L236' title='Defined at 236 in include/link.h.'>reloc_result</a>-&gt;<a href='../Y/13776.html' title='Multiple used in 12 places.'>enterexit</a>
+<a id='L369' name='L369'></a> 369           &amp; (<a href='../S/2902.html#L148' title='Defined at 148 in elf/link.h.'>LA_SYMB_NOPLTEXIT</a> &gt;&gt; (2 * <a href='../D/28982.html' title='Multiple defined in 8 places.'>cnt</a>))) == 0)
+<a id='L370' name='L370'></a> 370     <em class='brace'>{</em>
+<a id='L371' name='L371'></a> 371       <strong class='reserved'>struct</strong> <a href='../S/18099.html#L360' title='Defined at 360 in include/link.h.'>auditstate</a> *<a href='../Y/17663.html' title='Multiple used in 7 places.'>l_state</a> = <a href='../S/12128.html#L1392' title='Defined at 1392 in sysdeps/generic/ldsodefs.h.'>link_map_audit_state</a> (<a href='../D/32486.html' title='Multiple defined in 3 places.'>l</a>, <a href='../D/28982.html' title='Multiple defined in 8 places.'>cnt</a>);
+<a id='L372' name='L372'></a> 372       <strong class='reserved'>struct</strong> <a href='../S/18099.html#L360' title='Defined at 360 in include/link.h.'>auditstate</a> *<a href='../Y/10981.html' title='Multiple used in 4 places.'>bound_state</a>
+<a id='L373' name='L373'></a> 373         = <a href='../S/12128.html#L1392' title='Defined at 1392 in sysdeps/generic/ldsodefs.h.'>link_map_audit_state</a> (<a href='../S/18099.html#L236' title='Defined at 236 in include/link.h.'>reloc_result</a>-&gt;<a href='../Y/10980.html' title='Multiple used in 18 places.'>bound</a>, <a href='../D/28982.html' title='Multiple defined in 8 places.'>cnt</a>);
+<a id='L374' name='L374'></a> 374       <a href='../Y/10012.html' title='Multiple used in 41 places.'>afct</a>-&gt;<a href='../D/279.html' title='Multiple defined in 27 places.'>ARCH_LA_PLTEXIT</a> (&amp;<a href='../Y/26589.html' title='Multiple used in 929 places.'>sym</a>, <a href='../S/18099.html#L236' title='Defined at 236 in include/link.h.'>reloc_result</a>-&gt;<a href='../Y/10984.html' title='Multiple used in 8 places.'>boundndx</a>,
+<a id='L375' name='L375'></a> 375                  &amp;<a href='../Y/17663.html' title='Multiple used in 7 places.'>l_state</a>-&gt;<a href='../Y/11993.html' title='Multiple used in 227 places.'>cookie</a>, &amp;<a href='../Y/10981.html' title='Multiple used in 4 places.'>bound_state</a>-&gt;<a href='../Y/11993.html' title='Multiple used in 227 places.'>cookie</a>,
+<a id='L376' name='L376'></a> 376                  <a href='../Y/16922.html' title='Multiple used in 88 places.'>inregs</a>, <a href='../Y/22016.html' title='Multiple used in 91 places.'>outregs</a>, <a href='../Y/26624.html' title='Multiple used in 244 places.'>symname</a>);
+<a id='L377' name='L377'></a> 377     <em class='brace'>}</em>
+<a id='L378' name='L378'></a> 378 
+<a id='L379' name='L379'></a> 379       <a href='../Y/10012.html' title='Multiple used in 41 places.'>afct</a> = <a href='../Y/10012.html' title='Multiple used in 41 places.'>afct</a>-&gt;<a href='../Y/20703.html' title='Multiple used in 1000 places.'>next</a>;
+<a id='L380' name='L380'></a> 380     <em class='brace'>}</em>
+<a id='L381' name='L381'></a> 381 <em class='brace'>}</em>
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L27'>[^]</a><a href='#L340'>[v]</a><a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

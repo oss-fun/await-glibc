@@ -1,0 +1,223 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>sysdeps/pthread/posix-timer.h</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18977.html'>sysdeps</a>/<a href='../files/19192.html'>pthread</a>/posix-timer.h</h2>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L93'>[^]</a><a href='#L163'>[v]</a>[top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<h2 class='header'><a href='../J/10570.html' title='Multiple included from 7 places.'>INCLUDED FROM</a></h2>
+<hr />
+<h2 class='header'>DEFINITIONS</h2>
+This source file includes following definitions.
+<ol>
+<li><a href='#L93' title='Defined at 93.'>timer_valid</a></li>
+<li><a href='#L102' title='Defined at 102.'>timer_addref</a></li>
+<li><a href='#L108' title='Defined at 108.'>timer_delref</a></li>
+<li><a href='#L117' title='Defined at 117.'>timespec_compare</a></li>
+<li><a href='#L133' title='Defined at 133.'>timespec_add</a></li>
+<li><a href='#L147' title='Defined at 147.'>timespec_sub</a></li>
+<li><a href='#L163' title='Defined at 163.'>list_unlink_ip</a></li>
+</ol>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* Definitions for POSIX timer implementation on top of NPTL.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   Copyright (C) 2000-2022 Free Software Foundation, Inc.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'></em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   modify it under the terms of the GNU Lesser General Public License as</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   published by the Free Software Foundation; either version 2.1 of the</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'>   License, or (at your option) any later version.</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'></em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'></em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   License along with the GNU C Library; see the file COPYING.LIB.  If</em>
+<a id='L17' name='L17'></a>  17 <em class='comment'>   not, see &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L18' name='L18'></a>  18 
+<a id='L19' name='L19'></a>  19 <em class='sharp'>#include</em> &lt;<a href='18175.html'>limits.h</a>&gt;
+<a id='L20' name='L20'></a>  20 <em class='sharp'>#include</em> &lt;<a href='../I/1264.html'>signal.h</a>&gt;
+<a id='L21' name='L21'></a>  21 <em class='sharp'>#include</em> &lt;<a href='18118.html'>list.h</a>&gt;
+<a id='L22' name='L22'></a>  22 
+<a id='L23' name='L23'></a>  23 
+<a id='L24' name='L24'></a>  24 <em class='comment'>/* Forward declaration.  */</em>
+<a id='L25' name='L25'></a>  25 <strong class='reserved'>struct</strong> <a href='../S/16198.html#L44' title='Defined at 44 in sysdeps/pthread/posix-timer.h.'>timer_node</a>;
+<a id='L26' name='L26'></a>  26 
+<a id='L27' name='L27'></a>  27 
+<a id='L28' name='L28'></a>  28 <em class='comment'>/* Definitions for an internal thread of the POSIX timer implementation.  */</em>
+<a id='L29' name='L29'></a>  29 <strong class='reserved'>struct</strong> <a href='../R/25586.html' title='Multiple referred from 29 places.'>thread_node</a>
+<a id='L30' name='L30'></a>  30 <em class='brace'>{</em>
+<a id='L31' name='L31'></a>  31   <strong class='reserved'>struct</strong> <a href='../S/18015.html#L24' title='Defined at 24 in include/list_t.h.'>list_head</a> <a href='../Y/18251.html' title='Multiple used in 19 places.'>links</a>;
+<a id='L32' name='L32'></a>  32   <a href='../D/35089.html' title='Multiple defined in 4 places.'>pthread_attr_t</a> <a href='../Y/10555.html' title='Multiple used in 1022 places.'>attr</a>;
+<a id='L33' name='L33'></a>  33   <a href='../D/35174.html' title='Multiple defined in 2 places.'>pthread_t</a> <a href='../Y/16464.html' title='Multiple used in 324 places.'>id</a>;
+<a id='L34' name='L34'></a>  34   <strong class='reserved'>unsigned</strong> <strong class='reserved'>int</strong> <a href='../Y/14073.html' title='Multiple used in 13 places.'>exists</a>;
+<a id='L35' name='L35'></a>  35   <strong class='reserved'>struct</strong> <a href='../S/18015.html#L24' title='Defined at 24 in include/list_t.h.'>list_head</a> <a href='../Y/27330.html' title='Multiple used in 10 places.'>timer_queue</a>;
+<a id='L36' name='L36'></a>  36   <a href='../D/35112.html' title='Multiple defined in 2 places.'>pthread_cond_t</a> <a href='../Y/11905.html' title='Multiple used in 457 places.'>cond</a>;
+<a id='L37' name='L37'></a>  37   <strong class='reserved'>struct</strong> <a href='../S/16198.html#L44' title='Defined at 44 in sysdeps/pthread/posix-timer.h.'>timer_node</a> *<a href='../Y/12345.html' title='Multiple used in 6 places.'>current_timer</a>;
+<a id='L38' name='L38'></a>  38   <a href='../D/35174.html' title='Multiple defined in 2 places.'>pthread_t</a> <a href='../Y/11319.html' title='Multiple used in 3 places.'>captured</a>;
+<a id='L39' name='L39'></a>  39   <a href='../S/3982.html#L7' title='Defined at 7 in time/bits/types/clockid_t.h.'>clockid_t</a> <a href='../Y/11698.html' title='Multiple used in 103 places.'>clock_id</a>;
+<a id='L40' name='L40'></a>  40 <em class='brace'>}</em>;
+<a id='L41' name='L41'></a>  41 
+<a id='L42' name='L42'></a>  42 
+<a id='L43' name='L43'></a>  43 <em class='comment'>/* Internal representation of a timer.  */</em>
+<a id='L44' name='L44'></a>  44 <strong class='reserved'>struct</strong> <a href='../R/25635.html' title='Multiple referred from 26 places.'>timer_node</a>
+<a id='L45' name='L45'></a>  45 <em class='brace'>{</em>
+<a id='L46' name='L46'></a>  46   <strong class='reserved'>struct</strong> <a href='../S/18015.html#L24' title='Defined at 24 in include/list_t.h.'>list_head</a> <a href='../Y/18251.html' title='Multiple used in 19 places.'>links</a>;
+<a id='L47' name='L47'></a>  47   <strong class='reserved'>struct</strong> <a href='../D/36732.html' title='Multiple defined in 3 places.'>sigevent</a> <a href='../Y/14006.html' title='Multiple used in 49 places.'>event</a>;
+<a id='L48' name='L48'></a>  48   <a href='../S/3982.html#L7' title='Defined at 7 in time/bits/types/clockid_t.h.'>clockid_t</a> <a href='../D/28924.html' title='Multiple defined in 4 places.'>clock</a>;
+<a id='L49' name='L49'></a>  49   <strong class='reserved'>struct</strong> <a href='../S/3986.html#L8' title='Defined at 8 in time/bits/types/struct_itimerspec.h.'>itimerspec</a> <a href='../D/38921.html' title='Multiple defined in 7 places.'>value</a>;
+<a id='L50' name='L50'></a>  50   <strong class='reserved'>struct</strong> <a href='../D/38153.html' title='Multiple defined in 6 places.'>timespec</a> <a href='../Y/14202.html' title='Multiple used in 11 places.'>expirytime</a>;
+<a id='L51' name='L51'></a>  51   <a href='../D/35089.html' title='Multiple defined in 4 places.'>pthread_attr_t</a> <a href='../Y/10555.html' title='Multiple used in 1022 places.'>attr</a>;
+<a id='L52' name='L52'></a>  52   <strong class='reserved'>unsigned</strong> <strong class='reserved'>int</strong> <a href='../Y/9810.html' title='Multiple used in 201 places.'>abstime</a>;
+<a id='L53' name='L53'></a>  53   <strong class='reserved'>unsigned</strong> <strong class='reserved'>int</strong> <a href='../Y/10451.html' title='Multiple used in 9 places.'>armed</a>;
+<a id='L54' name='L54'></a>  54   <strong class='reserved'>enum</strong> <em class='brace'>{</em>
+<a id='L55' name='L55'></a>  55     <a href='../R/8734.html' title='Multiple referred from 2 places.'>TIMER_FREE</a>, <a href='../R/8735.html' title='Multiple referred from 2 places.'>TIMER_INUSE</a>, <a href='../S/1305.html#L58' title='Referred from 58 in rt/timer_delete.c.'>TIMER_DELETED</a>
+<a id='L56' name='L56'></a>  56   <em class='brace'>}</em> <a href='../S/1868.html#L1429' title='Defined at 1429 in malloc/malloc.c.'>inuse</a>;
+<a id='L57' name='L57'></a>  57   <strong class='reserved'>struct</strong> <a href='../S/16198.html#L29' title='Defined at 29 in sysdeps/pthread/posix-timer.h.'>thread_node</a> *<a href='../D/38045.html' title='Multiple defined in 2 places.'>thread</a>;
+<a id='L58' name='L58'></a>  58   <a href='../D/34727.html' title='Multiple defined in 11 places.'>pid_t</a> <a href='../Y/12169.html' title='Multiple used in 3 places.'>creator_pid</a>;
+<a id='L59' name='L59'></a>  59   <strong class='reserved'>int</strong> <a href='../Y/23652.html' title='Multiple used in 5 places.'>refcount</a>;
+<a id='L60' name='L60'></a>  60   <strong class='reserved'>int</strong> <a href='../Y/22043.html' title='Multiple used in 5 places.'>overrun_count</a>;
+<a id='L61' name='L61'></a>  61 <em class='brace'>}</em>;
+<a id='L62' name='L62'></a>  62 
+<a id='L63' name='L63'></a>  63 
+<a id='L64' name='L64'></a>  64 <em class='comment'>/* The limit is not published if we are compiled with kernel timer support.</em>
+<a id='L65' name='L65'></a>  65 <em class='comment'>   But we still compiled in this implementation with its limit unless built</em>
+<a id='L66' name='L66'></a>  66 <em class='comment'>   to require the kernel support.  */</em>
+<a id='L67' name='L67'></a>  67 <em class='sharp'>#ifndef</em> <a href='../S/16198.html#L68' title='Defined at 68 in sysdeps/pthread/posix-timer.h.'>TIMER_MAX</a>
+<a id='L68' name='L68'></a>  68 <em class='sharp'># define</em> <a href='../R/8736.html' title='Multiple referred from 6 places.'>TIMER_MAX</a> 256
+<a id='L69' name='L69'></a>  69 <em class='sharp'>#endif</em>
+<a id='L70' name='L70'></a>  70 
+<a id='L71' name='L71'></a>  71 <em class='comment'>/* Static array with the structures for all the timers.  */</em>
+<a id='L72' name='L72'></a>  72 <strong class='reserved'>extern</strong> <strong class='reserved'>struct</strong> <a href='../S/16198.html#L44' title='Defined at 44 in sysdeps/pthread/posix-timer.h.'>timer_node</a> <a href='../Y/8134.html' title='Multiple used in 4 places.'>__timer_array</a>[<a href='../S/16198.html#L68' title='Defined at 68 in sysdeps/pthread/posix-timer.h.'>TIMER_MAX</a>];
+<a id='L73' name='L73'></a>  73 
+<a id='L74' name='L74'></a>  74 <em class='comment'>/* Global lock to protect operation on the lists.  */</em>
+<a id='L75' name='L75'></a>  75 <strong class='reserved'>extern</strong> <a href='../D/35134.html' title='Multiple defined in 2 places.'>pthread_mutex_t</a> <a href='../Y/8149.html' title='Multiple used in 24 places.'>__timer_mutex</a>;
+<a id='L76' name='L76'></a>  76 
+<a id='L77' name='L77'></a>  77 <em class='comment'>/* Variable to protext initialization.  */</em>
+<a id='L78' name='L78'></a>  78 <strong class='reserved'>extern</strong> <a href='../D/35149.html' title='Multiple defined in 2 places.'>pthread_once_t</a> <a href='../Y/8148.html' title='Multiple used in 3 places.'>__timer_init_once_control</a>;
+<a id='L79' name='L79'></a>  79 
+<a id='L80' name='L80'></a>  80 <em class='comment'>/* Nonzero if initialization of timer implementation failed.  */</em>
+<a id='L81' name='L81'></a>  81 <strong class='reserved'>extern</strong> <strong class='reserved'>int</strong> <a href='../Y/8147.html' title='Multiple used in 3 places.'>__timer_init_failed</a>;
+<a id='L82' name='L82'></a>  82 
+<a id='L83' name='L83'></a>  83 <em class='comment'>/* Node for the thread used to deliver signals.  */</em>
+<a id='L84' name='L84'></a>  84 <strong class='reserved'>extern</strong> <strong class='reserved'>struct</strong> <a href='../S/16198.html#L29' title='Defined at 29 in sysdeps/pthread/posix-timer.h.'>thread_node</a> <a href='../Y/8153.html' title='Multiple used in 5 places.'>__timer_signal_thread_rclk</a>;
+<a id='L85' name='L85'></a>  85 
+<a id='L86' name='L86'></a>  86 
+<a id='L87' name='L87'></a>  87 <em class='comment'>/* Return pointer to timer structure corresponding to ID.  */</em>
+<a id='L88' name='L88'></a>  88 <em class='sharp'>#define</em> <a href='../R/25632.html' title='Multiple referred from 4 places.'>timer_id2ptr</a>(<a href='../Y/27341.html' title='Multiple used in 64 places.'>timerid</a>) ((<strong class='reserved'>struct</strong> <a href='../S/16198.html#L44' title='Defined at 44 in sysdeps/pthread/posix-timer.h.'>timer_node</a> *) <a href='../Y/27341.html' title='Multiple used in 64 places.'>timerid</a>)
+<a id='L89' name='L89'></a>  89 <em class='sharp'>#define</em> <a href='../S/1272.html#L147' title='Referred from 147 in rt/timer_create.c.'>timer_ptr2id</a>(<a href='../Y/27341.html' title='Multiple used in 64 places.'>timerid</a>) ((<a href='../S/3990.html#L7' title='Defined at 7 in time/bits/types/timer_t.h.'>timer_t</a>) <a href='../Y/27341.html' title='Multiple used in 64 places.'>timerid</a>)
+<a id='L90' name='L90'></a>  90 
+<a id='L91' name='L91'></a>  91 <em class='comment'>/* Check whether timer is valid; global mutex must be held. */</em>
+<a id='L92' name='L92'></a>  92 <strong class='reserved'>static</strong> <strong class='reserved'>inline</strong> <strong class='reserved'>int</strong>
+<a id='L93' name='L93'></a>  93 <a href='../R/25642.html' title='Multiple referred from 4 places.'>timer_valid</a> (<strong class='reserved'>struct</strong> <a href='../S/16198.html#L44' title='Defined at 44 in sysdeps/pthread/posix-timer.h.'>timer_node</a> *<a href='../Y/27325.html' title='Multiple used in 166 places.'>timer</a>)
+<a id='L94' name='L94'></a>  94 <em class='brace'>{</em>
+<a id='L95' name='L95'></a>  95   <strong class='reserved'>return</strong> <a href='../Y/27325.html' title='Multiple used in 166 places.'>timer</a> &amp;&amp; <a href='../Y/27325.html' title='Multiple used in 166 places.'>timer</a>-&gt;<a href='../S/1868.html#L1429' title='Defined at 1429 in malloc/malloc.c.'>inuse</a> == <a href='../S/16198.html#L55' title='Defined at 55 in sysdeps/pthread/posix-timer.h.'>TIMER_INUSE</a>;
+<a id='L96' name='L96'></a>  96 <em class='brace'>}</em>
+<a id='L97' name='L97'></a>  97 
+<a id='L98' name='L98'></a>  98 <em class='comment'>/* Timer refcount functions; need global mutex. */</em>
+<a id='L99' name='L99'></a>  99 <strong class='reserved'>extern</strong> <strong class='reserved'>void</strong> <a href='../S/17096.html#L540' title='Defined at 540 in sysdeps/htl/timer_routines.c.'>__timer_dealloc</a> (<strong class='reserved'>struct</strong> <a href='../S/16198.html#L44' title='Defined at 44 in sysdeps/pthread/posix-timer.h.'>timer_node</a> *<a href='../Y/27325.html' title='Multiple used in 166 places.'>timer</a>);
+<a id='L100' name='L100'></a> 100 
+<a id='L101' name='L101'></a> 101 <strong class='reserved'>static</strong> <strong class='reserved'>inline</strong> <strong class='reserved'>void</strong>
+<a id='L102' name='L102'></a> 102 <a href='../R/25625.html' title='Multiple referred from 2 places.'>timer_addref</a> (<strong class='reserved'>struct</strong> <a href='../S/16198.html#L44' title='Defined at 44 in sysdeps/pthread/posix-timer.h.'>timer_node</a> *<a href='../Y/27325.html' title='Multiple used in 166 places.'>timer</a>)
+<a id='L103' name='L103'></a> 103 <em class='brace'>{</em>
+<a id='L104' name='L104'></a> 104   <a href='../Y/27325.html' title='Multiple used in 166 places.'>timer</a>-&gt;<a href='../Y/23652.html' title='Multiple used in 5 places.'>refcount</a>++;
+<a id='L105' name='L105'></a> 105 <em class='brace'>}</em>
+<a id='L106' name='L106'></a> 106 
+<a id='L107' name='L107'></a> 107 <strong class='reserved'>static</strong> <strong class='reserved'>inline</strong> <strong class='reserved'>void</strong>
+<a id='L108' name='L108'></a> 108 <a href='../R/25628.html' title='Multiple referred from 3 places.'>timer_delref</a> (<strong class='reserved'>struct</strong> <a href='../S/16198.html#L44' title='Defined at 44 in sysdeps/pthread/posix-timer.h.'>timer_node</a> *<a href='../Y/27325.html' title='Multiple used in 166 places.'>timer</a>)
+<a id='L109' name='L109'></a> 109 <em class='brace'>{</em>
+<a id='L110' name='L110'></a> 110   <strong class='reserved'>if</strong> (--<a href='../Y/27325.html' title='Multiple used in 166 places.'>timer</a>-&gt;<a href='../Y/23652.html' title='Multiple used in 5 places.'>refcount</a> == 0)
+<a id='L111' name='L111'></a> 111     <a href='../S/17096.html#L540' title='Defined at 540 in sysdeps/htl/timer_routines.c.'>__timer_dealloc</a> (<a href='../Y/27325.html' title='Multiple used in 166 places.'>timer</a>);
+<a id='L112' name='L112'></a> 112 <em class='brace'>}</em>
+<a id='L113' name='L113'></a> 113 
+<a id='L114' name='L114'></a> 114 <em class='comment'>/* Timespec helper routines.  */</em>
+<a id='L115' name='L115'></a> 115 <strong class='reserved'>static</strong> <strong class='reserved'>inline</strong> <strong class='reserved'>int</strong>
+<a id='L116' name='L116'></a> 116 <strong class='reserved'>__attribute</strong> ((<a href='../Y/10209.html' title='Multiple used in 261 places.'>always_inline</a>))
+<a id='L117' name='L117'></a> 117 <a href='../R/25656.html' title='Multiple referred from 4 places.'>timespec_compare</a> (<strong class='reserved'>const</strong> <strong class='reserved'>struct</strong> <a href='../D/38153.html' title='Multiple defined in 6 places.'>timespec</a> *<a href='../Y/17987.html' title='Multiple used in 365 places.'>left</a>, <strong class='reserved'>const</strong> <strong class='reserved'>struct</strong> <a href='../D/38153.html' title='Multiple defined in 6 places.'>timespec</a> *<a href='../Y/24057.html' title='Multiple used in 264 places.'>right</a>)
+<a id='L118' name='L118'></a> 118 <em class='brace'>{</em>
+<a id='L119' name='L119'></a> 119   <strong class='reserved'>if</strong> (<a href='../Y/17987.html' title='Multiple used in 365 places.'>left</a>-&gt;<a href='../Y/27976.html' title='Multiple used in 803 places.'>tv_sec</a> &lt; <a href='../Y/24057.html' title='Multiple used in 264 places.'>right</a>-&gt;<a href='../Y/27976.html' title='Multiple used in 803 places.'>tv_sec</a>)
+<a id='L120' name='L120'></a> 120     <strong class='reserved'>return</strong> -1;
+<a id='L121' name='L121'></a> 121   <strong class='reserved'>if</strong> (<a href='../Y/17987.html' title='Multiple used in 365 places.'>left</a>-&gt;<a href='../Y/27976.html' title='Multiple used in 803 places.'>tv_sec</a> &gt; <a href='../Y/24057.html' title='Multiple used in 264 places.'>right</a>-&gt;<a href='../Y/27976.html' title='Multiple used in 803 places.'>tv_sec</a>)
+<a id='L122' name='L122'></a> 122     <strong class='reserved'>return</strong> 1;
+<a id='L123' name='L123'></a> 123 
+<a id='L124' name='L124'></a> 124   <strong class='reserved'>if</strong> (<a href='../Y/17987.html' title='Multiple used in 365 places.'>left</a>-&gt;<a href='../Y/27975.html' title='Multiple used in 531 places.'>tv_nsec</a> &lt; <a href='../Y/24057.html' title='Multiple used in 264 places.'>right</a>-&gt;<a href='../Y/27975.html' title='Multiple used in 531 places.'>tv_nsec</a>)
+<a id='L125' name='L125'></a> 125     <strong class='reserved'>return</strong> -1;
+<a id='L126' name='L126'></a> 126   <strong class='reserved'>if</strong> (<a href='../Y/17987.html' title='Multiple used in 365 places.'>left</a>-&gt;<a href='../Y/27975.html' title='Multiple used in 531 places.'>tv_nsec</a> &gt; <a href='../Y/24057.html' title='Multiple used in 264 places.'>right</a>-&gt;<a href='../Y/27975.html' title='Multiple used in 531 places.'>tv_nsec</a>)
+<a id='L127' name='L127'></a> 127     <strong class='reserved'>return</strong> 1;
+<a id='L128' name='L128'></a> 128 
+<a id='L129' name='L129'></a> 129   <strong class='reserved'>return</strong> 0;
+<a id='L130' name='L130'></a> 130 <em class='brace'>}</em>
+<a id='L131' name='L131'></a> 131 
+<a id='L132' name='L132'></a> 132 <strong class='reserved'>static</strong> <strong class='reserved'>inline</strong> <strong class='reserved'>void</strong>
+<a id='L133' name='L133'></a> 133 <a href='../R/25655.html' title='Multiple referred from 30 places.'>timespec_add</a> (<strong class='reserved'>struct</strong> <a href='../D/38153.html' title='Multiple defined in 6 places.'>timespec</a> *<a href='../Y/26474.html' title='Multiple used in 108 places.'>sum</a>, <strong class='reserved'>const</strong> <strong class='reserved'>struct</strong> <a href='../D/38153.html' title='Multiple defined in 6 places.'>timespec</a> *<a href='../Y/17987.html' title='Multiple used in 365 places.'>left</a>,
+<a id='L134' name='L134'></a> 134           <strong class='reserved'>const</strong> <strong class='reserved'>struct</strong> <a href='../D/38153.html' title='Multiple defined in 6 places.'>timespec</a> *<a href='../Y/24057.html' title='Multiple used in 264 places.'>right</a>)
+<a id='L135' name='L135'></a> 135 <em class='brace'>{</em>
+<a id='L136' name='L136'></a> 136   <a href='../Y/26474.html' title='Multiple used in 108 places.'>sum</a>-&gt;<a href='../Y/27976.html' title='Multiple used in 803 places.'>tv_sec</a> = <a href='../Y/17987.html' title='Multiple used in 365 places.'>left</a>-&gt;<a href='../Y/27976.html' title='Multiple used in 803 places.'>tv_sec</a> + <a href='../Y/24057.html' title='Multiple used in 264 places.'>right</a>-&gt;<a href='../Y/27976.html' title='Multiple used in 803 places.'>tv_sec</a>;
+<a id='L137' name='L137'></a> 137   <a href='../Y/26474.html' title='Multiple used in 108 places.'>sum</a>-&gt;<a href='../Y/27975.html' title='Multiple used in 531 places.'>tv_nsec</a> = <a href='../Y/17987.html' title='Multiple used in 365 places.'>left</a>-&gt;<a href='../Y/27975.html' title='Multiple used in 531 places.'>tv_nsec</a> + <a href='../Y/24057.html' title='Multiple used in 264 places.'>right</a>-&gt;<a href='../Y/27975.html' title='Multiple used in 531 places.'>tv_nsec</a>;
+<a id='L138' name='L138'></a> 138 
+<a id='L139' name='L139'></a> 139   <strong class='reserved'>if</strong> (<a href='../Y/26474.html' title='Multiple used in 108 places.'>sum</a>-&gt;<a href='../Y/27975.html' title='Multiple used in 531 places.'>tv_nsec</a> &gt;= 1000000000)
+<a id='L140' name='L140'></a> 140     <em class='brace'>{</em>
+<a id='L141' name='L141'></a> 141       ++<a href='../Y/26474.html' title='Multiple used in 108 places.'>sum</a>-&gt;<a href='../Y/27976.html' title='Multiple used in 803 places.'>tv_sec</a>;
+<a id='L142' name='L142'></a> 142       <a href='../Y/26474.html' title='Multiple used in 108 places.'>sum</a>-&gt;<a href='../Y/27975.html' title='Multiple used in 531 places.'>tv_nsec</a> -= 1000000000;
+<a id='L143' name='L143'></a> 143     <em class='brace'>}</em>
+<a id='L144' name='L144'></a> 144 <em class='brace'>}</em>
+<a id='L145' name='L145'></a> 145 
+<a id='L146' name='L146'></a> 146 <strong class='reserved'>static</strong> <strong class='reserved'>inline</strong> <strong class='reserved'>void</strong>
+<a id='L147' name='L147'></a> 147 <a href='../R/25661.html' title='Multiple referred from 9 places.'>timespec_sub</a> (<strong class='reserved'>struct</strong> <a href='../D/38153.html' title='Multiple defined in 6 places.'>timespec</a> *<a href='../D/29465.html' title='Multiple defined in 2 places.'>diff</a>, <strong class='reserved'>const</strong> <strong class='reserved'>struct</strong> <a href='../D/38153.html' title='Multiple defined in 6 places.'>timespec</a> *<a href='../Y/17987.html' title='Multiple used in 365 places.'>left</a>,
+<a id='L148' name='L148'></a> 148           <strong class='reserved'>const</strong> <strong class='reserved'>struct</strong> <a href='../D/38153.html' title='Multiple defined in 6 places.'>timespec</a> *<a href='../Y/24057.html' title='Multiple used in 264 places.'>right</a>)
+<a id='L149' name='L149'></a> 149 <em class='brace'>{</em>
+<a id='L150' name='L150'></a> 150   <a href='../D/29465.html' title='Multiple defined in 2 places.'>diff</a>-&gt;<a href='../Y/27976.html' title='Multiple used in 803 places.'>tv_sec</a> = <a href='../Y/17987.html' title='Multiple used in 365 places.'>left</a>-&gt;<a href='../Y/27976.html' title='Multiple used in 803 places.'>tv_sec</a> - <a href='../Y/24057.html' title='Multiple used in 264 places.'>right</a>-&gt;<a href='../Y/27976.html' title='Multiple used in 803 places.'>tv_sec</a>;
+<a id='L151' name='L151'></a> 151   <a href='../D/29465.html' title='Multiple defined in 2 places.'>diff</a>-&gt;<a href='../Y/27975.html' title='Multiple used in 531 places.'>tv_nsec</a> = <a href='../Y/17987.html' title='Multiple used in 365 places.'>left</a>-&gt;<a href='../Y/27975.html' title='Multiple used in 531 places.'>tv_nsec</a> - <a href='../Y/24057.html' title='Multiple used in 264 places.'>right</a>-&gt;<a href='../Y/27975.html' title='Multiple used in 531 places.'>tv_nsec</a>;
+<a id='L152' name='L152'></a> 152 
+<a id='L153' name='L153'></a> 153   <strong class='reserved'>if</strong> (<a href='../D/29465.html' title='Multiple defined in 2 places.'>diff</a>-&gt;<a href='../Y/27975.html' title='Multiple used in 531 places.'>tv_nsec</a> &lt; 0)
+<a id='L154' name='L154'></a> 154     <em class='brace'>{</em>
+<a id='L155' name='L155'></a> 155       --<a href='../D/29465.html' title='Multiple defined in 2 places.'>diff</a>-&gt;<a href='../Y/27976.html' title='Multiple used in 803 places.'>tv_sec</a>;
+<a id='L156' name='L156'></a> 156       <a href='../D/29465.html' title='Multiple defined in 2 places.'>diff</a>-&gt;<a href='../Y/27975.html' title='Multiple used in 531 places.'>tv_nsec</a> += 1000000000;
+<a id='L157' name='L157'></a> 157     <em class='brace'>}</em>
+<a id='L158' name='L158'></a> 158 <em class='brace'>}</em>
+<a id='L159' name='L159'></a> 159 
+<a id='L160' name='L160'></a> 160 
+<a id='L161' name='L161'></a> 161 <em class='comment'>/* We need one of the list functions in the other modules.  */</em>
+<a id='L162' name='L162'></a> 162 <strong class='reserved'>static</strong> <strong class='reserved'>inline</strong> <strong class='reserved'>void</strong>
+<a id='L163' name='L163'></a> 163 <a href='../R/21369.html' title='Multiple referred from 4 places.'>list_unlink_ip</a> (<strong class='reserved'>struct</strong> <a href='../S/18015.html#L24' title='Defined at 24 in include/list_t.h.'>list_head</a> *<a href='../D/32957.html' title='Multiple defined in 3 places.'>list</a>)
+<a id='L164' name='L164'></a> 164 <em class='brace'>{</em>
+<a id='L165' name='L165'></a> 165   <strong class='reserved'>struct</strong> <a href='../S/18015.html#L24' title='Defined at 24 in include/list_t.h.'>list_head</a> *<a href='../Y/18308.html' title='Multiple used in 6 places.'>lnext</a> = <a href='../D/32957.html' title='Multiple defined in 3 places.'>list</a>-&gt;<a href='../Y/20703.html' title='Multiple used in 1000 places.'>next</a>, *<a href='../Y/18571.html' title='Multiple used in 6 places.'>lprev</a> = <a href='../D/32957.html' title='Multiple defined in 3 places.'>list</a>-&gt;<a href='../Y/22719.html' title='Multiple used in 143 places.'>prev</a>;
+<a id='L166' name='L166'></a> 166 
+<a id='L167' name='L167'></a> 167   <a href='../Y/18308.html' title='Multiple used in 6 places.'>lnext</a>-&gt;<a href='../Y/22719.html' title='Multiple used in 143 places.'>prev</a> = <a href='../Y/18571.html' title='Multiple used in 6 places.'>lprev</a>;
+<a id='L168' name='L168'></a> 168   <a href='../Y/18571.html' title='Multiple used in 6 places.'>lprev</a>-&gt;<a href='../Y/20703.html' title='Multiple used in 1000 places.'>next</a> = <a href='../Y/18308.html' title='Multiple used in 6 places.'>lnext</a>;
+<a id='L169' name='L169'></a> 169 
+<a id='L170' name='L170'></a> 170   <em class='comment'>/* The suffix ip means idempotent; list_unlink_ip can be called</em>
+<a id='L171' name='L171'></a> 171 <em class='comment'>   * two or more times on the same node.</em>
+<a id='L172' name='L172'></a> 172 <em class='comment'>   */</em>
+<a id='L173' name='L173'></a> 173 
+<a id='L174' name='L174'></a> 174   <a href='../D/32957.html' title='Multiple defined in 3 places.'>list</a>-&gt;<a href='../Y/20703.html' title='Multiple used in 1000 places.'>next</a> = <a href='../D/32957.html' title='Multiple defined in 3 places.'>list</a>;
+<a id='L175' name='L175'></a> 175   <a href='../D/32957.html' title='Multiple defined in 3 places.'>list</a>-&gt;<a href='../Y/22719.html' title='Multiple used in 143 places.'>prev</a> = <a href='../D/32957.html' title='Multiple defined in 3 places.'>list</a>;
+<a id='L176' name='L176'></a> 176 <em class='brace'>}</em>
+<a id='L177' name='L177'></a> 177 
+<a id='L178' name='L178'></a> 178 
+<a id='L179' name='L179'></a> 179 <em class='comment'>/* Functions in the helper file.  */</em>
+<a id='L180' name='L180'></a> 180 <strong class='reserved'>extern</strong> <strong class='reserved'>void</strong> <a href='../S/17096.html#L551' title='Defined at 551 in sysdeps/htl/timer_routines.c.'>__timer_mutex_cancel_handler</a> (<strong class='reserved'>void</strong> *<a href='../D/27755.html' title='Multiple defined in 3 places.'>arg</a>);
+<a id='L181' name='L181'></a> 181 <strong class='reserved'>extern</strong> <strong class='reserved'>void</strong> <a href='../S/17096.html#L202' title='Defined at 202 in sysdeps/htl/timer_routines.c.'>__timer_init_once</a> (<strong class='reserved'>void</strong>);
+<a id='L182' name='L182'></a> 182 <strong class='reserved'>extern</strong> <strong class='reserved'>struct</strong> <a href='../S/16198.html#L44' title='Defined at 44 in sysdeps/pthread/posix-timer.h.'>timer_node</a> *<a href='../S/17096.html#L520' title='Defined at 520 in sysdeps/htl/timer_routines.c.'>__timer_alloc</a> (<strong class='reserved'>void</strong>);
+<a id='L183' name='L183'></a> 183 <strong class='reserved'>extern</strong> <strong class='reserved'>int</strong> <a href='../S/17096.html#L462' title='Defined at 462 in sysdeps/htl/timer_routines.c.'>__timer_thread_start</a> (<strong class='reserved'>struct</strong> <a href='../S/16198.html#L29' title='Defined at 29 in sysdeps/pthread/posix-timer.h.'>thread_node</a> *<a href='../D/38045.html' title='Multiple defined in 2 places.'>thread</a>);
+<a id='L184' name='L184'></a> 184 <strong class='reserved'>extern</strong> <strong class='reserved'>struct</strong> <a href='../S/16198.html#L29' title='Defined at 29 in sysdeps/pthread/posix-timer.h.'>thread_node</a> *<a href='../S/17096.html#L497' title='Defined at 497 in sysdeps/htl/timer_routines.c.'>__timer_thread_find_matching</a> (<strong class='reserved'>const</strong> <a href='../D/35089.html' title='Multiple defined in 4 places.'>pthread_attr_t</a> *<a href='../Y/12691.html' title='Multiple used in 6 places.'>desired_attr</a>, <a href='../S/3982.html#L7' title='Defined at 7 in time/bits/types/clockid_t.h.'>clockid_t</a>);
+<a id='L185' name='L185'></a> 185 <strong class='reserved'>extern</strong> <strong class='reserved'>struct</strong> <a href='../S/16198.html#L29' title='Defined at 29 in sysdeps/pthread/posix-timer.h.'>thread_node</a> *<a href='../S/17096.html#L222' title='Defined at 222 in sysdeps/htl/timer_routines.c.'>__timer_thread_alloc</a> (<strong class='reserved'>const</strong> <a href='../D/35089.html' title='Multiple defined in 4 places.'>pthread_attr_t</a> *<a href='../Y/12691.html' title='Multiple used in 6 places.'>desired_attr</a>, <a href='../S/3982.html#L7' title='Defined at 7 in time/bits/types/clockid_t.h.'>clockid_t</a>);
+<a id='L186' name='L186'></a> 186 <strong class='reserved'>extern</strong> <strong class='reserved'>void</strong> <a href='../S/17096.html#L242' title='Defined at 242 in sysdeps/htl/timer_routines.c.'>__timer_thread_dealloc</a> (<strong class='reserved'>struct</strong> <a href='../S/16198.html#L29' title='Defined at 29 in sysdeps/pthread/posix-timer.h.'>thread_node</a> *<a href='../D/38045.html' title='Multiple defined in 2 places.'>thread</a>);
+<a id='L187' name='L187'></a> 187 <strong class='reserved'>extern</strong> <strong class='reserved'>int</strong> <a href='../S/17096.html#L437' title='Defined at 437 in sysdeps/htl/timer_routines.c.'>__timer_thread_queue_timer</a> (<strong class='reserved'>struct</strong> <a href='../S/16198.html#L29' title='Defined at 29 in sysdeps/pthread/posix-timer.h.'>thread_node</a> *<a href='../D/38045.html' title='Multiple defined in 2 places.'>thread</a>,
+<a id='L188' name='L188'></a> 188                        <strong class='reserved'>struct</strong> <a href='../S/16198.html#L44' title='Defined at 44 in sysdeps/pthread/posix-timer.h.'>timer_node</a> *<a href='../S/8427.html#L193' title='Defined at 193 in sysdeps/posix/sprofil.c.'>insert</a>);
+<a id='L189' name='L189'></a> 189 <strong class='reserved'>extern</strong> <strong class='reserved'>void</strong> <a href='../S/17096.html#L487' title='Defined at 487 in sysdeps/htl/timer_routines.c.'>__timer_thread_wakeup</a> (<strong class='reserved'>struct</strong> <a href='../S/16198.html#L29' title='Defined at 29 in sysdeps/pthread/posix-timer.h.'>thread_node</a> *<a href='../D/38045.html' title='Multiple defined in 2 places.'>thread</a>);
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L93'>[^]</a><a href='#L163'>[v]</a><a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

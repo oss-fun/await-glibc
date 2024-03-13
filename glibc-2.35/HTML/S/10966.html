@@ -1,0 +1,127 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>sysdeps/unix/sysv/linux/tst-fallocate-common.c</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18977.html'>sysdeps</a>/<a href='../files/19246.html'>unix</a>/<a href='../files/19257.html'>sysv</a>/<a href='../files/19258.html'>linux</a>/tst-fallocate-common.c</h2>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L39'>[^]</a><a href='#L50'>[v]</a>[top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<h2 class='header'>DEFINITIONS</h2>
+This source file includes following definitions.
+<ol>
+<li><a href='#L39' title='Defined at 39.'>do_prepare</a></li>
+<li><a href='#L50' title='Defined at 50.'>do_test_with_offset</a></li>
+</ol>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* Basic fallocate test (no specific flags is checked).</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   Copyright (C) 2016-2022 Free Software Foundation, Inc.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'></em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'></em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'></em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   License along with the GNU C Library; if not, see</em>
+<a id='L17' name='L17'></a>  17 <em class='comment'>   &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L18' name='L18'></a>  18 
+<a id='L19' name='L19'></a>  19 <em class='sharp'>#include</em> &lt;<a href='../I/116.html'>errno.h</a>&gt;
+<a id='L20' name='L20'></a>  20 <em class='sharp'>#include</em> &lt;<a href='../I/117.html'>fcntl.h</a>&gt;
+<a id='L21' name='L21'></a>  21 <em class='sharp'>#include</em> &lt;<a href='18175.html'>limits.h</a>&gt;
+<a id='L22' name='L22'></a>  22 <em class='sharp'>#include</em> &lt;<a href='../I/1969.html'>stdint.h</a>&gt;
+<a id='L23' name='L23'></a>  23 <em class='sharp'>#include</em> &lt;<a href='../I/1973.html'>string.h</a>&gt;
+<a id='L24' name='L24'></a>  24 <em class='sharp'>#include</em> &lt;<a href='../I/167.html'>sys/stat.h</a>&gt;
+<a id='L25' name='L25'></a>  25 <em class='sharp'>#include</em> &lt;<a href='../I/1786.html'>sys/types.h</a>&gt;
+<a id='L26' name='L26'></a>  26 <em class='sharp'>#include</em> &lt;<a href='../I/1819.html'>unistd.h</a>&gt;
+<a id='L27' name='L27'></a>  27 
+<a id='L28' name='L28'></a>  28 <em class='sharp'>#include</em> &lt;<a href='5742.html'>support/support.h</a>&gt;
+<a id='L29' name='L29'></a>  29 <em class='sharp'>#include</em> &lt;<a href='5739.html'>support/check.h</a>&gt;
+<a id='L30' name='L30'></a>  30 <em class='sharp'>#include</em> &lt;<a href='5926.html'>support/temp_file.h</a>&gt;
+<a id='L31' name='L31'></a>  31 
+<a id='L32' name='L32'></a>  32 <em class='sharp'>#define</em> <a href='../R/9814.html' title='Multiple referred from 2 places.'>XSTR</a>(<a href='../D/36247.html' title='Multiple defined in 13 places.'>s</a>) <a href='../D/14847.html' title='Multiple defined in 26 places.'>STR</a>(<a href='../D/13494.html' title='Multiple defined in 27 places.'>S</a>)
+<a id='L33' name='L33'></a>  33 <em class='sharp'>#define</em> <a href='../R/8058.html' title='Multiple referred from 25 places.'>STR</a>(<a href='../D/36247.html' title='Multiple defined in 13 places.'>s</a>)  #<a href='../D/36247.html' title='Multiple defined in 13 places.'>s</a>
+<a id='L34' name='L34'></a>  34 
+<a id='L35' name='L35'></a>  35 <strong class='reserved'>static</strong> <strong class='reserved'>char</strong> *<a href='../Y/26962.html' title='Multiple used in 28 places.'>temp_filename</a>;
+<a id='L36' name='L36'></a>  36 <strong class='reserved'>static</strong> <strong class='reserved'>int</strong> <a href='../Y/26954.html' title='Multiple used in 155 places.'>temp_fd</a>;
+<a id='L37' name='L37'></a>  37 
+<a id='L38' name='L38'></a>  38 <strong class='reserved'>static</strong> <strong class='reserved'>void</strong>
+<a id='L39' name='L39'></a>  39 <a href='../R/18735.html' title='Multiple referred from 81 places.'>do_prepare</a> (<strong class='reserved'>int</strong> <a href='../Y/10354.html' title='Multiple used in 866 places.'>argc</a>, <strong class='reserved'>char</strong> **<a href='../Y/10408.html' title='Multiple used in 1144 places.'>argv</a>)
+<a id='L40' name='L40'></a>  40 <em class='brace'>{</em>
+<a id='L41' name='L41'></a>  41   <a href='../Y/26954.html' title='Multiple used in 155 places.'>temp_fd</a> = <a href='../S/5785.html#L104' title='Defined at 104 in support/temp_file.c.'>create_temp_file</a> ("tst-fallocate.", &amp;<a href='../Y/26962.html' title='Multiple used in 28 places.'>temp_filename</a>);
+<a id='L42' name='L42'></a>  42   <strong class='reserved'>if</strong> (<a href='../Y/26954.html' title='Multiple used in 155 places.'>temp_fd</a> == -1)
+<a id='L43' name='L43'></a>  43     <a href='../S/5739.html#L40' title='Defined at 40 in support/check.h.'>FAIL_EXIT1</a> ("cannot create temporary file: %m");
+<a id='L44' name='L44'></a>  44   <strong class='reserved'>if</strong> (!<a href='../S/5948.html#L26' title='Defined at 26 in support/support_descriptor_supports_holes.c.'>support_descriptor_supports_holes</a> (<a href='../Y/26954.html' title='Multiple used in 155 places.'>temp_fd</a>))
+<a id='L45' name='L45'></a>  45     <a href='../S/5739.html#L45' title='Defined at 45 in support/check.h.'>FAIL_UNSUPPORTED</a> ("File %s does not support holes", <a href='../Y/26962.html' title='Multiple used in 28 places.'>temp_filename</a>);
+<a id='L46' name='L46'></a>  46 <em class='brace'>}</em>
+<a id='L47' name='L47'></a>  47 <em class='sharp'>#define</em> <a href='../R/6187.html' title='Multiple referred from 32 places.'>PREPARE</a> <a href='../D/29648.html' title='Multiple defined in 52 places.'>do_prepare</a>
+<a id='L48' name='L48'></a>  48 
+<a id='L49' name='L49'></a>  49 <strong class='reserved'>static</strong> <strong class='reserved'>int</strong>
+<a id='L50' name='L50'></a>  50 <a href='../R/18838.html' title='Multiple referred from 17 places.'>do_test_with_offset</a> (<a href='../D/34492.html' title='Multiple defined in 12 places.'>off_t</a> <a href='../S/13710.html#L51' title='Defined at 51 in sysdeps/aarch64/strncmp.S.'>offset</a>)
+<a id='L51' name='L51'></a>  51 <em class='brace'>{</em>
+<a id='L52' name='L52'></a>  52   <strong class='reserved'>int</strong> <a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a>;
+<a id='L53' name='L53'></a>  53   <strong class='reserved'>struct</strong> <a href='../D/37012.html' title='Multiple defined in 29 places.'>stat</a> <a href='../Y/14615.html' title='Multiple used in 59 places.'>finfo</a>;
+<a id='L54' name='L54'></a>  54 <em class='sharp'>#define</em> <a href='../R/543.html' title='Multiple referred from 17 places.'>BLK_SIZE</a> 1024
+<a id='L55' name='L55'></a>  55   <strong class='reserved'>char</strong> <a href='../Y/11117.html' title='Multiple used in 3 places.'>bwrite</a>[<a href='../D/864.html' title='Multiple defined in 2 places.'>BLK_SIZE</a>] = <em class='brace'>{</em> 0xf0 <em class='brace'>}</em>;
+<a id='L56' name='L56'></a>  56   <strong class='reserved'>char</strong> <a href='../Y/11003.html' title='Multiple used in 3 places.'>bread</a>[<a href='../D/864.html' title='Multiple defined in 2 places.'>BLK_SIZE</a>];
+<a id='L57' name='L57'></a>  57 
+<a id='L58' name='L58'></a>  58   <em class='comment'>/* It tries to fallocate 1024 bytes from 'offset' and then write 1024 bytes.</em>
+<a id='L59' name='L59'></a>  59 <em class='comment'>     After both operation rewind the file descriptor and read 1024 bytes</em>
+<a id='L60' name='L60'></a>  60 <em class='comment'>     and check if both buffer have the same contents.  */</em>
+<a id='L61' name='L61'></a>  61   <a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a> = <a href='../D/30358.html' title='Multiple defined in 2 places.'>fallocate</a> (<a href='../Y/26954.html' title='Multiple used in 155 places.'>temp_fd</a>, 0, <a href='../S/13710.html#L51' title='Defined at 51 in sysdeps/aarch64/strncmp.S.'>offset</a>, <a href='../D/864.html' title='Multiple defined in 2 places.'>BLK_SIZE</a>);
+<a id='L62' name='L62'></a>  62   <strong class='reserved'>if</strong> (<a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a> == -1)
+<a id='L63' name='L63'></a>  63     <em class='brace'>{</em>
+<a id='L64' name='L64'></a>  64       <em class='comment'>/* fallocate might not be fully supported by underlying filesystem (for</em>
+<a id='L65' name='L65'></a>  65 <em class='comment'>     instance some NFS versions).   */</em>
+<a id='L66' name='L66'></a>  66       <strong class='reserved'>if</strong> (<a href='../D/30023.html' title='Multiple defined in 13 places.'>errno</a> == <a href='../D/3681.html' title='Multiple defined in 2 places.'>EOPNOTSUPP</a>)
+<a id='L67' name='L67'></a>  67     <a href='../S/5739.html#L35' title='Defined at 35 in support/check.h.'>FAIL_EXIT</a> (77, "fallocate not supported");
+<a id='L68' name='L68'></a>  68       <a href='../S/5739.html#L40' title='Defined at 40 in support/check.h.'>FAIL_EXIT1</a> ("fallocate failed");
+<a id='L69' name='L69'></a>  69     <em class='brace'>}</em>
+<a id='L70' name='L70'></a>  70 
+<a id='L71' name='L71'></a>  71   <a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a> = <a href='../D/30879.html' title='Multiple defined in 6 places.'>fstat</a> (<a href='../Y/26954.html' title='Multiple used in 155 places.'>temp_fd</a>, &amp;<a href='../Y/14615.html' title='Multiple used in 59 places.'>finfo</a>);
+<a id='L72' name='L72'></a>  72   <strong class='reserved'>if</strong> (<a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a> == -1)
+<a id='L73' name='L73'></a>  73     <a href='../S/5739.html#L40' title='Defined at 40 in support/check.h.'>FAIL_EXIT1</a> ("fstat failed");
+<a id='L74' name='L74'></a>  74 
+<a id='L75' name='L75'></a>  75   <strong class='reserved'>if</strong> (<a href='../Y/14615.html' title='Multiple used in 59 places.'>finfo</a>.<a href='../Y/26016.html' title='Multiple used in 381 places.'>st_size</a> &lt; (<a href='../S/13710.html#L51' title='Defined at 51 in sysdeps/aarch64/strncmp.S.'>offset</a> + <a href='../D/864.html' title='Multiple defined in 2 places.'>BLK_SIZE</a>))
+<a id='L76' name='L76'></a>  76     <a href='../S/5739.html#L40' title='Defined at 40 in support/check.h.'>FAIL_EXIT1</a> ("size of first fallocate less than expected (%llu)",
+<a id='L77' name='L77'></a>  77         (<strong class='reserved'>long</strong> <strong class='reserved'>long</strong> <strong class='reserved'>unsigned</strong> <strong class='reserved'>int</strong>)<a href='../S/13710.html#L51' title='Defined at 51 in sysdeps/aarch64/strncmp.S.'>offset</a> + <a href='../D/864.html' title='Multiple defined in 2 places.'>BLK_SIZE</a>);
+<a id='L78' name='L78'></a>  78 
+<a id='L79' name='L79'></a>  79   <strong class='reserved'>if</strong> (<a href='../S/1192.html#L346' title='Defined at 346 in posix/unistd.h.'>lseek</a> (<a href='../Y/26954.html' title='Multiple used in 155 places.'>temp_fd</a>, <a href='../S/13710.html#L51' title='Defined at 51 in sysdeps/aarch64/strncmp.S.'>offset</a>, <a href='../D/13729.html' title='Multiple defined in 3 places.'>SEEK_SET</a>) == (<a href='../D/34492.html' title='Multiple defined in 12 places.'>off_t</a>) -1)
+<a id='L80' name='L80'></a>  80     <a href='../S/5739.html#L40' title='Defined at 40 in support/check.h.'>FAIL_EXIT1</a> ("fseek (0, SEEK_SET) failed");
+<a id='L81' name='L81'></a>  81 
+<a id='L82' name='L82'></a>  82   <strong class='reserved'>if</strong> (<a href='../Y/29153.html' title='Multiple used in 258 places.'>write</a> (<a href='../Y/26954.html' title='Multiple used in 155 places.'>temp_fd</a>, <a href='../Y/11117.html' title='Multiple used in 3 places.'>bwrite</a>, <a href='../D/864.html' title='Multiple defined in 2 places.'>BLK_SIZE</a>) != <a href='../D/864.html' title='Multiple defined in 2 places.'>BLK_SIZE</a>)
+<a id='L83' name='L83'></a>  83     <a href='../S/5739.html#L40' title='Defined at 40 in support/check.h.'>FAIL_EXIT1</a> ("fail trying to write " <a href='../D/17535.html' title='Multiple defined in 2 places.'>XSTR</a> (<a href='../D/864.html' title='Multiple defined in 2 places.'>BLK_SIZE</a>) " bytes");
+<a id='L84' name='L84'></a>  84 
+<a id='L85' name='L85'></a>  85   <strong class='reserved'>if</strong> (<a href='../S/1192.html#L346' title='Defined at 346 in posix/unistd.h.'>lseek</a> (<a href='../Y/26954.html' title='Multiple used in 155 places.'>temp_fd</a>, <a href='../S/13710.html#L51' title='Defined at 51 in sysdeps/aarch64/strncmp.S.'>offset</a>, <a href='../D/13729.html' title='Multiple defined in 3 places.'>SEEK_SET</a>) == (<a href='../D/34492.html' title='Multiple defined in 12 places.'>off_t</a>) -1)
+<a id='L86' name='L86'></a>  86     <a href='../S/5739.html#L40' title='Defined at 40 in support/check.h.'>FAIL_EXIT1</a> ("fseek (0, SEEK_SET) failed");
+<a id='L87' name='L87'></a>  87 
+<a id='L88' name='L88'></a>  88   <strong class='reserved'>if</strong> (<a href='../S/284.html#L450' title='Defined at 450 in intl/loadmsgcat.c.'>read</a> (<a href='../Y/26954.html' title='Multiple used in 155 places.'>temp_fd</a>, <a href='../Y/11003.html' title='Multiple used in 3 places.'>bread</a>, <a href='../D/864.html' title='Multiple defined in 2 places.'>BLK_SIZE</a>) != <a href='../D/864.html' title='Multiple defined in 2 places.'>BLK_SIZE</a>)
+<a id='L89' name='L89'></a>  89     <a href='../S/5739.html#L40' title='Defined at 40 in support/check.h.'>FAIL_EXIT1</a> ("fail trying to read " <a href='../D/17535.html' title='Multiple defined in 2 places.'>XSTR</a> (<a href='../D/864.html' title='Multiple defined in 2 places.'>BLK_SIZE</a>) " bytes");
+<a id='L90' name='L90'></a>  90 
+<a id='L91' name='L91'></a>  91   <strong class='reserved'>if</strong> (<a href='../D/33446.html' title='Multiple defined in 22 places.'>memcmp</a> (<a href='../Y/11117.html' title='Multiple used in 3 places.'>bwrite</a>, <a href='../Y/11003.html' title='Multiple used in 3 places.'>bread</a>, <a href='../D/864.html' title='Multiple defined in 2 places.'>BLK_SIZE</a>) != 0)
+<a id='L92' name='L92'></a>  92     <a href='../S/5739.html#L40' title='Defined at 40 in support/check.h.'>FAIL_EXIT1</a> ("buffer written different than buffer readed");
+<a id='L93' name='L93'></a>  93 
+<a id='L94' name='L94'></a>  94   <strong class='reserved'>return</strong> 0;
+<a id='L95' name='L95'></a>  95 <em class='brace'>}</em>
+<a id='L96' name='L96'></a>  96 
+<a id='L97' name='L97'></a>  97 <em class='comment'>/* This function is defined by the individual tests.  */</em>
+<a id='L98' name='L98'></a>  98 <strong class='reserved'>static</strong> <strong class='reserved'>int</strong> <a href='../D/29701.html' title='Multiple defined in 1421 places.'>do_test</a> (<strong class='reserved'>void</strong>);
+<a id='L99' name='L99'></a>  99 
+<a id='L100' name='L100'></a> 100 <em class='sharp'>#include</em> &lt;support/test-driver.c&gt;
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L39'>[^]</a><a href='#L50'>[v]</a><a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

@@ -1,0 +1,266 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>nptl_db/td_thr_tlsbase.c</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18932.html'>nptl_db</a>/td_thr_tlsbase.c</h2>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L25'>[^]</a><a href='#L121'>[v]</a>[top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<h2 class='header'>DEFINITIONS</h2>
+This source file includes following definitions.
+<ol>
+<li><a href='#L25' title='Defined at 25.'>dtv_slotinfo_list</a></li>
+<li><a href='#L59' title='Defined at 59.'>dtv_slotinfo</a></li>
+<li><a href='#L121' title='Defined at 121.'>td_thr_tlsbase</a></li>
+</ol>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* Locate TLS data for a thread.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   Copyright (C) 2003-2022 Free Software Foundation, Inc.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'></em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'></em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'></em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   License along with the GNU C Library; if not, see</em>
+<a id='L17' name='L17'></a>  17 <em class='comment'>   &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L18' name='L18'></a>  18 
+<a id='L19' name='L19'></a>  19 <em class='sharp'>#include</em> "<a href='18811.html'>thread_dbP.h</a>"
+<a id='L20' name='L20'></a>  20 <em class='sharp'>#include</em> &lt;<a href='../I/134.html'>link.h</a>&gt;
+<a id='L21' name='L21'></a>  21 
+<a id='L22' name='L22'></a>  22 <em class='comment'>/* Get the DTV slotinfo list head entry from the dynamic loader state</em>
+<a id='L23' name='L23'></a>  23 <em class='comment'>   into *LISTHEAD.  */</em>
+<a id='L24' name='L24'></a>  24 <strong class='reserved'>static</strong> <a href='../S/17829.html#L59' title='Defined at 59 in sysdeps/nptl/thread_db.h.'>td_err_e</a>
+<a id='L25' name='L25'></a>  25 <a href='../R/18887.html' title='Multiple referred from 24 places.'>dtv_slotinfo_list</a> (<a href='../S/17829.html#L89' title='Defined at 89 in sysdeps/nptl/thread_db.h.'>td_thragent_t</a> *<a href='../Y/26733.html' title='Multiple used in 240 places.'>ta</a>,
+<a id='L26' name='L26'></a>  26            <a href='../D/35063.html' title='Multiple defined in 2 places.'>psaddr_t</a> *<a href='../Y/18268.html' title='Multiple used in 2 places.'>listhead</a>)
+<a id='L27' name='L27'></a>  27 <em class='brace'>{</em>
+<a id='L28' name='L28'></a>  28   <a href='../S/17829.html#L59' title='Defined at 59 in sysdeps/nptl/thread_db.h.'>td_err_e</a> <a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a>;
+<a id='L29' name='L29'></a>  29   <a href='../D/35063.html' title='Multiple defined in 2 places.'>psaddr_t</a> <a href='../S/1663.html#L66' title='Defined at 66 in nscd/initgrcache.c.'>head</a>;
+<a id='L30' name='L30'></a>  30 
+<a id='L31' name='L31'></a>  31   <strong class='reserved'>if</strong> (<a href='../S/18812.html#L33' title='Defined at 33 in nptl_db/td_init.c.'>__td_ta_rtld_global</a> (<a href='../Y/26733.html' title='Multiple used in 240 places.'>ta</a>))
+<a id='L32' name='L32'></a>  32     <em class='brace'>{</em>
+<a id='L33' name='L33'></a>  33       <a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a> = <a href='../S/18811.html#L165' title='Defined at 165 in nptl_db/thread_dbP.h.'>DB_GET_FIELD</a> (<a href='../S/1663.html#L66' title='Defined at 66 in nscd/initgrcache.c.'>head</a>, <a href='../Y/26733.html' title='Multiple used in 240 places.'>ta</a>, <a href='../Y/26733.html' title='Multiple used in 240 places.'>ta</a>-&gt;<a href='../Y/26738.html' title='Multiple used in 8 places.'>ta_addr__rtld_global</a>,
+<a id='L34' name='L34'></a>  34               <a href='../D/36171.html' title='Multiple defined in 2 places.'>rtld_global</a>, <a href='../Y/8958.html' title='Multiple used in 3 places.'>_dl_tls_dtv_slotinfo_list</a>, 0);
+<a id='L35' name='L35'></a>  35       <strong class='reserved'>if</strong> (<a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a> != <a href='../S/17829.html#L34' title='Defined at 34 in sysdeps/nptl/thread_db.h.'>TD_OK</a>)
+<a id='L36' name='L36'></a>  36     <strong class='reserved'>return</strong> <a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a>;
+<a id='L37' name='L37'></a>  37     <em class='brace'>}</em>
+<a id='L38' name='L38'></a>  38   <strong class='reserved'>else</strong>
+<a id='L39' name='L39'></a>  39     <em class='brace'>{</em>
+<a id='L40' name='L40'></a>  40       <strong class='reserved'>if</strong> (<a href='../Y/26733.html' title='Multiple used in 240 places.'>ta</a>-&gt;<a href='../Y/26737.html' title='Multiple used in 3 places.'>ta_addr__dl_tls_dtv_slotinfo_list</a> == 0
+<a id='L41' name='L41'></a>  41       &amp;&amp; <a href='../S/18845.html#L42' title='Defined at 42 in nptl_db/td_symbol_list.c.'>td_mod_lookup</a> (<a href='../Y/26733.html' title='Multiple used in 240 places.'>ta</a>-&gt;<a href='../Y/22375.html' title='Multiple used in 211 places.'>ph</a>, <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>, SYM__dl_tls_dtv_slotinfo_list,
+<a id='L42' name='L42'></a>  42                 &amp;<a href='../Y/26733.html' title='Multiple used in 240 places.'>ta</a>-&gt;<a href='../Y/26737.html' title='Multiple used in 3 places.'>ta_addr__dl_tls_dtv_slotinfo_list</a>) != <a href='../S/17817.html#L30' title='Defined at 30 in sysdeps/nptl/proc_service.h.'>PS_OK</a>)
+<a id='L43' name='L43'></a>  43     <strong class='reserved'>return</strong> <a href='../S/17829.html#L35' title='Defined at 35 in sysdeps/nptl/thread_db.h.'>TD_ERR</a>;
+<a id='L44' name='L44'></a>  44 
+<a id='L45' name='L45'></a>  45       <a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a> = <a href='../S/18834.html#L88' title='Defined at 88 in nptl_db/fetch-value.c.'>_td_fetch_value</a> (<a href='../Y/26733.html' title='Multiple used in 240 places.'>ta</a>, <a href='../Y/26733.html' title='Multiple used in 240 places.'>ta</a>-&gt;ta_var__dl_tls_dtv_slotinfo_list,
+<a id='L46' name='L46'></a>  46                  SYM_DESC__dl_tls_dtv_slotinfo_list,
+<a id='L47' name='L47'></a>  47                  0, <a href='../Y/26733.html' title='Multiple used in 240 places.'>ta</a>-&gt;<a href='../Y/26737.html' title='Multiple used in 3 places.'>ta_addr__dl_tls_dtv_slotinfo_list</a>, &amp;<a href='../S/1663.html#L66' title='Defined at 66 in nscd/initgrcache.c.'>head</a>);
+<a id='L48' name='L48'></a>  48       <strong class='reserved'>if</strong> (<a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a> != <a href='../S/17829.html#L34' title='Defined at 34 in sysdeps/nptl/thread_db.h.'>TD_OK</a>)
+<a id='L49' name='L49'></a>  49     <strong class='reserved'>return</strong> <a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a>;
+<a id='L50' name='L50'></a>  50     <em class='brace'>}</em>
+<a id='L51' name='L51'></a>  51 
+<a id='L52' name='L52'></a>  52   *<a href='../Y/18268.html' title='Multiple used in 2 places.'>listhead</a> = <a href='../S/1663.html#L66' title='Defined at 66 in nscd/initgrcache.c.'>head</a>;
+<a id='L53' name='L53'></a>  53   <strong class='reserved'>return</strong> <a href='../S/17829.html#L34' title='Defined at 34 in sysdeps/nptl/thread_db.h.'>TD_OK</a>;
+<a id='L54' name='L54'></a>  54 <em class='brace'>}</em>
+<a id='L55' name='L55'></a>  55 
+<a id='L56' name='L56'></a>  56 <em class='comment'>/* Get the address of the DTV slotinfo entry for MODID into</em>
+<a id='L57' name='L57'></a>  57 <em class='comment'>   *DTVSLOTINFO.  */</em>
+<a id='L58' name='L58'></a>  58 <strong class='reserved'>static</strong> <a href='../S/17829.html#L59' title='Defined at 59 in sysdeps/nptl/thread_db.h.'>td_err_e</a>
+<a id='L59' name='L59'></a>  59 <a href='../R/18886.html' title='Multiple referred from 10 places.'>dtv_slotinfo</a> (<a href='../S/17829.html#L89' title='Defined at 89 in sysdeps/nptl/thread_db.h.'>td_thragent_t</a> *<a href='../Y/26733.html' title='Multiple used in 240 places.'>ta</a>,
+<a id='L60' name='L60'></a>  60           <strong class='reserved'>unsigned</strong> <strong class='reserved'>long</strong> <strong class='reserved'>int</strong> <a href='../Y/19514.html' title='Multiple used in 34 places.'>modid</a>,
+<a id='L61' name='L61'></a>  61           <a href='../D/35063.html' title='Multiple defined in 2 places.'>psaddr_t</a> *<a href='../Y/13364.html' title='Multiple used in 2 places.'>dtvslotinfo</a>)
+<a id='L62' name='L62'></a>  62 <em class='brace'>{</em>
+<a id='L63' name='L63'></a>  63   <a href='../S/17829.html#L59' title='Defined at 59 in sysdeps/nptl/thread_db.h.'>td_err_e</a> <a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a>;
+<a id='L64' name='L64'></a>  64   <a href='../D/35063.html' title='Multiple defined in 2 places.'>psaddr_t</a> <a href='../Y/25647.html' title='Multiple used in 56 places.'>slot</a>, <a href='../Y/26948.html' title='Multiple used in 493 places.'>temp</a>;
+<a id='L65' name='L65'></a>  65   <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/25624.html' title='Multiple used in 4 places.'>slbase</a> = 0;
+<a id='L66' name='L66'></a>  66 
+<a id='L67' name='L67'></a>  67   <a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a> = <a href='../D/29820.html' title='Multiple defined in 2 places.'>dtv_slotinfo_list</a> (<a href='../Y/26733.html' title='Multiple used in 240 places.'>ta</a>, &amp;<a href='../Y/25647.html' title='Multiple used in 56 places.'>slot</a>);
+<a id='L68' name='L68'></a>  68   <strong class='reserved'>if</strong> (<a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a> != <a href='../S/17829.html#L34' title='Defined at 34 in sysdeps/nptl/thread_db.h.'>TD_OK</a>)
+<a id='L69' name='L69'></a>  69     <strong class='reserved'>return</strong> <a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a>;
+<a id='L70' name='L70'></a>  70 
+<a id='L71' name='L71'></a>  71   <strong class='reserved'>while</strong> (<a href='../Y/25647.html' title='Multiple used in 56 places.'>slot</a>)
+<a id='L72' name='L72'></a>  72     <em class='brace'>{</em>
+<a id='L73' name='L73'></a>  73       <em class='comment'>/* Get the number of entries in this list entry's array.  */</em>
+<a id='L74' name='L74'></a>  74       <a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a> = <a href='../S/18811.html#L165' title='Defined at 165 in nptl_db/thread_dbP.h.'>DB_GET_FIELD</a> (<a href='../Y/26948.html' title='Multiple used in 493 places.'>temp</a>, <a href='../Y/26733.html' title='Multiple used in 240 places.'>ta</a>, <a href='../Y/25647.html' title='Multiple used in 56 places.'>slot</a>, <a href='../D/29820.html' title='Multiple defined in 2 places.'>dtv_slotinfo_list</a>, <a href='../D/32598.html' title='Multiple defined in 10 places.'>len</a>, 0);
+<a id='L75' name='L75'></a>  75       <strong class='reserved'>if</strong> (<a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a> != <a href='../S/17829.html#L34' title='Defined at 34 in sysdeps/nptl/thread_db.h.'>TD_OK</a>)
+<a id='L76' name='L76'></a>  76     <strong class='reserved'>return</strong> <a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a>;
+<a id='L77' name='L77'></a>  77       <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../D/32598.html' title='Multiple defined in 10 places.'>len</a> = (<a href='../D/38692.html' title='Multiple defined in 2 places.'>uintptr_t</a>)<a href='../Y/26948.html' title='Multiple used in 493 places.'>temp</a>;
+<a id='L78' name='L78'></a>  78 
+<a id='L79' name='L79'></a>  79       <em class='comment'>/* Did we find the list entry for modid?  */</em>
+<a id='L80' name='L80'></a>  80       <strong class='reserved'>if</strong> (<a href='../Y/19514.html' title='Multiple used in 34 places.'>modid</a> &lt; <a href='../Y/25624.html' title='Multiple used in 4 places.'>slbase</a> + <a href='../D/32598.html' title='Multiple defined in 10 places.'>len</a>)
+<a id='L81' name='L81'></a>  81     <strong class='reserved'>break</strong>;
+<a id='L82' name='L82'></a>  82 
+<a id='L83' name='L83'></a>  83       <em class='comment'>/* We didn't, so get the next list entry.  */</em>
+<a id='L84' name='L84'></a>  84       <a href='../Y/25624.html' title='Multiple used in 4 places.'>slbase</a> += <a href='../D/32598.html' title='Multiple defined in 10 places.'>len</a>;
+<a id='L85' name='L85'></a>  85       <a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a> = <a href='../S/18811.html#L165' title='Defined at 165 in nptl_db/thread_dbP.h.'>DB_GET_FIELD</a> (<a href='../Y/26948.html' title='Multiple used in 493 places.'>temp</a>, <a href='../Y/26733.html' title='Multiple used in 240 places.'>ta</a>, <a href='../Y/25647.html' title='Multiple used in 56 places.'>slot</a>, <a href='../D/29820.html' title='Multiple defined in 2 places.'>dtv_slotinfo_list</a>,
+<a id='L86' name='L86'></a>  86               <a href='../Y/20703.html' title='Multiple used in 1000 places.'>next</a>, 0);
+<a id='L87' name='L87'></a>  87       <strong class='reserved'>if</strong> (<a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a> != <a href='../S/17829.html#L34' title='Defined at 34 in sysdeps/nptl/thread_db.h.'>TD_OK</a>)
+<a id='L88' name='L88'></a>  88     <strong class='reserved'>return</strong> <a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a>;
+<a id='L89' name='L89'></a>  89       <a href='../Y/25647.html' title='Multiple used in 56 places.'>slot</a> = <a href='../Y/26948.html' title='Multiple used in 493 places.'>temp</a>;
+<a id='L90' name='L90'></a>  90     <em class='brace'>}</em>
+<a id='L91' name='L91'></a>  91 
+<a id='L92' name='L92'></a>  92   <em class='comment'>/* We reached the end of the list and found nothing.  */</em>
+<a id='L93' name='L93'></a>  93   <strong class='reserved'>if</strong> (!<a href='../Y/25647.html' title='Multiple used in 56 places.'>slot</a>)
+<a id='L94' name='L94'></a>  94     <strong class='reserved'>return</strong> <a href='../S/17829.html#L35' title='Defined at 35 in sysdeps/nptl/thread_db.h.'>TD_ERR</a>;
+<a id='L95' name='L95'></a>  95 
+<a id='L96' name='L96'></a>  96   <em class='comment'>/* Take the slotinfo for modid from the list entry.  */</em>
+<a id='L97' name='L97'></a>  97   <a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a> = <a href='../S/18811.html#L178' title='Defined at 178 in nptl_db/thread_dbP.h.'>DB_GET_FIELD_ADDRESS</a> (<a href='../Y/26948.html' title='Multiple used in 493 places.'>temp</a>, <a href='../Y/26733.html' title='Multiple used in 240 places.'>ta</a>, <a href='../Y/25647.html' title='Multiple used in 56 places.'>slot</a>, <a href='../D/29820.html' title='Multiple defined in 2 places.'>dtv_slotinfo_list</a>,
+<a id='L98' name='L98'></a>  98                   <a href='../Y/25651.html' title='Multiple used in 56 places.'>slotinfo</a>, <a href='../Y/19514.html' title='Multiple used in 34 places.'>modid</a> - <a href='../Y/25624.html' title='Multiple used in 4 places.'>slbase</a>);
+<a id='L99' name='L99'></a>  99   <strong class='reserved'>if</strong> (<a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a> != <a href='../S/17829.html#L34' title='Defined at 34 in sysdeps/nptl/thread_db.h.'>TD_OK</a>)
+<a id='L100' name='L100'></a> 100     <strong class='reserved'>return</strong> <a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a>;
+<a id='L101' name='L101'></a> 101   <a href='../Y/25647.html' title='Multiple used in 56 places.'>slot</a> = <a href='../Y/26948.html' title='Multiple used in 493 places.'>temp</a>;
+<a id='L102' name='L102'></a> 102 
+<a id='L103' name='L103'></a> 103   *<a href='../Y/13364.html' title='Multiple used in 2 places.'>dtvslotinfo</a> = <a href='../Y/25647.html' title='Multiple used in 56 places.'>slot</a>;
+<a id='L104' name='L104'></a> 104   <strong class='reserved'>return</strong> <a href='../S/17829.html#L34' title='Defined at 34 in sysdeps/nptl/thread_db.h.'>TD_OK</a>;
+<a id='L105' name='L105'></a> 105 <em class='brace'>}</em>
+<a id='L106' name='L106'></a> 106 
+<a id='L107' name='L107'></a> 107 <em class='comment'>/* Return in *BASE the base address of the TLS block for MODID within</em>
+<a id='L108' name='L108'></a> 108 <em class='comment'>   TH.</em>
+<a id='L109' name='L109'></a> 109 <em class='comment'></em>
+<a id='L110' name='L110'></a> 110 <em class='comment'>   It should return success and yield the correct pointer in any</em>
+<a id='L111' name='L111'></a> 111 <em class='comment'>   circumstance where the TLS block for the module and thread</em>
+<a id='L112' name='L112'></a> 112 <em class='comment'>   requested has already been initialized.</em>
+<a id='L113' name='L113'></a> 113 <em class='comment'></em>
+<a id='L114' name='L114'></a> 114 <em class='comment'>   It should fail with TD_TLSDEFER only when the thread could not</em>
+<a id='L115' name='L115'></a> 115 <em class='comment'>   possibly have observed any values in that TLS block.  That way, the</em>
+<a id='L116' name='L116'></a> 116 <em class='comment'>   debugger can fall back to showing initial values from the PT_TLS</em>
+<a id='L117' name='L117'></a> 117 <em class='comment'>   segment (and refusing attempts to mutate) for the TD_TLSDEFER case,</em>
+<a id='L118' name='L118'></a> 118 <em class='comment'>   and never fail to make the values the program will actually see</em>
+<a id='L119' name='L119'></a> 119 <em class='comment'>   available to the user of the debugger.  */</em>
+<a id='L120' name='L120'></a> 120 <a href='../S/17829.html#L59' title='Defined at 59 in sysdeps/nptl/thread_db.h.'>td_err_e</a>
+<a id='L121' name='L121'></a> 121 <a href='../R/25169.html' title='Multiple referred from 2 places.'>td_thr_tlsbase</a> (<strong class='reserved'>const</strong> <a href='../S/17829.html#L96' title='Defined at 96 in sysdeps/nptl/thread_db.h.'>td_thrhandle_t</a> *<a href='../S/16383.html#L33' title='Defined at 33 in sysdeps/pthread/tst-abstime.c.'>th</a>,
+<a id='L122' name='L122'></a> 122         <strong class='reserved'>unsigned</strong> <strong class='reserved'>long</strong> <strong class='reserved'>int</strong> <a href='../Y/19514.html' title='Multiple used in 34 places.'>modid</a>,
+<a id='L123' name='L123'></a> 123         <a href='../D/35063.html' title='Multiple defined in 2 places.'>psaddr_t</a> *<a href='../Y/10765.html' title='Multiple used in 573 places.'>base</a>)
+<a id='L124' name='L124'></a> 124 <em class='brace'>{</em>
+<a id='L125' name='L125'></a> 125   <a href='../S/17829.html#L59' title='Defined at 59 in sysdeps/nptl/thread_db.h.'>td_err_e</a> <a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a>;
+<a id='L126' name='L126'></a> 126   <a href='../D/35063.html' title='Multiple defined in 2 places.'>psaddr_t</a> <a href='../D/29817.html' title='Multiple defined in 2 places.'>dtv</a>, <a href='../Y/13363.html' title='Multiple used in 3 places.'>dtvslot</a>, <a href='../Y/13362.html' title='Multiple used in 7 places.'>dtvptr</a>, <a href='../Y/26948.html' title='Multiple used in 493 places.'>temp</a>;
+<a id='L127' name='L127'></a> 127 
+<a id='L128' name='L128'></a> 128   <strong class='reserved'>if</strong> (<a href='../Y/19514.html' title='Multiple used in 34 places.'>modid</a> &lt; 1)
+<a id='L129' name='L129'></a> 129     <strong class='reserved'>return</strong> <a href='../S/17829.html#L58' title='Defined at 58 in sysdeps/nptl/thread_db.h.'>TD_NOTLS</a>;
+<a id='L130' name='L130'></a> 130 
+<a id='L131' name='L131'></a> 131   <a href='../D/35063.html' title='Multiple defined in 2 places.'>psaddr_t</a> <a href='../Y/22310.html' title='Multiple used in 361 places.'>pd</a> = <a href='../S/16383.html#L33' title='Defined at 33 in sysdeps/pthread/tst-abstime.c.'>th</a>-&gt;<a href='../Y/27105.html' title='Multiple used in 36 places.'>th_unique</a>;
+<a id='L132' name='L132'></a> 132   <strong class='reserved'>if</strong> (<a href='../Y/22310.html' title='Multiple used in 361 places.'>pd</a> == 0)
+<a id='L133' name='L133'></a> 133     <em class='brace'>{</em>
+<a id='L134' name='L134'></a> 134       <em class='comment'>/* This is the fake handle for the main thread before libpthread</em>
+<a id='L135' name='L135'></a> 135 <em class='comment'>     initialization.  We are using 0 for its th_unique because we can't</em>
+<a id='L136' name='L136'></a> 136 <em class='comment'>     trust that its thread register has been initialized.  But we need</em>
+<a id='L137' name='L137'></a> 137 <em class='comment'>     a real pointer to have any TLS access work.  In case of dlopen'd</em>
+<a id='L138' name='L138'></a> 138 <em class='comment'>     libpthread, initialization might not be for quite some time.  So</em>
+<a id='L139' name='L139'></a> 139 <em class='comment'>     try looking up the thread register now.  Worst case, it's nonzero</em>
+<a id='L140' name='L140'></a> 140 <em class='comment'>     uninitialized garbage and we get bogus results for TLS access</em>
+<a id='L141' name='L141'></a> 141 <em class='comment'>     attempted too early.  Tough.  */</em>
+<a id='L142' name='L142'></a> 142 
+<a id='L143' name='L143'></a> 143       <a href='../S/17829.html#L96' title='Defined at 96 in sysdeps/nptl/thread_db.h.'>td_thrhandle_t</a> <a href='../Y/18845.html' title='Multiple used in 3 places.'>main_th</a>;
+<a id='L144' name='L144'></a> 144       <a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a> = <a href='../S/18842.html#L26' title='Defined at 26 in nptl_db/td_ta_map_lwp2thr.c.'>__td_ta_lookup_th_unique</a> (<a href='../S/16383.html#L33' title='Defined at 33 in sysdeps/pthread/tst-abstime.c.'>th</a>-&gt;<a href='../Y/27101.html' title='Multiple used in 85 places.'>th_ta_p</a>, <a href='../Y/22907.html' title='Multiple used in 8 places.'>ps_getpid</a> (<a href='../S/16383.html#L33' title='Defined at 33 in sysdeps/pthread/tst-abstime.c.'>th</a>-&gt;<a href='../Y/27101.html' title='Multiple used in 85 places.'>th_ta_p</a>-&gt;<a href='../Y/22375.html' title='Multiple used in 211 places.'>ph</a>),
+<a id='L145' name='L145'></a> 145                       &amp;<a href='../Y/18845.html' title='Multiple used in 3 places.'>main_th</a>);
+<a id='L146' name='L146'></a> 146       <strong class='reserved'>if</strong> (<a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a> == 0)
+<a id='L147' name='L147'></a> 147     <a href='../Y/22310.html' title='Multiple used in 361 places.'>pd</a> = <a href='../Y/18845.html' title='Multiple used in 3 places.'>main_th</a>.<a href='../Y/27105.html' title='Multiple used in 36 places.'>th_unique</a>;
+<a id='L148' name='L148'></a> 148       <strong class='reserved'>if</strong> (<a href='../Y/22310.html' title='Multiple used in 361 places.'>pd</a> == 0)
+<a id='L149' name='L149'></a> 149     <strong class='reserved'>return</strong> <a href='../S/17829.html#L55' title='Defined at 55 in sysdeps/nptl/thread_db.h.'>TD_TLSDEFER</a>;
+<a id='L150' name='L150'></a> 150     <em class='brace'>}</em>
+<a id='L151' name='L151'></a> 151 
+<a id='L152' name='L152'></a> 152   <a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a> = <a href='../D/29819.html' title='Multiple defined in 3 places.'>dtv_slotinfo</a> (<a href='../S/16383.html#L33' title='Defined at 33 in sysdeps/pthread/tst-abstime.c.'>th</a>-&gt;<a href='../Y/27101.html' title='Multiple used in 85 places.'>th_ta_p</a>, <a href='../Y/19514.html' title='Multiple used in 34 places.'>modid</a>, &amp;<a href='../Y/26948.html' title='Multiple used in 493 places.'>temp</a>);
+<a id='L153' name='L153'></a> 153   <strong class='reserved'>if</strong> (<a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a> != <a href='../S/17829.html#L34' title='Defined at 34 in sysdeps/nptl/thread_db.h.'>TD_OK</a>)
+<a id='L154' name='L154'></a> 154     <strong class='reserved'>return</strong> <a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a>;
+<a id='L155' name='L155'></a> 155 
+<a id='L156' name='L156'></a> 156   <a href='../D/35063.html' title='Multiple defined in 2 places.'>psaddr_t</a> <a href='../Y/25647.html' title='Multiple used in 56 places.'>slot</a>;
+<a id='L157' name='L157'></a> 157   <a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a> = <a href='../S/18811.html#L248' title='Defined at 248 in nptl_db/thread_dbP.h.'>DB_GET_STRUCT</a> (<a href='../Y/25647.html' title='Multiple used in 56 places.'>slot</a>, <a href='../S/16383.html#L33' title='Defined at 33 in sysdeps/pthread/tst-abstime.c.'>th</a>-&gt;<a href='../Y/27101.html' title='Multiple used in 85 places.'>th_ta_p</a>, <a href='../Y/26948.html' title='Multiple used in 493 places.'>temp</a>, <a href='../D/29819.html' title='Multiple defined in 3 places.'>dtv_slotinfo</a>);
+<a id='L158' name='L158'></a> 158   <strong class='reserved'>if</strong> (<a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a> != <a href='../S/17829.html#L34' title='Defined at 34 in sysdeps/nptl/thread_db.h.'>TD_OK</a>)
+<a id='L159' name='L159'></a> 159     <strong class='reserved'>return</strong> <a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a>;
+<a id='L160' name='L160'></a> 160 
+<a id='L161' name='L161'></a> 161   <em class='comment'>/* Take the link_map from the slotinfo.  */</em>
+<a id='L162' name='L162'></a> 162   <a href='../D/35063.html' title='Multiple defined in 2 places.'>psaddr_t</a> <a href='../D/33311.html' title='Multiple defined in 2 places.'>map</a>;
+<a id='L163' name='L163'></a> 163   <a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a> = <a href='../S/18811.html#L192' title='Defined at 192 in nptl_db/thread_dbP.h.'>DB_GET_FIELD_LOCAL</a> (<a href='../D/33311.html' title='Multiple defined in 2 places.'>map</a>, <a href='../S/16383.html#L33' title='Defined at 33 in sysdeps/pthread/tst-abstime.c.'>th</a>-&gt;<a href='../Y/27101.html' title='Multiple used in 85 places.'>th_ta_p</a>, <a href='../Y/25647.html' title='Multiple used in 56 places.'>slot</a>, <a href='../D/29819.html' title='Multiple defined in 3 places.'>dtv_slotinfo</a>, <a href='../D/33311.html' title='Multiple defined in 2 places.'>map</a>, 0);
+<a id='L164' name='L164'></a> 164   <strong class='reserved'>if</strong> (<a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a> != <a href='../S/17829.html#L34' title='Defined at 34 in sysdeps/nptl/thread_db.h.'>TD_OK</a>)
+<a id='L165' name='L165'></a> 165     <strong class='reserved'>return</strong> <a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a>;
+<a id='L166' name='L166'></a> 166   <strong class='reserved'>if</strong> (!<a href='../D/33311.html' title='Multiple defined in 2 places.'>map</a>)
+<a id='L167' name='L167'></a> 167     <strong class='reserved'>return</strong> <a href='../S/17829.html#L35' title='Defined at 35 in sysdeps/nptl/thread_db.h.'>TD_ERR</a>;
+<a id='L168' name='L168'></a> 168 
+<a id='L169' name='L169'></a> 169   <em class='comment'>/* Ok, the modid is good, now find out what DTV generation it</em>
+<a id='L170' name='L170'></a> 170 <em class='comment'>     requires.  */</em>
+<a id='L171' name='L171'></a> 171   <a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a> = <a href='../S/18811.html#L192' title='Defined at 192 in nptl_db/thread_dbP.h.'>DB_GET_FIELD_LOCAL</a> (<a href='../Y/26948.html' title='Multiple used in 493 places.'>temp</a>, <a href='../S/16383.html#L33' title='Defined at 33 in sysdeps/pthread/tst-abstime.c.'>th</a>-&gt;<a href='../Y/27101.html' title='Multiple used in 85 places.'>th_ta_p</a>, <a href='../Y/25647.html' title='Multiple used in 56 places.'>slot</a>, <a href='../D/29819.html' title='Multiple defined in 3 places.'>dtv_slotinfo</a>, <a href='../Y/15411.html' title='Multiple used in 108 places.'>gen</a>, 0);
+<a id='L172' name='L172'></a> 172   <strong class='reserved'>if</strong> (<a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a> != <a href='../S/17829.html#L34' title='Defined at 34 in sysdeps/nptl/thread_db.h.'>TD_OK</a>)
+<a id='L173' name='L173'></a> 173     <strong class='reserved'>return</strong> <a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a>;
+<a id='L174' name='L174'></a> 174   <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/19512.html' title='Multiple used in 2 places.'>modgen</a> = (<a href='../D/38692.html' title='Multiple defined in 2 places.'>uintptr_t</a>)<a href='../Y/26948.html' title='Multiple used in 493 places.'>temp</a>;
+<a id='L175' name='L175'></a> 175 
+<a id='L176' name='L176'></a> 176   <em class='comment'>/* Get the DTV pointer from the thread descriptor.  */</em>
+<a id='L177' name='L177'></a> 177   <a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a> = <a href='../S/18811.html#L165' title='Defined at 165 in nptl_db/thread_dbP.h.'>DB_GET_FIELD</a> (<a href='../D/29817.html' title='Multiple defined in 2 places.'>dtv</a>, <a href='../S/16383.html#L33' title='Defined at 33 in sysdeps/pthread/tst-abstime.c.'>th</a>-&gt;<a href='../Y/27101.html' title='Multiple used in 85 places.'>th_ta_p</a>, <a href='../Y/22310.html' title='Multiple used in 361 places.'>pd</a>, <a href='../D/35082.html' title='Multiple defined in 2 places.'>pthread</a>, <a href='../S/18821.html#L61' title='Defined at 61 in nptl_db/db_info.c.'>dtvp</a>, 0);
+<a id='L178' name='L178'></a> 178   <strong class='reserved'>if</strong> (<a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a> != <a href='../S/17829.html#L34' title='Defined at 34 in sysdeps/nptl/thread_db.h.'>TD_OK</a>)
+<a id='L179' name='L179'></a> 179     <strong class='reserved'>return</strong> <a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a>;
+<a id='L180' name='L180'></a> 180 
+<a id='L181' name='L181'></a> 181   <a href='../D/35063.html' title='Multiple defined in 2 places.'>psaddr_t</a> <a href='../Y/13361.html' title='Multiple used in 3 places.'>dtvgenloc</a>;
+<a id='L182' name='L182'></a> 182   <em class='comment'>/* Get the DTV generation count at dtv[0].counter.  */</em>
+<a id='L183' name='L183'></a> 183   <a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a> = <a href='../S/18811.html#L178' title='Defined at 178 in nptl_db/thread_dbP.h.'>DB_GET_FIELD_ADDRESS</a> (<a href='../Y/13361.html' title='Multiple used in 3 places.'>dtvgenloc</a>, <a href='../S/16383.html#L33' title='Defined at 33 in sysdeps/pthread/tst-abstime.c.'>th</a>-&gt;<a href='../Y/27101.html' title='Multiple used in 85 places.'>th_ta_p</a>, <a href='../D/29817.html' title='Multiple defined in 2 places.'>dtv</a>, <a href='../D/29817.html' title='Multiple defined in 2 places.'>dtv</a>, <a href='../D/29817.html' title='Multiple defined in 2 places.'>dtv</a>, 0);
+<a id='L184' name='L184'></a> 184   <strong class='reserved'>if</strong> (<a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a> != <a href='../S/17829.html#L34' title='Defined at 34 in sysdeps/nptl/thread_db.h.'>TD_OK</a>)
+<a id='L185' name='L185'></a> 185     <strong class='reserved'>return</strong> <a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a>;
+<a id='L186' name='L186'></a> 186   <a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a> = <a href='../S/18811.html#L165' title='Defined at 165 in nptl_db/thread_dbP.h.'>DB_GET_FIELD</a> (<a href='../Y/26948.html' title='Multiple used in 493 places.'>temp</a>, <a href='../S/16383.html#L33' title='Defined at 33 in sysdeps/pthread/tst-abstime.c.'>th</a>-&gt;<a href='../Y/27101.html' title='Multiple used in 85 places.'>th_ta_p</a>, <a href='../Y/13361.html' title='Multiple used in 3 places.'>dtvgenloc</a>, <a href='../S/12350.html#L33' title='Defined at 33 in sysdeps/generic/dl-dtv.h.'>dtv_t</a>, <a href='../S/18705.html#L29' title='Defined at 29 in nptl/tst-thread_local1.cc.'>counter</a>, 0);
+<a id='L187' name='L187'></a> 187   <strong class='reserved'>if</strong> (<a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a> != <a href='../S/17829.html#L34' title='Defined at 34 in sysdeps/nptl/thread_db.h.'>TD_OK</a>)
+<a id='L188' name='L188'></a> 188     <strong class='reserved'>return</strong> <a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a>;
+<a id='L189' name='L189'></a> 189   <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/13360.html' title='Multiple used in 2 places.'>dtvgen</a> = (<a href='../D/38692.html' title='Multiple defined in 2 places.'>uintptr_t</a>)<a href='../Y/26948.html' title='Multiple used in 493 places.'>temp</a>;
+<a id='L190' name='L190'></a> 190 
+<a id='L191' name='L191'></a> 191   <em class='comment'>/* Is the DTV current enough?  */</em>
+<a id='L192' name='L192'></a> 192   <strong class='reserved'>if</strong> (<a href='../Y/13360.html' title='Multiple used in 2 places.'>dtvgen</a> &lt; <a href='../Y/19512.html' title='Multiple used in 2 places.'>modgen</a>)
+<a id='L193' name='L193'></a> 193     <em class='brace'>{</em>
+<a id='L194' name='L194'></a> 194     <a href='../Y/27824.html' title='Multiple used in 2 places.'>try_static_tls</a>:
+<a id='L195' name='L195'></a> 195       <em class='comment'>/* If the module uses Static TLS, we're still good.  */</em>
+<a id='L196' name='L196'></a> 196       <a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a> = <a href='../S/18811.html#L165' title='Defined at 165 in nptl_db/thread_dbP.h.'>DB_GET_FIELD</a> (<a href='../Y/26948.html' title='Multiple used in 493 places.'>temp</a>, <a href='../S/16383.html#L33' title='Defined at 33 in sysdeps/pthread/tst-abstime.c.'>th</a>-&gt;<a href='../Y/27101.html' title='Multiple used in 85 places.'>th_ta_p</a>, <a href='../D/33311.html' title='Multiple defined in 2 places.'>map</a>, <a href='../D/32945.html' title='Multiple defined in 4 places.'>link_map</a>, <a href='../Y/17676.html' title='Multiple used in 100 places.'>l_tls_offset</a>, 0);
+<a id='L197' name='L197'></a> 197       <strong class='reserved'>if</strong> (<a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a> != <a href='../S/17829.html#L34' title='Defined at 34 in sysdeps/nptl/thread_db.h.'>TD_OK</a>)
+<a id='L198' name='L198'></a> 198     <strong class='reserved'>return</strong> <a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a>;
+<a id='L199' name='L199'></a> 199       <a href='../Y/23108.html' title='Multiple used in 102 places.'>ptrdiff_t</a> <a href='../Y/27399.html' title='Multiple used in 5 places.'>tlsoff</a> = (<a href='../D/38692.html' title='Multiple defined in 2 places.'>uintptr_t</a>)<a href='../Y/26948.html' title='Multiple used in 493 places.'>temp</a>;
+<a id='L200' name='L200'></a> 200 
+<a id='L201' name='L201'></a> 201       <strong class='reserved'>if</strong> (<a href='../Y/27399.html' title='Multiple used in 5 places.'>tlsoff</a> != <a href='../D/4353.html' title='Multiple defined in 2 places.'>FORCED_DYNAMIC_TLS_OFFSET</a>
+<a id='L202' name='L202'></a> 202       &amp;&amp; <a href='../Y/27399.html' title='Multiple used in 5 places.'>tlsoff</a> != <a href='../D/9008.html' title='Multiple defined in 6 places.'>NO_TLS_OFFSET</a>)
+<a id='L203' name='L203'></a> 203     <em class='brace'>{</em>
+<a id='L204' name='L204'></a> 204       <a href='../D/35063.html' title='Multiple defined in 2 places.'>psaddr_t</a> <a href='../Y/27711.html' title='Multiple used in 432 places.'>tp</a> = <a href='../Y/22310.html' title='Multiple used in 361 places.'>pd</a>;
+<a id='L205' name='L205'></a> 205 
+<a id='L206' name='L206'></a> 206 <em class='sharp'>#if</em> <a href='../D/16103.html' title='Multiple defined in 20 places.'>TLS_TCB_AT_TP</a>
+<a id='L207' name='L207'></a> 207       <a href='../Y/13362.html' title='Multiple used in 7 places.'>dtvptr</a> = <a href='../Y/27711.html' title='Multiple used in 432 places.'>tp</a> - <a href='../Y/27399.html' title='Multiple used in 5 places.'>tlsoff</a>;
+<a id='L208' name='L208'></a> 208 <em class='sharp'>#elif</em> <a href='../D/16088.html' title='Multiple defined in 20 places.'>TLS_DTV_AT_TP</a>
+<a id='L209' name='L209'></a> 209       <a href='../Y/13362.html' title='Multiple used in 7 places.'>dtvptr</a> = <a href='../Y/27711.html' title='Multiple used in 432 places.'>tp</a> + <a href='../Y/27399.html' title='Multiple used in 5 places.'>tlsoff</a> + <a href='../D/16097.html' title='Multiple defined in 15 places.'>TLS_PRE_TCB_SIZE</a>;
+<a id='L210' name='L210'></a> 210 <em class='sharp'>#else</em>
+<a id='L211' name='L211'></a> 211 <em class='sharp'># error</em> "Either TLS_TCB_AT_TP or TLS_DTV_AT_TP must be defined"
+<a id='L212' name='L212'></a> 212 <em class='sharp'>#endif</em>
+<a id='L213' name='L213'></a> 213 
+<a id='L214' name='L214'></a> 214       *<a href='../Y/10765.html' title='Multiple used in 573 places.'>base</a> = <a href='../Y/13362.html' title='Multiple used in 7 places.'>dtvptr</a>;
+<a id='L215' name='L215'></a> 215       <strong class='reserved'>return</strong> <a href='../S/17829.html#L34' title='Defined at 34 in sysdeps/nptl/thread_db.h.'>TD_OK</a>;
+<a id='L216' name='L216'></a> 216     <em class='brace'>}</em>
+<a id='L217' name='L217'></a> 217 
+<a id='L218' name='L218'></a> 218       <strong class='reserved'>return</strong> <a href='../S/17829.html#L55' title='Defined at 55 in sysdeps/nptl/thread_db.h.'>TD_TLSDEFER</a>;
+<a id='L219' name='L219'></a> 219     <em class='brace'>}</em>
+<a id='L220' name='L220'></a> 220 
+<a id='L221' name='L221'></a> 221   <em class='comment'>/* Find the corresponding entry in the DTV.  */</em>
+<a id='L222' name='L222'></a> 222   <a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a> = <a href='../S/18811.html#L178' title='Defined at 178 in nptl_db/thread_dbP.h.'>DB_GET_FIELD_ADDRESS</a> (<a href='../Y/13363.html' title='Multiple used in 3 places.'>dtvslot</a>, <a href='../S/16383.html#L33' title='Defined at 33 in sysdeps/pthread/tst-abstime.c.'>th</a>-&gt;<a href='../Y/27101.html' title='Multiple used in 85 places.'>th_ta_p</a>, <a href='../D/29817.html' title='Multiple defined in 2 places.'>dtv</a>, <a href='../D/29817.html' title='Multiple defined in 2 places.'>dtv</a>, <a href='../D/29817.html' title='Multiple defined in 2 places.'>dtv</a>, <a href='../Y/19514.html' title='Multiple used in 34 places.'>modid</a>);
+<a id='L223' name='L223'></a> 223   <strong class='reserved'>if</strong> (<a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a> != <a href='../S/17829.html#L34' title='Defined at 34 in sysdeps/nptl/thread_db.h.'>TD_OK</a>)
+<a id='L224' name='L224'></a> 224     <strong class='reserved'>return</strong> <a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a>;
+<a id='L225' name='L225'></a> 225 
+<a id='L226' name='L226'></a> 226   <em class='comment'>/* Extract the TLS block address from that DTV slot.  */</em>
+<a id='L227' name='L227'></a> 227   <a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a> = <a href='../S/18811.html#L165' title='Defined at 165 in nptl_db/thread_dbP.h.'>DB_GET_FIELD</a> (<a href='../Y/13362.html' title='Multiple used in 7 places.'>dtvptr</a>, <a href='../S/16383.html#L33' title='Defined at 33 in sysdeps/pthread/tst-abstime.c.'>th</a>-&gt;<a href='../Y/27101.html' title='Multiple used in 85 places.'>th_ta_p</a>, <a href='../Y/13363.html' title='Multiple used in 3 places.'>dtvslot</a>, <a href='../S/12350.html#L33' title='Defined at 33 in sysdeps/generic/dl-dtv.h.'>dtv_t</a>, pointer_val, 0);
+<a id='L228' name='L228'></a> 228   <strong class='reserved'>if</strong> (<a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a> != <a href='../S/17829.html#L34' title='Defined at 34 in sysdeps/nptl/thread_db.h.'>TD_OK</a>)
+<a id='L229' name='L229'></a> 229     <strong class='reserved'>return</strong> <a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a>;
+<a id='L230' name='L230'></a> 230 
+<a id='L231' name='L231'></a> 231   <em class='comment'>/* It could be that the memory for this module is not allocated for</em>
+<a id='L232' name='L232'></a> 232 <em class='comment'>     the given thread.  */</em>
+<a id='L233' name='L233'></a> 233   <strong class='reserved'>if</strong> ((<a href='../D/38692.html' title='Multiple defined in 2 places.'>uintptr_t</a>) <a href='../Y/13362.html' title='Multiple used in 7 places.'>dtvptr</a> &amp; 1)
+<a id='L234' name='L234'></a> 234     <strong class='reserved'>goto</strong> <a href='../Y/27824.html' title='Multiple used in 2 places.'>try_static_tls</a>;
+<a id='L235' name='L235'></a> 235 
+<a id='L236' name='L236'></a> 236   *<a href='../Y/10765.html' title='Multiple used in 573 places.'>base</a> = <a href='../Y/13362.html' title='Multiple used in 7 places.'>dtvptr</a>;
+<a id='L237' name='L237'></a> 237   <strong class='reserved'>return</strong> <a href='../S/17829.html#L34' title='Defined at 34 in sysdeps/nptl/thread_db.h.'>TD_OK</a>;
+<a id='L238' name='L238'></a> 238 <em class='brace'>}</em>
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L25'>[^]</a><a href='#L121'>[v]</a><a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

@@ -1,0 +1,201 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>sysdeps/powerpc/powerpc64/le/power10/memcmp.S</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18977.html'>sysdeps</a>/<a href='../files/19149.html'>powerpc</a>/<a href='../files/19172.html'>powerpc64</a>/<a href='../files/19180.html'>le</a>/<a href='../files/19183.html'>power10</a>/memcmp.S</h2>
+<em class='comment'>/* [&lt;][&gt;][^][v][top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* Optimized memcmp implementation for POWER10.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   Copyright (C) 2021-2022 Free Software Foundation, Inc.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'></em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'></em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'></em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   License along with the GNU C Library; if not, see</em>
+<a id='L17' name='L17'></a>  17 <em class='comment'>   &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L18' name='L18'></a>  18 
+<a id='L19' name='L19'></a>  19 <em class='sharp'>#include</em> &lt;<a href='../I/5967.html'>sysdep.h</a>&gt;
+<a id='L20' name='L20'></a>  20 
+<a id='L21' name='L21'></a>  21 <em class='comment'>/* TODO: Replace macros by the actual instructions when minimum binutils becomes</em>
+<a id='L22' name='L22'></a>  22 <em class='comment'>   &gt;= 2.35.  This is used to keep compatibility with older versions.  */</em>
+<a id='L23' name='L23'></a>  23 <em class='sharp'>#define</em> VEXTRACTBM(rt,vrb)   \
+<a id='L24' name='L24'></a>  24     .long(((4)&lt;&lt;(32-6))  \
+<a id='L25' name='L25'></a>  25           | ((rt)&lt;&lt;(32-11))  \
+<a id='L26' name='L26'></a>  26           | ((8)&lt;&lt;(32-16))   \
+<a id='L27' name='L27'></a>  27           | ((vrb)&lt;&lt;(32-21)) \
+<a id='L28' name='L28'></a>  28           | 1602)
+<a id='L29' name='L29'></a>  29 
+<a id='L30' name='L30'></a>  30 <em class='sharp'>#define</em> LXVP(xtp,dq,ra)            \
+<a id='L31' name='L31'></a>  31     .long(((6)&lt;&lt;(32-6))        \
+<a id='L32' name='L32'></a>  32           | ((((xtp)-32)&gt;&gt;1)&lt;&lt;(32-10)) \
+<a id='L33' name='L33'></a>  33           | ((1)&lt;&lt;(32-11))         \
+<a id='L34' name='L34'></a>  34           | ((ra)&lt;&lt;(32-16))        \
+<a id='L35' name='L35'></a>  35           | dq)
+<a id='L36' name='L36'></a>  36 
+<a id='L37' name='L37'></a>  37 <em class='comment'>/* Compare 32 bytes.  */</em>
+<a id='L38' name='L38'></a>  38 <em class='sharp'>#define</em> COMPARE_32(vr1,vr2,offset,tail_1,tail_2)\
+<a id='L39' name='L39'></a>  39     LXVP(32+vr1,offset,r3);     \
+<a id='L40' name='L40'></a>  40     LXVP(32+vr2,offset,r4);     \
+<a id='L41' name='L41'></a>  41     vcmpneb.  v5,vr1+1,vr2+1;   \
+<a id='L42' name='L42'></a>  42     bne   cr6,L(tail_2);    \
+<a id='L43' name='L43'></a>  43     vcmpneb.  v4,vr1,vr2;       \
+<a id='L44' name='L44'></a>  44     bne   cr6,L(tail_1);    \
+<a id='L45' name='L45'></a>  45 
+<a id='L46' name='L46'></a>  46 <em class='sharp'>#define</em> TAIL(v_res,s1,s2)   \
+<a id='L47' name='L47'></a>  47     vctzlsbb  r7,v_res; \
+<a id='L48' name='L48'></a>  48     vextubrx  r8,r7,s1; \
+<a id='L49' name='L49'></a>  49     vextubrx  r9,r7,s2; \
+<a id='L50' name='L50'></a>  50     subf      r3,r9,r8; \
+<a id='L51' name='L51'></a>  51     blr;            \
+<a id='L52' name='L52'></a>  52 
+<a id='L53' name='L53'></a>  53 <em class='comment'>/* int [r3] memcmp (const char *s1 [r3], const char *s2 [r4],</em>
+<a id='L54' name='L54'></a>  54 <em class='comment'>                    size_t size [r5])  */</em>
+<a id='L55' name='L55'></a>  55 
+<a id='L56' name='L56'></a>  56 <em class='sharp'>#ifndef</em> <a href='../D/7867.html' title='Multiple defined in 53 places.'>MEMCMP</a>
+<a id='L57' name='L57'></a>  57 <em class='sharp'># define</em> <a href='../R/4812.html' title='Multiple referred from 30 places.'>MEMCMP</a> memcmp
+<a id='L58' name='L58'></a>  58 <em class='sharp'>#endif</em>
+<a id='L59' name='L59'></a>  59     .machine  power9
+<a id='L60' name='L60'></a>  60 ENTRY_TOCLESS (MEMCMP, 4)
+<a id='L61' name='L61'></a>  61     CALL_MCOUNT 3
+<a id='L62' name='L62'></a>  62 
+<a id='L63' name='L63'></a>  63     cmpldi  cr6,r5,64
+<a id='L64' name='L64'></a>  64     bgt cr6,L(loop_head)
+<a id='L65' name='L65'></a>  65 
+<a id='L66' name='L66'></a>  66 <em class='comment'>/* Compare 64 bytes. This section is used for lengths &lt;= 64 and for the last</em>
+<a id='L67' name='L67'></a>  67 <em class='comment'>   bytes for larger lengths.  */</em>
+<a id='L68' name='L68'></a>  68 L(last_compare):
+<a id='L69' name='L69'></a>  69     li  r8,16
+<a id='L70' name='L70'></a>  70 
+<a id='L71' name='L71'></a>  71     sldi    r9,r5,56
+<a id='L72' name='L72'></a>  72     sldi    r8,r8,56
+<a id='L73' name='L73'></a>  73     addi    r6,r3,16
+<a id='L74' name='L74'></a>  74     addi    r7,r4,16
+<a id='L75' name='L75'></a>  75 
+<a id='L76' name='L76'></a>  76     <em class='comment'>/* Align up to 16 bytes.  */</em>
+<a id='L77' name='L77'></a>  77     lxvl    32+v0,r3,r9
+<a id='L78' name='L78'></a>  78     lxvl    32+v2,r4,r9
+<a id='L79' name='L79'></a>  79 
+<a id='L80' name='L80'></a>  80     <em class='comment'>/* The sub. and vcmpneb. results are concatenated by the crnand in order</em>
+<a id='L81' name='L81'></a>  81 <em class='comment'>       to do a single branch. It's doing a NOT(CR0.GT AND CR6.EQ) then</em>
+<a id='L82' name='L82'></a>  82 <em class='comment'>       loading to CR0.LT.  That means r9 is not bigger than 0 and v4 is not</em>
+<a id='L83' name='L83'></a>  83 <em class='comment'>       all equal to 0.  */</em>
+<a id='L84' name='L84'></a>  84     sub.      r9,r9,r8
+<a id='L85' name='L85'></a>  85     vcmpneb.  v4,v0,v2
+<a id='L86' name='L86'></a>  86     crnand    4*cr0+lt,4*cr0+gt,4*cr6+eq
+<a id='L87' name='L87'></a>  87     bt    4*cr0+lt,L(tail1)
+<a id='L88' name='L88'></a>  88 
+<a id='L89' name='L89'></a>  89     addi      r3,r3,32
+<a id='L90' name='L90'></a>  90     addi      r4,r4,32
+<a id='L91' name='L91'></a>  91 
+<a id='L92' name='L92'></a>  92     lxvl      32+v1,r6,r9
+<a id='L93' name='L93'></a>  93     lxvl      32+v3,r7,r9
+<a id='L94' name='L94'></a>  94     sub.      r9,r9,r8
+<a id='L95' name='L95'></a>  95     vcmpneb.  v5,v1,v3
+<a id='L96' name='L96'></a>  96     crnand    4*cr0+lt,4*cr0+gt,4*cr6+eq
+<a id='L97' name='L97'></a>  97     bt    4*cr0+lt,L(tail2)
+<a id='L98' name='L98'></a>  98 
+<a id='L99' name='L99'></a>  99     addi      r6,r3,16
+<a id='L100' name='L100'></a> 100     addi      r7,r4,16
+<a id='L101' name='L101'></a> 101 
+<a id='L102' name='L102'></a> 102     lxvl      32+v6,r3,r9
+<a id='L103' name='L103'></a> 103     lxvl      32+v8,r4,r9
+<a id='L104' name='L104'></a> 104     sub.      r9,r9,r8
+<a id='L105' name='L105'></a> 105     vcmpneb.  v4,v6,v8
+<a id='L106' name='L106'></a> 106     crnand    4*cr0+lt,4*cr0+gt,4*cr6+eq
+<a id='L107' name='L107'></a> 107     bt    4*cr0+lt,L(tail3)
+<a id='L108' name='L108'></a> 108 
+<a id='L109' name='L109'></a> 109     lxvl      32+v7,r6,r9
+<a id='L110' name='L110'></a> 110     lxvl      32+v9,r7,r9
+<a id='L111' name='L111'></a> 111     vcmpneb.  v5,v7,v9
+<a id='L112' name='L112'></a> 112     bne   cr6,L(tail4)
+<a id='L113' name='L113'></a> 113 
+<a id='L114' name='L114'></a> 114 L(finish):
+<a id='L115' name='L115'></a> 115     <em class='comment'>/* The contents are equal.  */</em>
+<a id='L116' name='L116'></a> 116     li  r3,0
+<a id='L117' name='L117'></a> 117     blr
+<a id='L118' name='L118'></a> 118 
+<a id='L119' name='L119'></a> 119 L(loop_head):
+<a id='L120' name='L120'></a> 120     <em class='comment'>/* Calculate how many loops to run.  */</em>
+<a id='L121' name='L121'></a> 121     srdi.   r8,r5,7
+<a id='L122' name='L122'></a> 122     beq L(loop_tail)
+<a id='L123' name='L123'></a> 123     mtctr   r8
+<a id='L124' name='L124'></a> 124 
+<a id='L125' name='L125'></a> 125 <em class='comment'>/* Main loop.  Compares 128 bytes each loop.  */</em>
+<a id='L126' name='L126'></a> 126     .p2align 5
+<a id='L127' name='L127'></a> 127 L(loop_128):
+<a id='L128' name='L128'></a> 128     COMPARE_32(v0,v2,0,tail1,tail2)
+<a id='L129' name='L129'></a> 129     COMPARE_32(v6,v8,32,tail3,tail4)
+<a id='L130' name='L130'></a> 130     COMPARE_32(v10,v12,64,tail5,tail6)
+<a id='L131' name='L131'></a> 131     COMPARE_32(v14,v16,96,tail7,tail8)
+<a id='L132' name='L132'></a> 132 
+<a id='L133' name='L133'></a> 133     addi    r3,r3,128
+<a id='L134' name='L134'></a> 134     addi    r4,r4,128
+<a id='L135' name='L135'></a> 135     bdnz    L(loop_128)
+<a id='L136' name='L136'></a> 136 
+<a id='L137' name='L137'></a> 137     <em class='comment'>/* Account loop comparisons.  */</em>
+<a id='L138' name='L138'></a> 138     clrldi.  r5,r5,57
+<a id='L139' name='L139'></a> 139     beq  L(finish)
+<a id='L140' name='L140'></a> 140 
+<a id='L141' name='L141'></a> 141 <em class='comment'>/* Compares 64 bytes if length is still bigger than 64 bytes.  */</em>
+<a id='L142' name='L142'></a> 142     .p2align 5
+<a id='L143' name='L143'></a> 143 L(loop_tail):
+<a id='L144' name='L144'></a> 144     cmpldi  r5,64
+<a id='L145' name='L145'></a> 145     ble L(last_compare)
+<a id='L146' name='L146'></a> 146     COMPARE_32(v0,v2,0,tail1,tail2)
+<a id='L147' name='L147'></a> 147     COMPARE_32(v6,v8,32,tail3,tail4)
+<a id='L148' name='L148'></a> 148     addi    r3,r3,64
+<a id='L149' name='L149'></a> 149     addi    r4,r4,64
+<a id='L150' name='L150'></a> 150     subi    r5,r5,64
+<a id='L151' name='L151'></a> 151     b   L(last_compare)
+<a id='L152' name='L152'></a> 152 
+<a id='L153' name='L153'></a> 153 L(tail1):
+<a id='L154' name='L154'></a> 154     TAIL(v4,v0,v2)
+<a id='L155' name='L155'></a> 155 
+<a id='L156' name='L156'></a> 156 L(tail2):
+<a id='L157' name='L157'></a> 157     TAIL(v5,v1,v3)
+<a id='L158' name='L158'></a> 158 
+<a id='L159' name='L159'></a> 159 L(tail3):
+<a id='L160' name='L160'></a> 160     TAIL(v4,v6,v8)
+<a id='L161' name='L161'></a> 161 
+<a id='L162' name='L162'></a> 162 L(tail4):
+<a id='L163' name='L163'></a> 163     TAIL(v5,v7,v9)
+<a id='L164' name='L164'></a> 164 
+<a id='L165' name='L165'></a> 165 L(tail5):
+<a id='L166' name='L166'></a> 166     TAIL(v4,v10,v12)
+<a id='L167' name='L167'></a> 167 
+<a id='L168' name='L168'></a> 168 L(tail6):
+<a id='L169' name='L169'></a> 169     TAIL(v5,v11,v13)
+<a id='L170' name='L170'></a> 170 
+<a id='L171' name='L171'></a> 171 L(tail7):
+<a id='L172' name='L172'></a> 172     TAIL(v4,v14,v16)
+<a id='L173' name='L173'></a> 173 
+<a id='L174' name='L174'></a> 174 L(tail8):
+<a id='L175' name='L175'></a> 175     TAIL(v5,v15,v17)
+<a id='L176' name='L176'></a> 176 
+<a id='L177' name='L177'></a> 177 END (MEMCMP)
+<a id='L178' name='L178'></a> 178 libc_hidden_builtin_def (memcmp)
+<a id='L179' name='L179'></a> 179 weak_alias (memcmp, bcmp)
+<a id='L180' name='L180'></a> 180 strong_alias (memcmp, __memcmpeq)
+<a id='L181' name='L181'></a> 181 libc_hidden_def (__memcmpeq)
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;][^][v]<a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

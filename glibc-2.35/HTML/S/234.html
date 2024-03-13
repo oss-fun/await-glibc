@@ -1,0 +1,123 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>csu/check_fds.c</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18863.html'>csu</a>/check_fds.c</h2>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L40'>[^]</a><a href='#L87'>[v]</a>[top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<h2 class='header'>DEFINITIONS</h2>
+This source file includes following definitions.
+<ol>
+<li><a href='#L40' title='Defined at 40.'>check_one_fd</a></li>
+<li><a href='#L87' title='Defined at 87.'>__libc_check_standard_fds</a></li>
+</ol>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* Copyright (C) 2000-2022 Free Software Foundation, Inc.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'></em>
+<a id='L4' name='L4'></a>   4 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'></em>
+<a id='L9' name='L9'></a>   9 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'></em>
+<a id='L14' name='L14'></a>  14 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   License along with the GNU C Library; if not, see</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L17' name='L17'></a>  17 
+<a id='L18' name='L18'></a>  18 <em class='sharp'>#include</em> &lt;<a href='../I/116.html'>errno.h</a>&gt;
+<a id='L19' name='L19'></a>  19 <em class='sharp'>#include</em> &lt;<a href='../I/117.html'>fcntl.h</a>&gt;
+<a id='L20' name='L20'></a>  20 <em class='sharp'>#include</em> &lt;<a href='../I/6568.html'>paths.h</a>&gt;
+<a id='L21' name='L21'></a>  21 <em class='sharp'>#include</em> &lt;<a href='../I/1819.html'>unistd.h</a>&gt;
+<a id='L22' name='L22'></a>  22 <em class='sharp'>#include</em> &lt;<a href='../I/167.html'>sys/stat.h</a>&gt;
+<a id='L23' name='L23'></a>  23 <em class='sharp'>#include</em> &lt;<a href='../I/174.html'>sys/sysmacros.h</a>&gt;
+<a id='L24' name='L24'></a>  24 
+<a id='L25' name='L25'></a>  25 <em class='comment'>/* Try to get a machine dependent instruction which will make the</em>
+<a id='L26' name='L26'></a>  26 <em class='comment'>   program crash.  This is used in case everything else fails.  */</em>
+<a id='L27' name='L27'></a>  27 <em class='sharp'>#include</em> &lt;<a href='../I/5835.html'>abort-instr.h</a>&gt;
+<a id='L28' name='L28'></a>  28 <em class='sharp'>#ifndef</em> <a href='../D/29.html' title='Multiple defined in 21 places.'>ABORT_INSTRUCTION</a>
+<a id='L29' name='L29'></a>  29 <em class='comment'>/* No such instruction is available.  */</em>
+<a id='L30' name='L30'></a>  30 <em class='sharp'># define</em> <a href='../R/27.html' title='Multiple referred from 17 places.'>ABORT_INSTRUCTION</a>
+<a id='L31' name='L31'></a>  31 <em class='sharp'>#endif</em>
+<a id='L32' name='L32'></a>  32 
+<a id='L33' name='L33'></a>  33 <em class='sharp'>#include</em> &lt;<a href='../I/6426.html'>device-nrs.h</a>&gt;
+<a id='L34' name='L34'></a>  34 <em class='sharp'>#include</em> &lt;<a href='../I/6564.html'>not-cancel.h</a>&gt;
+<a id='L35' name='L35'></a>  35 
+<a id='L36' name='L36'></a>  36 
+<a id='L37' name='L37'></a>  37 <em class='comment'>/* Should other OSes (e.g., Hurd) have different versions which can</em>
+<a id='L38' name='L38'></a>  38 <em class='comment'>   be written in a better way?  */</em>
+<a id='L39' name='L39'></a>  39 <strong class='reserved'>static</strong> <strong class='reserved'>void</strong>
+<a id='L40' name='L40'></a>  40 <a href='../R/17978.html' title='Multiple referred from 6 places.'>check_one_fd</a> (<strong class='reserved'>int</strong> <a href='../S/1663.html#L52' title='Defined at 52 in nscd/initgrcache.c.'>fd</a>, <strong class='reserved'>int</strong> <a href='../Y/19494.html' title='Multiple used in 1028 places.'>mode</a>)
+<a id='L41' name='L41'></a>  41 <em class='brace'>{</em>
+<a id='L42' name='L42'></a>  42   <strong class='reserved'>if</strong> (<a href='../D/23349.html' title='Multiple defined in 3 places.'>__builtin_expect</a> (<a href='../D/23817.html' title='Multiple defined in 3 places.'>__fcntl64_nocancel</a> (<a href='../S/1663.html#L52' title='Defined at 52 in nscd/initgrcache.c.'>fd</a>, <a href='../D/4869.html' title='Multiple defined in 3 places.'>F_GETFD</a>), 0) == -1
+<a id='L43' name='L43'></a>  43       &amp;&amp; <a href='../D/30023.html' title='Multiple defined in 13 places.'>errno</a> == <a href='../D/2928.html' title='Multiple defined in 2 places.'>EBADF</a>)
+<a id='L44' name='L44'></a>  44     <em class='brace'>{</em>
+<a id='L45' name='L45'></a>  45       <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../D/33817.html' title='Multiple defined in 21 places.'>name</a>;
+<a id='L46' name='L46'></a>  46       <a href='../D/29455.html' title='Multiple defined in 2 places.'>dev_t</a> <a href='../Y/12732.html' title='Multiple used in 92 places.'>dev</a>;
+<a id='L47' name='L47'></a>  47 
+<a id='L48' name='L48'></a>  48       <em class='comment'>/* For writable descriptors we use /dev/full.  */</em>
+<a id='L49' name='L49'></a>  49       <strong class='reserved'>if</strong> ((<a href='../Y/19494.html' title='Multiple used in 1028 places.'>mode</a> &amp; <a href='../D/9607.html' title='Multiple defined in 3 places.'>O_ACCMODE</a>) == <a href='../D/9642.html' title='Multiple defined in 3 places.'>O_WRONLY</a>)
+<a id='L50' name='L50'></a>  50     <em class='brace'>{</em>
+<a id='L51' name='L51'></a>  51       <a href='../D/33817.html' title='Multiple defined in 21 places.'>name</a> = <a href='../D/19728.html' title='Multiple defined in 2 places.'>_PATH_DEV</a> "full";
+<a id='L52' name='L52'></a>  52       <a href='../Y/12732.html' title='Multiple used in 92 places.'>dev</a> = <a href='../Y/4797.html' title='Multiple used in 5 places.'>__gnu_dev_makedev</a> (<a href='../S/10384.html#L29' title='Defined at 29 in sysdeps/unix/sysv/linux/device-nrs.h.'>DEV_FULL_MAJOR</a>, <a href='../S/10384.html#L30' title='Defined at 30 in sysdeps/unix/sysv/linux/device-nrs.h.'>DEV_FULL_MINOR</a>);
+<a id='L53' name='L53'></a>  53     <em class='brace'>}</em>
+<a id='L54' name='L54'></a>  54       <strong class='reserved'>else</strong>
+<a id='L55' name='L55'></a>  55     <em class='brace'>{</em>
+<a id='L56' name='L56'></a>  56       <a href='../D/33817.html' title='Multiple defined in 21 places.'>name</a> = <a href='../D/19730.html' title='Multiple defined in 2 places.'>_PATH_DEVNULL</a>;
+<a id='L57' name='L57'></a>  57       <a href='../Y/12732.html' title='Multiple used in 92 places.'>dev</a> = <a href='../Y/4797.html' title='Multiple used in 5 places.'>__gnu_dev_makedev</a> (<a href='../S/10384.html#L25' title='Defined at 25 in sysdeps/unix/sysv/linux/device-nrs.h.'>DEV_NULL_MAJOR</a>, <a href='../S/10384.html#L26' title='Defined at 26 in sysdeps/unix/sysv/linux/device-nrs.h.'>DEV_NULL_MINOR</a>);
+<a id='L58' name='L58'></a>  58     <em class='brace'>}</em>
+<a id='L59' name='L59'></a>  59 
+<a id='L60' name='L60'></a>  60       <em class='comment'>/* Something is wrong with this descriptor, it's probably not</em>
+<a id='L61' name='L61'></a>  61 <em class='comment'>     opened.  Open /dev/null so that the SUID program we are</em>
+<a id='L62' name='L62'></a>  62 <em class='comment'>     about to start does not accidentally use this descriptor.  */</em>
+<a id='L63' name='L63'></a>  63       <strong class='reserved'>int</strong> <a href='../Y/21319.html' title='Multiple used in 28 places.'>nullfd</a> = <a href='../D/25357.html' title='Multiple defined in 3 places.'>__open_nocancel</a> (<a href='../D/33817.html' title='Multiple defined in 21 places.'>name</a>, <a href='../Y/19494.html' title='Multiple used in 1028 places.'>mode</a>, 0);
+<a id='L64' name='L64'></a>  64 
+<a id='L65' name='L65'></a>  65       <em class='comment'>/* We are very paranoid here.  With all means we try to ensure</em>
+<a id='L66' name='L66'></a>  66 <em class='comment'>     that we are actually opening the /dev/null device and nothing</em>
+<a id='L67' name='L67'></a>  67 <em class='comment'>     else.</em>
+<a id='L68' name='L68'></a>  68 <em class='comment'></em>
+<a id='L69' name='L69'></a>  69 <em class='comment'>     Note that the following code assumes that STDIN_FILENO,</em>
+<a id='L70' name='L70'></a>  70 <em class='comment'>     STDOUT_FILENO, STDERR_FILENO are the three lowest file</em>
+<a id='L71' name='L71'></a>  71 <em class='comment'>     decsriptor numbers, in this order.  */</em>
+<a id='L72' name='L72'></a>  72       <strong class='reserved'>struct</strong> <a href='../D/26130.html' title='Multiple defined in 3 places.'>__stat64_t64</a> <a href='../Y/25966.html' title='Multiple used in 1069 places.'>st</a>;
+<a id='L73' name='L73'></a>  73       <strong class='reserved'>if</strong> (<a href='../D/24205.html' title='Multiple defined in 2 places.'>__glibc_unlikely</a> (<a href='../Y/21319.html' title='Multiple used in 28 places.'>nullfd</a> != <a href='../S/1663.html#L52' title='Defined at 52 in nscd/initgrcache.c.'>fd</a>)
+<a id='L74' name='L74'></a>  74       || <a href='../D/24195.html' title='Multiple defined in 2 places.'>__glibc_likely</a> (<a href='../D/23999.html' title='Multiple defined in 2 places.'>__fstat64_time64</a> (<a href='../S/1663.html#L52' title='Defined at 52 in nscd/initgrcache.c.'>fd</a>, &amp;<a href='../Y/25966.html' title='Multiple used in 1069 places.'>st</a>) != 0)
+<a id='L75' name='L75'></a>  75       || <a href='../D/24205.html' title='Multiple defined in 2 places.'>__glibc_unlikely</a> (<a href='../S/5316.html#L126' title='Defined at 126 in io/sys/stat.h.'>S_ISCHR</a> (<a href='../Y/25966.html' title='Multiple used in 1069 places.'>st</a>.<a href='../Y/25994.html' title='Multiple used in 275 places.'>st_mode</a>) == 0)
+<a id='L76' name='L76'></a>  76       || <a href='../Y/25966.html' title='Multiple used in 1069 places.'>st</a>.<a href='../Y/26011.html' title='Multiple used in 93 places.'>st_rdev</a> != <a href='../Y/12732.html' title='Multiple used in 92 places.'>dev</a>)
+<a id='L77' name='L77'></a>  77     <em class='comment'>/* We cannot even give an error message here since it would</em>
+<a id='L78' name='L78'></a>  78 <em class='comment'>       run into the same problems.  */</em>
+<a id='L79' name='L79'></a>  79     <strong class='reserved'>while</strong> (1)
+<a id='L80' name='L80'></a>  80       <em class='comment'>/* Try for ever and ever.  */</em>
+<a id='L81' name='L81'></a>  81       <a href='../D/29.html' title='Multiple defined in 21 places.'>ABORT_INSTRUCTION</a>;
+<a id='L82' name='L82'></a>  82     <em class='brace'>}</em>
+<a id='L83' name='L83'></a>  83 <em class='brace'>}</em>
+<a id='L84' name='L84'></a>  84 
+<a id='L85' name='L85'></a>  85 
+<a id='L86' name='L86'></a>  86 <strong class='reserved'>void</strong>
+<a id='L87' name='L87'></a>  87 <a href='../R/14652.html' title='Multiple referred from 4 places.'>__libc_check_standard_fds</a> (<strong class='reserved'>void</strong>)
+<a id='L88' name='L88'></a>  88 <em class='brace'>{</em>
+<a id='L89' name='L89'></a>  89   <em class='comment'>/* Check all three standard file descriptors.  The O_NOFOLLOW flag</em>
+<a id='L90' name='L90'></a>  90 <em class='comment'>     is really paranoid but some people actually are.  If /dev/null</em>
+<a id='L91' name='L91'></a>  91 <em class='comment'>     should happen to be a symlink to somewhere else and not the</em>
+<a id='L92' name='L92'></a>  92 <em class='comment'>     device commonly known as "/dev/null" we bail out.  */</em>
+<a id='L93' name='L93'></a>  93   <a href='../D/28747.html' title='Multiple defined in 2 places.'>check_one_fd</a> (<a href='../S/1192.html#L210' title='Defined at 210 in posix/unistd.h.'>STDIN_FILENO</a>, <a href='../D/9642.html' title='Multiple defined in 3 places.'>O_WRONLY</a> | <a href='../D/9626.html' title='Multiple defined in 3 places.'>O_NOFOLLOW</a>);
+<a id='L94' name='L94'></a>  94   <a href='../D/28747.html' title='Multiple defined in 2 places.'>check_one_fd</a> (<a href='../S/1192.html#L211' title='Defined at 211 in posix/unistd.h.'>STDOUT_FILENO</a>, <a href='../D/9632.html' title='Multiple defined in 3 places.'>O_RDONLY</a> | <a href='../D/9626.html' title='Multiple defined in 3 places.'>O_NOFOLLOW</a>);
+<a id='L95' name='L95'></a>  95   <a href='../D/28747.html' title='Multiple defined in 2 places.'>check_one_fd</a> (<a href='../S/1192.html#L212' title='Defined at 212 in posix/unistd.h.'>STDERR_FILENO</a>, <a href='../D/9632.html' title='Multiple defined in 3 places.'>O_RDONLY</a> | <a href='../D/9626.html' title='Multiple defined in 3 places.'>O_NOFOLLOW</a>);
+<a id='L96' name='L96'></a>  96 <em class='brace'>}</em>
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L40'>[^]</a><a href='#L87'>[v]</a><a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

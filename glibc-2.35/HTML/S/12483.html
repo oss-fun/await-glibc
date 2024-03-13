@@ -1,0 +1,835 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>sysdeps/ia64/fpu/e_log2l.S</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18977.html'>sysdeps</a>/<a href='../files/19053.html'>ia64</a>/<a href='../files/19055.html'>fpu</a>/e_log2l.S</h2>
+<em class='comment'>/* [&lt;][&gt;][^][v][top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 .file "log2l.s"
+<a id='L2' name='L2'></a>   2 
+<a id='L3' name='L3'></a>   3 
+<a id='L4' name='L4'></a>   4 <em class='comment'>// Copyright (c) 2000 - 2003, Intel Corporation</em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>// All rights reserved.</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>//</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>//</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'>// Redistribution and use in source and binary forms, with or without</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'>// modification, are permitted provided that the following conditions are</em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>// met:</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>//</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>// * Redistributions of source code must retain the above copyright</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'>// notice, this list of conditions and the following disclaimer.</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'>//</em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>// * Redistributions in binary form must reproduce the above copyright</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>// notice, this list of conditions and the following disclaimer in the</em>
+<a id='L17' name='L17'></a>  17 <em class='comment'>// documentation and/or other materials provided with the distribution.</em>
+<a id='L18' name='L18'></a>  18 <em class='comment'>//</em>
+<a id='L19' name='L19'></a>  19 <em class='comment'>// * The name of Intel Corporation may not be used to endorse or promote</em>
+<a id='L20' name='L20'></a>  20 <em class='comment'>// products derived from this software without specific prior written</em>
+<a id='L21' name='L21'></a>  21 <em class='comment'>// permission.</em>
+<a id='L22' name='L22'></a>  22 
+<a id='L23' name='L23'></a>  23 <em class='comment'>// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS</em>
+<a id='L24' name='L24'></a>  24 <em class='comment'>// "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT</em>
+<a id='L25' name='L25'></a>  25 <em class='comment'>// LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR</em>
+<a id='L26' name='L26'></a>  26 <em class='comment'>// A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL INTEL OR ITS</em>
+<a id='L27' name='L27'></a>  27 <em class='comment'>// CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,</em>
+<a id='L28' name='L28'></a>  28 <em class='comment'>// EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,</em>
+<a id='L29' name='L29'></a>  29 <em class='comment'>// PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR</em>
+<a id='L30' name='L30'></a>  30 <em class='comment'>// PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY</em>
+<a id='L31' name='L31'></a>  31 <em class='comment'>// OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY OR TORT (INCLUDING</em>
+<a id='L32' name='L32'></a>  32 <em class='comment'>// NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS</em>
+<a id='L33' name='L33'></a>  33 <em class='comment'>// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.</em>
+<a id='L34' name='L34'></a>  34 <em class='comment'>//</em>
+<a id='L35' name='L35'></a>  35 <em class='comment'>// Intel Corporation is the author of this code, and requests that all</em>
+<a id='L36' name='L36'></a>  36 <em class='comment'>// problem reports or change requests be submitted to it directly at</em>
+<a id='L37' name='L37'></a>  37 <em class='comment'>// http://www.intel.com/software/products/opensource/libraries/num.htm.</em>
+<a id='L38' name='L38'></a>  38 <em class='comment'>//</em>
+<a id='L39' name='L39'></a>  39 <em class='comment'>// History</em>
+<a id='L40' name='L40'></a>  40 <em class='comment'>//==============================================================</em>
+<a id='L41' name='L41'></a>  41 <em class='comment'>// 09/25/00 Initial version</em>
+<a id='L42' name='L42'></a>  42 <em class='comment'>// 11/22/00 Fixed accuracy bug (for mantissas near 1, 2)</em>
+<a id='L43' name='L43'></a>  43 <em class='comment'>// 12/07/00 Fixed C_1l constant, eliminated rounding errors in</em>
+<a id='L44' name='L44'></a>  44 <em class='comment'>//          reduced argument (x*frcpa(x)-1)</em>
+<a id='L45' name='L45'></a>  45 <em class='comment'>// 05/20/02 Cleaned up namespace and sf0 syntax</em>
+<a id='L46' name='L46'></a>  46 <em class='comment'>// 02/10/03 Reordered header: .section, .global, .proc, .align</em>
+<a id='L47' name='L47'></a>  47 <em class='comment'>//</em>
+<a id='L48' name='L48'></a>  48 <em class='comment'>// API</em>
+<a id='L49' name='L49'></a>  49 <em class='comment'>//==============================================================</em>
+<a id='L50' name='L50'></a>  50 <em class='comment'>// long double log2l(long double)</em>
+<a id='L51' name='L51'></a>  51 <em class='comment'>//</em>
+<a id='L52' name='L52'></a>  52 <em class='comment'>// Overview of operation</em>
+<a id='L53' name='L53'></a>  53 <em class='comment'>//==============================================================</em>
+<a id='L54' name='L54'></a>  54 <em class='comment'>// Background</em>
+<a id='L55' name='L55'></a>  55 <em class='comment'>//</em>
+<a id='L56' name='L56'></a>  56 <em class='comment'>// Implementation</em>
+<a id='L57' name='L57'></a>  57 <em class='comment'>//</em>
+<a id='L58' name='L58'></a>  58 <em class='comment'>// Let x = 2^l * m, where     m=1.b1 b2 ... b8 b9 ... b52</em>
+<a id='L59' name='L59'></a>  59 <em class='comment'>//     y=frcpa(m),   r=m*y-1, f=b1 b2 .. b8</em>
+<a id='L60' name='L60'></a>  60 <em class='comment'>// T_hi is a table that stores the 24 most significant bits of log2(1/y)</em>
+<a id='L61' name='L61'></a>  61 <em class='comment'>// (in entries 1..255) in single precision format</em>
+<a id='L62' name='L62'></a>  62 <em class='comment'>// T_low is a table that stores (log2(1/y)-T_high), rounded to double</em>
+<a id='L63' name='L63'></a>  63 <em class='comment'>// precision</em>
+<a id='L64' name='L64'></a>  64 <em class='comment'>//</em>
+<a id='L65' name='L65'></a>  65 <em class='comment'>// f is used as an index; T_high[255]=T_low[255]=0</em>
+<a id='L66' name='L66'></a>  66 <em class='comment'>//</em>
+<a id='L67' name='L67'></a>  67 <em class='comment'>// If f=0 and b9=0, r is set to 2^{-8}* 0.b9 b10 ... b52 = m-1 (fractional part of m),</em>
+<a id='L68' name='L68'></a>  68 <em class='comment'>//                  and 0 is used instead of T_high[0], T_low[0]</em>
+<a id='L69' name='L69'></a>  69 <em class='comment'>//                  (polynomial evaluation only, for m=1+r, 0&lt;=r&lt;2^{-9})</em>
+<a id='L70' name='L70'></a>  70 <em class='comment'>// If f=255, r is set to (m-2)/2  (T[255]=0, and only polynomial evaluation is used</em>
+<a id='L71' name='L71'></a>  71 <em class='comment'>//                                 for m=2(1-r'), 0&lt;=r'&lt;2^{-9})</em>
+<a id='L72' name='L72'></a>  72 <em class='comment'>//</em>
+<a id='L73' name='L73'></a>  73 <em class='comment'>// If 2^{-9}&lt;=m&lt;2-2^{-8} or (input not near 1), let C1r=(2^{16}+C1*r)-2^{16}</em>
+<a id='L74' name='L74'></a>  74 <em class='comment'>//                       and let E=((RN(m*y)-1)-r)+(m*y-RN(m*y))</em>
+<a id='L75' name='L75'></a>  75 <em class='comment'>// Else let C1r=C1*r (rounded to 64 significant bits)  and let  E=0</em>
+<a id='L76' name='L76'></a>  76 <em class='comment'>//</em>
+<a id='L77' name='L77'></a>  77 <em class='comment'>// Let D=C1*r-C1r</em>
+<a id='L78' name='L78'></a>  78 <em class='comment'>//</em>
+<a id='L79' name='L79'></a>  79 <em class='comment'>//</em>
+<a id='L80' name='L80'></a>  80 <em class='comment'>// log2l(x) is approximated as</em>
+<a id='L81' name='L81'></a>  81 <em class='comment'>//     (l+T_high[f]+C1r) + (D+r*(c1+c2*r+c3*r^2...+c8*r^7)+(T_low[f]+C_1*E))</em>
+<a id='L82' name='L82'></a>  82 <em class='comment'>//</em>
+<a id='L83' name='L83'></a>  83 
+<a id='L84' name='L84'></a>  84 
+<a id='L85' name='L85'></a>  85 <em class='comment'>// Special values</em>
+<a id='L86' name='L86'></a>  86 <em class='comment'>//==============================================================</em>
+<a id='L87' name='L87'></a>  87 <em class='comment'>//  log2l(0)=-inf, raises Divide by Zero</em>
+<a id='L88' name='L88'></a>  88 <em class='comment'>//  log2l(+inf)=inf</em>
+<a id='L89' name='L89'></a>  89 <em class='comment'>//  log2l(x)=NaN,  raises Invalid if x&lt;0</em>
+<a id='L90' name='L90'></a>  90 <em class='comment'>//</em>
+<a id='L91' name='L91'></a>  91 
+<a id='L92' name='L92'></a>  92 
+<a id='L93' name='L93'></a>  93 <em class='comment'>// Registers used</em>
+<a id='L94' name='L94'></a>  94 <em class='comment'>//==============================================================</em>
+<a id='L95' name='L95'></a>  95 <em class='comment'>//   f6-f15, f32-f36</em>
+<a id='L96' name='L96'></a>  96 <em class='comment'>//   r2-r3, r23-r23</em>
+<a id='L97' name='L97'></a>  97 <em class='comment'>//   p6,p7,p8,p12</em>
+<a id='L98' name='L98'></a>  98 <em class='comment'>//</em>
+<a id='L99' name='L99'></a>  99 
+<a id='L100' name='L100'></a> 100 
+<a id='L101' name='L101'></a> 101 GR_SAVE_B0                    = r33
+<a id='L102' name='L102'></a> 102 GR_SAVE_PFS                   = r34
+<a id='L103' name='L103'></a> 103 GR_SAVE_GP                    = r35 <em class='comment'>// This reg. can safely be used</em>
+<a id='L104' name='L104'></a> 104 GR_SAVE_SP                    = r36
+<a id='L105' name='L105'></a> 105 
+<a id='L106' name='L106'></a> 106 GR_Parameter_X                = r37
+<a id='L107' name='L107'></a> 107 GR_Parameter_Y                = r38
+<a id='L108' name='L108'></a> 108 GR_Parameter_RESULT           = r39
+<a id='L109' name='L109'></a> 109 GR_Parameter_TAG              = r40
+<a id='L110' name='L110'></a> 110 
+<a id='L111' name='L111'></a> 111 FR_X             = f10
+<a id='L112' name='L112'></a> 112 FR_Y             = f1
+<a id='L113' name='L113'></a> 113 FR_RESULT        = f8
+<a id='L114' name='L114'></a> 114 
+<a id='L115' name='L115'></a> 115 
+<a id='L116' name='L116'></a> 116 
+<a id='L117' name='L117'></a> 117 
+<a id='L118' name='L118'></a> 118 <em class='comment'>// Data tables</em>
+<a id='L119' name='L119'></a> 119 <em class='comment'>//==============================================================</em>
+<a id='L120' name='L120'></a> 120 
+<a id='L121' name='L121'></a> 121 RODATA
+<a id='L122' name='L122'></a> 122 
+<a id='L123' name='L123'></a> 123 .align 16
+<a id='L124' name='L124'></a> 124 
+<a id='L125' name='L125'></a> 125 LOCAL_OBJECT_START(poly_coeffs)
+<a id='L126' name='L126'></a> 126 
+<a id='L127' name='L127'></a> 127 data8 0xb8aa3b295c17f0bc, 0x00003fff  <em class='comment'>// C_1</em>
+<a id='L128' name='L128'></a> 128 data8 0x3fca61762a7aded9, 0xbfc71547652b82fe <em class='comment'>// C_7, C_8</em>
+<a id='L129' name='L129'></a> 129 data8 0x3fd2776c50ef9bfe, 0xbfcec709dc3a03fd <em class='comment'>// C_5, C_6</em>
+<a id='L130' name='L130'></a> 130 data8 0x3fdec709dc3a03fd, 0xbfd71547652b82fe  <em class='comment'>// C_3, C_4</em>
+<a id='L131' name='L131'></a> 131 <em class='comment'>//data8 0xd871319ff0342580, 0x0000bfbd  // C_1l (low part of C1)</em>
+<a id='L132' name='L132'></a> 132 data8 0x82f0025f2dc582ee, 0x0000bfbe   <em class='comment'>// C_1l (low part of C1)</em>
+<a id='L133' name='L133'></a> 133 data8 0xb8aa3b295c17f0bc, 0x0000bffe  <em class='comment'>// C_2</em>
+<a id='L134' name='L134'></a> 134 LOCAL_OBJECT_END(poly_coeffs)
+<a id='L135' name='L135'></a> 135 
+<a id='L136' name='L136'></a> 136 
+<a id='L137' name='L137'></a> 137 
+<a id='L138' name='L138'></a> 138 
+<a id='L139' name='L139'></a> 139 LOCAL_OBJECT_START(T_table)
+<a id='L140' name='L140'></a> 140 
+<a id='L141' name='L141'></a> 141 data4 0x3b38d875, 0x3c0ae7f4, 0x3c67f738, 0x3ca2b253
+<a id='L142' name='L142'></a> 142 data4 0x3ccbb91d, 0x3cfac91e, 0x3d1504a5, 0x3d29c4a0
+<a id='L143' name='L143'></a> 143 data4 0x3d419264, 0x3d567aa6, 0x3d6e76ca, 0x3d81c3f7
+<a id='L144' name='L144'></a> 144 data4 0x3d8c5630, 0x3d9876e9, 0x3da31e0a, 0x3dadcf09
+<a id='L145' name='L145'></a> 145 data4 0x3db889f9, 0x3dc34eec, 0x3dce1df5, 0x3dd8f726
+<a id='L146' name='L146'></a> 146 data4 0x3de3da94, 0x3deec851, 0x3df82ea4, 0x3e0197dd
+<a id='L147' name='L147'></a> 147 data4 0x3e071dad, 0x3e0ca8ca, 0x3e116d6e, 0x3e170281
+<a id='L148' name='L148'></a> 148 data4 0x3e1bcfbc, 0x3e216ee9, 0x3e2644dc, 0x3e2b1ee1
+<a id='L149' name='L149'></a> 149 data4 0x3e30cd12, 0x3e35affd, 0x3e3a970f, 0x3e3f824f
+<a id='L150' name='L150'></a> 150 data4 0x3e4544c0, 0x3e4a3926, 0x3e4f31d1, 0x3e542ec7
+<a id='L151' name='L151'></a> 151 data4 0x3e593012, 0x3e5e35b7, 0x3e633fbf, 0x3e677625
+<a id='L152' name='L152'></a> 152 data4 0x3e6c884b, 0x3e719eea, 0x3e76ba0a, 0x3e7bd9b2
+<a id='L153' name='L153'></a> 153 data4 0x3e80111d, 0x3e82a523, 0x3e84ccec, 0x3e876533
+<a id='L154' name='L154'></a> 154 data4 0x3e89ffd1, 0x3e8c2d22, 0x3e8e5c18, 0x3e90fd0a
+<a id='L155' name='L155'></a> 155 data4 0x3e932fa9, 0x3e95d506, 0x3e980b5a, 0x3e9a4361
+<a id='L156' name='L156'></a> 156 data4 0x3e9c7d1f, 0x3e9f2b16, 0x3ea168a0, 0x3ea3a7ea
+<a id='L157' name='L157'></a> 157 data4 0x3ea5e8f5, 0x3ea82bc4, 0x3eaa705b, 0x3eacb6bb
+<a id='L158' name='L158'></a> 158 data4 0x3eaefee7, 0x3eb148e3, 0x3eb394b1, 0x3eb5e255
+<a id='L159' name='L159'></a> 159 data4 0x3eb831d0, 0x3eba8327, 0x3ebcd65c, 0x3ebeb3e0
+<a id='L160' name='L160'></a> 160 data4 0x3ec10a7a, 0x3ec362f9, 0x3ec5bd63, 0x3ec7a0b3
+<a id='L161' name='L161'></a> 161 data4 0x3ec9fe96, 0x3ecc5e6c, 0x3ece4619, 0x3ed0a978
+<a id='L162' name='L162'></a> 162 data4 0x3ed293fe, 0x3ed4faf1, 0x3ed6e859, 0x3ed952eb
+<a id='L163' name='L163'></a> 163 data4 0x3edb433c, 0x3eddb178, 0x3edfa4bc, 0x3ee19953
+<a id='L164' name='L164'></a> 164 data4 0x3ee40cee, 0x3ee60484, 0x3ee7fd73, 0x3ee9f7bb
+<a id='L165' name='L165'></a> 165 data4 0x3eec7280, 0x3eee6fda, 0x3ef06e94, 0x3ef26eb1
+<a id='L166' name='L166'></a> 166 data4 0x3ef47031, 0x3ef67317, 0x3ef8f8b2, 0x3efafec5
+<a id='L167' name='L167'></a> 167 data4 0x3efd0644, 0x3eff0f32, 0x3f008cc8, 0x3f0192b0
+<a id='L168' name='L168'></a> 168 data4 0x3f029952, 0x3f03a0b0, 0x3f0466b2, 0x3f056f5a
+<a id='L169' name='L169'></a> 169 data4 0x3f0678c0, 0x3f0782e6, 0x3f088dcc, 0x3f099973
+<a id='L170' name='L170'></a> 170 data4 0x3f0aa5dd, 0x3f0b6fac, 0x3f0c7d6d, 0x3f0d8bf4
+<a id='L171' name='L171'></a> 171 data4 0x3f0e575b, 0x3f0f673e, 0x3f1077e9, 0x3f1144ef
+<a id='L172' name='L172'></a> 172 data4 0x3f1256fc, 0x3f1369d6, 0x3f143880, 0x3f154cc1
+<a id='L173' name='L173'></a> 173 data4 0x3f161c7a, 0x3f173227, 0x3f1802f2, 0x3f191a0f
+<a id='L174' name='L174'></a> 174 data4 0x3f19ebee, 0x3f1b047e, 0x3f1bd775, 0x3f1cf17b
+<a id='L175' name='L175'></a> 175 data4 0x3f1dc58e, 0x3f1ee10f, 0x3f1fb63f, 0x3f208bea
+<a id='L176' name='L176'></a> 176 data4 0x3f21a98f, 0x3f22805c, 0x3f2357a7, 0x3f247778
+<a id='L177' name='L177'></a> 177 data4 0x3f254fe9, 0x3f2628d9, 0x3f270249, 0x3f2824fb
+<a id='L178' name='L178'></a> 178 data4 0x3f28ff97, 0x3f29dab4, 0x3f2ab654, 0x3f2b9277
+<a id='L179' name='L179'></a> 179 data4 0x3f2cb8c8, 0x3f2d961e, 0x3f2e73fa, 0x3f2f525b
+<a id='L180' name='L180'></a> 180 data4 0x3f303143, 0x3f3110b1, 0x3f31f0a7, 0x3f32d125
+<a id='L181' name='L181'></a> 181 data4 0x3f33b22b, 0x3f3493bc, 0x3f3575d6, 0x3f36587b
+<a id='L182' name='L182'></a> 182 data4 0x3f373bab, 0x3f381f68, 0x3f3903b1, 0x3f39e888
+<a id='L183' name='L183'></a> 183 data4 0x3f3acdec, 0x3f3bb3e0, 0x3f3c9a63, 0x3f3d8177
+<a id='L184' name='L184'></a> 184 data4 0x3f3e1bd4, 0x3f3f03d9, 0x3f3fec71, 0x3f40d59b
+<a id='L185' name='L185'></a> 185 data4 0x3f41bf59, 0x3f42a9ab, 0x3f434635, 0x3f443180
+<a id='L186' name='L186'></a> 186 data4 0x3f451d61, 0x3f4609d9, 0x3f46a7d3, 0x3f479549
+<a id='L187' name='L187'></a> 187 data4 0x3f488357, 0x3f492261, 0x3f4a1171, 0x3f4b011c
+<a id='L188' name='L188'></a> 188 data4 0x3f4ba139, 0x3f4c91e8, 0x3f4d8334, 0x3f4e246a
+<a id='L189' name='L189'></a> 189 data4 0x3f4f16be, 0x3f5009b1, 0x3f50ac02, 0x3f51a001
+<a id='L190' name='L190'></a> 190 data4 0x3f524305, 0x3f533812, 0x3f53dbca, 0x3f54d1e7
+<a id='L191' name='L191'></a> 191 data4 0x3f55c8a8, 0x3f566d85, 0x3f57655b, 0x3f580af0
+<a id='L192' name='L192'></a> 192 data4 0x3f58b0d0, 0x3f59aa2c, 0x3f5a50c7, 0x3f5b4b3c
+<a id='L193' name='L193'></a> 193 data4 0x3f5bf294, 0x3f5cee26, 0x3f5d963c, 0x3f5e92ed
+<a id='L194' name='L194'></a> 194 data4 0x3f5f3bc3, 0x3f5fe4e7, 0x3f60e32d, 0x3f618d13
+<a id='L195' name='L195'></a> 195 data4 0x3f623748, 0x3f63372a, 0x3f63e223, 0x3f648d6b
+<a id='L196' name='L196'></a> 196 data4 0x3f658eee, 0x3f663afe, 0x3f66e75e, 0x3f67ea86
+<a id='L197' name='L197'></a> 197 data4 0x3f6897b0, 0x3f69452c, 0x3f69f2f9, 0x3f6af847
+<a id='L198' name='L198'></a> 198 data4 0x3f6ba6e2, 0x3f6c55d0, 0x3f6d0510, 0x3f6e0c8d
+<a id='L199' name='L199'></a> 199 data4 0x3f6ebc9f, 0x3f6f6d04, 0x3f701dbe, 0x3f70cecd
+<a id='L200' name='L200'></a> 200 data4 0x3f718030, 0x3f728ae6, 0x3f733d20, 0x3f73efaf
+<a id='L201' name='L201'></a> 201 data4 0x3f74a296, 0x3f7555d3, 0x3f760967, 0x3f76bd53
+<a id='L202' name='L202'></a> 202 data4 0x3f777197, 0x3f7880a1, 0x3f7935c2, 0x3f79eb3c
+<a id='L203' name='L203'></a> 203 data4 0x3f7aa10f, 0x3f7b573b, 0x3f7c0dc2, 0x3f7cc4a3
+<a id='L204' name='L204'></a> 204 data4 0x3f7d7bdf, 0x3f7e3376, 0x3f7eeb68, 0x00000000
+<a id='L205' name='L205'></a> 205 LOCAL_OBJECT_END(T_table)
+<a id='L206' name='L206'></a> 206 
+<a id='L207' name='L207'></a> 207 
+<a id='L208' name='L208'></a> 208 
+<a id='L209' name='L209'></a> 209 LOCAL_OBJECT_START(T_low)
+<a id='L210' name='L210'></a> 210 
+<a id='L211' name='L211'></a> 211 
+<a id='L212' name='L212'></a> 212 data8 0x3dc0b97f689876ef, 0x3dfd5d906028ac01
+<a id='L213' name='L213'></a> 213 data8 0x3df8b9cbb8d7240b, 0x3de0c941a2f220cd
+<a id='L214' name='L214'></a> 214 data8 0x3e09c6aecba15936, 0x3dfa6d528241827c
+<a id='L215' name='L215'></a> 215 data8 0x3dd0bad25714903c, 0x3e2776b01dc036a2
+<a id='L216' name='L216'></a> 216 data8 0x3e2b914bc77f158b, 0x3e1c0fafd29dc74a
+<a id='L217' name='L217'></a> 217 data8 0x3e28dadc119cd3de, 0x3e3bca869da085be
+<a id='L218' name='L218'></a> 218 data8 0x3e19d1e700f2200a, 0x3e3e13530cc37504
+<a id='L219' name='L219'></a> 219 data8 0x3e3936464d9c41ee, 0x3e3c3fa21c9499d0
+<a id='L220' name='L220'></a> 220 data8 0x3e3259e079b6c6e8, 0x3e2a364069c4f7f3
+<a id='L221' name='L221'></a> 221 data8 0x3e1274c84f6c6364, 0x3e3796170159f454
+<a id='L222' name='L222'></a> 222 data8 0x3e26e1e389f4364e, 0x3e28cedda8c7f658
+<a id='L223' name='L223'></a> 223 data8 0x3e376c2028433268, 0x3e4aee6d650c82e1
+<a id='L224' name='L224'></a> 224 data8 0x3e33e65094fbeeb4, 0x3e4c7d125aa92c5d
+<a id='L225' name='L225'></a> 225 data8 0x3e1559a4b69691d8, 0x3e18efabeb7d7221
+<a id='L226' name='L226'></a> 226 data8 0x3e4c2b255abaa8de, 0x3e37436952a4538b
+<a id='L227' name='L227'></a> 227 data8 0x3e4e6807f4ba00b8, 0x3e33ff5964190e42
+<a id='L228' name='L228'></a> 228 data8 0x3e4f5d798cead43c, 0x3e4f3676443bf453
+<a id='L229' name='L229'></a> 229 data8 0x3e4660f8d5bc1bf5, 0x3e2d4f9f3ab04f36
+<a id='L230' name='L230'></a> 230 data8 0x3e357f7a64ccd537, 0x3e394caf7c9b05af
+<a id='L231' name='L231'></a> 231 data8 0x3e225c7d17ab29b0, 0x3e4eb202f6d55a12
+<a id='L232' name='L232'></a> 232 data8 0x3e32faa68b19bcd2, 0x3e45ee1c9b566a8b
+<a id='L233' name='L233'></a> 233 data8 0x3e4770a67de054ff, 0x3e42234fb9de6d6b
+<a id='L234' name='L234'></a> 234 data8 0x3e4ad139825c6e19, 0x3e47f3d334814a93
+<a id='L235' name='L235'></a> 235 data8 0x3e2af1ec402867b6, 0x3e2bfbda0c956e3d
+<a id='L236' name='L236'></a> 236 data8 0x3e4287b831e77ff2, 0x3e54bf0eb77f7b89
+<a id='L237' name='L237'></a> 237 data8 0x3e5b9259a1029607, 0x3e4a764b015e699d
+<a id='L238' name='L238'></a> 238 data8 0x3e4d0b68ea883ab5, 0x3e33e829ecdadf46
+<a id='L239' name='L239'></a> 239 data8 0x3e52f27efef3031b, 0x3e3073979e4af89e
+<a id='L240' name='L240'></a> 240 data8 0x3e3b980f2cd6c253, 0x3e2a5f0f5f7f66a9
+<a id='L241' name='L241'></a> 241 data8 0x3e37788738117b02, 0x3e58aa29a784d52f
+<a id='L242' name='L242'></a> 242 data8 0x3e4f5504c4ff2466, 0x3e002d40340fa647
+<a id='L243' name='L243'></a> 243 data8 0x3e5f53b64592f4c3, 0x3e543f222c526802
+<a id='L244' name='L244'></a> 244 data8 0x3e5680e547a872fa, 0x3e5e234bd1154450
+<a id='L245' name='L245'></a> 245 data8 0x3e3000edc18b6d21, 0x3e1c3c1f000942a8
+<a id='L246' name='L246'></a> 246 data8 0x3e51eeae0e442d6e, 0x3e4fb265376623f2
+<a id='L247' name='L247'></a> 247 data8 0x3e57b5941782d830, 0x3e3a4b83f24ae52c
+<a id='L248' name='L248'></a> 248 data8 0x3e5a5fb4f23978de, 0x3e51ed071563fb02
+<a id='L249' name='L249'></a> 249 data8 0x3e49e2071f51a7a8, 0x3e5e43ae5b924234
+<a id='L250' name='L250'></a> 250 data8 0x3dfa2be9aedf374a, 0x3e56dea3dbba67d5
+<a id='L251' name='L251'></a> 251 data8 0x3e3375fe732b3c3e, 0x3e5a0c6f91f2e77e
+<a id='L252' name='L252'></a> 252 data8 0x3e55e1bf1c969e41, 0x3e30a5a5166b8eee
+<a id='L253' name='L253'></a> 253 data8 0x3e53e6e9a539d46c, 0x3e542981b3d7b0e6
+<a id='L254' name='L254'></a> 254 data8 0x3e595fd8ff36ad64, 0x3e5edeb9e65cbbb4
+<a id='L255' name='L255'></a> 255 data8 0x3e46aeab4d3434c1, 0x3e4ea3ff0564b010
+<a id='L256' name='L256'></a> 256 data8 0x3e59b00be2e3c25a, 0x3e5b887cd7b0821f
+<a id='L257' name='L257'></a> 257 data8 0x3e5f666668547b4d, 0x3e4d0733a805273f
+<a id='L258' name='L258'></a> 258 data8 0x3e26a2ff21c4aec5, 0x3e4c336f7a3a78f3
+<a id='L259' name='L259'></a> 259 data8 0x3e11ad12b628e2d0, 0x3e56d43ff3f0ea64
+<a id='L260' name='L260'></a> 260 data8 0x3e238809433cccd2, 0x3e40d9734147d40f
+<a id='L261' name='L261'></a> 261 data8 0x3e54245fe3e24e06, 0x3e251441fce4d48c
+<a id='L262' name='L262'></a> 262 data8 0x3e517114efc5d1f9, 0x3e5e9a99154b0d82
+<a id='L263' name='L263'></a> 263 data8 0x3e442a71337970f8, 0x3e420c7c69211fdf
+<a id='L264' name='L264'></a> 264 data8 0x3e537e7d5d43c6a7, 0x3e4376c66ad9ad8b
+<a id='L265' name='L265'></a> 265 data8 0x3e49054d678a4f1c, 0x3e5d23cb3bc19f18
+<a id='L266' name='L266'></a> 266 data8 0x3e6ebcd449dcab2b, 0x3e67f5fc2849c88a
+<a id='L267' name='L267'></a> 267 data8 0x3e63f388395d3e84, 0x3e65c1103b0ad7e9
+<a id='L268' name='L268'></a> 268 data8 0x3e6d5d1dd031f353, 0x3e5a159dae75c4d0
+<a id='L269' name='L269'></a> 269 data8 0x3e4d5e22aa75f71d, 0x3e5e379ee62e1e35
+<a id='L270' name='L270'></a> 270 data8 0x3e4df082213cb2dc, 0x3e6bfa06c156f521
+<a id='L271' name='L271'></a> 271 data8 0x3e66e2d3c19b517b, 0x3e426b7098590071
+<a id='L272' name='L272'></a> 272 data8 0x3e541bd027e9854e, 0x3e5061dd924b0ac0
+<a id='L273' name='L273'></a> 273 data8 0x3e6dae01df373a03, 0x3e3baec80b207b0b
+<a id='L274' name='L274'></a> 274 data8 0x3e6b6a6fe06bebac, 0x3e61aebcfc3ab5d1
+<a id='L275' name='L275'></a> 275 data8 0x3e584ee3e7c79d83, 0x3e6b3c1b2840cb40
+<a id='L276' name='L276'></a> 276 data8 0x3e6c842085d6befd, 0x3e6ac04fd7b141e0
+<a id='L277' name='L277'></a> 277 data8 0x3e6c48250474141d, 0x3e2d889b86125f69
+<a id='L278' name='L278'></a> 278 data8 0x3e6e74740225dad0, 0x3e45940d31d50a7c
+<a id='L279' name='L279'></a> 279 data8 0x3e695476a6c39ddc, 0x3e6d9a6d857a060a
+<a id='L280' name='L280'></a> 280 data8 0x3e4a3e9bb4b69337, 0x3e484f3ce4707ed6
+<a id='L281' name='L281'></a> 281 data8 0x3e39dd125d25fc27, 0x3e563fb400de8732
+<a id='L282' name='L282'></a> 282 data8 0x3e5fdd6d0ee28b48, 0x3e669d15b869bb07
+<a id='L283' name='L283'></a> 283 data8 0x3e40687cfad7964d, 0x3e69317990d43957
+<a id='L284' name='L284'></a> 284 data8 0x3e633d57e24ae1bd, 0x3e618bf03710eabb
+<a id='L285' name='L285'></a> 285 data8 0x3e4b4df6fccd1160, 0x3e3fb26ddaa1ec45
+<a id='L286' name='L286'></a> 286 data8 0x3e3810a5e1817fd4, 0x3e6857373642fa5c
+<a id='L287' name='L287'></a> 287 data8 0x3e673db6193add31, 0x3e63200c8acbc9c3
+<a id='L288' name='L288'></a> 288 data8 0x3e3d2dee448ebb62, 0x3e6a19723a80db6a
+<a id='L289' name='L289'></a> 289 data8 0x3e5e7cdab8fd3e6a, 0x3e671855cd660672
+<a id='L290' name='L290'></a> 290 data8 0x3e473c3c78a85ecd, 0x3e5f5e23056a7cf2
+<a id='L291' name='L291'></a> 291 data8 0x3e52538519527367, 0x3e4b573bcf2580e9
+<a id='L292' name='L292'></a> 292 data8 0x3e6d6f856fe90c60, 0x3e2d932a8487642e
+<a id='L293' name='L293'></a> 293 data8 0x3e5236fc78b6174c, 0x3e50cb91d406db50
+<a id='L294' name='L294'></a> 294 data8 0x3e650e8bd562aa57, 0x3e424ee3d9a82f2e
+<a id='L295' name='L295'></a> 295 data8 0x3e59363960e1e3d9, 0x3e379604c1150a3e
+<a id='L296' name='L296'></a> 296 data8 0x3e6d914f6c2ac258, 0x3e62967a451a7b48
+<a id='L297' name='L297'></a> 297 data8 0x3e684b5f01139cb2, 0x3e448bbfbf6d292c
+<a id='L298' name='L298'></a> 298 data8 0x3e6227e7fb487e73, 0x3e6d39d50290f458
+<a id='L299' name='L299'></a> 299 data8 0x3e58368342b4b668, 0x3e65dc0c25bd1763
+<a id='L300' name='L300'></a> 300 data8 0x3e61b7dc362e22b5, 0x3e671691f094bb80
+<a id='L301' name='L301'></a> 301 data8 0x3e5011642d5123f2, 0x3e4c4eb7f11e41be
+<a id='L302' name='L302'></a> 302 data8 0x3e5dcee36ca242cf, 0x3e6791cefff688f1
+<a id='L303' name='L303'></a> 303 data8 0x3e60e23c8dda4ecd, 0x3e48e6a22fe78cfe
+<a id='L304' name='L304'></a> 304 data8 0x3e6d703f244adc86, 0x3e6a281a85a5049d
+<a id='L305' name='L305'></a> 305 data8 0x3e570f20e6403d9e, 0x3e2211518a12956f
+<a id='L306' name='L306'></a> 306 data8 0x3e6737d1e54d71df, 0x3e66b1881476f5e9
+<a id='L307' name='L307'></a> 307 data8 0x3e6e1bbeef085376, 0x3e47cad4944a32be
+<a id='L308' name='L308'></a> 308 data8 0x3e527f2c738e7ee9, 0x3e699883a4b9fb29
+<a id='L309' name='L309'></a> 309 data8 0x3e5c17d1108740d9, 0x3e5d4a9c79a43389
+<a id='L310' name='L310'></a> 310 data8 0x3e49fdc24462ba3b, 0x3e24dbb3a60cceb2
+<a id='L311' name='L311'></a> 311 data8 0x3e5c5bf618780748, 0x3e5c38005b0c778c
+<a id='L312' name='L312'></a> 312 data8 0x3e6be168dd6dd3fe, 0x3e633ab9370693b0
+<a id='L313' name='L313'></a> 313 data8 0x3dd290556b0ae339, 0x3e607c317927096a
+<a id='L314' name='L314'></a> 314 data8 0x3e59651353b3d90e, 0x3e4d8751e5e0ae0d
+<a id='L315' name='L315'></a> 315 data8 0x3e46c81023272a85, 0x3e6b23c988f391b2
+<a id='L316' name='L316'></a> 316 data8 0x3e608741d215209c, 0x3e60b8ba506d758f
+<a id='L317' name='L317'></a> 317 data8 0x3e62ddbe74803297, 0x3e5dbb8b5087587d
+<a id='L318' name='L318'></a> 318 data8 0x3e642aa529048131, 0x3e3dcbda6835dcf4
+<a id='L319' name='L319'></a> 319 data8 0x3e6db503ce854d2a, 0x3e6dd00b49bc6849
+<a id='L320' name='L320'></a> 320 data8 0x3e4db2f11243bc84, 0x3e3b9848efc2ea97
+<a id='L321' name='L321'></a> 321 data8 0x3e58f18e17c82609, 0x3e6ed8645e16c312
+<a id='L322' name='L322'></a> 322 data8 0x3e4065bdb60a5dd4, 0x3e490453c6e6c30a
+<a id='L323' name='L323'></a> 323 data8 0x3e62373994aa31ba, 0x3e56305f0e6b2a95
+<a id='L324' name='L324'></a> 324 data8 0x3e68c1601a6614ee, 0x3e614e204f19d93f
+<a id='L325' name='L325'></a> 325 data8 0x3e6e5037ca773299, 0x3e693f98892561a6
+<a id='L326' name='L326'></a> 326 data8 0x3e639de4f4bf700d, 0x3e416c071e93fd97
+<a id='L327' name='L327'></a> 327 data8 0x3e65466991b415ef, 0x3e6896a324afac9d
+<a id='L328' name='L328'></a> 328 data8 0x3e44f64802e2f11c, 0x3e64d7d747e2191a
+<a id='L329' name='L329'></a> 329 data8 0x3e6174b7581de84c, 0x3e44c7b946e1d43c
+<a id='L330' name='L330'></a> 330 data8 0x3e6a3bcbe30512ec, 0x3e5d3ed411c95ce4
+<a id='L331' name='L331'></a> 331 data8 0x3e3e5b5735cfaf8e, 0x3e6e538ab34efb51
+<a id='L332' name='L332'></a> 332 data8 0x3e514e204f19d93f, 0x3e5a88e6550c89a4
+<a id='L333' name='L333'></a> 333 data8 0x3e66b97a5d9dfd8b, 0x3e5f46b1e14ebaf3
+<a id='L334' name='L334'></a> 334 data8 0x3e357665f6893f5d, 0x3e6bbf633078d1d5
+<a id='L335' name='L335'></a> 335 data8 0x3e5e7337a212c417, 0x3e3570fde15fc8cc
+<a id='L336' name='L336'></a> 336 data8 0x3e21119402da92b4, 0x3e6566e830d1ff3b
+<a id='L337' name='L337'></a> 337 data8 0x3e558883e480e220, 0x3e589ca3a68da411
+<a id='L338' name='L338'></a> 338 data8 0x3e44eb66df73d648, 0x3e1a0a629b1b7e68
+<a id='L339' name='L339'></a> 339 data8 0x3e54cc207b8c1116, 0x0000000000000000
+<a id='L340' name='L340'></a> 340 LOCAL_OBJECT_END(T_low)
+<a id='L341' name='L341'></a> 341 
+<a id='L342' name='L342'></a> 342 
+<a id='L343' name='L343'></a> 343 .section .text
+<a id='L344' name='L344'></a> 344 GLOBAL_IEEE754_ENTRY(log2l)
+<a id='L345' name='L345'></a> 345 
+<a id='L346' name='L346'></a> 346 <em class='brace'>{</em> .mfi
+<a id='L347' name='L347'></a> 347   alloc r32=ar.pfs,1,4,4,0
+<a id='L348' name='L348'></a> 348   <em class='comment'>// normalize x</em>
+<a id='L349' name='L349'></a> 349   <em class='comment'>// y=frcpa(x)</em>
+<a id='L350' name='L350'></a> 350   frcpa.s1 f41,p0=f1,f8
+<a id='L351' name='L351'></a> 351   <em class='comment'>// r26=bias-1</em>
+<a id='L352' name='L352'></a> 352   mov r26=0xfffe
+<a id='L353' name='L353'></a> 353 <em class='brace'>}</em>
+<a id='L354' name='L354'></a> 354 <em class='brace'>{</em>.mfi
+<a id='L355' name='L355'></a> 355   <em class='comment'>// r23=bias+16</em>
+<a id='L356' name='L356'></a> 356   mov r23=0xffff+16
+<a id='L357' name='L357'></a> 357   fma.s1 f7=f8,f1,f0
+<a id='L358' name='L358'></a> 358   <em class='comment'>// r2 = pointer to C_1...C_6 followed by T_table</em>
+<a id='L359' name='L359'></a> 359   addl r2 = @ltoff(poly_coeffs), gp;;
+<a id='L360' name='L360'></a> 360 <em class='brace'>}</em>
+<a id='L361' name='L361'></a> 361 <em class='brace'>{</em>.mfi
+<a id='L362' name='L362'></a> 362   <em class='comment'>// get significand</em>
+<a id='L363' name='L363'></a> 363   getf.sig r25=f8
+<a id='L364' name='L364'></a> 364   <em class='comment'>// f8 denormal ?</em>
+<a id='L365' name='L365'></a> 365   fclass.m p8,p10=f8,0x9
+<a id='L366' name='L366'></a> 366   <em class='comment'>// r24=bias-8</em>
+<a id='L367' name='L367'></a> 367   mov r24=0xffff-8;;
+<a id='L368' name='L368'></a> 368 <em class='brace'>}</em>
+<a id='L369' name='L369'></a> 369 <em class='brace'>{</em>.mfi
+<a id='L370' name='L370'></a> 370   setf.exp f36=r26
+<a id='L371' name='L371'></a> 371   nop.f 0
+<a id='L372' name='L372'></a> 372   <em class='comment'>// r27=bias</em>
+<a id='L373' name='L373'></a> 373   mov r27=0xffff;;
+<a id='L374' name='L374'></a> 374 <em class='brace'>}</em>
+<a id='L375' name='L375'></a> 375 
+<a id='L376' name='L376'></a> 376 <em class='brace'>{</em>.mmf
+<a id='L377' name='L377'></a> 377   getf.exp r29=f8
+<a id='L378' name='L378'></a> 378   <em class='comment'>// load start address for C_1...C_7 followed by T_table</em>
+<a id='L379' name='L379'></a> 379   ld8 r2=[r2]
+<a id='L380' name='L380'></a> 380   <em class='comment'>// will continue only for positive normal/unnormal numbers</em>
+<a id='L381' name='L381'></a> 381   fclass.m.unc p0,p12 = f8, 0x19;;
+<a id='L382' name='L382'></a> 382 <em class='brace'>}</em>
+<a id='L383' name='L383'></a> 383 
+<a id='L384' name='L384'></a> 384 
+<a id='L385' name='L385'></a> 385 .pred.rel "mutex",p8,p10
+<a id='L386' name='L386'></a> 386 <em class='brace'>{</em>.mfi
+<a id='L387' name='L387'></a> 387   <em class='comment'>// denormal input, repeat get significand (after normalization)</em>
+<a id='L388' name='L388'></a> 388   (p8) getf.sig r25=f7
+<a id='L389' name='L389'></a> 389   <em class='comment'>// x=1 ?</em>
+<a id='L390' name='L390'></a> 390   fcmp.eq.s0 p6,p0=f8,f1
+<a id='L391' name='L391'></a> 391   <em class='comment'>// get T_index</em>
+<a id='L392' name='L392'></a> 392   (p10) shr.u r28=r25,63-8
+<a id='L393' name='L393'></a> 393 <em class='brace'>}</em>
+<a id='L394' name='L394'></a> 394 <em class='brace'>{</em>.mfi
+<a id='L395' name='L395'></a> 395   <em class='comment'>// f32=2^16</em>
+<a id='L396' name='L396'></a> 396   setf.exp f32=r23
+<a id='L397' name='L397'></a> 397   nop.f 0
+<a id='L398' name='L398'></a> 398   mov r26=0x804;;
+<a id='L399' name='L399'></a> 399 <em class='brace'>}</em>
+<a id='L400' name='L400'></a> 400 
+<a id='L401' name='L401'></a> 401 <em class='brace'>{</em>.mfi
+<a id='L402' name='L402'></a> 402   <em class='comment'>// denormal input, repeat get exponent (after normalization)</em>
+<a id='L403' name='L403'></a> 403   (p8) getf.exp r29=f7
+<a id='L404' name='L404'></a> 404   <em class='comment'>// f33=0</em>
+<a id='L405' name='L405'></a> 405   mov f33=f0
+<a id='L406' name='L406'></a> 406   <em class='comment'>// r26=0x80400...0 (threshold for using polynomial approximation)</em>
+<a id='L407' name='L407'></a> 407   shl r26=r26,64-12;;
+<a id='L408' name='L408'></a> 408 <em class='brace'>}</em>
+<a id='L409' name='L409'></a> 409 
+<a id='L410' name='L410'></a> 410 <em class='brace'>{</em>.mfb
+<a id='L411' name='L411'></a> 411   add r3=16,r2
+<a id='L412' name='L412'></a> 412   <em class='comment'>// r=x*y-1</em>
+<a id='L413' name='L413'></a> 413   fms.s1 f6=f41,f8,f1
+<a id='L414' name='L414'></a> 414   (p12) br.cond.spnt SPECIAL_log2l
+<a id='L415' name='L415'></a> 415 <em class='brace'>}</em>
+<a id='L416' name='L416'></a> 416 <em class='brace'>{</em>.mfi
+<a id='L417' name='L417'></a> 417   <em class='comment'>// load C_1</em>
+<a id='L418' name='L418'></a> 418   ldfe f14=[r2],48
+<a id='L419' name='L419'></a> 419   <em class='comment'>// RN(x*y)</em>
+<a id='L420' name='L420'></a> 420   fma.s1 f43=f41,f8,f0
+<a id='L421' name='L421'></a> 421   mov r23=0xff;;
+<a id='L422' name='L422'></a> 422 <em class='brace'>}</em>
+<a id='L423' name='L423'></a> 423 
+<a id='L424' name='L424'></a> 424 <em class='brace'>{</em>.mmi
+<a id='L425' name='L425'></a> 425   <em class='comment'>// load C_7, C_8</em>
+<a id='L426' name='L426'></a> 426   ldfpd f10,f11=[r3],16
+<a id='L427' name='L427'></a> 427   <em class='comment'>// load C_3,C_4</em>
+<a id='L428' name='L428'></a> 428   ldfpd f15,f42=[r2],16
+<a id='L429' name='L429'></a> 429   (p8) shr.u r28=r25,63-8;;
+<a id='L430' name='L430'></a> 430 <em class='brace'>}</em>
+<a id='L431' name='L431'></a> 431 
+<a id='L432' name='L432'></a> 432 
+<a id='L433' name='L433'></a> 433 <em class='brace'>{</em>.mfi
+<a id='L434' name='L434'></a> 434   <em class='comment'>// load C_5, C_6</em>
+<a id='L435' name='L435'></a> 435   ldfpd f12,f13=[r3]
+<a id='L436' name='L436'></a> 436   <em class='comment'>// pseudo-zero ?</em>
+<a id='L437' name='L437'></a> 437   fcmp.eq.s0 p7,p0=f7,f0
+<a id='L438' name='L438'></a> 438   <em class='comment'>// if first 9 bits after leading 1 are all zero, then p8=1</em>
+<a id='L439' name='L439'></a> 439   cmp.ltu p8,p12=r25,r26
+<a id='L440' name='L440'></a> 440 <em class='brace'>}</em>
+<a id='L441' name='L441'></a> 441 <em class='brace'>{</em>.mfi
+<a id='L442' name='L442'></a> 442   <em class='comment'>// load C1l</em>
+<a id='L443' name='L443'></a> 443   ldfe f34=[r2],16
+<a id='L444' name='L444'></a> 444   fmerge.se f7=f1,f7
+<a id='L445' name='L445'></a> 445   <em class='comment'>// get T_index</em>
+<a id='L446' name='L446'></a> 446   and r28=r28,r23;;
+<a id='L447' name='L447'></a> 447 <em class='brace'>}</em>
+<a id='L448' name='L448'></a> 448 <em class='brace'>{</em>.mfi
+<a id='L449' name='L449'></a> 449   <em class='comment'>// r29=exponent-bias</em>
+<a id='L450' name='L450'></a> 450   sub r29=r29,r27
+<a id='L451' name='L451'></a> 451   <em class='comment'>// if first 8 bits after leading bit are 0, use polynomial approx. only</em>
+<a id='L452' name='L452'></a> 452   (p8) fms.s1 f6=f7,f1,f1
+<a id='L453' name='L453'></a> 453   <em class='comment'>// start address of T_low</em>
+<a id='L454' name='L454'></a> 454   add r3=1024+16,r2
+<a id='L455' name='L455'></a> 455 <em class='brace'>}</em>
+<a id='L456' name='L456'></a> 456 <em class='brace'>{</em>.mfi
+<a id='L457' name='L457'></a> 457   <em class='comment'>// load C_2</em>
+<a id='L458' name='L458'></a> 458   ldfe f35=[r2],16
+<a id='L459' name='L459'></a> 459   <em class='comment'>// x=1, return 0</em>
+<a id='L460' name='L460'></a> 460   (p6) fma.s0 f8=f0,f0,f0
+<a id='L461' name='L461'></a> 461   <em class='comment'>// first 8 bits after leading 1 are all ones ?</em>
+<a id='L462' name='L462'></a> 462   cmp.eq p10,p0=r23,r28;;
+<a id='L463' name='L463'></a> 463 <em class='brace'>}</em>
+<a id='L464' name='L464'></a> 464 
+<a id='L465' name='L465'></a> 465 <em class='brace'>{</em>.mfb
+<a id='L466' name='L466'></a> 466   <em class='comment'>// if first 8 bits after leading 1 are all ones, use polynomial approx. only</em>
+<a id='L467' name='L467'></a> 467   <em class='comment'>// add 1 to the exponent additive term, and estimate log2(1-r)</em>
+<a id='L468' name='L468'></a> 468   (p10) add r29=1,r29
+<a id='L469' name='L469'></a> 469   nop.f 0
+<a id='L470' name='L470'></a> 470   (p7) br.cond.spnt LOG2_PSEUDO_ZERO
+<a id='L471' name='L471'></a> 471 <em class='brace'>}</em>
+<a id='L472' name='L472'></a> 472 <em class='brace'>{</em>.mfi
+<a id='L473' name='L473'></a> 473   <em class='comment'>// get T_low address</em>
+<a id='L474' name='L474'></a> 474   shladd r3=r28,3,r3
+<a id='L475' name='L475'></a> 475   <em class='comment'>// if first 8 bits after leading 1 are all ones, use polynomial approx. only</em>
+<a id='L476' name='L476'></a> 476   (p10) fms.s1 f6=f7,f36,f1
+<a id='L477' name='L477'></a> 477   <em class='comment'>// p10 --&gt; p8=1, p12=0</em>
+<a id='L478' name='L478'></a> 478   (p10) cmp.eq p8,p12=r0,r0;;
+<a id='L479' name='L479'></a> 479 <em class='brace'>}</em>
+<a id='L480' name='L480'></a> 480 
+<a id='L481' name='L481'></a> 481 <em class='brace'>{</em>.mfi
+<a id='L482' name='L482'></a> 482   <em class='comment'>// get T_high address</em>
+<a id='L483' name='L483'></a> 483   shladd r2=r28,2,r2
+<a id='L484' name='L484'></a> 484   <em class='comment'>// L(x*y)=x*y-RN(x*y)</em>
+<a id='L485' name='L485'></a> 485   fms.s1 f41=f41,f8,f43
+<a id='L486' name='L486'></a> 486   nop.i 0
+<a id='L487' name='L487'></a> 487 <em class='brace'>}</em>
+<a id='L488' name='L488'></a> 488 <em class='brace'>{</em>.mfi
+<a id='L489' name='L489'></a> 489   <em class='comment'>// p13=p12</em>
+<a id='L490' name='L490'></a> 490   (p12) cmp.eq.unc p13,p0=r0,r0
+<a id='L491' name='L491'></a> 491   <em class='comment'>// RtH=RN(x*y)-1  (will eliminate rounding errors in r)</em>
+<a id='L492' name='L492'></a> 492   fms.s1 f43=f43,f1,f1
+<a id='L493' name='L493'></a> 493   nop.i 0;;
+<a id='L494' name='L494'></a> 494 <em class='brace'>}</em>
+<a id='L495' name='L495'></a> 495 
+<a id='L496' name='L496'></a> 496 .pred.rel "mutex",p8,p12
+<a id='L497' name='L497'></a> 497 <em class='brace'>{</em>.mfb
+<a id='L498' name='L498'></a> 498   <em class='comment'>// load T_high (unless first 9 bits after leading 1 are 0)</em>
+<a id='L499' name='L499'></a> 499   (p12) ldfs f7=[r2]
+<a id='L500' name='L500'></a> 500   <em class='comment'>// set T_high=0 (if first 9 bits after leading 1 are 0)</em>
+<a id='L501' name='L501'></a> 501   (p8) fma.s1 f7=f0,f0,f0
+<a id='L502' name='L502'></a> 502   <em class='comment'>// x=1, return</em>
+<a id='L503' name='L503'></a> 503   (p6) br.ret.spnt b0
+<a id='L504' name='L504'></a> 504 <em class='brace'>}</em>
+<a id='L505' name='L505'></a> 505 .pred.rel "mutex",p8,p12
+<a id='L506' name='L506'></a> 506 <em class='brace'>{</em>.mfi
+<a id='L507' name='L507'></a> 507   <em class='comment'>// p12: load T_low</em>
+<a id='L508' name='L508'></a> 508   (p12) ldfd f36=[r3]
+<a id='L509' name='L509'></a> 509   <em class='comment'>// p8: set T_low=0</em>
+<a id='L510' name='L510'></a> 510   (p8) fma.s1 f36=f0,f0,f0
+<a id='L511' name='L511'></a> 511   (p8) cmp.eq p8,p12=r29,r0;; <em class='comment'>//nop.i 0;;</em>
+<a id='L512' name='L512'></a> 512 <em class='brace'>}</em>
+<a id='L513' name='L513'></a> 513 
+<a id='L514' name='L514'></a> 514 .pred.rel "mutex",p8,p12
+<a id='L515' name='L515'></a> 515 <em class='brace'>{</em>.mfi
+<a id='L516' name='L516'></a> 516   <em class='comment'>// f8=expon - bias</em>
+<a id='L517' name='L517'></a> 517   setf.sig f8=r29
+<a id='L518' name='L518'></a> 518   <em class='comment'>// general case: 2^{16}+C1*r</em>
+<a id='L519' name='L519'></a> 519   (p12) fma.s1 f33=f6,f14,f32
+<a id='L520' name='L520'></a> 520   nop.i 0
+<a id='L521' name='L521'></a> 521 <em class='brace'>}</em>
+<a id='L522' name='L522'></a> 522 <em class='brace'>{</em>.mfi
+<a id='L523' name='L523'></a> 523   <em class='comment'>// r26=1</em>
+<a id='L524' name='L524'></a> 524   mov r26=1
+<a id='L525' name='L525'></a> 525   <em class='comment'>// p8 (mantissa is close to 1, or close to 2): 2^{-8}+C1*r</em>
+<a id='L526' name='L526'></a> 526   (p8) fma.s1 f32=f6,f14,f33
+<a id='L527' name='L527'></a> 527   nop.i 0;;
+<a id='L528' name='L528'></a> 528 <em class='brace'>}</em>
+<a id='L529' name='L529'></a> 529 
+<a id='L530' name='L530'></a> 530 <em class='brace'>{</em>.mfi
+<a id='L531' name='L531'></a> 531   nop.m 0
+<a id='L532' name='L532'></a> 532   <em class='comment'>// P78=C_7+C_8*r</em>
+<a id='L533' name='L533'></a> 533   fma.s1 f10=f11,f6,f10
+<a id='L534' name='L534'></a> 534   <em class='comment'>// r26=2^{63}</em>
+<a id='L535' name='L535'></a> 535   shl r26=r26,63
+<a id='L536' name='L536'></a> 536 <em class='brace'>}</em>
+<a id='L537' name='L537'></a> 537 <em class='brace'>{</em>.mfi
+<a id='L538' name='L538'></a> 538   nop.m 0
+<a id='L539' name='L539'></a> 539   <em class='comment'>// P34=C_3+r*C_4</em>
+<a id='L540' name='L540'></a> 540   fma.s1 f15=f42,f6,f15
+<a id='L541' name='L541'></a> 541   nop.i 0;;
+<a id='L542' name='L542'></a> 542 <em class='brace'>}</em>
+<a id='L543' name='L543'></a> 543 <em class='brace'>{</em>.mfi
+<a id='L544' name='L544'></a> 544   nop.m 0
+<a id='L545' name='L545'></a> 545   <em class='comment'>// r2=r*r</em>
+<a id='L546' name='L546'></a> 546   fma.s1 f11=f6,f6,f0
+<a id='L547' name='L547'></a> 547   nop.i 0
+<a id='L548' name='L548'></a> 548 <em class='brace'>}</em>
+<a id='L549' name='L549'></a> 549 <em class='brace'>{</em>.mfi
+<a id='L550' name='L550'></a> 550   nop.m 0
+<a id='L551' name='L551'></a> 551   <em class='comment'>// P56=C_5+C_6*r</em>
+<a id='L552' name='L552'></a> 552   fma.s1 f13=f13,f6,f12
+<a id='L553' name='L553'></a> 553   nop.i 0;;
+<a id='L554' name='L554'></a> 554 <em class='brace'>}</em>
+<a id='L555' name='L555'></a> 555 
+<a id='L556' name='L556'></a> 556 <em class='brace'>{</em>.mfi
+<a id='L557' name='L557'></a> 557   nop.m 0
+<a id='L558' name='L558'></a> 558   <em class='comment'>// Rth-r</em>
+<a id='L559' name='L559'></a> 559   (p13) fms.s1 f43=f43,f1,f6
+<a id='L560' name='L560'></a> 560   nop.i 0
+<a id='L561' name='L561'></a> 561 <em class='brace'>}</em>
+<a id='L562' name='L562'></a> 562 <em class='brace'>{</em>.mfi
+<a id='L563' name='L563'></a> 563   <em class='comment'>// significand(x)=1 ?</em>
+<a id='L564' name='L564'></a> 564   cmp.eq p0,p6=r25,r26
+<a id='L565' name='L565'></a> 565   <em class='comment'>// P12=C1l+C_2*r</em>
+<a id='L566' name='L566'></a> 566   fma.s1 f34=f35,f6,f34
+<a id='L567' name='L567'></a> 567   nop.i 0;;
+<a id='L568' name='L568'></a> 568 <em class='brace'>}</em>
+<a id='L569' name='L569'></a> 569 
+<a id='L570' name='L570'></a> 570 .pred.rel "mutex",p8,p12
+<a id='L571' name='L571'></a> 571 <em class='brace'>{</em>.mfi
+<a id='L572' name='L572'></a> 572   nop.m 0
+<a id='L573' name='L573'></a> 573   <em class='comment'>// p12: C1r=(2^{16}+C1*r)-2^{16}</em>
+<a id='L574' name='L574'></a> 574   (p12) fms.s1 f32=f33,f1,f32
+<a id='L575' name='L575'></a> 575   nop.i 0
+<a id='L576' name='L576'></a> 576 <em class='brace'>}</em>
+<a id='L577' name='L577'></a> 577 <em class='brace'>{</em>.mfi
+<a id='L578' name='L578'></a> 578   nop.m 0
+<a id='L579' name='L579'></a> 579   <em class='comment'>// p8: C1r=C1*r (double extended)</em>
+<a id='L580' name='L580'></a> 580   (p8) fms.s1 f32=f32,f1,f33
+<a id='L581' name='L581'></a> 581   nop.i 0;;
+<a id='L582' name='L582'></a> 582 <em class='brace'>}</em>
+<a id='L583' name='L583'></a> 583 
+<a id='L584' name='L584'></a> 584 <em class='brace'>{</em>.mfi
+<a id='L585' name='L585'></a> 585   nop.m 0
+<a id='L586' name='L586'></a> 586   <em class='comment'>// L(x*y)*C_1+T_low</em>
+<a id='L587' name='L587'></a> 587   (p13) fma.s1 f36=f41,f14,f36
+<a id='L588' name='L588'></a> 588   nop.i 0
+<a id='L589' name='L589'></a> 589 <em class='brace'>}</em>
+<a id='L590' name='L590'></a> 590 <em class='brace'>{</em>.mfi
+<a id='L591' name='L591'></a> 591   nop.m 0
+<a id='L592' name='L592'></a> 592   <em class='comment'>// P58=P56+r2*P78</em>
+<a id='L593' name='L593'></a> 593   fma.s1 f13=f11,f10,f13
+<a id='L594' name='L594'></a> 594   nop.i 0;;
+<a id='L595' name='L595'></a> 595 <em class='brace'>}</em>
+<a id='L596' name='L596'></a> 596 <em class='brace'>{</em>.mfi
+<a id='L597' name='L597'></a> 597   nop.m 0
+<a id='L598' name='L598'></a> 598   <em class='comment'>// P14=P12+r2*P34</em>
+<a id='L599' name='L599'></a> 599   fma.s1 f15=f15,f11,f34
+<a id='L600' name='L600'></a> 600   nop.i 0
+<a id='L601' name='L601'></a> 601 <em class='brace'>}</em>
+<a id='L602' name='L602'></a> 602 <em class='brace'>{</em>.mfi
+<a id='L603' name='L603'></a> 603   nop.m 0
+<a id='L604' name='L604'></a> 604   <em class='comment'>// r4=r2*r2</em>
+<a id='L605' name='L605'></a> 605   fma.s1 f11=f11,f11,f0
+<a id='L606' name='L606'></a> 606   nop.i 0;;
+<a id='L607' name='L607'></a> 607 <em class='brace'>}</em>
+<a id='L608' name='L608'></a> 608 
+<a id='L609' name='L609'></a> 609 <em class='brace'>{</em>.mfi
+<a id='L610' name='L610'></a> 610   nop.m 0
+<a id='L611' name='L611'></a> 611   <em class='comment'>// normalize additive term (l=exponent of x)</em>
+<a id='L612' name='L612'></a> 612   fcvt.xf f8=f8
+<a id='L613' name='L613'></a> 613   nop.i 0;;
+<a id='L614' name='L614'></a> 614 <em class='brace'>}</em>
+<a id='L615' name='L615'></a> 615 
+<a id='L616' name='L616'></a> 616 
+<a id='L617' name='L617'></a> 617 <em class='brace'>{</em>.mfi
+<a id='L618' name='L618'></a> 618   nop.m 0
+<a id='L619' name='L619'></a> 619   <em class='comment'>// D=C1*r-C1r</em>
+<a id='L620' name='L620'></a> 620   (p6) fms.s1 f12=f14,f6,f32
+<a id='L621' name='L621'></a> 621   nop.i 0;;
+<a id='L622' name='L622'></a> 622 <em class='brace'>}</em>
+<a id='L623' name='L623'></a> 623 
+<a id='L624' name='L624'></a> 624 <em class='brace'>{</em>.mfi
+<a id='L625' name='L625'></a> 625   nop.m 0
+<a id='L626' name='L626'></a> 626   <em class='comment'>// T_low'=(Rth-r)*C1+(L(x*y)*C1+T_low)</em>
+<a id='L627' name='L627'></a> 627   (p13) fma.s1 f36=f43,f14,f36
+<a id='L628' name='L628'></a> 628   nop.i 0;;
+<a id='L629' name='L629'></a> 629 <em class='brace'>}</em>
+<a id='L630' name='L630'></a> 630 <em class='brace'>{</em>.mfi
+<a id='L631' name='L631'></a> 631   nop.m 0
+<a id='L632' name='L632'></a> 632   <em class='comment'>// P18=P14+r4*P58</em>
+<a id='L633' name='L633'></a> 633   (p6) fma.s1 f13=f11,f13,f15
+<a id='L634' name='L634'></a> 634   nop.i 0;;
+<a id='L635' name='L635'></a> 635 <em class='brace'>}</em>
+<a id='L636' name='L636'></a> 636 
+<a id='L637' name='L637'></a> 637 <em class='brace'>{</em>.mfi
+<a id='L638' name='L638'></a> 638   nop.m 0
+<a id='L639' name='L639'></a> 639   <em class='comment'>// add T_high+l</em>
+<a id='L640' name='L640'></a> 640   (p6) fma.s1 f8=f8,f1,f7
+<a id='L641' name='L641'></a> 641   nop.i 0;;
+<a id='L642' name='L642'></a> 642 <em class='brace'>}</em>
+<a id='L643' name='L643'></a> 643 
+<a id='L644' name='L644'></a> 644 
+<a id='L645' name='L645'></a> 645 <em class='brace'>{</em>.mfi
+<a id='L646' name='L646'></a> 646   nop.m 0
+<a id='L647' name='L647'></a> 647   <em class='comment'>// D+T_low</em>
+<a id='L648' name='L648'></a> 648   (p6) fma.s1 f12=f12,f1,f36
+<a id='L649' name='L649'></a> 649   nop.i 0;;
+<a id='L650' name='L650'></a> 650 <em class='brace'>}</em>
+<a id='L651' name='L651'></a> 651 
+<a id='L652' name='L652'></a> 652 
+<a id='L653' name='L653'></a> 653 <em class='brace'>{</em>.mfi
+<a id='L654' name='L654'></a> 654   nop.m 0
+<a id='L655' name='L655'></a> 655   <em class='comment'>// (T_high+l)+C1r</em>
+<a id='L656' name='L656'></a> 656   (p6) fma.s1 f8=f8,f1,f32
+<a id='L657' name='L657'></a> 657   nop.i 0
+<a id='L658' name='L658'></a> 658 <em class='brace'>}</em>
+<a id='L659' name='L659'></a> 659 <em class='brace'>{</em>.mfi
+<a id='L660' name='L660'></a> 660   nop.m 0
+<a id='L661' name='L661'></a> 661   <em class='comment'>// (D+T_low)+r*P18</em>
+<a id='L662' name='L662'></a> 662   (p6) fma.s1 f13=f13,f6,f12
+<a id='L663' name='L663'></a> 663   nop.i 0;;
+<a id='L664' name='L664'></a> 664 <em class='brace'>}</em>
+<a id='L665' name='L665'></a> 665 
+<a id='L666' name='L666'></a> 666 <em class='comment'>//{.mfb</em>
+<a id='L667' name='L667'></a> 667 <em class='comment'>//nop.m 0</em>
+<a id='L668' name='L668'></a> 668 <em class='comment'>//mov f8=f36</em>
+<a id='L669' name='L669'></a> 669 <em class='comment'>//fma.s0 f8=f13,f6,f0</em>
+<a id='L670' name='L670'></a> 670 <em class='comment'>//br.ret.sptk b0;;</em>
+<a id='L671' name='L671'></a> 671 <em class='comment'>//}</em>
+<a id='L672' name='L672'></a> 672 
+<a id='L673' name='L673'></a> 673 
+<a id='L674' name='L674'></a> 674 <em class='brace'>{</em>.mfb
+<a id='L675' name='L675'></a> 675   nop.m 0
+<a id='L676' name='L676'></a> 676   <em class='comment'>// result=((T_high+l)+C1r)+((D+T_low)+r*P18)</em>
+<a id='L677' name='L677'></a> 677   (p6) fma.s0 f8=f13,f1,f8
+<a id='L678' name='L678'></a> 678   <em class='comment'>// return</em>
+<a id='L679' name='L679'></a> 679   br.ret.sptk b0;;
+<a id='L680' name='L680'></a> 680 <em class='brace'>}</em>
+<a id='L681' name='L681'></a> 681 
+<a id='L682' name='L682'></a> 682 
+<a id='L683' name='L683'></a> 683 SPECIAL_log2l:
+<a id='L684' name='L684'></a> 684 <em class='brace'>{</em>.mfi
+<a id='L685' name='L685'></a> 685   nop.m 0
+<a id='L686' name='L686'></a> 686   mov FR_X=f8
+<a id='L687' name='L687'></a> 687   nop.i 0
+<a id='L688' name='L688'></a> 688 <em class='brace'>}</em>
+<a id='L689' name='L689'></a> 689 <em class='brace'>{</em>.mfi
+<a id='L690' name='L690'></a> 690   nop.m 0
+<a id='L691' name='L691'></a> 691   <em class='comment'>// x=+Infinity ?</em>
+<a id='L692' name='L692'></a> 692   fclass.m p7,p0=f8,0x21
+<a id='L693' name='L693'></a> 693   nop.i 0;;
+<a id='L694' name='L694'></a> 694 <em class='brace'>}</em>
+<a id='L695' name='L695'></a> 695 <em class='brace'>{</em>.mfi
+<a id='L696' name='L696'></a> 696   nop.m 0
+<a id='L697' name='L697'></a> 697   <em class='comment'>// x=+/-Zero ?</em>
+<a id='L698' name='L698'></a> 698   fclass.m p8,p0=f7,0x7
+<a id='L699' name='L699'></a> 699   nop.i 0;;
+<a id='L700' name='L700'></a> 700 <em class='brace'>}</em>
+<a id='L701' name='L701'></a> 701 <em class='brace'>{</em>.mfi
+<a id='L702' name='L702'></a> 702   nop.m 0
+<a id='L703' name='L703'></a> 703   <em class='comment'>// x=-Infinity, -normal, -denormal ?</em>
+<a id='L704' name='L704'></a> 704   fclass.m p6,p0=f8,0x3a
+<a id='L705' name='L705'></a> 705   nop.i 0;;
+<a id='L706' name='L706'></a> 706 <em class='brace'>}</em>
+<a id='L707' name='L707'></a> 707 <em class='brace'>{</em>.mfb
+<a id='L708' name='L708'></a> 708   nop.m 0
+<a id='L709' name='L709'></a> 709   <em class='comment'>// log2l(+Infinity)=+Infinity</em>
+<a id='L710' name='L710'></a> 710   nop.f 0
+<a id='L711' name='L711'></a> 711   (p7) br.ret.spnt b0;;
+<a id='L712' name='L712'></a> 712 <em class='brace'>}</em>
+<a id='L713' name='L713'></a> 713 <em class='brace'>{</em>.mfi
+<a id='L714' name='L714'></a> 714   (p8) mov GR_Parameter_TAG = 168
+<a id='L715' name='L715'></a> 715   <em class='comment'>// log2l(+/-0)=-infinity, raises Divide by Zero</em>
+<a id='L716' name='L716'></a> 716   <em class='comment'>// set f8=-0</em>
+<a id='L717' name='L717'></a> 717   (p8) fmerge.ns f8=f0,f8
+<a id='L718' name='L718'></a> 718   nop.i 0;;
+<a id='L719' name='L719'></a> 719 <em class='brace'>}</em>
+<a id='L720' name='L720'></a> 720 <em class='brace'>{</em>.mfb
+<a id='L721' name='L721'></a> 721   nop.m 0
+<a id='L722' name='L722'></a> 722   (p8) frcpa.s0 f8,p0=f1,f8
+<a id='L723' name='L723'></a> 723   (p8) br.cond.sptk __libm_error_region;;
+<a id='L724' name='L724'></a> 724 <em class='brace'>}</em>
+<a id='L725' name='L725'></a> 725 <em class='brace'>{</em>.mfb
+<a id='L726' name='L726'></a> 726   (p6) mov GR_Parameter_TAG = 169
+<a id='L727' name='L727'></a> 727   <em class='comment'>// x&lt;0: return NaN, raise Invalid</em>
+<a id='L728' name='L728'></a> 728   (p6) frcpa.s0 f8,p0=f0,f0
+<a id='L729' name='L729'></a> 729   (p6) br.cond.sptk __libm_error_region;;
+<a id='L730' name='L730'></a> 730 <em class='brace'>}</em>
+<a id='L731' name='L731'></a> 731 
+<a id='L732' name='L732'></a> 732 
+<a id='L733' name='L733'></a> 733 <em class='brace'>{</em>.mfb
+<a id='L734' name='L734'></a> 734   nop.m 0
+<a id='L735' name='L735'></a> 735   <em class='comment'>// Remaining cases: NaNs</em>
+<a id='L736' name='L736'></a> 736   fma.s0 f8=f8,f1,f0
+<a id='L737' name='L737'></a> 737   br.ret.sptk b0;;
+<a id='L738' name='L738'></a> 738 <em class='brace'>}</em>
+<a id='L739' name='L739'></a> 739 
+<a id='L740' name='L740'></a> 740 LOG2_PSEUDO_ZERO:
+<a id='L741' name='L741'></a> 741 
+<a id='L742' name='L742'></a> 742 <em class='brace'>{</em>.mfi
+<a id='L743' name='L743'></a> 743   nop.m 0
+<a id='L744' name='L744'></a> 744   mov FR_X=f8
+<a id='L745' name='L745'></a> 745   nop.i 0
+<a id='L746' name='L746'></a> 746 <em class='brace'>}</em>
+<a id='L747' name='L747'></a> 747 <em class='brace'>{</em>.mfi
+<a id='L748' name='L748'></a> 748   mov GR_Parameter_TAG = 168
+<a id='L749' name='L749'></a> 749   <em class='comment'>// log2l(+/-0)=-infinity, raises Divide by Zero</em>
+<a id='L750' name='L750'></a> 750   <em class='comment'>// set f8=-0</em>
+<a id='L751' name='L751'></a> 751   fmerge.ns f8=f0,f8
+<a id='L752' name='L752'></a> 752   nop.i 0;;
+<a id='L753' name='L753'></a> 753 <em class='brace'>}</em>
+<a id='L754' name='L754'></a> 754 <em class='brace'>{</em>.mfb
+<a id='L755' name='L755'></a> 755   nop.m 0
+<a id='L756' name='L756'></a> 756   frcpa.s0 f8,p0=f1,f8
+<a id='L757' name='L757'></a> 757   br.cond.sptk __libm_error_region;;
+<a id='L758' name='L758'></a> 758 <em class='brace'>}</em>
+<a id='L759' name='L759'></a> 759 
+<a id='L760' name='L760'></a> 760 
+<a id='L761' name='L761'></a> 761 GLOBAL_IEEE754_END(log2l)
+<a id='L762' name='L762'></a> 762 libm_alias_ldouble_other (__log2, log2)
+<a id='L763' name='L763'></a> 763 
+<a id='L764' name='L764'></a> 764 
+<a id='L765' name='L765'></a> 765 LOCAL_LIBM_ENTRY(__libm_error_region)
+<a id='L766' name='L766'></a> 766 .prologue
+<a id='L767' name='L767'></a> 767 <em class='brace'>{</em> .mfi
+<a id='L768' name='L768'></a> 768         add   GR_Parameter_Y=-32,sp             <em class='comment'>// Parameter 2 value</em>
+<a id='L769' name='L769'></a> 769         nop.f 0
+<a id='L770' name='L770'></a> 770 .save   ar.pfs,GR_SAVE_PFS
+<a id='L771' name='L771'></a> 771         mov  GR_SAVE_PFS=ar.pfs                 <em class='comment'>// Save ar.pfs</em>
+<a id='L772' name='L772'></a> 772 <em class='brace'>}</em>
+<a id='L773' name='L773'></a> 773 <em class='brace'>{</em> .mfi
+<a id='L774' name='L774'></a> 774 .fframe 64
+<a id='L775' name='L775'></a> 775         add sp=-64,sp                           <em class='comment'>// Create new stack</em>
+<a id='L776' name='L776'></a> 776         nop.f 0
+<a id='L777' name='L777'></a> 777         mov GR_SAVE_GP=gp                       <em class='comment'>// Save gp</em>
+<a id='L778' name='L778'></a> 778 <em class='brace'>}</em>;;
+<a id='L779' name='L779'></a> 779 <em class='brace'>{</em> .mmi
+<a id='L780' name='L780'></a> 780         stfe [GR_Parameter_Y] = FR_Y,16         <em class='comment'>// STORE Parameter 2 on stack</em>
+<a id='L781' name='L781'></a> 781         add GR_Parameter_X = 16,sp              <em class='comment'>// Parameter 1 address</em>
+<a id='L782' name='L782'></a> 782 .save   b0, GR_SAVE_B0
+<a id='L783' name='L783'></a> 783         mov GR_SAVE_B0=b0                       <em class='comment'>// Save b0</em>
+<a id='L784' name='L784'></a> 784 <em class='brace'>}</em>;;
+<a id='L785' name='L785'></a> 785 .body
+<a id='L786' name='L786'></a> 786 <em class='brace'>{</em> .mib
+<a id='L787' name='L787'></a> 787         stfe [GR_Parameter_X] = FR_X                  <em class='comment'>// STORE Parameter 1 on stack</em>
+<a id='L788' name='L788'></a> 788         add   GR_Parameter_RESULT = 0,GR_Parameter_Y  <em class='comment'>// Parameter 3 address</em>
+<a id='L789' name='L789'></a> 789     nop.b 0
+<a id='L790' name='L790'></a> 790 <em class='brace'>}</em>
+<a id='L791' name='L791'></a> 791 <em class='brace'>{</em> .mib
+<a id='L792' name='L792'></a> 792         stfe [GR_Parameter_Y] = FR_RESULT             <em class='comment'>// STORE Parameter 3 on stack</em>
+<a id='L793' name='L793'></a> 793         add   GR_Parameter_Y = -16,GR_Parameter_Y
+<a id='L794' name='L794'></a> 794         br.call.sptk b0=__libm_error_support#         <em class='comment'>// Call error handling function</em>
+<a id='L795' name='L795'></a> 795 <em class='brace'>}</em>;;
+<a id='L796' name='L796'></a> 796 <em class='brace'>{</em> .mmi
+<a id='L797' name='L797'></a> 797         nop.m 0
+<a id='L798' name='L798'></a> 798         nop.m 0
+<a id='L799' name='L799'></a> 799         add   GR_Parameter_RESULT = 48,sp
+<a id='L800' name='L800'></a> 800 <em class='brace'>}</em>;;
+<a id='L801' name='L801'></a> 801 <em class='brace'>{</em> .mmi
+<a id='L802' name='L802'></a> 802         ldfe  f8 = [GR_Parameter_RESULT]       <em class='comment'>// Get return result off stack</em>
+<a id='L803' name='L803'></a> 803 .restore sp
+<a id='L804' name='L804'></a> 804         add   sp = 64,sp                       <em class='comment'>// Restore stack pointer</em>
+<a id='L805' name='L805'></a> 805         mov   b0 = GR_SAVE_B0                  <em class='comment'>// Restore return address</em>
+<a id='L806' name='L806'></a> 806 <em class='brace'>}</em>;;
+<a id='L807' name='L807'></a> 807 <em class='brace'>{</em> .mib
+<a id='L808' name='L808'></a> 808         mov   gp = GR_SAVE_GP                  <em class='comment'>// Restore gp</em>
+<a id='L809' name='L809'></a> 809         mov   ar.pfs = GR_SAVE_PFS             <em class='comment'>// Restore ar.pfs</em>
+<a id='L810' name='L810'></a> 810         br.ret.sptk     b0                     <em class='comment'>// Return</em>
+<a id='L811' name='L811'></a> 811 <em class='brace'>}</em>;;
+<a id='L812' name='L812'></a> 812 
+<a id='L813' name='L813'></a> 813 LOCAL_LIBM_END(__libm_error_region)
+<a id='L814' name='L814'></a> 814 .type   __libm_error_support#,@function
+<a id='L815' name='L815'></a> 815 .global __libm_error_support#
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;][^][v]<a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

@@ -1,0 +1,597 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>benchtests/bench-pthread-locks.c</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18858.html'>benchtests</a>/bench-pthread-locks.c</h2>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L68'>[^]</a><a href='#L522'>[v]</a>[top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<h2 class='header'>DEFINITIONS</h2>
+This source file includes following definitions.
+<ol>
+<li><a href='#L68' title='Defined at 68.'>fibonacci</a></li>
+<li><a href='#L77' title='Defined at 77.'>do_filler</a></li>
+<li><a href='#L87' title='Defined at 87.'>test_mutex</a></li>
+<li><a href='#L107' title='Defined at 107.'>test_mutex_trylock</a></li>
+<li><a href='#L128' title='Defined at 128.'>test_rwlock_read</a></li>
+<li><a href='#L148' title='Defined at 148.'>test_rwlock_tryread</a></li>
+<li><a href='#L169' title='Defined at 169.'>test_rwlock_write</a></li>
+<li><a href='#L189' title='Defined at 189.'>test_rwlock_trywrite</a></li>
+<li><a href='#L210' title='Defined at 210.'>test_spin_lock</a></li>
+<li><a href='#L230' title='Defined at 230.'>test_spin_trylock</a></li>
+<li><a href='#L251' title='Defined at 251.'>test_sem_wait</a></li>
+<li><a href='#L271' title='Defined at 271.'>test_sem_trywait</a></li>
+<li><a href='#L290' title='Defined at 290.'>test_condvar_helper</a></li>
+<li><a href='#L304' title='Defined at 304.'>test_condvar</a></li>
+<li><a href='#L345' title='Defined at 345.'>test_producer_thread</a></li>
+<li><a href='#L373' title='Defined at 373.'>test_consumer_producer</a></li>
+<li><a href='#L419' title='Defined at 419.'>do_bench_2</a></li>
+<li><a href='#L511' title='Defined at 511.'>do_bench_1</a></li>
+<li><a href='#L522' title='Defined at 522.'>do_bench</a></li>
+</ol>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* Measure various lock acquisition times for empty critical sections.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   Copyright (C) 2020-2022 Free Software Foundation, Inc.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'></em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'></em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'></em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   License along with the GNU C Library; if not, see</em>
+<a id='L17' name='L17'></a>  17 <em class='comment'>   &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L18' name='L18'></a>  18 
+<a id='L19' name='L19'></a>  19 <em class='sharp'>#define</em> <a href='../R/8623.html' title='Multiple referred from 2 places.'>TEST_MAIN</a>
+<a id='L20' name='L20'></a>  20 <em class='sharp'>#define</em> <a href='../R/8630.html' title='Multiple referred from 32 places.'>TEST_NAME</a> "pthread-locks"
+<a id='L21' name='L21'></a>  21 
+<a id='L22' name='L22'></a>  22 <em class='sharp'>#include</em> &lt;<a href='../I/1776.html'>stdio.h</a>&gt;
+<a id='L23' name='L23'></a>  23 <em class='sharp'>#include</em> &lt;<a href='../I/1973.html'>string.h</a>&gt;
+<a id='L24' name='L24'></a>  24 <em class='sharp'>#include</em> &lt;<a href='18175.html'>limits.h</a>&gt;
+<a id='L25' name='L25'></a>  25 <em class='sharp'>#include</em> &lt;<a href='../I/1780.html'>stdlib.h</a>&gt;
+<a id='L26' name='L26'></a>  26 <em class='sharp'>#include</em> &lt;<a href='../I/1919.html'>pthread.h</a>&gt;
+<a id='L27' name='L27'></a>  27 <em class='sharp'>#include</em> &lt;<a href='../I/5945.html'>semaphore.h</a>&gt;
+<a id='L28' name='L28'></a>  28 <em class='sharp'>#include</em> &lt;stdatomic.h&gt;
+<a id='L29' name='L29'></a>  29 <em class='sharp'>#include</em> &lt;<a href='../I/176.html'>sys/time.h</a>&gt;
+<a id='L30' name='L30'></a>  30 <em class='sharp'>#include</em> &lt;<a href='../I/1890.html'>math.h</a>&gt;
+<a id='L31' name='L31'></a>  31 <em class='sharp'>#include</em> "<a href='6874.html'>bench-timing.h</a>"
+<a id='L32' name='L32'></a>  32 <em class='sharp'>#include</em> "<a href='7000.html'>json-lib.h</a>"
+<a id='L33' name='L33'></a>  33 
+<a id='L34' name='L34'></a>  34 <em class='comment'>/* The point of this benchmark is to measure the overhead of an empty</em>
+<a id='L35' name='L35'></a>  35 <em class='comment'>   critical section or a small critical section.  This is never going</em>
+<a id='L36' name='L36'></a>  36 <em class='comment'>   to be indicative of real application performance.  Instead we are</em>
+<a id='L37' name='L37'></a>  37 <em class='comment'>   trying to benchmark the effects of the compiler and the runtime</em>
+<a id='L38' name='L38'></a>  38 <em class='comment'>   coupled with a particular set of hardware atomic operations.</em>
+<a id='L39' name='L39'></a>  39 <em class='comment'>   The numbers from this benchmark should be taken with a massive gain</em>
+<a id='L40' name='L40'></a>  40 <em class='comment'>   of salt and viewed through the eyes of expert reviewers.  */</em>
+<a id='L41' name='L41'></a>  41 
+<a id='L42' name='L42'></a>  42 <strong class='reserved'>static</strong> <a href='../D/35134.html' title='Multiple defined in 2 places.'>pthread_mutex_t</a> <a href='../D/33231.html' title='Multiple defined in 2 places.'>m</a>;
+<a id='L43' name='L43'></a>  43 <strong class='reserved'>static</strong> <a href='../D/35152.html' title='Multiple defined in 2 places.'>pthread_rwlock_t</a> <a href='../Y/24417.html' title='Multiple used in 15 places.'>rw</a>;
+<a id='L44' name='L44'></a>  44 <strong class='reserved'>static</strong> <a href='../D/35112.html' title='Multiple defined in 2 places.'>pthread_cond_t</a> <a href='../Y/12366.html' title='Multiple used in 31 places.'>cv</a>;
+<a id='L45' name='L45'></a>  45 <strong class='reserved'>static</strong> <a href='../D/35112.html' title='Multiple defined in 2 places.'>pthread_cond_t</a> <a href='../Y/11950.html' title='Multiple used in 3 places.'>consumer_c</a>, <a href='../Y/22830.html' title='Multiple used in 3 places.'>producer_c</a>;
+<a id='L46' name='L46'></a>  46 <strong class='reserved'>static</strong> <strong class='reserved'>int</strong> <a href='../Y/12372.html' title='Multiple used in 4 places.'>cv_done</a>;
+<a id='L47' name='L47'></a>  47 <strong class='reserved'>static</strong> <a href='../D/35172.html' title='Multiple defined in 2 places.'>pthread_spinlock_t</a> <a href='../D/36879.html' title='Multiple defined in 2 places.'>sp</a>;
+<a id='L48' name='L48'></a>  48 <strong class='reserved'>static</strong> <a href='../D/36445.html' title='Multiple defined in 5 places.'>sem_t</a> <a href='../Y/24932.html' title='Multiple used in 179 places.'>sem</a>;
+<a id='L49' name='L49'></a>  49 
+<a id='L50' name='L50'></a>  50 <strong class='reserved'>typedef</strong> <a href='../S/6874.html#L30' title='Defined at 30 in benchtests/bench-timing.h.'>timing_t</a> (*<a href='../S/2015.html#L26' title='Defined at 26 in string/test-sig_np.c.'>test_t</a>)(<strong class='reserved'>long</strong>, <strong class='reserved'>int</strong>);
+<a id='L51' name='L51'></a>  51 
+<a id='L52' name='L52'></a>  52 <em class='sharp'>#define</em> <a href='../S/6980.html#L429' title='Referred from 429 in benchtests/bench-pthread-locks.c.'>START_ITERS</a> 1000
+<a id='L53' name='L53'></a>  53 
+<a id='L54' name='L54'></a>  54 <em class='sharp'>#define</em> <a href='../R/2443.html' title='Multiple referred from 13 places.'>FILLER_GOES_HERE</a> \
+<a id='L55' name='L55'></a>  55   <strong class='reserved'>if</strong> (<a href='../Y/14596.html' title='Multiple used in 20 places.'>filler</a>) \
+<a id='L56' name='L56'></a>  56     <a href='../S/6980.html#L77' title='Defined at 77 in benchtests/bench-pthread-locks.c.'>do_filler</a> ();
+<a id='L57' name='L57'></a>  57 
+<a id='L58' name='L58'></a>  58 <em class='comment'>/* Everyone loves a good fibonacci series.  This isn't quite one of</em>
+<a id='L59' name='L59'></a>  59 <em class='comment'>   them because we need larger values in fewer steps, in a way that</em>
+<a id='L60' name='L60'></a>  60 <em class='comment'>   won't be optimized away.  We're looking to approximately double the</em>
+<a id='L61' name='L61'></a>  61 <em class='comment'>   total time each test iteration takes, so as to not swamp the useful</em>
+<a id='L62' name='L62'></a>  62 <em class='comment'>   timings.  */</em>
+<a id='L63' name='L63'></a>  63 
+<a id='L64' name='L64'></a>  64 <em class='sharp'>#pragma</em> GCC push_options
+<a id='L65' name='L65'></a>  65 <em class='sharp'>#pragma</em> GCC optimize(1)
+<a id='L66' name='L66'></a>  66 
+<a id='L67' name='L67'></a>  67 <strong class='reserved'>static</strong> <strong class='reserved'>int</strong> <strong class='reserved'>__attribute__</strong>((<a href='../Y/21025.html' title='Multiple used in 150 places.'>noinline</a>))
+<a id='L68' name='L68'></a>  68 <a href='../R/19423.html' title='Multiple referred from 2 places.'>fibonacci</a> (<strong class='reserved'>int</strong> <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>)
+<a id='L69' name='L69'></a>  69 <em class='brace'>{</em>
+<a id='L70' name='L70'></a>  70   <strong class='reserved'>asm</strong>("");
+<a id='L71' name='L71'></a>  71   <strong class='reserved'>if</strong> (<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> &gt; 2)
+<a id='L72' name='L72'></a>  72     <strong class='reserved'>return</strong> <a href='../S/6980.html#L68' title='Defined at 68 in benchtests/bench-pthread-locks.c.'>fibonacci</a> (<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>-1) + <a href='../S/6980.html#L68' title='Defined at 68 in benchtests/bench-pthread-locks.c.'>fibonacci</a> (<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>-2);
+<a id='L73' name='L73'></a>  73   <strong class='reserved'>return</strong> 10+<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>;
+<a id='L74' name='L74'></a>  74 <em class='brace'>}</em>
+<a id='L75' name='L75'></a>  75 
+<a id='L76' name='L76'></a>  76 <strong class='reserved'>static</strong> <strong class='reserved'>void</strong>
+<a id='L77' name='L77'></a>  77 <a href='../S/6980.html#L56' title='Referred from 56 in benchtests/bench-pthread-locks.c.'>do_filler</a> (<strong class='reserved'>void</strong>)
+<a id='L78' name='L78'></a>  78 <em class='brace'>{</em>
+<a id='L79' name='L79'></a>  79   <strong class='reserved'>static</strong> <strong class='reserved'>char</strong> <a href='../Y/11038.html' title='Multiple used in 410 places.'>buf1</a>[512], <a href='../Y/11040.html' title='Multiple used in 265 places.'>buf2</a>[512];
+<a id='L80' name='L80'></a>  80   <strong class='reserved'>int</strong> <a href='../D/30173.html' title='Multiple defined in 17 places.'>f</a> = <a href='../S/6980.html#L68' title='Defined at 68 in benchtests/bench-pthread-locks.c.'>fibonacci</a> (5);
+<a id='L81' name='L81'></a>  81   <a href='../D/33450.html' title='Multiple defined in 47 places.'>memcpy</a> (<a href='../Y/11038.html' title='Multiple used in 410 places.'>buf1</a>, <a href='../Y/11040.html' title='Multiple used in 265 places.'>buf2</a>, <a href='../D/30173.html' title='Multiple defined in 17 places.'>f</a>);
+<a id='L82' name='L82'></a>  82 <em class='brace'>}</em>
+<a id='L83' name='L83'></a>  83 
+<a id='L84' name='L84'></a>  84 <em class='sharp'>#pragma</em> GCC pop_options
+<a id='L85' name='L85'></a>  85 
+<a id='L86' name='L86'></a>  86 <strong class='reserved'>static</strong> <a href='../S/6874.html#L30' title='Defined at 30 in benchtests/bench-timing.h.'>timing_t</a>
+<a id='L87' name='L87'></a>  87 test_mutex (<strong class='reserved'>long</strong> <a href='../Y/17305.html' title='Multiple used in 182 places.'>iters</a>, <strong class='reserved'>int</strong> <a href='../Y/14596.html' title='Multiple used in 20 places.'>filler</a>)
+<a id='L88' name='L88'></a>  88 <em class='brace'>{</em>
+<a id='L89' name='L89'></a>  89   <a href='../S/6874.html#L30' title='Defined at 30 in benchtests/bench-timing.h.'>timing_t</a> <a href='../D/36987.html' title='Multiple defined in 10 places.'>start</a>, <a href='../S/2170.html#L624' title='Defined at 624 in hurd/hurdsig.c.'>stop</a>, <a href='../Y/12277.html' title='Multiple used in 356 places.'>cur</a>;
+<a id='L90' name='L90'></a>  90 
+<a id='L91' name='L91'></a>  91   <a href='../Y/23001.html' title='Multiple used in 64 places.'>pthread_mutex_init</a> (&amp;<a href='../D/33231.html' title='Multiple defined in 2 places.'>m</a>, <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>);
+<a id='L92' name='L92'></a>  92 
+<a id='L93' name='L93'></a>  93   <a href='../S/6874.html#L34' title='Defined at 34 in benchtests/bench-timing.h.'>TIMING_NOW</a> (<a href='../D/36987.html' title='Multiple defined in 10 places.'>start</a>);
+<a id='L94' name='L94'></a>  94   <strong class='reserved'>for</strong> (<strong class='reserved'>long</strong> <a href='../Y/17344.html' title='Multiple used in 1543 places.'>j</a> = <a href='../Y/17305.html' title='Multiple used in 182 places.'>iters</a>; <a href='../Y/17344.html' title='Multiple used in 1543 places.'>j</a> &gt;= 0; --<a href='../Y/17344.html' title='Multiple used in 1543 places.'>j</a>)
+<a id='L95' name='L95'></a>  95     <em class='brace'>{</em>
+<a id='L96' name='L96'></a>  96       <a href='../Y/23002.html' title='Multiple used in 212 places.'>pthread_mutex_lock</a> (&amp;<a href='../D/33231.html' title='Multiple defined in 2 places.'>m</a>);
+<a id='L97' name='L97'></a>  97       <a href='../S/6980.html#L54' title='Defined at 54 in benchtests/bench-pthread-locks.c.'>FILLER_GOES_HERE</a>;
+<a id='L98' name='L98'></a>  98       <a href='../Y/23005.html' title='Multiple used in 191 places.'>pthread_mutex_unlock</a> (&amp;<a href='../D/33231.html' title='Multiple defined in 2 places.'>m</a>);
+<a id='L99' name='L99'></a>  99     <em class='brace'>}</em>
+<a id='L100' name='L100'></a> 100   <a href='../S/6874.html#L34' title='Defined at 34 in benchtests/bench-timing.h.'>TIMING_NOW</a> (<a href='../S/2170.html#L624' title='Defined at 624 in hurd/hurdsig.c.'>stop</a>);
+<a id='L101' name='L101'></a> 101   <a href='../S/6874.html#L35' title='Defined at 35 in benchtests/bench-timing.h.'>TIMING_DIFF</a> (<a href='../Y/12277.html' title='Multiple used in 356 places.'>cur</a>, <a href='../D/36987.html' title='Multiple defined in 10 places.'>start</a>, <a href='../S/2170.html#L624' title='Defined at 624 in hurd/hurdsig.c.'>stop</a>);
+<a id='L102' name='L102'></a> 102 
+<a id='L103' name='L103'></a> 103   <strong class='reserved'>return</strong> <a href='../Y/12277.html' title='Multiple used in 356 places.'>cur</a>;
+<a id='L104' name='L104'></a> 104 <em class='brace'>}</em>
+<a id='L105' name='L105'></a> 105 
+<a id='L106' name='L106'></a> 106 <strong class='reserved'>static</strong> <a href='../S/6874.html#L30' title='Defined at 30 in benchtests/bench-timing.h.'>timing_t</a>
+<a id='L107' name='L107'></a> 107 test_mutex_trylock (<strong class='reserved'>long</strong> <a href='../Y/17305.html' title='Multiple used in 182 places.'>iters</a>, <strong class='reserved'>int</strong> <a href='../Y/14596.html' title='Multiple used in 20 places.'>filler</a>)
+<a id='L108' name='L108'></a> 108 <em class='brace'>{</em>
+<a id='L109' name='L109'></a> 109   <a href='../S/6874.html#L30' title='Defined at 30 in benchtests/bench-timing.h.'>timing_t</a> <a href='../D/36987.html' title='Multiple defined in 10 places.'>start</a>, <a href='../S/2170.html#L624' title='Defined at 624 in hurd/hurdsig.c.'>stop</a>, <a href='../Y/12277.html' title='Multiple used in 356 places.'>cur</a>;
+<a id='L110' name='L110'></a> 110 
+<a id='L111' name='L111'></a> 111   <a href='../Y/23001.html' title='Multiple used in 64 places.'>pthread_mutex_init</a> (&amp;<a href='../D/33231.html' title='Multiple defined in 2 places.'>m</a>, <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>);
+<a id='L112' name='L112'></a> 112   <a href='../Y/23002.html' title='Multiple used in 212 places.'>pthread_mutex_lock</a> (&amp;<a href='../D/33231.html' title='Multiple defined in 2 places.'>m</a>);
+<a id='L113' name='L113'></a> 113 
+<a id='L114' name='L114'></a> 114   <a href='../S/6874.html#L34' title='Defined at 34 in benchtests/bench-timing.h.'>TIMING_NOW</a> (<a href='../D/36987.html' title='Multiple defined in 10 places.'>start</a>);
+<a id='L115' name='L115'></a> 115   <strong class='reserved'>for</strong> (<strong class='reserved'>long</strong> <a href='../Y/17344.html' title='Multiple used in 1543 places.'>j</a> = <a href='../Y/17305.html' title='Multiple used in 182 places.'>iters</a>; <a href='../Y/17344.html' title='Multiple used in 1543 places.'>j</a> &gt;= 0; --<a href='../Y/17344.html' title='Multiple used in 1543 places.'>j</a>)
+<a id='L116' name='L116'></a> 116     <em class='brace'>{</em>
+<a id='L117' name='L117'></a> 117       <a href='../Y/23004.html' title='Multiple used in 21 places.'>pthread_mutex_trylock</a> (&amp;<a href='../D/33231.html' title='Multiple defined in 2 places.'>m</a>);
+<a id='L118' name='L118'></a> 118       <a href='../S/6980.html#L54' title='Defined at 54 in benchtests/bench-pthread-locks.c.'>FILLER_GOES_HERE</a>;
+<a id='L119' name='L119'></a> 119     <em class='brace'>}</em>
+<a id='L120' name='L120'></a> 120   <a href='../S/6874.html#L34' title='Defined at 34 in benchtests/bench-timing.h.'>TIMING_NOW</a> (<a href='../S/2170.html#L624' title='Defined at 624 in hurd/hurdsig.c.'>stop</a>);
+<a id='L121' name='L121'></a> 121   <a href='../S/6874.html#L35' title='Defined at 35 in benchtests/bench-timing.h.'>TIMING_DIFF</a> (<a href='../Y/12277.html' title='Multiple used in 356 places.'>cur</a>, <a href='../D/36987.html' title='Multiple defined in 10 places.'>start</a>, <a href='../S/2170.html#L624' title='Defined at 624 in hurd/hurdsig.c.'>stop</a>);
+<a id='L122' name='L122'></a> 122 
+<a id='L123' name='L123'></a> 123   <a href='../Y/23005.html' title='Multiple used in 191 places.'>pthread_mutex_unlock</a> (&amp;<a href='../D/33231.html' title='Multiple defined in 2 places.'>m</a>);
+<a id='L124' name='L124'></a> 124   <strong class='reserved'>return</strong> <a href='../Y/12277.html' title='Multiple used in 356 places.'>cur</a>;
+<a id='L125' name='L125'></a> 125 <em class='brace'>}</em>
+<a id='L126' name='L126'></a> 126 
+<a id='L127' name='L127'></a> 127 <strong class='reserved'>static</strong> <a href='../S/6874.html#L30' title='Defined at 30 in benchtests/bench-timing.h.'>timing_t</a>
+<a id='L128' name='L128'></a> 128 test_rwlock_read (<strong class='reserved'>long</strong> <a href='../Y/17305.html' title='Multiple used in 182 places.'>iters</a>, <strong class='reserved'>int</strong> <a href='../Y/14596.html' title='Multiple used in 20 places.'>filler</a>)
+<a id='L129' name='L129'></a> 129 <em class='brace'>{</em>
+<a id='L130' name='L130'></a> 130   <a href='../S/6874.html#L30' title='Defined at 30 in benchtests/bench-timing.h.'>timing_t</a> <a href='../D/36987.html' title='Multiple defined in 10 places.'>start</a>, <a href='../S/2170.html#L624' title='Defined at 624 in hurd/hurdsig.c.'>stop</a>, <a href='../Y/12277.html' title='Multiple used in 356 places.'>cur</a>;
+<a id='L131' name='L131'></a> 131 
+<a id='L132' name='L132'></a> 132   <a href='../Y/23014.html' title='Multiple used in 28 places.'>pthread_rwlock_init</a> (&amp;<a href='../Y/24417.html' title='Multiple used in 15 places.'>rw</a>, <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>);
+<a id='L133' name='L133'></a> 133 
+<a id='L134' name='L134'></a> 134   <a href='../S/6874.html#L34' title='Defined at 34 in benchtests/bench-timing.h.'>TIMING_NOW</a> (<a href='../D/36987.html' title='Multiple defined in 10 places.'>start</a>);
+<a id='L135' name='L135'></a> 135   <strong class='reserved'>for</strong> (<strong class='reserved'>long</strong> <a href='../Y/17344.html' title='Multiple used in 1543 places.'>j</a> = <a href='../Y/17305.html' title='Multiple used in 182 places.'>iters</a>; <a href='../Y/17344.html' title='Multiple used in 1543 places.'>j</a> &gt;= 0; --<a href='../Y/17344.html' title='Multiple used in 1543 places.'>j</a>)
+<a id='L136' name='L136'></a> 136     <em class='brace'>{</em>
+<a id='L137' name='L137'></a> 137       <a href='../Y/23015.html' title='Multiple used in 26 places.'>pthread_rwlock_rdlock</a> (&amp;<a href='../Y/24417.html' title='Multiple used in 15 places.'>rw</a>);
+<a id='L138' name='L138'></a> 138       <a href='../S/6980.html#L54' title='Defined at 54 in benchtests/bench-pthread-locks.c.'>FILLER_GOES_HERE</a>;
+<a id='L139' name='L139'></a> 139       <a href='../Y/23016.html' title='Multiple used in 59 places.'>pthread_rwlock_unlock</a> (&amp;<a href='../Y/24417.html' title='Multiple used in 15 places.'>rw</a>);
+<a id='L140' name='L140'></a> 140     <em class='brace'>}</em>
+<a id='L141' name='L141'></a> 141   <a href='../S/6874.html#L34' title='Defined at 34 in benchtests/bench-timing.h.'>TIMING_NOW</a> (<a href='../S/2170.html#L624' title='Defined at 624 in hurd/hurdsig.c.'>stop</a>);
+<a id='L142' name='L142'></a> 142   <a href='../S/6874.html#L35' title='Defined at 35 in benchtests/bench-timing.h.'>TIMING_DIFF</a> (<a href='../Y/12277.html' title='Multiple used in 356 places.'>cur</a>, <a href='../D/36987.html' title='Multiple defined in 10 places.'>start</a>, <a href='../S/2170.html#L624' title='Defined at 624 in hurd/hurdsig.c.'>stop</a>);
+<a id='L143' name='L143'></a> 143 
+<a id='L144' name='L144'></a> 144   <strong class='reserved'>return</strong> <a href='../Y/12277.html' title='Multiple used in 356 places.'>cur</a>;
+<a id='L145' name='L145'></a> 145 <em class='brace'>}</em>
+<a id='L146' name='L146'></a> 146 
+<a id='L147' name='L147'></a> 147 <strong class='reserved'>static</strong> <a href='../S/6874.html#L30' title='Defined at 30 in benchtests/bench-timing.h.'>timing_t</a>
+<a id='L148' name='L148'></a> 148 test_rwlock_tryread (<strong class='reserved'>long</strong> <a href='../Y/17305.html' title='Multiple used in 182 places.'>iters</a>, <strong class='reserved'>int</strong> <a href='../Y/14596.html' title='Multiple used in 20 places.'>filler</a>)
+<a id='L149' name='L149'></a> 149 <em class='brace'>{</em>
+<a id='L150' name='L150'></a> 150   <a href='../S/6874.html#L30' title='Defined at 30 in benchtests/bench-timing.h.'>timing_t</a> <a href='../D/36987.html' title='Multiple defined in 10 places.'>start</a>, <a href='../S/2170.html#L624' title='Defined at 624 in hurd/hurdsig.c.'>stop</a>, <a href='../Y/12277.html' title='Multiple used in 356 places.'>cur</a>;
+<a id='L151' name='L151'></a> 151 
+<a id='L152' name='L152'></a> 152   <a href='../Y/23014.html' title='Multiple used in 28 places.'>pthread_rwlock_init</a> (&amp;<a href='../Y/24417.html' title='Multiple used in 15 places.'>rw</a>, <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>);
+<a id='L153' name='L153'></a> 153   <a href='../Y/23017.html' title='Multiple used in 25 places.'>pthread_rwlock_wrlock</a> (&amp;<a href='../Y/24417.html' title='Multiple used in 15 places.'>rw</a>);
+<a id='L154' name='L154'></a> 154 
+<a id='L155' name='L155'></a> 155   <a href='../S/6874.html#L34' title='Defined at 34 in benchtests/bench-timing.h.'>TIMING_NOW</a> (<a href='../D/36987.html' title='Multiple defined in 10 places.'>start</a>);
+<a id='L156' name='L156'></a> 156   <strong class='reserved'>for</strong> (<strong class='reserved'>long</strong> <a href='../Y/17344.html' title='Multiple used in 1543 places.'>j</a> = <a href='../Y/17305.html' title='Multiple used in 182 places.'>iters</a>; <a href='../Y/17344.html' title='Multiple used in 1543 places.'>j</a> &gt;= 0; --<a href='../Y/17344.html' title='Multiple used in 1543 places.'>j</a>)
+<a id='L157' name='L157'></a> 157     <em class='brace'>{</em>
+<a id='L158' name='L158'></a> 158       <a href='../S/17188.html#L26' title='Defined at 26 in sysdeps/htl/pt-rwlock-tryrdlock.c.'>pthread_rwlock_tryrdlock</a> (&amp;<a href='../Y/24417.html' title='Multiple used in 15 places.'>rw</a>);
+<a id='L159' name='L159'></a> 159       <a href='../S/6980.html#L54' title='Defined at 54 in benchtests/bench-pthread-locks.c.'>FILLER_GOES_HERE</a>;
+<a id='L160' name='L160'></a> 160     <em class='brace'>}</em>
+<a id='L161' name='L161'></a> 161   <a href='../S/6874.html#L34' title='Defined at 34 in benchtests/bench-timing.h.'>TIMING_NOW</a> (<a href='../S/2170.html#L624' title='Defined at 624 in hurd/hurdsig.c.'>stop</a>);
+<a id='L162' name='L162'></a> 162   <a href='../S/6874.html#L35' title='Defined at 35 in benchtests/bench-timing.h.'>TIMING_DIFF</a> (<a href='../Y/12277.html' title='Multiple used in 356 places.'>cur</a>, <a href='../D/36987.html' title='Multiple defined in 10 places.'>start</a>, <a href='../S/2170.html#L624' title='Defined at 624 in hurd/hurdsig.c.'>stop</a>);
+<a id='L163' name='L163'></a> 163 
+<a id='L164' name='L164'></a> 164   <a href='../Y/23016.html' title='Multiple used in 59 places.'>pthread_rwlock_unlock</a> (&amp;<a href='../Y/24417.html' title='Multiple used in 15 places.'>rw</a>);
+<a id='L165' name='L165'></a> 165   <strong class='reserved'>return</strong> <a href='../Y/12277.html' title='Multiple used in 356 places.'>cur</a>;
+<a id='L166' name='L166'></a> 166 <em class='brace'>}</em>
+<a id='L167' name='L167'></a> 167 
+<a id='L168' name='L168'></a> 168 <strong class='reserved'>static</strong> <a href='../S/6874.html#L30' title='Defined at 30 in benchtests/bench-timing.h.'>timing_t</a>
+<a id='L169' name='L169'></a> 169 test_rwlock_write (<strong class='reserved'>long</strong> <a href='../Y/17305.html' title='Multiple used in 182 places.'>iters</a>, <strong class='reserved'>int</strong> <a href='../Y/14596.html' title='Multiple used in 20 places.'>filler</a>)
+<a id='L170' name='L170'></a> 170 <em class='brace'>{</em>
+<a id='L171' name='L171'></a> 171   <a href='../S/6874.html#L30' title='Defined at 30 in benchtests/bench-timing.h.'>timing_t</a> <a href='../D/36987.html' title='Multiple defined in 10 places.'>start</a>, <a href='../S/2170.html#L624' title='Defined at 624 in hurd/hurdsig.c.'>stop</a>, <a href='../Y/12277.html' title='Multiple used in 356 places.'>cur</a>;
+<a id='L172' name='L172'></a> 172 
+<a id='L173' name='L173'></a> 173   <a href='../Y/23014.html' title='Multiple used in 28 places.'>pthread_rwlock_init</a> (&amp;<a href='../Y/24417.html' title='Multiple used in 15 places.'>rw</a>, <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>);
+<a id='L174' name='L174'></a> 174 
+<a id='L175' name='L175'></a> 175   <a href='../S/6874.html#L34' title='Defined at 34 in benchtests/bench-timing.h.'>TIMING_NOW</a> (<a href='../D/36987.html' title='Multiple defined in 10 places.'>start</a>);
+<a id='L176' name='L176'></a> 176   <strong class='reserved'>for</strong> (<strong class='reserved'>long</strong> <a href='../Y/17344.html' title='Multiple used in 1543 places.'>j</a> = <a href='../Y/17305.html' title='Multiple used in 182 places.'>iters</a>; <a href='../Y/17344.html' title='Multiple used in 1543 places.'>j</a> &gt;= 0; --<a href='../Y/17344.html' title='Multiple used in 1543 places.'>j</a>)
+<a id='L177' name='L177'></a> 177     <em class='brace'>{</em>
+<a id='L178' name='L178'></a> 178       <a href='../Y/23017.html' title='Multiple used in 25 places.'>pthread_rwlock_wrlock</a> (&amp;<a href='../Y/24417.html' title='Multiple used in 15 places.'>rw</a>);
+<a id='L179' name='L179'></a> 179       <a href='../S/6980.html#L54' title='Defined at 54 in benchtests/bench-pthread-locks.c.'>FILLER_GOES_HERE</a>;
+<a id='L180' name='L180'></a> 180       <a href='../Y/23016.html' title='Multiple used in 59 places.'>pthread_rwlock_unlock</a> (&amp;<a href='../Y/24417.html' title='Multiple used in 15 places.'>rw</a>);
+<a id='L181' name='L181'></a> 181     <em class='brace'>}</em>
+<a id='L182' name='L182'></a> 182   <a href='../S/6874.html#L34' title='Defined at 34 in benchtests/bench-timing.h.'>TIMING_NOW</a> (<a href='../S/2170.html#L624' title='Defined at 624 in hurd/hurdsig.c.'>stop</a>);
+<a id='L183' name='L183'></a> 183   <a href='../S/6874.html#L35' title='Defined at 35 in benchtests/bench-timing.h.'>TIMING_DIFF</a> (<a href='../Y/12277.html' title='Multiple used in 356 places.'>cur</a>, <a href='../D/36987.html' title='Multiple defined in 10 places.'>start</a>, <a href='../S/2170.html#L624' title='Defined at 624 in hurd/hurdsig.c.'>stop</a>);
+<a id='L184' name='L184'></a> 184 
+<a id='L185' name='L185'></a> 185   <strong class='reserved'>return</strong> <a href='../Y/12277.html' title='Multiple used in 356 places.'>cur</a>;
+<a id='L186' name='L186'></a> 186 <em class='brace'>}</em>
+<a id='L187' name='L187'></a> 187 
+<a id='L188' name='L188'></a> 188 <strong class='reserved'>static</strong> <a href='../S/6874.html#L30' title='Defined at 30 in benchtests/bench-timing.h.'>timing_t</a>
+<a id='L189' name='L189'></a> 189 test_rwlock_trywrite (<strong class='reserved'>long</strong> <a href='../Y/17305.html' title='Multiple used in 182 places.'>iters</a>, <strong class='reserved'>int</strong> <a href='../Y/14596.html' title='Multiple used in 20 places.'>filler</a>)
+<a id='L190' name='L190'></a> 190 <em class='brace'>{</em>
+<a id='L191' name='L191'></a> 191   <a href='../S/6874.html#L30' title='Defined at 30 in benchtests/bench-timing.h.'>timing_t</a> <a href='../D/36987.html' title='Multiple defined in 10 places.'>start</a>, <a href='../S/2170.html#L624' title='Defined at 624 in hurd/hurdsig.c.'>stop</a>, <a href='../Y/12277.html' title='Multiple used in 356 places.'>cur</a>;
+<a id='L192' name='L192'></a> 192 
+<a id='L193' name='L193'></a> 193   <a href='../Y/23014.html' title='Multiple used in 28 places.'>pthread_rwlock_init</a> (&amp;<a href='../Y/24417.html' title='Multiple used in 15 places.'>rw</a>, <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>);
+<a id='L194' name='L194'></a> 194   <a href='../Y/23015.html' title='Multiple used in 26 places.'>pthread_rwlock_rdlock</a> (&amp;<a href='../Y/24417.html' title='Multiple used in 15 places.'>rw</a>);
+<a id='L195' name='L195'></a> 195 
+<a id='L196' name='L196'></a> 196   <a href='../S/6874.html#L34' title='Defined at 34 in benchtests/bench-timing.h.'>TIMING_NOW</a> (<a href='../D/36987.html' title='Multiple defined in 10 places.'>start</a>);
+<a id='L197' name='L197'></a> 197   <strong class='reserved'>for</strong> (<strong class='reserved'>long</strong> <a href='../Y/17344.html' title='Multiple used in 1543 places.'>j</a> = <a href='../Y/17305.html' title='Multiple used in 182 places.'>iters</a>; <a href='../Y/17344.html' title='Multiple used in 1543 places.'>j</a> &gt;= 0; --<a href='../Y/17344.html' title='Multiple used in 1543 places.'>j</a>)
+<a id='L198' name='L198'></a> 198     <em class='brace'>{</em>
+<a id='L199' name='L199'></a> 199       <a href='../S/17189.html#L26' title='Defined at 26 in sysdeps/htl/pt-rwlock-trywrlock.c.'>pthread_rwlock_trywrlock</a> (&amp;<a href='../Y/24417.html' title='Multiple used in 15 places.'>rw</a>);
+<a id='L200' name='L200'></a> 200       <a href='../S/6980.html#L54' title='Defined at 54 in benchtests/bench-pthread-locks.c.'>FILLER_GOES_HERE</a>;
+<a id='L201' name='L201'></a> 201     <em class='brace'>}</em>
+<a id='L202' name='L202'></a> 202   <a href='../S/6874.html#L34' title='Defined at 34 in benchtests/bench-timing.h.'>TIMING_NOW</a> (<a href='../S/2170.html#L624' title='Defined at 624 in hurd/hurdsig.c.'>stop</a>);
+<a id='L203' name='L203'></a> 203   <a href='../S/6874.html#L35' title='Defined at 35 in benchtests/bench-timing.h.'>TIMING_DIFF</a> (<a href='../Y/12277.html' title='Multiple used in 356 places.'>cur</a>, <a href='../D/36987.html' title='Multiple defined in 10 places.'>start</a>, <a href='../S/2170.html#L624' title='Defined at 624 in hurd/hurdsig.c.'>stop</a>);
+<a id='L204' name='L204'></a> 204 
+<a id='L205' name='L205'></a> 205   <a href='../Y/23016.html' title='Multiple used in 59 places.'>pthread_rwlock_unlock</a> (&amp;<a href='../Y/24417.html' title='Multiple used in 15 places.'>rw</a>);
+<a id='L206' name='L206'></a> 206   <strong class='reserved'>return</strong> <a href='../Y/12277.html' title='Multiple used in 356 places.'>cur</a>;
+<a id='L207' name='L207'></a> 207 <em class='brace'>}</em>
+<a id='L208' name='L208'></a> 208 
+<a id='L209' name='L209'></a> 209 <strong class='reserved'>static</strong> <a href='../S/6874.html#L30' title='Defined at 30 in benchtests/bench-timing.h.'>timing_t</a>
+<a id='L210' name='L210'></a> 210 test_spin_lock (<strong class='reserved'>long</strong> <a href='../Y/17305.html' title='Multiple used in 182 places.'>iters</a>, <strong class='reserved'>int</strong> <a href='../Y/14596.html' title='Multiple used in 20 places.'>filler</a>)
+<a id='L211' name='L211'></a> 211 <em class='brace'>{</em>
+<a id='L212' name='L212'></a> 212   <a href='../S/6874.html#L30' title='Defined at 30 in benchtests/bench-timing.h.'>timing_t</a> <a href='../D/36987.html' title='Multiple defined in 10 places.'>start</a>, <a href='../S/2170.html#L624' title='Defined at 624 in hurd/hurdsig.c.'>stop</a>, <a href='../Y/12277.html' title='Multiple used in 356 places.'>cur</a>;
+<a id='L213' name='L213'></a> 213 
+<a id='L214' name='L214'></a> 214   <a href='../S/17175.html#L18' title='Defined at 18 in sysdeps/htl/include/pthread.h.'>pthread_spin_init</a> (&amp;<a href='../D/36879.html' title='Multiple defined in 2 places.'>sp</a>, <a href='../D/10412.html' title='Multiple defined in 4 places.'>PTHREAD_PROCESS_PRIVATE</a>);
+<a id='L215' name='L215'></a> 215 
+<a id='L216' name='L216'></a> 216   <a href='../S/6874.html#L34' title='Defined at 34 in benchtests/bench-timing.h.'>TIMING_NOW</a> (<a href='../D/36987.html' title='Multiple defined in 10 places.'>start</a>);
+<a id='L217' name='L217'></a> 217   <strong class='reserved'>for</strong> (<strong class='reserved'>long</strong> <a href='../Y/17344.html' title='Multiple used in 1543 places.'>j</a> = <a href='../Y/17305.html' title='Multiple used in 182 places.'>iters</a>; <a href='../Y/17344.html' title='Multiple used in 1543 places.'>j</a> &gt;= 0; --<a href='../Y/17344.html' title='Multiple used in 1543 places.'>j</a>)
+<a id='L218' name='L218'></a> 218     <em class='brace'>{</em>
+<a id='L219' name='L219'></a> 219       <a href='../S/17175.html#L24' title='Defined at 24 in sysdeps/htl/include/pthread.h.'>pthread_spin_lock</a> (&amp;<a href='../D/36879.html' title='Multiple defined in 2 places.'>sp</a>);
+<a id='L220' name='L220'></a> 220       <a href='../S/6980.html#L54' title='Defined at 54 in benchtests/bench-pthread-locks.c.'>FILLER_GOES_HERE</a>;
+<a id='L221' name='L221'></a> 221       <a href='../S/17175.html#L36' title='Defined at 36 in sysdeps/htl/include/pthread.h.'>pthread_spin_unlock</a> (&amp;<a href='../D/36879.html' title='Multiple defined in 2 places.'>sp</a>);
+<a id='L222' name='L222'></a> 222     <em class='brace'>}</em>
+<a id='L223' name='L223'></a> 223   <a href='../S/6874.html#L34' title='Defined at 34 in benchtests/bench-timing.h.'>TIMING_NOW</a> (<a href='../S/2170.html#L624' title='Defined at 624 in hurd/hurdsig.c.'>stop</a>);
+<a id='L224' name='L224'></a> 224   <a href='../S/6874.html#L35' title='Defined at 35 in benchtests/bench-timing.h.'>TIMING_DIFF</a> (<a href='../Y/12277.html' title='Multiple used in 356 places.'>cur</a>, <a href='../D/36987.html' title='Multiple defined in 10 places.'>start</a>, <a href='../S/2170.html#L624' title='Defined at 624 in hurd/hurdsig.c.'>stop</a>);
+<a id='L225' name='L225'></a> 225 
+<a id='L226' name='L226'></a> 226   <strong class='reserved'>return</strong> <a href='../Y/12277.html' title='Multiple used in 356 places.'>cur</a>;
+<a id='L227' name='L227'></a> 227 <em class='brace'>}</em>
+<a id='L228' name='L228'></a> 228 
+<a id='L229' name='L229'></a> 229 <strong class='reserved'>static</strong> <a href='../S/6874.html#L30' title='Defined at 30 in benchtests/bench-timing.h.'>timing_t</a>
+<a id='L230' name='L230'></a> 230 test_spin_trylock (<strong class='reserved'>long</strong> <a href='../Y/17305.html' title='Multiple used in 182 places.'>iters</a>, <strong class='reserved'>int</strong> <a href='../Y/14596.html' title='Multiple used in 20 places.'>filler</a>)
+<a id='L231' name='L231'></a> 231 <em class='brace'>{</em>
+<a id='L232' name='L232'></a> 232   <a href='../S/6874.html#L30' title='Defined at 30 in benchtests/bench-timing.h.'>timing_t</a> <a href='../D/36987.html' title='Multiple defined in 10 places.'>start</a>, <a href='../S/2170.html#L624' title='Defined at 624 in hurd/hurdsig.c.'>stop</a>, <a href='../Y/12277.html' title='Multiple used in 356 places.'>cur</a>;
+<a id='L233' name='L233'></a> 233 
+<a id='L234' name='L234'></a> 234   <a href='../S/17175.html#L18' title='Defined at 18 in sysdeps/htl/include/pthread.h.'>pthread_spin_init</a> (&amp;<a href='../D/36879.html' title='Multiple defined in 2 places.'>sp</a>, <a href='../D/10412.html' title='Multiple defined in 4 places.'>PTHREAD_PROCESS_PRIVATE</a>);
+<a id='L235' name='L235'></a> 235   <a href='../S/17175.html#L24' title='Defined at 24 in sysdeps/htl/include/pthread.h.'>pthread_spin_lock</a> (&amp;<a href='../D/36879.html' title='Multiple defined in 2 places.'>sp</a>);
+<a id='L236' name='L236'></a> 236 
+<a id='L237' name='L237'></a> 237   <a href='../S/6874.html#L34' title='Defined at 34 in benchtests/bench-timing.h.'>TIMING_NOW</a> (<a href='../D/36987.html' title='Multiple defined in 10 places.'>start</a>);
+<a id='L238' name='L238'></a> 238   <strong class='reserved'>for</strong> (<strong class='reserved'>long</strong> <a href='../Y/17344.html' title='Multiple used in 1543 places.'>j</a> = <a href='../Y/17305.html' title='Multiple used in 182 places.'>iters</a>; <a href='../Y/17344.html' title='Multiple used in 1543 places.'>j</a> &gt;= 0; --<a href='../Y/17344.html' title='Multiple used in 1543 places.'>j</a>)
+<a id='L239' name='L239'></a> 239     <em class='brace'>{</em>
+<a id='L240' name='L240'></a> 240       <a href='../S/17175.html#L30' title='Defined at 30 in sysdeps/htl/include/pthread.h.'>pthread_spin_trylock</a> (&amp;<a href='../D/36879.html' title='Multiple defined in 2 places.'>sp</a>);
+<a id='L241' name='L241'></a> 241       <a href='../S/6980.html#L54' title='Defined at 54 in benchtests/bench-pthread-locks.c.'>FILLER_GOES_HERE</a>;
+<a id='L242' name='L242'></a> 242     <em class='brace'>}</em>
+<a id='L243' name='L243'></a> 243   <a href='../S/6874.html#L34' title='Defined at 34 in benchtests/bench-timing.h.'>TIMING_NOW</a> (<a href='../S/2170.html#L624' title='Defined at 624 in hurd/hurdsig.c.'>stop</a>);
+<a id='L244' name='L244'></a> 244   <a href='../S/6874.html#L35' title='Defined at 35 in benchtests/bench-timing.h.'>TIMING_DIFF</a> (<a href='../Y/12277.html' title='Multiple used in 356 places.'>cur</a>, <a href='../D/36987.html' title='Multiple defined in 10 places.'>start</a>, <a href='../S/2170.html#L624' title='Defined at 624 in hurd/hurdsig.c.'>stop</a>);
+<a id='L245' name='L245'></a> 245 
+<a id='L246' name='L246'></a> 246   <a href='../S/17175.html#L36' title='Defined at 36 in sysdeps/htl/include/pthread.h.'>pthread_spin_unlock</a> (&amp;<a href='../D/36879.html' title='Multiple defined in 2 places.'>sp</a>);
+<a id='L247' name='L247'></a> 247   <strong class='reserved'>return</strong> <a href='../Y/12277.html' title='Multiple used in 356 places.'>cur</a>;
+<a id='L248' name='L248'></a> 248 <em class='brace'>}</em>
+<a id='L249' name='L249'></a> 249 
+<a id='L250' name='L250'></a> 250 <strong class='reserved'>static</strong> <a href='../S/6874.html#L30' title='Defined at 30 in benchtests/bench-timing.h.'>timing_t</a>
+<a id='L251' name='L251'></a> 251 test_sem_wait (<strong class='reserved'>long</strong> <a href='../Y/17305.html' title='Multiple used in 182 places.'>iters</a>, <strong class='reserved'>int</strong> <a href='../Y/14596.html' title='Multiple used in 20 places.'>filler</a>)
+<a id='L252' name='L252'></a> 252 <em class='brace'>{</em>
+<a id='L253' name='L253'></a> 253   <a href='../S/6874.html#L30' title='Defined at 30 in benchtests/bench-timing.h.'>timing_t</a> <a href='../D/36987.html' title='Multiple defined in 10 places.'>start</a>, <a href='../S/2170.html#L624' title='Defined at 624 in hurd/hurdsig.c.'>stop</a>, <a href='../Y/12277.html' title='Multiple used in 356 places.'>cur</a>;
+<a id='L254' name='L254'></a> 254 
+<a id='L255' name='L255'></a> 255   <a href='../Y/24940.html' title='Multiple used in 34 places.'>sem_init</a> (&amp;<a href='../Y/24932.html' title='Multiple used in 179 places.'>sem</a>, 0, 1);
+<a id='L256' name='L256'></a> 256 
+<a id='L257' name='L257'></a> 257   <a href='../S/6874.html#L34' title='Defined at 34 in benchtests/bench-timing.h.'>TIMING_NOW</a> (<a href='../D/36987.html' title='Multiple defined in 10 places.'>start</a>);
+<a id='L258' name='L258'></a> 258   <strong class='reserved'>for</strong> (<strong class='reserved'>long</strong> <a href='../Y/17344.html' title='Multiple used in 1543 places.'>j</a> = <a href='../Y/17305.html' title='Multiple used in 182 places.'>iters</a>; <a href='../Y/17344.html' title='Multiple used in 1543 places.'>j</a> &gt;= 0; --<a href='../Y/17344.html' title='Multiple used in 1543 places.'>j</a>)
+<a id='L259' name='L259'></a> 259     <em class='brace'>{</em>
+<a id='L260' name='L260'></a> 260       <a href='../Y/24950.html' title='Multiple used in 26 places.'>sem_post</a> (&amp;<a href='../Y/24932.html' title='Multiple used in 179 places.'>sem</a>);
+<a id='L261' name='L261'></a> 261       <a href='../S/6980.html#L54' title='Defined at 54 in benchtests/bench-pthread-locks.c.'>FILLER_GOES_HERE</a>;
+<a id='L262' name='L262'></a> 262       <a href='../Y/24954.html' title='Multiple used in 31 places.'>sem_wait</a> (&amp;<a href='../Y/24932.html' title='Multiple used in 179 places.'>sem</a>);
+<a id='L263' name='L263'></a> 263     <em class='brace'>}</em>
+<a id='L264' name='L264'></a> 264   <a href='../S/6874.html#L34' title='Defined at 34 in benchtests/bench-timing.h.'>TIMING_NOW</a> (<a href='../S/2170.html#L624' title='Defined at 624 in hurd/hurdsig.c.'>stop</a>);
+<a id='L265' name='L265'></a> 265   <a href='../S/6874.html#L35' title='Defined at 35 in benchtests/bench-timing.h.'>TIMING_DIFF</a> (<a href='../Y/12277.html' title='Multiple used in 356 places.'>cur</a>, <a href='../D/36987.html' title='Multiple defined in 10 places.'>start</a>, <a href='../S/2170.html#L624' title='Defined at 624 in hurd/hurdsig.c.'>stop</a>);
+<a id='L266' name='L266'></a> 266 
+<a id='L267' name='L267'></a> 267   <strong class='reserved'>return</strong> <a href='../Y/12277.html' title='Multiple used in 356 places.'>cur</a>;
+<a id='L268' name='L268'></a> 268 <em class='brace'>}</em>
+<a id='L269' name='L269'></a> 269 
+<a id='L270' name='L270'></a> 270 <strong class='reserved'>static</strong> <a href='../S/6874.html#L30' title='Defined at 30 in benchtests/bench-timing.h.'>timing_t</a>
+<a id='L271' name='L271'></a> 271 test_sem_trywait (<strong class='reserved'>long</strong> <a href='../Y/17305.html' title='Multiple used in 182 places.'>iters</a>, <strong class='reserved'>int</strong> <a href='../Y/14596.html' title='Multiple used in 20 places.'>filler</a>)
+<a id='L272' name='L272'></a> 272 <em class='brace'>{</em>
+<a id='L273' name='L273'></a> 273   <a href='../S/6874.html#L30' title='Defined at 30 in benchtests/bench-timing.h.'>timing_t</a> <a href='../D/36987.html' title='Multiple defined in 10 places.'>start</a>, <a href='../S/2170.html#L624' title='Defined at 624 in hurd/hurdsig.c.'>stop</a>, <a href='../Y/12277.html' title='Multiple used in 356 places.'>cur</a>;
+<a id='L274' name='L274'></a> 274 
+<a id='L275' name='L275'></a> 275   <a href='../Y/24940.html' title='Multiple used in 34 places.'>sem_init</a> (&amp;<a href='../Y/24932.html' title='Multiple used in 179 places.'>sem</a>, 0, 0);
+<a id='L276' name='L276'></a> 276 
+<a id='L277' name='L277'></a> 277   <a href='../S/6874.html#L34' title='Defined at 34 in benchtests/bench-timing.h.'>TIMING_NOW</a> (<a href='../D/36987.html' title='Multiple defined in 10 places.'>start</a>);
+<a id='L278' name='L278'></a> 278   <strong class='reserved'>for</strong> (<strong class='reserved'>long</strong> <a href='../Y/17344.html' title='Multiple used in 1543 places.'>j</a> = <a href='../Y/17305.html' title='Multiple used in 182 places.'>iters</a>; <a href='../Y/17344.html' title='Multiple used in 1543 places.'>j</a> &gt;= 0; --<a href='../Y/17344.html' title='Multiple used in 1543 places.'>j</a>)
+<a id='L279' name='L279'></a> 279     <em class='brace'>{</em>
+<a id='L280' name='L280'></a> 280       <a href='../Y/24952.html' title='Multiple used in 10 places.'>sem_trywait</a> (&amp;<a href='../Y/24932.html' title='Multiple used in 179 places.'>sem</a>);
+<a id='L281' name='L281'></a> 281       <a href='../S/6980.html#L54' title='Defined at 54 in benchtests/bench-pthread-locks.c.'>FILLER_GOES_HERE</a>;
+<a id='L282' name='L282'></a> 282     <em class='brace'>}</em>
+<a id='L283' name='L283'></a> 283   <a href='../S/6874.html#L34' title='Defined at 34 in benchtests/bench-timing.h.'>TIMING_NOW</a> (<a href='../S/2170.html#L624' title='Defined at 624 in hurd/hurdsig.c.'>stop</a>);
+<a id='L284' name='L284'></a> 284   <a href='../S/6874.html#L35' title='Defined at 35 in benchtests/bench-timing.h.'>TIMING_DIFF</a> (<a href='../Y/12277.html' title='Multiple used in 356 places.'>cur</a>, <a href='../D/36987.html' title='Multiple defined in 10 places.'>start</a>, <a href='../S/2170.html#L624' title='Defined at 624 in hurd/hurdsig.c.'>stop</a>);
+<a id='L285' name='L285'></a> 285 
+<a id='L286' name='L286'></a> 286   <strong class='reserved'>return</strong> <a href='../Y/12277.html' title='Multiple used in 356 places.'>cur</a>;
+<a id='L287' name='L287'></a> 287 <em class='brace'>}</em>
+<a id='L288' name='L288'></a> 288 
+<a id='L289' name='L289'></a> 289 <strong class='reserved'>static</strong> <strong class='reserved'>void</strong> *
+<a id='L290' name='L290'></a> 290 <a href='../S/6980.html#L314' title='Referred from 314 in benchtests/bench-pthread-locks.c.'>test_condvar_helper</a> (<strong class='reserved'>void</strong> *<a href='../Y/28520.html' title='Multiple used in 798 places.'>v</a>)
+<a id='L291' name='L291'></a> 291 <em class='brace'>{</em>
+<a id='L292' name='L292'></a> 292   <em class='comment'>/* This is wasteful, but the alternative is to add the overhead of a</em>
+<a id='L293' name='L293'></a> 293 <em class='comment'>     mutex lock/unlock to the overall iteration (both threads) and we</em>
+<a id='L294' name='L294'></a> 294 <em class='comment'>     don't want that.  Ideally, this thread would run on an</em>
+<a id='L295' name='L295'></a> 295 <em class='comment'>     independent processing core anyway.  The ONLY goal here is to</em>
+<a id='L296' name='L296'></a> 296 <em class='comment'>     minimize the time the other thread spends waiting for us.  */</em>
+<a id='L297' name='L297'></a> 297   <strong class='reserved'>while</strong> (<a href='../Y/3652.html' title='Multiple used in 17 places.'>__atomic_load_n</a> (&amp;<a href='../Y/12372.html' title='Multiple used in 4 places.'>cv_done</a>, <a href='../Y/2886.html' title='Multiple used in 67 places.'>__ATOMIC_RELAXED</a>) == 0)
+<a id='L298' name='L298'></a> 298     <a href='../Y/22975.html' title='Multiple used in 43 places.'>pthread_cond_signal</a> (&amp;<a href='../Y/12366.html' title='Multiple used in 31 places.'>cv</a>);
+<a id='L299' name='L299'></a> 299 
+<a id='L300' name='L300'></a> 300   <strong class='reserved'>return</strong> <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>;
+<a id='L301' name='L301'></a> 301 <em class='brace'>}</em>
+<a id='L302' name='L302'></a> 302 
+<a id='L303' name='L303'></a> 303 <strong class='reserved'>static</strong> <a href='../S/6874.html#L30' title='Defined at 30 in benchtests/bench-timing.h.'>timing_t</a>
+<a id='L304' name='L304'></a> 304 test_condvar (<strong class='reserved'>long</strong> <a href='../Y/17305.html' title='Multiple used in 182 places.'>iters</a>, <strong class='reserved'>int</strong> <a href='../Y/14596.html' title='Multiple used in 20 places.'>filler</a>)
+<a id='L305' name='L305'></a> 305 <em class='brace'>{</em>
+<a id='L306' name='L306'></a> 306   <a href='../S/6874.html#L30' title='Defined at 30 in benchtests/bench-timing.h.'>timing_t</a> <a href='../D/36987.html' title='Multiple defined in 10 places.'>start</a>, <a href='../S/2170.html#L624' title='Defined at 624 in hurd/hurdsig.c.'>stop</a>, <a href='../Y/12277.html' title='Multiple used in 356 places.'>cur</a>;
+<a id='L307' name='L307'></a> 307   <a href='../D/35174.html' title='Multiple defined in 2 places.'>pthread_t</a> <a href='../Y/16068.html' title='Multiple used in 6 places.'>helper_id</a>;
+<a id='L308' name='L308'></a> 308 
+<a id='L309' name='L309'></a> 309   <a href='../Y/23001.html' title='Multiple used in 64 places.'>pthread_mutex_init</a> (&amp;<a href='../D/33231.html' title='Multiple defined in 2 places.'>m</a>, <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>);
+<a id='L310' name='L310'></a> 310   <a href='../Y/22974.html' title='Multiple used in 26 places.'>pthread_cond_init</a> (&amp;<a href='../Y/12366.html' title='Multiple used in 31 places.'>cv</a>, <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>);
+<a id='L311' name='L311'></a> 311   <a href='../Y/23002.html' title='Multiple used in 212 places.'>pthread_mutex_lock</a> (&amp;<a href='../D/33231.html' title='Multiple defined in 2 places.'>m</a>);
+<a id='L312' name='L312'></a> 312 
+<a id='L313' name='L313'></a> 313   <a href='../Y/3657.html' title='Multiple used in 17 places.'>__atomic_store_n</a> (&amp;<a href='../Y/12372.html' title='Multiple used in 4 places.'>cv_done</a>, 0, <a href='../Y/2886.html' title='Multiple used in 67 places.'>__ATOMIC_RELAXED</a>);
+<a id='L314' name='L314'></a> 314   <a href='../Y/22978.html' title='Multiple used in 248 places.'>pthread_create</a> (&amp;<a href='../Y/16068.html' title='Multiple used in 6 places.'>helper_id</a>, <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>, <a href='../S/6980.html#L290' title='Defined at 290 in benchtests/bench-pthread-locks.c.'>test_condvar_helper</a>, &amp;<a href='../Y/17305.html' title='Multiple used in 182 places.'>iters</a>);
+<a id='L315' name='L315'></a> 315 
+<a id='L316' name='L316'></a> 316   <a href='../S/6874.html#L34' title='Defined at 34 in benchtests/bench-timing.h.'>TIMING_NOW</a> (<a href='../D/36987.html' title='Multiple defined in 10 places.'>start</a>);
+<a id='L317' name='L317'></a> 317   <strong class='reserved'>for</strong> (<strong class='reserved'>long</strong> <a href='../Y/17344.html' title='Multiple used in 1543 places.'>j</a> = <a href='../Y/17305.html' title='Multiple used in 182 places.'>iters</a>; <a href='../Y/17344.html' title='Multiple used in 1543 places.'>j</a> &gt;= 0; --<a href='../Y/17344.html' title='Multiple used in 1543 places.'>j</a>)
+<a id='L318' name='L318'></a> 318     <em class='brace'>{</em>
+<a id='L319' name='L319'></a> 319       <a href='../Y/22976.html' title='Multiple used in 50 places.'>pthread_cond_wait</a> (&amp;<a href='../Y/12366.html' title='Multiple used in 31 places.'>cv</a>, &amp;<a href='../D/33231.html' title='Multiple defined in 2 places.'>m</a>);
+<a id='L320' name='L320'></a> 320       <a href='../S/6980.html#L54' title='Defined at 54 in benchtests/bench-pthread-locks.c.'>FILLER_GOES_HERE</a>;
+<a id='L321' name='L321'></a> 321     <em class='brace'>}</em>
+<a id='L322' name='L322'></a> 322   <a href='../S/6874.html#L34' title='Defined at 34 in benchtests/bench-timing.h.'>TIMING_NOW</a> (<a href='../S/2170.html#L624' title='Defined at 624 in hurd/hurdsig.c.'>stop</a>);
+<a id='L323' name='L323'></a> 323   <a href='../S/6874.html#L35' title='Defined at 35 in benchtests/bench-timing.h.'>TIMING_DIFF</a> (<a href='../Y/12277.html' title='Multiple used in 356 places.'>cur</a>, <a href='../D/36987.html' title='Multiple defined in 10 places.'>start</a>, <a href='../S/2170.html#L624' title='Defined at 624 in hurd/hurdsig.c.'>stop</a>);
+<a id='L324' name='L324'></a> 324 
+<a id='L325' name='L325'></a> 325   <a href='../Y/23005.html' title='Multiple used in 191 places.'>pthread_mutex_unlock</a> (&amp;<a href='../D/33231.html' title='Multiple defined in 2 places.'>m</a>);
+<a id='L326' name='L326'></a> 326   <a href='../Y/3657.html' title='Multiple used in 17 places.'>__atomic_store_n</a> (&amp;<a href='../Y/12372.html' title='Multiple used in 4 places.'>cv_done</a>, 1, <a href='../Y/2886.html' title='Multiple used in 67 places.'>__ATOMIC_RELAXED</a>);
+<a id='L327' name='L327'></a> 327 
+<a id='L328' name='L328'></a> 328   <a href='../Y/22992.html' title='Multiple used in 204 places.'>pthread_join</a> (<a href='../Y/16068.html' title='Multiple used in 6 places.'>helper_id</a>, <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>);
+<a id='L329' name='L329'></a> 329   <strong class='reserved'>return</strong> <a href='../Y/12277.html' title='Multiple used in 356 places.'>cur</a>;
+<a id='L330' name='L330'></a> 330 <em class='brace'>}</em>
+<a id='L331' name='L331'></a> 331 
+<a id='L332' name='L332'></a> 332 <em class='comment'>/* How many items are "queued" in our pretend queue.  */</em>
+<a id='L333' name='L333'></a> 333 <strong class='reserved'>static</strong> <strong class='reserved'>int</strong> <a href='../S/12316.html#L64' title='Defined at 64 in sysdeps/generic/aio_misc.h.'>queued</a> = 0;
+<a id='L334' name='L334'></a> 334 
+<a id='L335' name='L335'></a> 335 <strong class='reserved'>typedef</strong> <strong class='reserved'>struct</strong> <a href='../R/6585.html' title='Multiple referred from 2 places.'>Producer_Params</a> <em class='brace'>{</em>
+<a id='L336' name='L336'></a> 336   <strong class='reserved'>long</strong> <a href='../Y/17305.html' title='Multiple used in 182 places.'>iters</a>;
+<a id='L337' name='L337'></a> 337   <strong class='reserved'>int</strong> <a href='../Y/14596.html' title='Multiple used in 20 places.'>filler</a>;
+<a id='L338' name='L338'></a> 338 <em class='brace'>}</em> <a href='../R/6585.html' title='Multiple referred from 2 places.'>Producer_Params</a>;
+<a id='L339' name='L339'></a> 339 
+<a id='L340' name='L340'></a> 340 <em class='comment'>/* We only benchmark the consumer thread, but both threads are doing</em>
+<a id='L341' name='L341'></a> 341 <em class='comment'>   essentially the same thing, and never run in parallel due to the</em>
+<a id='L342' name='L342'></a> 342 <em class='comment'>   locks.  Thus, even if they run on separate processing cores, we</em>
+<a id='L343' name='L343'></a> 343 <em class='comment'>   count the time for both threads.  */</em>
+<a id='L344' name='L344'></a> 344 <strong class='reserved'>static</strong> <strong class='reserved'>void</strong> *
+<a id='L345' name='L345'></a> 345 <a href='../S/6980.html#L385' title='Referred from 385 in benchtests/bench-pthread-locks.c.'>test_producer_thread</a> (<strong class='reserved'>void</strong> *<a href='../Y/28520.html' title='Multiple used in 798 places.'>v</a>)
+<a id='L346' name='L346'></a> 346 <em class='brace'>{</em>
+<a id='L347' name='L347'></a> 347   <a href='../D/10795.html' title='Multiple defined in 2 places.'>Producer_Params</a> *<a href='../S/2562.html#L29' title='Defined at 29 in elf/testobj2.c.'>p</a> = (<a href='../D/10795.html' title='Multiple defined in 2 places.'>Producer_Params</a> *) <a href='../Y/28520.html' title='Multiple used in 798 places.'>v</a>;
+<a id='L348' name='L348'></a> 348   <strong class='reserved'>long</strong> <a href='../Y/17305.html' title='Multiple used in 182 places.'>iters</a> = <a href='../S/2562.html#L29' title='Defined at 29 in elf/testobj2.c.'>p</a>-&gt;<a href='../Y/17305.html' title='Multiple used in 182 places.'>iters</a>;
+<a id='L349' name='L349'></a> 349   <strong class='reserved'>int</strong> <a href='../Y/14596.html' title='Multiple used in 20 places.'>filler</a> = <a href='../S/2562.html#L29' title='Defined at 29 in elf/testobj2.c.'>p</a>-&gt;<a href='../Y/14596.html' title='Multiple used in 20 places.'>filler</a>;
+<a id='L350' name='L350'></a> 350   <strong class='reserved'>long</strong> <a href='../Y/17344.html' title='Multiple used in 1543 places.'>j</a>;
+<a id='L351' name='L351'></a> 351 
+<a id='L352' name='L352'></a> 352   <strong class='reserved'>for</strong> (<a href='../Y/17344.html' title='Multiple used in 1543 places.'>j</a> = <a href='../Y/17305.html' title='Multiple used in 182 places.'>iters</a>; <a href='../Y/17344.html' title='Multiple used in 1543 places.'>j</a> &gt;= 0; --<a href='../Y/17344.html' title='Multiple used in 1543 places.'>j</a>)
+<a id='L353' name='L353'></a> 353     <em class='brace'>{</em>
+<a id='L354' name='L354'></a> 354       <em class='comment'>/* Aquire lock on the queue.  */</em>
+<a id='L355' name='L355'></a> 355       <a href='../Y/23002.html' title='Multiple used in 212 places.'>pthread_mutex_lock</a> (&amp;<a href='../D/33231.html' title='Multiple defined in 2 places.'>m</a>);
+<a id='L356' name='L356'></a> 356       <em class='comment'>/* if something's already there, wait.  */</em>
+<a id='L357' name='L357'></a> 357       <strong class='reserved'>while</strong> (<a href='../S/12316.html#L64' title='Defined at 64 in sysdeps/generic/aio_misc.h.'>queued</a> &gt; 0)
+<a id='L358' name='L358'></a> 358     <a href='../Y/22976.html' title='Multiple used in 50 places.'>pthread_cond_wait</a> (&amp;<a href='../Y/11950.html' title='Multiple used in 3 places.'>consumer_c</a>, &amp;<a href='../D/33231.html' title='Multiple defined in 2 places.'>m</a>);
+<a id='L359' name='L359'></a> 359 
+<a id='L360' name='L360'></a> 360       <em class='comment'>/* Put something on the queue */</em>
+<a id='L361' name='L361'></a> 361       <a href='../S/6980.html#L54' title='Defined at 54 in benchtests/bench-pthread-locks.c.'>FILLER_GOES_HERE</a>;
+<a id='L362' name='L362'></a> 362       ++ <a href='../S/12316.html#L64' title='Defined at 64 in sysdeps/generic/aio_misc.h.'>queued</a>;
+<a id='L363' name='L363'></a> 363       <a href='../Y/22975.html' title='Multiple used in 43 places.'>pthread_cond_signal</a> (&amp;<a href='../Y/22830.html' title='Multiple used in 3 places.'>producer_c</a>);
+<a id='L364' name='L364'></a> 364 
+<a id='L365' name='L365'></a> 365       <em class='comment'>/* Give the other thread a chance to run.  */</em>
+<a id='L366' name='L366'></a> 366       <a href='../Y/23005.html' title='Multiple used in 191 places.'>pthread_mutex_unlock</a> (&amp;<a href='../D/33231.html' title='Multiple defined in 2 places.'>m</a>);
+<a id='L367' name='L367'></a> 367     <em class='brace'>}</em>
+<a id='L368' name='L368'></a> 368 
+<a id='L369' name='L369'></a> 369   <strong class='reserved'>return</strong> <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>;
+<a id='L370' name='L370'></a> 370 <em class='brace'>}</em>
+<a id='L371' name='L371'></a> 371 
+<a id='L372' name='L372'></a> 372 <strong class='reserved'>static</strong> <a href='../S/6874.html#L30' title='Defined at 30 in benchtests/bench-timing.h.'>timing_t</a>
+<a id='L373' name='L373'></a> 373 test_consumer_producer (<strong class='reserved'>long</strong> <a href='../Y/17305.html' title='Multiple used in 182 places.'>iters</a>, <strong class='reserved'>int</strong> <a href='../Y/14596.html' title='Multiple used in 20 places.'>filler</a>)
+<a id='L374' name='L374'></a> 374 <em class='brace'>{</em>
+<a id='L375' name='L375'></a> 375   <a href='../S/6874.html#L30' title='Defined at 30 in benchtests/bench-timing.h.'>timing_t</a> <a href='../D/36987.html' title='Multiple defined in 10 places.'>start</a>, <a href='../S/2170.html#L624' title='Defined at 624 in hurd/hurdsig.c.'>stop</a>, <a href='../Y/12277.html' title='Multiple used in 356 places.'>cur</a>;
+<a id='L376' name='L376'></a> 376   <a href='../D/35174.html' title='Multiple defined in 2 places.'>pthread_t</a> <a href='../Y/16068.html' title='Multiple used in 6 places.'>helper_id</a>;
+<a id='L377' name='L377'></a> 377   <a href='../D/10795.html' title='Multiple defined in 2 places.'>Producer_Params</a> <a href='../S/2562.html#L29' title='Defined at 29 in elf/testobj2.c.'>p</a>;
+<a id='L378' name='L378'></a> 378 
+<a id='L379' name='L379'></a> 379   <a href='../S/2562.html#L29' title='Defined at 29 in elf/testobj2.c.'>p</a>.<a href='../Y/17305.html' title='Multiple used in 182 places.'>iters</a> = <a href='../Y/17305.html' title='Multiple used in 182 places.'>iters</a>;
+<a id='L380' name='L380'></a> 380   <a href='../S/2562.html#L29' title='Defined at 29 in elf/testobj2.c.'>p</a>.<a href='../Y/14596.html' title='Multiple used in 20 places.'>filler</a> = <a href='../Y/14596.html' title='Multiple used in 20 places.'>filler</a>;
+<a id='L381' name='L381'></a> 381 
+<a id='L382' name='L382'></a> 382   <a href='../Y/23001.html' title='Multiple used in 64 places.'>pthread_mutex_init</a> (&amp;<a href='../D/33231.html' title='Multiple defined in 2 places.'>m</a>, <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>);
+<a id='L383' name='L383'></a> 383   <a href='../Y/22974.html' title='Multiple used in 26 places.'>pthread_cond_init</a> (&amp;<a href='../Y/12366.html' title='Multiple used in 31 places.'>cv</a>, <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>);
+<a id='L384' name='L384'></a> 384 
+<a id='L385' name='L385'></a> 385   <a href='../Y/22978.html' title='Multiple used in 248 places.'>pthread_create</a> (&amp;<a href='../Y/16068.html' title='Multiple used in 6 places.'>helper_id</a>, <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>, <a href='../S/6980.html#L345' title='Defined at 345 in benchtests/bench-pthread-locks.c.'>test_producer_thread</a>, &amp;<a href='../S/2562.html#L29' title='Defined at 29 in elf/testobj2.c.'>p</a>);
+<a id='L386' name='L386'></a> 386 
+<a id='L387' name='L387'></a> 387   <a href='../S/6874.html#L34' title='Defined at 34 in benchtests/bench-timing.h.'>TIMING_NOW</a> (<a href='../D/36987.html' title='Multiple defined in 10 places.'>start</a>);
+<a id='L388' name='L388'></a> 388 
+<a id='L389' name='L389'></a> 389   <strong class='reserved'>for</strong> (<strong class='reserved'>long</strong> <a href='../Y/17344.html' title='Multiple used in 1543 places.'>j</a> = <a href='../Y/17305.html' title='Multiple used in 182 places.'>iters</a>; <a href='../Y/17344.html' title='Multiple used in 1543 places.'>j</a> &gt;= 0; --<a href='../Y/17344.html' title='Multiple used in 1543 places.'>j</a>)
+<a id='L390' name='L390'></a> 390     <em class='brace'>{</em>
+<a id='L391' name='L391'></a> 391       <em class='comment'>/* Aquire lock on the queue.  */</em>
+<a id='L392' name='L392'></a> 392       <a href='../Y/23002.html' title='Multiple used in 212 places.'>pthread_mutex_lock</a> (&amp;<a href='../D/33231.html' title='Multiple defined in 2 places.'>m</a>);
+<a id='L393' name='L393'></a> 393       <em class='comment'>/* Wait for something to be on the queue.  */</em>
+<a id='L394' name='L394'></a> 394       <strong class='reserved'>while</strong> (<a href='../S/12316.html#L64' title='Defined at 64 in sysdeps/generic/aio_misc.h.'>queued</a> == 0)
+<a id='L395' name='L395'></a> 395     <a href='../Y/22976.html' title='Multiple used in 50 places.'>pthread_cond_wait</a> (&amp;<a href='../Y/22830.html' title='Multiple used in 3 places.'>producer_c</a>, &amp;<a href='../D/33231.html' title='Multiple defined in 2 places.'>m</a>);
+<a id='L396' name='L396'></a> 396 
+<a id='L397' name='L397'></a> 397       <em class='comment'>/* Take if off. */</em>
+<a id='L398' name='L398'></a> 398       <a href='../S/6980.html#L54' title='Defined at 54 in benchtests/bench-pthread-locks.c.'>FILLER_GOES_HERE</a>;
+<a id='L399' name='L399'></a> 399       -- <a href='../S/12316.html#L64' title='Defined at 64 in sysdeps/generic/aio_misc.h.'>queued</a>;
+<a id='L400' name='L400'></a> 400       <a href='../Y/22975.html' title='Multiple used in 43 places.'>pthread_cond_signal</a> (&amp;<a href='../Y/11950.html' title='Multiple used in 3 places.'>consumer_c</a>);
+<a id='L401' name='L401'></a> 401 
+<a id='L402' name='L402'></a> 402       <em class='comment'>/* Give the other thread a chance to run.  */</em>
+<a id='L403' name='L403'></a> 403       <a href='../Y/23005.html' title='Multiple used in 191 places.'>pthread_mutex_unlock</a> (&amp;<a href='../D/33231.html' title='Multiple defined in 2 places.'>m</a>);
+<a id='L404' name='L404'></a> 404     <em class='brace'>}</em>
+<a id='L405' name='L405'></a> 405 
+<a id='L406' name='L406'></a> 406   <a href='../S/6874.html#L34' title='Defined at 34 in benchtests/bench-timing.h.'>TIMING_NOW</a> (<a href='../S/2170.html#L624' title='Defined at 624 in hurd/hurdsig.c.'>stop</a>);
+<a id='L407' name='L407'></a> 407   <a href='../S/6874.html#L35' title='Defined at 35 in benchtests/bench-timing.h.'>TIMING_DIFF</a> (<a href='../Y/12277.html' title='Multiple used in 356 places.'>cur</a>, <a href='../D/36987.html' title='Multiple defined in 10 places.'>start</a>, <a href='../S/2170.html#L624' title='Defined at 624 in hurd/hurdsig.c.'>stop</a>);
+<a id='L408' name='L408'></a> 408 
+<a id='L409' name='L409'></a> 409 
+<a id='L410' name='L410'></a> 410   <a href='../Y/22992.html' title='Multiple used in 204 places.'>pthread_join</a> (<a href='../Y/16068.html' title='Multiple used in 6 places.'>helper_id</a>, <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>);
+<a id='L411' name='L411'></a> 411   <strong class='reserved'>return</strong> <a href='../Y/12277.html' title='Multiple used in 356 places.'>cur</a>;
+<a id='L412' name='L412'></a> 412 <em class='brace'>}</em>
+<a id='L413' name='L413'></a> 413 
+<a id='L414' name='L414'></a> 414 <em class='comment'>/* Number of runs we use for computing mean and standard deviation.</em>
+<a id='L415' name='L415'></a> 415 <em class='comment'>   We actually do two additional runs and discard the outliers.  */</em>
+<a id='L416' name='L416'></a> 416 <em class='sharp'>#define</em> <a href='../R/7052.html' title='Multiple referred from 10 places.'>RUN_COUNT</a> 10
+<a id='L417' name='L417'></a> 417 
+<a id='L418' name='L418'></a> 418 <strong class='reserved'>static</strong> <strong class='reserved'>int</strong>
+<a id='L419' name='L419'></a> 419 <a href='../R/18663.html' title='Multiple referred from 2 places.'>do_bench_2</a> (<strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../D/33817.html' title='Multiple defined in 21 places.'>name</a>, <a href='../S/2015.html#L26' title='Defined at 26 in string/test-sig_np.c.'>test_t</a> <a href='../D/30951.html' title='Multiple defined in 15 places.'>func</a>, <strong class='reserved'>int</strong> <a href='../Y/14596.html' title='Multiple used in 20 places.'>filler</a>, <a href='../S/7000.html#L33' title='Defined at 33 in benchtests/json-lib.h.'>json_ctx_t</a> *<a href='../Y/17403.html' title='Multiple used in 15 places.'>js</a>)
+<a id='L420' name='L420'></a> 420 <em class='brace'>{</em>
+<a id='L421' name='L421'></a> 421   <a href='../S/6874.html#L30' title='Defined at 30 in benchtests/bench-timing.h.'>timing_t</a> <a href='../Y/12277.html' title='Multiple used in 356 places.'>cur</a>;
+<a id='L422' name='L422'></a> 422   <strong class='reserved'>struct</strong> <a href='../S/3985.html#L8' title='Defined at 8 in time/bits/types/struct_timeval.h.'>timeval</a> <a href='../Y/27832.html' title='Multiple used in 718 places.'>ts</a>, <a href='../Y/26939.html' title='Multiple used in 3 places.'>te</a>;
+<a id='L423' name='L423'></a> 423   <strong class='reserved'>double</strong> <a href='../Y/27849.html' title='Multiple used in 4 places.'>tsd</a>, <a href='../Y/26940.html' title='Multiple used in 3 places.'>ted</a>, <a href='../Y/26926.html' title='Multiple used in 66 places.'>td</a>;
+<a id='L424' name='L424'></a> 424   <strong class='reserved'>long</strong> <a href='../Y/17305.html' title='Multiple used in 182 places.'>iters</a>, <a href='../Y/17307.html' title='Multiple used in 3 places.'>iters_limit</a>;
+<a id='L425' name='L425'></a> 425   <a href='../S/6874.html#L30' title='Defined at 30 in benchtests/bench-timing.h.'>timing_t</a> <a href='../Y/12352.html' title='Multiple used in 19 places.'>curs</a>[<a href='../S/6980.html#L416' title='Defined at 416 in benchtests/bench-pthread-locks.c.'>RUN_COUNT</a> + 2];
+<a id='L426' name='L426'></a> 426   <strong class='reserved'>int</strong> <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>, <a href='../Y/17344.html' title='Multiple used in 1543 places.'>j</a>;
+<a id='L427' name='L427'></a> 427   <strong class='reserved'>double</strong> <a href='../Y/19213.html' title='Multiple used in 6 places.'>mean</a>, <a href='../Y/26176.html' title='Multiple used in 5 places.'>stdev</a>;
+<a id='L428' name='L428'></a> 428 
+<a id='L429' name='L429'></a> 429   <a href='../Y/17305.html' title='Multiple used in 182 places.'>iters</a> = <a href='../S/6980.html#L52' title='Defined at 52 in benchtests/bench-pthread-locks.c.'>START_ITERS</a>;
+<a id='L430' name='L430'></a> 430   <a href='../Y/17307.html' title='Multiple used in 3 places.'>iters_limit</a> = <a href='../D/7390.html' title='Multiple defined in 4 places.'>LONG_MAX</a> / 100;
+<a id='L431' name='L431'></a> 431 
+<a id='L432' name='L432'></a> 432   <strong class='reserved'>while</strong> (1) <em class='brace'>{</em>
+<a id='L433' name='L433'></a> 433     <a href='../S/4039.html#L75' title='Defined at 75 in time/sys/time.h.'>gettimeofday</a> (&amp;<a href='../Y/27832.html' title='Multiple used in 718 places.'>ts</a>, <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>);
+<a id='L434' name='L434'></a> 434     <a href='../Y/12277.html' title='Multiple used in 356 places.'>cur</a> = <a href='../D/30951.html' title='Multiple defined in 15 places.'>func</a>(<a href='../Y/17305.html' title='Multiple used in 182 places.'>iters</a>, <a href='../Y/14596.html' title='Multiple used in 20 places.'>filler</a>);
+<a id='L435' name='L435'></a> 435     <a href='../S/4039.html#L75' title='Defined at 75 in time/sys/time.h.'>gettimeofday</a> (&amp;<a href='../Y/26939.html' title='Multiple used in 3 places.'>te</a>, <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>);
+<a id='L436' name='L436'></a> 436 
+<a id='L437' name='L437'></a> 437     <em class='comment'>/* We want a test to take at least 0.01 seconds, and try</em>
+<a id='L438' name='L438'></a> 438 <em class='comment'>       increasingly larger iteration counts until it does.  This</em>
+<a id='L439' name='L439'></a> 439 <em class='comment'>       allows for approximately constant-time tests regardless of</em>
+<a id='L440' name='L440'></a> 440 <em class='comment'>       hardware speed, without the overhead of checking the time</em>
+<a id='L441' name='L441'></a> 441 <em class='comment'>       inside the test loop itself.  We stop at a million iterations</em>
+<a id='L442' name='L442'></a> 442 <em class='comment'>       as that should be precise enough.  Once we determine a suitable</em>
+<a id='L443' name='L443'></a> 443 <em class='comment'>       iteration count, we run the test multiple times to calculate</em>
+<a id='L444' name='L444'></a> 444 <em class='comment'>       mean and standard deviation.  */</em>
+<a id='L445' name='L445'></a> 445 
+<a id='L446' name='L446'></a> 446     <em class='comment'>/* Note that this also primes the CPU cache and triggers faster</em>
+<a id='L447' name='L447'></a> 447 <em class='comment'>       MHz, we hope.  */</em>
+<a id='L448' name='L448'></a> 448     <a href='../Y/27849.html' title='Multiple used in 4 places.'>tsd</a> = <a href='../Y/27832.html' title='Multiple used in 718 places.'>ts</a>.<a href='../Y/27976.html' title='Multiple used in 803 places.'>tv_sec</a> + <a href='../Y/27832.html' title='Multiple used in 718 places.'>ts</a>.<a href='../Y/27978.html' title='Multiple used in 191 places.'>tv_usec</a> / 1000000.0;
+<a id='L449' name='L449'></a> 449     <a href='../Y/26940.html' title='Multiple used in 3 places.'>ted</a> = <a href='../Y/26939.html' title='Multiple used in 3 places.'>te</a>.<a href='../Y/27976.html' title='Multiple used in 803 places.'>tv_sec</a> + <a href='../Y/26939.html' title='Multiple used in 3 places.'>te</a>.<a href='../Y/27978.html' title='Multiple used in 191 places.'>tv_usec</a> / 1000000.0;
+<a id='L450' name='L450'></a> 450     <a href='../Y/26926.html' title='Multiple used in 66 places.'>td</a> = <a href='../Y/26940.html' title='Multiple used in 3 places.'>ted</a> - <a href='../Y/27849.html' title='Multiple used in 4 places.'>tsd</a>;
+<a id='L451' name='L451'></a> 451     <strong class='reserved'>if</strong> (<a href='../Y/26926.html' title='Multiple used in 66 places.'>td</a> &gt;= 0.01
+<a id='L452' name='L452'></a> 452     || <a href='../Y/17305.html' title='Multiple used in 182 places.'>iters</a> &gt;= <a href='../Y/17307.html' title='Multiple used in 3 places.'>iters_limit</a>
+<a id='L453' name='L453'></a> 453     || <a href='../Y/17305.html' title='Multiple used in 182 places.'>iters</a> &gt;= 1000000)
+<a id='L454' name='L454'></a> 454       <strong class='reserved'>break</strong>;
+<a id='L455' name='L455'></a> 455 
+<a id='L456' name='L456'></a> 456     <a href='../Y/17305.html' title='Multiple used in 182 places.'>iters</a> *= 10;
+<a id='L457' name='L457'></a> 457   <em class='brace'>}</em>
+<a id='L458' name='L458'></a> 458 
+<a id='L459' name='L459'></a> 459   <a href='../Y/12352.html' title='Multiple used in 19 places.'>curs</a>[0] = <a href='../Y/12277.html' title='Multiple used in 356 places.'>cur</a>;
+<a id='L460' name='L460'></a> 460   <strong class='reserved'>for</strong> (<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> = 1; <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> &lt; <a href='../S/6980.html#L416' title='Defined at 416 in benchtests/bench-pthread-locks.c.'>RUN_COUNT</a> + 2; <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> ++)
+<a id='L461' name='L461'></a> 461     <a href='../Y/12352.html' title='Multiple used in 19 places.'>curs</a>[<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>] = <a href='../D/30951.html' title='Multiple defined in 15 places.'>func</a>(<a href='../Y/17305.html' title='Multiple used in 182 places.'>iters</a>, <a href='../Y/14596.html' title='Multiple used in 20 places.'>filler</a>);
+<a id='L462' name='L462'></a> 462 
+<a id='L463' name='L463'></a> 463   <em class='comment'>/* We sort the results so we can discard the fastest and slowest</em>
+<a id='L464' name='L464'></a> 464 <em class='comment'>     times as outliers.  In theory we should keep the fastest time,</em>
+<a id='L465' name='L465'></a> 465 <em class='comment'>     but IMHO this is more fair.  A simple bubble sort suffices.  */</em>
+<a id='L466' name='L466'></a> 466 
+<a id='L467' name='L467'></a> 467   <strong class='reserved'>for</strong> (<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> = 0; <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> &lt; <a href='../S/6980.html#L416' title='Defined at 416 in benchtests/bench-pthread-locks.c.'>RUN_COUNT</a> + 1; <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> ++)
+<a id='L468' name='L468'></a> 468     <strong class='reserved'>for</strong> (<a href='../Y/17344.html' title='Multiple used in 1543 places.'>j</a> = <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> + 1; <a href='../Y/17344.html' title='Multiple used in 1543 places.'>j</a> &lt; <a href='../S/6980.html#L416' title='Defined at 416 in benchtests/bench-pthread-locks.c.'>RUN_COUNT</a> + 2; <a href='../Y/17344.html' title='Multiple used in 1543 places.'>j</a> ++)
+<a id='L469' name='L469'></a> 469       <strong class='reserved'>if</strong> (<a href='../Y/12352.html' title='Multiple used in 19 places.'>curs</a>[<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>] &gt; <a href='../Y/12352.html' title='Multiple used in 19 places.'>curs</a>[<a href='../Y/17344.html' title='Multiple used in 1543 places.'>j</a>])
+<a id='L470' name='L470'></a> 470     <em class='brace'>{</em>
+<a id='L471' name='L471'></a> 471       <a href='../S/6874.html#L30' title='Defined at 30 in benchtests/bench-timing.h.'>timing_t</a> <a href='../Y/26948.html' title='Multiple used in 493 places.'>temp</a> = <a href='../Y/12352.html' title='Multiple used in 19 places.'>curs</a>[<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>];
+<a id='L472' name='L472'></a> 472       <a href='../Y/12352.html' title='Multiple used in 19 places.'>curs</a>[<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>] = <a href='../Y/12352.html' title='Multiple used in 19 places.'>curs</a>[<a href='../Y/17344.html' title='Multiple used in 1543 places.'>j</a>];
+<a id='L473' name='L473'></a> 473       <a href='../Y/12352.html' title='Multiple used in 19 places.'>curs</a>[<a href='../Y/17344.html' title='Multiple used in 1543 places.'>j</a>] = <a href='../Y/26948.html' title='Multiple used in 493 places.'>temp</a>;
+<a id='L474' name='L474'></a> 474     <em class='brace'>}</em>
+<a id='L475' name='L475'></a> 475 
+<a id='L476' name='L476'></a> 476   <em class='comment'>/* Now calculate mean and standard deviation, skipping the outliers.  */</em>
+<a id='L477' name='L477'></a> 477   <a href='../Y/19213.html' title='Multiple used in 6 places.'>mean</a> = 0.0;
+<a id='L478' name='L478'></a> 478   <strong class='reserved'>for</strong> (<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> = 1; <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>&lt;<a href='../S/6980.html#L416' title='Defined at 416 in benchtests/bench-pthread-locks.c.'>RUN_COUNT</a> + 1; <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> ++)
+<a id='L479' name='L479'></a> 479     <a href='../Y/19213.html' title='Multiple used in 6 places.'>mean</a> += (<strong class='reserved'>double</strong>) <a href='../Y/12352.html' title='Multiple used in 19 places.'>curs</a>[<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>] / (<strong class='reserved'>double</strong>) <a href='../Y/17305.html' title='Multiple used in 182 places.'>iters</a>;
+<a id='L480' name='L480'></a> 480   <a href='../Y/19213.html' title='Multiple used in 6 places.'>mean</a> /= <a href='../S/6980.html#L416' title='Defined at 416 in benchtests/bench-pthread-locks.c.'>RUN_COUNT</a>;
+<a id='L481' name='L481'></a> 481 
+<a id='L482' name='L482'></a> 482   <a href='../Y/26176.html' title='Multiple used in 5 places.'>stdev</a> = 0.0;
+<a id='L483' name='L483'></a> 483   <strong class='reserved'>for</strong> (<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> = 1; <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> &lt; <a href='../S/6980.html#L416' title='Defined at 416 in benchtests/bench-pthread-locks.c.'>RUN_COUNT</a> + 1; <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> ++)
+<a id='L484' name='L484'></a> 484     <em class='brace'>{</em>
+<a id='L485' name='L485'></a> 485       <strong class='reserved'>double</strong> <a href='../D/36247.html' title='Multiple defined in 13 places.'>s</a> = (<strong class='reserved'>double</strong>) <a href='../Y/12352.html' title='Multiple used in 19 places.'>curs</a>[<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>] / (<strong class='reserved'>double</strong>) <a href='../Y/17305.html' title='Multiple used in 182 places.'>iters</a> - <a href='../Y/19213.html' title='Multiple used in 6 places.'>mean</a>;
+<a id='L486' name='L486'></a> 486       <a href='../Y/26176.html' title='Multiple used in 5 places.'>stdev</a> += <a href='../D/36247.html' title='Multiple defined in 13 places.'>s</a> * <a href='../D/36247.html' title='Multiple defined in 13 places.'>s</a>;
+<a id='L487' name='L487'></a> 487     <em class='brace'>}</em>
+<a id='L488' name='L488'></a> 488   <a href='../Y/26176.html' title='Multiple used in 5 places.'>stdev</a> = <a href='../S/3342.html#L800' title='Defined at 800 in math/tgmath.h.'>sqrt</a> (<a href='../Y/26176.html' title='Multiple used in 5 places.'>stdev</a> / (<a href='../S/6980.html#L416' title='Defined at 416 in benchtests/bench-pthread-locks.c.'>RUN_COUNT</a> - 1));
+<a id='L489' name='L489'></a> 489 
+<a id='L490' name='L490'></a> 490   <strong class='reserved'>char</strong> <a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>[128];
+<a id='L491' name='L491'></a> 491   <a href='../D/36842.html' title='Multiple defined in 3 places.'>snprintf</a> (<a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>, <strong class='reserved'>sizeof</strong> <a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>, "%s-%s", <a href='../D/33817.html' title='Multiple defined in 21 places.'>name</a>, <a href='../Y/14596.html' title='Multiple used in 20 places.'>filler</a> ? "filler" : "empty");
+<a id='L492' name='L492'></a> 492 
+<a id='L493' name='L493'></a> 493   <a href='../S/7007.html#L64' title='Defined at 64 in benchtests/json-lib.c.'>json_attr_object_begin</a> (<a href='../Y/17403.html' title='Multiple used in 15 places.'>js</a>, <a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>);
+<a id='L494' name='L494'></a> 494 
+<a id='L495' name='L495'></a> 495   <a href='../S/7007.html#L130' title='Defined at 130 in benchtests/json-lib.c.'>json_attr_double</a> (<a href='../Y/17403.html' title='Multiple used in 15 places.'>js</a>, "duration", (<strong class='reserved'>double</strong>) <a href='../Y/12277.html' title='Multiple used in 356 places.'>cur</a>);
+<a id='L496' name='L496'></a> 496   <a href='../S/7007.html#L130' title='Defined at 130 in benchtests/json-lib.c.'>json_attr_double</a> (<a href='../Y/17403.html' title='Multiple used in 15 places.'>js</a>, "iterations", (<strong class='reserved'>double</strong>) <a href='../Y/17305.html' title='Multiple used in 182 places.'>iters</a>);
+<a id='L497' name='L497'></a> 497   <a href='../S/7007.html#L130' title='Defined at 130 in benchtests/json-lib.c.'>json_attr_double</a> (<a href='../Y/17403.html' title='Multiple used in 15 places.'>js</a>, "wall-sec", (<strong class='reserved'>double</strong>) <a href='../Y/26926.html' title='Multiple used in 66 places.'>td</a>);
+<a id='L498' name='L498'></a> 498   <a href='../S/7007.html#L130' title='Defined at 130 in benchtests/json-lib.c.'>json_attr_double</a> (<a href='../Y/17403.html' title='Multiple used in 15 places.'>js</a>, "mean", <a href='../Y/19213.html' title='Multiple used in 6 places.'>mean</a>);
+<a id='L499' name='L499'></a> 499   <a href='../S/7007.html#L130' title='Defined at 130 in benchtests/json-lib.c.'>json_attr_double</a> (<a href='../Y/17403.html' title='Multiple used in 15 places.'>js</a>, "stdev", <a href='../Y/26176.html' title='Multiple used in 5 places.'>stdev</a>);
+<a id='L500' name='L500'></a> 500   <a href='../S/7007.html#L130' title='Defined at 130 in benchtests/json-lib.c.'>json_attr_double</a> (<a href='../Y/17403.html' title='Multiple used in 15 places.'>js</a>, "min-outlier", (<strong class='reserved'>double</strong>) <a href='../Y/12352.html' title='Multiple used in 19 places.'>curs</a>[0] / (<strong class='reserved'>double</strong>) <a href='../Y/17305.html' title='Multiple used in 182 places.'>iters</a>);
+<a id='L501' name='L501'></a> 501   <a href='../S/7007.html#L130' title='Defined at 130 in benchtests/json-lib.c.'>json_attr_double</a> (<a href='../Y/17403.html' title='Multiple used in 15 places.'>js</a>, "min", (<strong class='reserved'>double</strong>) <a href='../Y/12352.html' title='Multiple used in 19 places.'>curs</a>[1] / (<strong class='reserved'>double</strong>) <a href='../Y/17305.html' title='Multiple used in 182 places.'>iters</a>);
+<a id='L502' name='L502'></a> 502   <a href='../S/7007.html#L130' title='Defined at 130 in benchtests/json-lib.c.'>json_attr_double</a> (<a href='../Y/17403.html' title='Multiple used in 15 places.'>js</a>, "max", (<strong class='reserved'>double</strong>) <a href='../Y/12352.html' title='Multiple used in 19 places.'>curs</a>[<a href='../S/6980.html#L416' title='Defined at 416 in benchtests/bench-pthread-locks.c.'>RUN_COUNT</a>] / (<strong class='reserved'>double</strong>) <a href='../Y/17305.html' title='Multiple used in 182 places.'>iters</a>);
+<a id='L503' name='L503'></a> 503   <a href='../S/7007.html#L130' title='Defined at 130 in benchtests/json-lib.c.'>json_attr_double</a> (<a href='../Y/17403.html' title='Multiple used in 15 places.'>js</a>, "max-outlier", (<strong class='reserved'>double</strong>) <a href='../Y/12352.html' title='Multiple used in 19 places.'>curs</a>[<a href='../S/6980.html#L416' title='Defined at 416 in benchtests/bench-pthread-locks.c.'>RUN_COUNT</a> + 1] / (<strong class='reserved'>double</strong>) <a href='../Y/17305.html' title='Multiple used in 182 places.'>iters</a>);
+<a id='L504' name='L504'></a> 504 
+<a id='L505' name='L505'></a> 505   <a href='../S/7007.html#L78' title='Defined at 78 in benchtests/json-lib.c.'>json_attr_object_end</a> (<a href='../Y/17403.html' title='Multiple used in 15 places.'>js</a>);
+<a id='L506' name='L506'></a> 506 
+<a id='L507' name='L507'></a> 507   <strong class='reserved'>return</strong> 0;
+<a id='L508' name='L508'></a> 508 <em class='brace'>}</em>
+<a id='L509' name='L509'></a> 509 
+<a id='L510' name='L510'></a> 510 <strong class='reserved'>static</strong> <strong class='reserved'>int</strong>
+<a id='L511' name='L511'></a> 511 <a href='../S/6980.html#L530' title='Referred from 530 in benchtests/bench-pthread-locks.c.'>do_bench_1</a> (<strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../D/33817.html' title='Multiple defined in 21 places.'>name</a>, <a href='../S/2015.html#L26' title='Defined at 26 in string/test-sig_np.c.'>test_t</a> <a href='../D/30951.html' title='Multiple defined in 15 places.'>func</a>, <a href='../S/7000.html#L33' title='Defined at 33 in benchtests/json-lib.h.'>json_ctx_t</a> *<a href='../Y/17403.html' title='Multiple used in 15 places.'>js</a>)
+<a id='L512' name='L512'></a> 512 <em class='brace'>{</em>
+<a id='L513' name='L513'></a> 513   <strong class='reserved'>int</strong> <a href='../S/10504.html#L20' title='Defined at 20 in sysdeps/unix/sysv/linux/ia64/swapcontext.c.'>rv</a> = 0;
+<a id='L514' name='L514'></a> 514 
+<a id='L515' name='L515'></a> 515   <a href='../S/10504.html#L20' title='Defined at 20 in sysdeps/unix/sysv/linux/ia64/swapcontext.c.'>rv</a> += <a href='../S/6980.html#L419' title='Defined at 419 in benchtests/bench-pthread-locks.c.'>do_bench_2</a> (<a href='../D/33817.html' title='Multiple defined in 21 places.'>name</a>, <a href='../D/30951.html' title='Multiple defined in 15 places.'>func</a>, 0, <a href='../Y/17403.html' title='Multiple used in 15 places.'>js</a>);
+<a id='L516' name='L516'></a> 516   <a href='../S/10504.html#L20' title='Defined at 20 in sysdeps/unix/sysv/linux/ia64/swapcontext.c.'>rv</a> += <a href='../S/6980.html#L419' title='Defined at 419 in benchtests/bench-pthread-locks.c.'>do_bench_2</a> (<a href='../D/33817.html' title='Multiple defined in 21 places.'>name</a>, <a href='../D/30951.html' title='Multiple defined in 15 places.'>func</a>, 1, <a href='../Y/17403.html' title='Multiple used in 15 places.'>js</a>);
+<a id='L517' name='L517'></a> 517 
+<a id='L518' name='L518'></a> 518   <strong class='reserved'>return</strong> <a href='../S/10504.html#L20' title='Defined at 20 in sysdeps/unix/sysv/linux/ia64/swapcontext.c.'>rv</a>;
+<a id='L519' name='L519'></a> 519 <em class='brace'>}</em>
+<a id='L520' name='L520'></a> 520 
+<a id='L521' name='L521'></a> 521 <strong class='reserved'>int</strong>
+<a id='L522' name='L522'></a> 522 <a href='../R/18661.html' title='Multiple referred from 2 places.'>do_bench</a> (<strong class='reserved'>void</strong>)
+<a id='L523' name='L523'></a> 523 <em class='brace'>{</em>
+<a id='L524' name='L524'></a> 524   <strong class='reserved'>int</strong> <a href='../S/10504.html#L20' title='Defined at 20 in sysdeps/unix/sysv/linux/ia64/swapcontext.c.'>rv</a> = 0;
+<a id='L525' name='L525'></a> 525   <a href='../S/7000.html#L33' title='Defined at 33 in benchtests/json-lib.h.'>json_ctx_t</a> <a href='../S/7000.html#L26' title='Defined at 26 in benchtests/json-lib.h.'>json_ctx</a>;
+<a id='L526' name='L526'></a> 526 
+<a id='L527' name='L527'></a> 527   <a href='../S/7007.html#L24' title='Defined at 24 in benchtests/json-lib.c.'>json_init</a> (&amp;<a href='../S/7000.html#L26' title='Defined at 26 in benchtests/json-lib.h.'>json_ctx</a>, 2, <a href='../D/37041.html' title='Multiple defined in 3 places.'>stdout</a>);
+<a id='L528' name='L528'></a> 528   <a href='../S/7007.html#L64' title='Defined at 64 in benchtests/json-lib.c.'>json_attr_object_begin</a> (&amp;<a href='../S/7000.html#L26' title='Defined at 26 in benchtests/json-lib.h.'>json_ctx</a>, "pthread_locks");
+<a id='L529' name='L529'></a> 529 
+<a id='L530' name='L530'></a> 530 <em class='sharp'>#define</em> <a href='../R/510.html' title='Multiple referred from 12 places.'>BENCH</a>(<a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>) <a href='../S/10504.html#L20' title='Defined at 20 in sysdeps/unix/sysv/linux/ia64/swapcontext.c.'>rv</a> += <a href='../S/6980.html#L511' title='Defined at 511 in benchtests/bench-pthread-locks.c.'>do_bench_1</a> (#<a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>, <a href='../Y/27004.html' title='Multiple used in 4 places.'>test_</a>##<a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>, &amp;<a href='../S/7000.html#L26' title='Defined at 26 in benchtests/json-lib.h.'>json_ctx</a>)
+<a id='L531' name='L531'></a> 531 
+<a id='L532' name='L532'></a> 532   <a href='../S/6980.html#L530' title='Defined at 530 in benchtests/bench-pthread-locks.c.'>BENCH</a> (<a href='../S/5207.html#L98' title='Defined at 98 in mach/lock-intern.h.'>mutex</a>);
+<a id='L533' name='L533'></a> 533   <a href='../S/6980.html#L530' title='Defined at 530 in benchtests/bench-pthread-locks.c.'>BENCH</a> (mutex_trylock);
+<a id='L534' name='L534'></a> 534   <a href='../S/6980.html#L530' title='Defined at 530 in benchtests/bench-pthread-locks.c.'>BENCH</a> (rwlock_read);
+<a id='L535' name='L535'></a> 535   <a href='../S/6980.html#L530' title='Defined at 530 in benchtests/bench-pthread-locks.c.'>BENCH</a> (rwlock_tryread);
+<a id='L536' name='L536'></a> 536   <a href='../S/6980.html#L530' title='Defined at 530 in benchtests/bench-pthread-locks.c.'>BENCH</a> (rwlock_write);
+<a id='L537' name='L537'></a> 537   <a href='../S/6980.html#L530' title='Defined at 530 in benchtests/bench-pthread-locks.c.'>BENCH</a> (rwlock_trywrite);
+<a id='L538' name='L538'></a> 538   <a href='../S/6980.html#L530' title='Defined at 530 in benchtests/bench-pthread-locks.c.'>BENCH</a> (<a href='../S/5181.html#L28' title='Defined at 28 in mach/spin-lock.h.'>spin_lock</a>);
+<a id='L539' name='L539'></a> 539   <a href='../S/6980.html#L530' title='Defined at 530 in benchtests/bench-pthread-locks.c.'>BENCH</a> (spin_trylock);
+<a id='L540' name='L540'></a> 540   <a href='../S/6980.html#L530' title='Defined at 530 in benchtests/bench-pthread-locks.c.'>BENCH</a> (<a href='../Y/24954.html' title='Multiple used in 31 places.'>sem_wait</a>);
+<a id='L541' name='L541'></a> 541   <a href='../S/6980.html#L530' title='Defined at 530 in benchtests/bench-pthread-locks.c.'>BENCH</a> (<a href='../Y/24952.html' title='Multiple used in 10 places.'>sem_trywait</a>);
+<a id='L542' name='L542'></a> 542   <a href='../S/6980.html#L530' title='Defined at 530 in benchtests/bench-pthread-locks.c.'>BENCH</a> (<a href='../Y/11918.html' title='Multiple used in 22 places.'>condvar</a>);
+<a id='L543' name='L543'></a> 543   <a href='../S/6980.html#L530' title='Defined at 530 in benchtests/bench-pthread-locks.c.'>BENCH</a> (consumer_producer);
+<a id='L544' name='L544'></a> 544 
+<a id='L545' name='L545'></a> 545   <a href='../S/7007.html#L78' title='Defined at 78 in benchtests/json-lib.c.'>json_attr_object_end</a> (&amp;<a href='../S/7000.html#L26' title='Defined at 26 in benchtests/json-lib.h.'>json_ctx</a>);
+<a id='L546' name='L546'></a> 546 
+<a id='L547' name='L547'></a> 547   <strong class='reserved'>return</strong> <a href='../S/10504.html#L20' title='Defined at 20 in sysdeps/unix/sysv/linux/ia64/swapcontext.c.'>rv</a>;
+<a id='L548' name='L548'></a> 548 <em class='brace'>}</em>
+<a id='L549' name='L549'></a> 549 
+<a id='L550' name='L550'></a> 550 
+<a id='L551' name='L551'></a> 551 <em class='sharp'>#define</em> <a href='../R/8619.html' title='Multiple referred from 7 places.'>TEST_FUNCTION</a> <a href='../D/29572.html' title='Multiple defined in 2 places.'>do_bench</a> ()
+<a id='L552' name='L552'></a> 552 
+<a id='L553' name='L553'></a> 553 <em class='sharp'>#include</em> "../test-skeleton.c"
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L68'>[^]</a><a href='#L522'>[v]</a><a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

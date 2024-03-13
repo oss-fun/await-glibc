@@ -1,0 +1,1299 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>sysdeps/x86_64/fpu/multiarch/svml_d_tanh4_core_avx2.S</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18977.html'>sysdeps</a>/<a href='../files/19391.html'>x86_64</a>/<a href='../files/19392.html'>fpu</a>/<a href='../files/19393.html'>multiarch</a>/svml_d_tanh4_core_avx2.S</h2>
+<em class='comment'>/* [&lt;][&gt;][^][v][top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* Function tanh vectorized with AVX2.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   Copyright (C) 2021-2022 Free Software Foundation, Inc.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'></em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'></em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'></em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   License along with the GNU C Library; if not, see</em>
+<a id='L17' name='L17'></a>  17 <em class='comment'>   https://www.gnu.org/licenses/.  */</em>
+<a id='L18' name='L18'></a>  18 
+<a id='L19' name='L19'></a>  19 <em class='comment'>/*</em>
+<a id='L20' name='L20'></a>  20 <em class='comment'> * ALGORITHM DESCRIPTION:</em>
+<a id='L21' name='L21'></a>  21 <em class='comment'> *</em>
+<a id='L22' name='L22'></a>  22 <em class='comment'> *   NOTE: Since the hyperbolic tangent function is odd</em>
+<a id='L23' name='L23'></a>  23 <em class='comment'> *         (tanh(x) = -tanh(-x)), below algorithm deals with the absolute</em>
+<a id='L24' name='L24'></a>  24 <em class='comment'> *         value of the argument |x|: tanh(x) = sign(x) * tanh(|x|)</em>
+<a id='L25' name='L25'></a>  25 <em class='comment'> *</em>
+<a id='L26' name='L26'></a>  26 <em class='comment'> *   We use a table lookup method to compute tanh(|x|).</em>
+<a id='L27' name='L27'></a>  27 <em class='comment'> *   The basic idea is to split the input range into a number of subintervals</em>
+<a id='L28' name='L28'></a>  28 <em class='comment'> *   and to approximate tanh(.) with a polynomial on each of them.</em>
+<a id='L29' name='L29'></a>  29 <em class='comment'> *</em>
+<a id='L30' name='L30'></a>  30 <em class='comment'> *   IEEE SPECIAL CONDITIONS:</em>
+<a id='L31' name='L31'></a>  31 <em class='comment'> *   x = [+,-]0, r = [+,-]0</em>
+<a id='L32' name='L32'></a>  32 <em class='comment'> *   x = +Inf,   r = +1</em>
+<a id='L33' name='L33'></a>  33 <em class='comment'> *   x = -Inf,   r = -1</em>
+<a id='L34' name='L34'></a>  34 <em class='comment'> *   x = QNaN,   r = QNaN</em>
+<a id='L35' name='L35'></a>  35 <em class='comment'> *   x = SNaN,   r = QNaN</em>
+<a id='L36' name='L36'></a>  36 <em class='comment'> *</em>
+<a id='L37' name='L37'></a>  37 <em class='comment'> *</em>
+<a id='L38' name='L38'></a>  38 <em class='comment'> *   ALGORITHM DETAILS</em>
+<a id='L39' name='L39'></a>  39 <em class='comment'> *   We handle special values in a callout function, aside from main path</em>
+<a id='L40' name='L40'></a>  40 <em class='comment'> *   computations. "Special" for this algorithm are:</em>
+<a id='L41' name='L41'></a>  41 <em class='comment'> *   INF, NAN, |x| &gt; HUGE_THRESHOLD</em>
+<a id='L42' name='L42'></a>  42 <em class='comment'> *</em>
+<a id='L43' name='L43'></a>  43 <em class='comment'> *</em>
+<a id='L44' name='L44'></a>  44 <em class='comment'> *   Main path computations are organized as follows:</em>
+<a id='L45' name='L45'></a>  45 <em class='comment'> *   Actually we split the interval [0, SATURATION_THRESHOLD)</em>
+<a id='L46' name='L46'></a>  46 <em class='comment'> *   into a number of subintervals.  On each subinterval we approximate tanh(.)</em>
+<a id='L47' name='L47'></a>  47 <em class='comment'> *   with a minimax polynomial of pre-defined degree. Polynomial coefficients</em>
+<a id='L48' name='L48'></a>  48 <em class='comment'> *   are computed beforehand and stored in table. We also use</em>
+<a id='L49' name='L49'></a>  49 <em class='comment'> *</em>
+<a id='L50' name='L50'></a>  50 <em class='comment'> *       y := |x| + B,</em>
+<a id='L51' name='L51'></a>  51 <em class='comment'> *</em>
+<a id='L52' name='L52'></a>  52 <em class='comment'> *   here B depends on subinterval and is used to make argument</em>
+<a id='L53' name='L53'></a>  53 <em class='comment'> *   closer to zero.</em>
+<a id='L54' name='L54'></a>  54 <em class='comment'> *   We also add large fake interval [SATURATION_THRESHOLD, HUGE_THRESHOLD],</em>
+<a id='L55' name='L55'></a>  55 <em class='comment'> *   where 1.0 + 0.0*y + 0.0*y^2 ... coefficients are stored - just to</em>
+<a id='L56' name='L56'></a>  56 <em class='comment'> *   preserve main path computation logic but return 1.0 for all arguments.</em>
+<a id='L57' name='L57'></a>  57 <em class='comment'> *</em>
+<a id='L58' name='L58'></a>  58 <em class='comment'> *   Hence reconstruction looks as follows:</em>
+<a id='L59' name='L59'></a>  59 <em class='comment'> *   we extract proper polynomial and range reduction coefficients</em>
+<a id='L60' name='L60'></a>  60 <em class='comment'> *        (Pj and B), corresponding to subinterval, to which |x| belongs,</em>
+<a id='L61' name='L61'></a>  61 <em class='comment'> *        and return</em>
+<a id='L62' name='L62'></a>  62 <em class='comment'> *</em>
+<a id='L63' name='L63'></a>  63 <em class='comment'> *       r := sign(x) * (P0 + P1 * y + ... + Pn * y^n)</em>
+<a id='L64' name='L64'></a>  64 <em class='comment'> *</em>
+<a id='L65' name='L65'></a>  65 <em class='comment'> *   NOTE: we use multiprecision technique to multiply and sum the first</em>
+<a id='L66' name='L66'></a>  66 <em class='comment'> *         K terms of the polynomial. So Pj, j = 0..K are stored in</em>
+<a id='L67' name='L67'></a>  67 <em class='comment'> *         table each as a pair of target precision numbers (Pj and PLj) to</em>
+<a id='L68' name='L68'></a>  68 <em class='comment'> *         achieve wider than target precision.</em>
+<a id='L69' name='L69'></a>  69 <em class='comment'> *</em>
+<a id='L70' name='L70'></a>  70 <em class='comment'> *</em>
+<a id='L71' name='L71'></a>  71 <em class='comment'> */</em>
+<a id='L72' name='L72'></a>  72 
+<a id='L73' name='L73'></a>  73 <em class='comment'>/* Offsets for data table __svml_dtanh_data_internal</em>
+<a id='L74' name='L74'></a>  74 <em class='comment'> */</em>
+<a id='L75' name='L75'></a>  75 <em class='sharp'>#define</em> _dbP                            0
+<a id='L76' name='L76'></a>  76 <em class='sharp'>#define</em> _dbSignMask                     7680
+<a id='L77' name='L77'></a>  77 <em class='sharp'>#define</em> _dbAbsMask                      7712
+<a id='L78' name='L78'></a>  78 <em class='sharp'>#define</em> _iExpMantMask                   7744
+<a id='L79' name='L79'></a>  79 <em class='sharp'>#define</em> _iExpMask                       7776
+<a id='L80' name='L80'></a>  80 <em class='sharp'>#define</em> _iMinIdxOfsMask                 7808
+<a id='L81' name='L81'></a>  81 <em class='sharp'>#define</em> _iMaxIdxMask                    7840
+<a id='L82' name='L82'></a>  82 
+<a id='L83' name='L83'></a>  83 <em class='sharp'>#include</em> &lt;<a href='../I/5967.html'>sysdep.h</a>&gt;
+<a id='L84' name='L84'></a>  84 
+<a id='L85' name='L85'></a>  85         .text
+<a id='L86' name='L86'></a>  86     .section .text.avx2,"ax",@progbits
+<a id='L87' name='L87'></a>  87 <a href='../D/3651.html' title='Multiple defined in 54 places.'>ENTRY</a>(_ZGVdN4v_tanh_avx2)
+<a id='L88' name='L88'></a>  88         pushq     %rbp
+<a id='L89' name='L89'></a>  89         cfi_def_cfa_offset(16)
+<a id='L90' name='L90'></a>  90         movq      %rsp, %rbp
+<a id='L91' name='L91'></a>  91         cfi_def_cfa(6, 16)
+<a id='L92' name='L92'></a>  92         cfi_offset(6, -16)
+<a id='L93' name='L93'></a>  93         andq      $-32, %rsp
+<a id='L94' name='L94'></a>  94         subq      $96, %rsp
+<a id='L95' name='L95'></a>  95         lea       _dbP+96+__svml_dtanh_data_internal(%rip), %r8
+<a id='L96' name='L96'></a>  96         vmovupd   %ymm0, (%rsp)
+<a id='L97' name='L97'></a>  97 
+<a id='L98' name='L98'></a>  98 <em class='comment'>/* if VMIN, VMAX is defined for I type */</em>
+<a id='L99' name='L99'></a>  99         vpxor     %xmm11, %xmm11, %xmm11
+<a id='L100' name='L100'></a> 100 
+<a id='L101' name='L101'></a> 101 <em class='comment'>/*  Constant loading  */</em>
+<a id='L102' name='L102'></a> 102         vmovups   _iMaxIdxMask+__svml_dtanh_data_internal(%rip), %xmm8
+<a id='L103' name='L103'></a> 103         vandpd    _dbAbsMask+__svml_dtanh_data_internal(%rip), %ymm0, %ymm1
+<a id='L104' name='L104'></a> 104         vandpd    _dbSignMask+__svml_dtanh_data_internal(%rip), %ymm0, %ymm2
+<a id='L105' name='L105'></a> 105         vextractf128 $1, %ymm0, %xmm15
+<a id='L106' name='L106'></a> 106         vshufps   $221, %xmm15, %xmm0, %xmm14
+<a id='L107' name='L107'></a> 107 
+<a id='L108' name='L108'></a> 108 <em class='comment'>/* Here huge arguments, INF and NaNs are filtered out to callout. */</em>
+<a id='L109' name='L109'></a> 109         vpand     _iExpMantMask+__svml_dtanh_data_internal(%rip), %xmm14, %xmm12
+<a id='L110' name='L110'></a> 110         vpsubd    _iMinIdxOfsMask+__svml_dtanh_data_internal(%rip), %xmm12, %xmm9
+<a id='L111' name='L111'></a> 111         vpcmpgtd  %xmm11, %xmm9, %xmm10
+<a id='L112' name='L112'></a> 112         vpcmpgtd  %xmm8, %xmm9, %xmm0
+<a id='L113' name='L113'></a> 113         vpand     %xmm10, %xmm9, %xmm7
+<a id='L114' name='L114'></a> 114         blendvps  %xmm0, %xmm8, %xmm7
+<a id='L115' name='L115'></a> 115 
+<a id='L116' name='L116'></a> 116 <em class='comment'>/*</em>
+<a id='L117' name='L117'></a> 117 <em class='comment'> * VSHRIMM( I, iIndex, = iIndex, (17 - 4) );</em>
+<a id='L118' name='L118'></a> 118 <em class='comment'> * VGATHER_MATRIX( L2D, p, TAB._dbP, iIndex, 0, T_ITEM_SIZE, T_ITEM_GRAN, 13, 0, 0 );</em>
+<a id='L119' name='L119'></a> 119 <em class='comment'> */</em>
+<a id='L120' name='L120'></a> 120         vpsrld    $10, %xmm7, %xmm6
+<a id='L121' name='L121'></a> 121         vmovd     %xmm6, %edx
+<a id='L122' name='L122'></a> 122         vpcmpgtd  _iExpMask+__svml_dtanh_data_internal(%rip), %xmm12, %xmm13
+<a id='L123' name='L123'></a> 123         vmovmskps %xmm13, %eax
+<a id='L124' name='L124'></a> 124         vpextrd   $1, %xmm6, %ecx
+<a id='L125' name='L125'></a> 125         movslq    %edx, %rdx
+<a id='L126' name='L126'></a> 126         movslq    %ecx, %rcx
+<a id='L127' name='L127'></a> 127         vpextrd   $2, %xmm6, %esi
+<a id='L128' name='L128'></a> 128         vpextrd   $3, %xmm6, %edi
+<a id='L129' name='L129'></a> 129         movslq    %esi, %rsi
+<a id='L130' name='L130'></a> 130         movslq    %edi, %rdi
+<a id='L131' name='L131'></a> 131         vmovupd   -96(%rdx,%r8), %xmm3
+<a id='L132' name='L132'></a> 132         vmovupd   -96(%rcx,%r8), %xmm4
+<a id='L133' name='L133'></a> 133         vmovupd   -80(%rcx,%r8), %xmm13
+<a id='L134' name='L134'></a> 134         vmovupd   -64(%rcx,%r8), %xmm9
+<a id='L135' name='L135'></a> 135         vmovupd   -80(%rdx,%r8), %xmm14
+<a id='L136' name='L136'></a> 136         vmovupd   -64(%rdx,%r8), %xmm10
+<a id='L137' name='L137'></a> 137         vmovupd   -48(%rdx,%r8), %xmm6
+<a id='L138' name='L138'></a> 138         vinsertf128 $1, -96(%rsi,%r8), %ymm3, %ymm0
+<a id='L139' name='L139'></a> 139         vinsertf128 $1, -96(%rdi,%r8), %ymm4, %ymm15
+<a id='L140' name='L140'></a> 140         vmovupd   -48(%rcx,%r8), %xmm3
+<a id='L141' name='L141'></a> 141         vunpckhpd %ymm15, %ymm0, %ymm0
+<a id='L142' name='L142'></a> 142         vinsertf128 $1, -80(%rsi,%r8), %ymm14, %ymm12
+<a id='L143' name='L143'></a> 143         vinsertf128 $1, -64(%rsi,%r8), %ymm10, %ymm8
+<a id='L144' name='L144'></a> 144         vinsertf128 $1, -80(%rdi,%r8), %ymm13, %ymm11
+<a id='L145' name='L145'></a> 145         vinsertf128 $1, -64(%rdi,%r8), %ymm9, %ymm7
+<a id='L146' name='L146'></a> 146         vunpcklpd %ymm11, %ymm12, %ymm15
+<a id='L147' name='L147'></a> 147         vunpckhpd %ymm11, %ymm12, %ymm14
+<a id='L148' name='L148'></a> 148         vunpcklpd %ymm7, %ymm8, %ymm13
+<a id='L149' name='L149'></a> 149         vunpckhpd %ymm7, %ymm8, %ymm12
+<a id='L150' name='L150'></a> 150         vmovupd   -32(%rdx,%r8), %xmm9
+<a id='L151' name='L151'></a> 151         vmovupd   -32(%rcx,%r8), %xmm8
+<a id='L152' name='L152'></a> 152         vinsertf128 $1, -48(%rsi,%r8), %ymm6, %ymm4
+<a id='L153' name='L153'></a> 153         vinsertf128 $1, -48(%rdi,%r8), %ymm3, %ymm5
+<a id='L154' name='L154'></a> 154         vunpcklpd %ymm5, %ymm4, %ymm11
+<a id='L155' name='L155'></a> 155         vunpckhpd %ymm5, %ymm4, %ymm10
+<a id='L156' name='L156'></a> 156         vmovupd   -16(%rdx,%r8), %xmm3
+<a id='L157' name='L157'></a> 157         vmovupd   -16(%rcx,%r8), %xmm4
+<a id='L158' name='L158'></a> 158         vinsertf128 $1, -32(%rsi,%r8), %ymm9, %ymm7
+<a id='L159' name='L159'></a> 159         vinsertf128 $1, -32(%rdi,%r8), %ymm8, %ymm6
+<a id='L160' name='L160'></a> 160         vunpcklpd %ymm6, %ymm7, %ymm9
+<a id='L161' name='L161'></a> 161         vunpckhpd %ymm6, %ymm7, %ymm8
+<a id='L162' name='L162'></a> 162         vinsertf128 $1, -16(%rsi,%r8), %ymm3, %ymm5
+<a id='L163' name='L163'></a> 163         vinsertf128 $1, -16(%rdi,%r8), %ymm4, %ymm6
+<a id='L164' name='L164'></a> 164         vunpcklpd %ymm6, %ymm5, %ymm7
+<a id='L165' name='L165'></a> 165         vunpckhpd %ymm6, %ymm5, %ymm6
+<a id='L166' name='L166'></a> 166         vmovupd   (%rdx,%r8), %xmm3
+<a id='L167' name='L167'></a> 167         vmovupd   (%rcx,%r8), %xmm5
+<a id='L168' name='L168'></a> 168         vinsertf128 $1, (%rsi,%r8), %ymm3, %ymm4
+<a id='L169' name='L169'></a> 169         vinsertf128 $1, (%rdi,%r8), %ymm5, %ymm5
+<a id='L170' name='L170'></a> 170         vunpcklpd %ymm5, %ymm4, %ymm3
+<a id='L171' name='L171'></a> 171         vaddpd    %ymm3, %ymm1, %ymm1
+<a id='L172' name='L172'></a> 172         vfmadd213pd %ymm7, %ymm1, %ymm6
+<a id='L173' name='L173'></a> 173         vfmadd213pd %ymm8, %ymm1, %ymm6
+<a id='L174' name='L174'></a> 174         vfmadd213pd %ymm9, %ymm1, %ymm6
+<a id='L175' name='L175'></a> 175         vfmadd213pd %ymm10, %ymm1, %ymm6
+<a id='L176' name='L176'></a> 176         vfmadd213pd %ymm11, %ymm1, %ymm6
+<a id='L177' name='L177'></a> 177         vfmadd213pd %ymm12, %ymm1, %ymm6
+<a id='L178' name='L178'></a> 178         vfmadd213pd %ymm13, %ymm1, %ymm6
+<a id='L179' name='L179'></a> 179         vfmadd213pd %ymm14, %ymm1, %ymm6
+<a id='L180' name='L180'></a> 180         vfmadd213pd %ymm15, %ymm1, %ymm6
+<a id='L181' name='L181'></a> 181         vfmadd213pd %ymm0, %ymm1, %ymm6
+<a id='L182' name='L182'></a> 182         vorpd     %ymm2, %ymm6, %ymm0
+<a id='L183' name='L183'></a> 183         testl     %eax, %eax
+<a id='L184' name='L184'></a> 184 
+<a id='L185' name='L185'></a> 185 <em class='comment'>/* Go to special inputs processing branch */</em>
+<a id='L186' name='L186'></a> 186         jne       L(SPECIAL_VALUES_BRANCH)
+<a id='L187' name='L187'></a> 187 <em class='comment'>                                # LOE rbx r12 r13 r14 r15 eax ymm0</em>
+<a id='L188' name='L188'></a> 188 
+<a id='L189' name='L189'></a> 189 <em class='comment'>/* Restore registers</em>
+<a id='L190' name='L190'></a> 190 <em class='comment'> * and exit the function</em>
+<a id='L191' name='L191'></a> 191 <em class='comment'> */</em>
+<a id='L192' name='L192'></a> 192 
+<a id='L193' name='L193'></a> 193 L(EXIT):
+<a id='L194' name='L194'></a> 194         movq      %rbp, %rsp
+<a id='L195' name='L195'></a> 195         popq      %rbp
+<a id='L196' name='L196'></a> 196         cfi_def_cfa(7, 8)
+<a id='L197' name='L197'></a> 197         cfi_restore(6)
+<a id='L198' name='L198'></a> 198         ret
+<a id='L199' name='L199'></a> 199         cfi_def_cfa(6, 16)
+<a id='L200' name='L200'></a> 200         cfi_offset(6, -16)
+<a id='L201' name='L201'></a> 201 
+<a id='L202' name='L202'></a> 202 <em class='comment'>/* Branch to process</em>
+<a id='L203' name='L203'></a> 203 <em class='comment'> * special inputs</em>
+<a id='L204' name='L204'></a> 204 <em class='comment'> */</em>
+<a id='L205' name='L205'></a> 205 
+<a id='L206' name='L206'></a> 206 L(SPECIAL_VALUES_BRANCH):
+<a id='L207' name='L207'></a> 207         vmovupd   (%rsp), %ymm1
+<a id='L208' name='L208'></a> 208         vmovupd   %ymm0, 64(%rsp)
+<a id='L209' name='L209'></a> 209         vmovupd   %ymm1, 32(%rsp)
+<a id='L210' name='L210'></a> 210 <em class='comment'>                                # LOE rbx r12 r13 r14 r15 eax ymm0</em>
+<a id='L211' name='L211'></a> 211 
+<a id='L212' name='L212'></a> 212         xorl      %edx, %edx
+<a id='L213' name='L213'></a> 213 <em class='comment'>                                # LOE rbx r12 r13 r14 r15 eax edx</em>
+<a id='L214' name='L214'></a> 214 
+<a id='L215' name='L215'></a> 215         vzeroupper
+<a id='L216' name='L216'></a> 216         movq      %r12, 16(%rsp)
+<a id='L217' name='L217'></a> 217         <em class='comment'>/*  DW_CFA_expression: r12 (r12) (DW_OP_lit8; DW_OP_minus; DW_OP_const4s: -32; DW_OP_and; DW_OP_const4s: -80; DW_OP_plus)  */</em>
+<a id='L218' name='L218'></a> 218         .cfi_escape 0x10, 0x0c, 0x0e, 0x38, 0x1c, 0x0d, 0xe0, 0xff, 0xff, 0xff, 0x1a, 0x0d, 0xb0, 0xff, 0xff, 0xff, 0x22
+<a id='L219' name='L219'></a> 219         movl      %edx, %r12d
+<a id='L220' name='L220'></a> 220         movq      %r13, 8(%rsp)
+<a id='L221' name='L221'></a> 221         <em class='comment'>/*  DW_CFA_expression: r13 (r13) (DW_OP_lit8; DW_OP_minus; DW_OP_const4s: -32; DW_OP_and; DW_OP_const4s: -88; DW_OP_plus)  */</em>
+<a id='L222' name='L222'></a> 222         .cfi_escape 0x10, 0x0d, 0x0e, 0x38, 0x1c, 0x0d, 0xe0, 0xff, 0xff, 0xff, 0x1a, 0x0d, 0xa8, 0xff, 0xff, 0xff, 0x22
+<a id='L223' name='L223'></a> 223         movl      %eax, %r13d
+<a id='L224' name='L224'></a> 224         movq      %r14, (%rsp)
+<a id='L225' name='L225'></a> 225         <em class='comment'>/*  DW_CFA_expression: r14 (r14) (DW_OP_lit8; DW_OP_minus; DW_OP_const4s: -32; DW_OP_and; DW_OP_const4s: -96; DW_OP_plus)  */</em>
+<a id='L226' name='L226'></a> 226         .cfi_escape 0x10, 0x0e, 0x0e, 0x38, 0x1c, 0x0d, 0xe0, 0xff, 0xff, 0xff, 0x1a, 0x0d, 0xa0, 0xff, 0xff, 0xff, 0x22
+<a id='L227' name='L227'></a> 227 <em class='comment'>                                # LOE rbx r15 r12d r13d</em>
+<a id='L228' name='L228'></a> 228 
+<a id='L229' name='L229'></a> 229 <em class='comment'>/* Range mask</em>
+<a id='L230' name='L230'></a> 230 <em class='comment'> * bits check</em>
+<a id='L231' name='L231'></a> 231 <em class='comment'> */</em>
+<a id='L232' name='L232'></a> 232 
+<a id='L233' name='L233'></a> 233 L(RANGEMASK_CHECK):
+<a id='L234' name='L234'></a> 234         btl       %r12d, %r13d
+<a id='L235' name='L235'></a> 235 
+<a id='L236' name='L236'></a> 236 <em class='comment'>/* Call scalar math function */</em>
+<a id='L237' name='L237'></a> 237         jc        L(SCALAR_MATH_CALL)
+<a id='L238' name='L238'></a> 238 <em class='comment'>                                # LOE rbx r15 r12d r13d</em>
+<a id='L239' name='L239'></a> 239 
+<a id='L240' name='L240'></a> 240 <em class='comment'>/* Special inputs</em>
+<a id='L241' name='L241'></a> 241 <em class='comment'> * processing loop</em>
+<a id='L242' name='L242'></a> 242 <em class='comment'> */</em>
+<a id='L243' name='L243'></a> 243 
+<a id='L244' name='L244'></a> 244 L(SPECIAL_VALUES_LOOP):
+<a id='L245' name='L245'></a> 245         incl      %r12d
+<a id='L246' name='L246'></a> 246         cmpl      $4, %r12d
+<a id='L247' name='L247'></a> 247 
+<a id='L248' name='L248'></a> 248 <em class='comment'>/* Check bits in range mask */</em>
+<a id='L249' name='L249'></a> 249         jl        L(RANGEMASK_CHECK)
+<a id='L250' name='L250'></a> 250 <em class='comment'>                                # LOE rbx r15 r12d r13d</em>
+<a id='L251' name='L251'></a> 251 
+<a id='L252' name='L252'></a> 252         movq      16(%rsp), %r12
+<a id='L253' name='L253'></a> 253         cfi_restore(12)
+<a id='L254' name='L254'></a> 254         movq      8(%rsp), %r13
+<a id='L255' name='L255'></a> 255         cfi_restore(13)
+<a id='L256' name='L256'></a> 256         movq      (%rsp), %r14
+<a id='L257' name='L257'></a> 257         cfi_restore(14)
+<a id='L258' name='L258'></a> 258         vmovupd   64(%rsp), %ymm0
+<a id='L259' name='L259'></a> 259 
+<a id='L260' name='L260'></a> 260 <em class='comment'>/* Go to exit */</em>
+<a id='L261' name='L261'></a> 261         jmp       L(EXIT)
+<a id='L262' name='L262'></a> 262         <em class='comment'>/*  DW_CFA_expression: r12 (r12) (DW_OP_lit8; DW_OP_minus; DW_OP_const4s: -32; DW_OP_and; DW_OP_const4s: -80; DW_OP_plus)  */</em>
+<a id='L263' name='L263'></a> 263         .cfi_escape 0x10, 0x0c, 0x0e, 0x38, 0x1c, 0x0d, 0xe0, 0xff, 0xff, 0xff, 0x1a, 0x0d, 0xb0, 0xff, 0xff, 0xff, 0x22
+<a id='L264' name='L264'></a> 264         <em class='comment'>/*  DW_CFA_expression: r13 (r13) (DW_OP_lit8; DW_OP_minus; DW_OP_const4s: -32; DW_OP_and; DW_OP_const4s: -88; DW_OP_plus)  */</em>
+<a id='L265' name='L265'></a> 265         .cfi_escape 0x10, 0x0d, 0x0e, 0x38, 0x1c, 0x0d, 0xe0, 0xff, 0xff, 0xff, 0x1a, 0x0d, 0xa8, 0xff, 0xff, 0xff, 0x22
+<a id='L266' name='L266'></a> 266         <em class='comment'>/*  DW_CFA_expression: r14 (r14) (DW_OP_lit8; DW_OP_minus; DW_OP_const4s: -32; DW_OP_and; DW_OP_const4s: -96; DW_OP_plus)  */</em>
+<a id='L267' name='L267'></a> 267         .cfi_escape 0x10, 0x0e, 0x0e, 0x38, 0x1c, 0x0d, 0xe0, 0xff, 0xff, 0xff, 0x1a, 0x0d, 0xa0, 0xff, 0xff, 0xff, 0x22
+<a id='L268' name='L268'></a> 268 <em class='comment'>                                # LOE rbx r12 r13 r14 r15 ymm0</em>
+<a id='L269' name='L269'></a> 269 
+<a id='L270' name='L270'></a> 270 <em class='comment'>/* Scalar math fucntion call</em>
+<a id='L271' name='L271'></a> 271 <em class='comment'> * to process special input</em>
+<a id='L272' name='L272'></a> 272 <em class='comment'> */</em>
+<a id='L273' name='L273'></a> 273 
+<a id='L274' name='L274'></a> 274 L(SCALAR_MATH_CALL):
+<a id='L275' name='L275'></a> 275         movl      %r12d, %r14d
+<a id='L276' name='L276'></a> 276         movsd     32(%rsp,%r14,8), %xmm0
+<a id='L277' name='L277'></a> 277         call      tanh@PLT
+<a id='L278' name='L278'></a> 278 <em class='comment'>                                # LOE rbx r14 r15 r12d r13d xmm0</em>
+<a id='L279' name='L279'></a> 279 
+<a id='L280' name='L280'></a> 280         movsd     %xmm0, 64(%rsp,%r14,8)
+<a id='L281' name='L281'></a> 281 
+<a id='L282' name='L282'></a> 282 <em class='comment'>/* Process special inputs in loop */</em>
+<a id='L283' name='L283'></a> 283         jmp       L(SPECIAL_VALUES_LOOP)
+<a id='L284' name='L284'></a> 284 <em class='comment'>                                # LOE rbx r15 r12d r13d</em>
+<a id='L285' name='L285'></a> 285 END(_ZGVdN4v_tanh_avx2)
+<a id='L286' name='L286'></a> 286 
+<a id='L287' name='L287'></a> 287         .section .rodata, "a"
+<a id='L288' name='L288'></a> 288         .align 32
+<a id='L289' name='L289'></a> 289 
+<a id='L290' name='L290'></a> 290 <em class='sharp'>#ifdef</em> <a href='../Y/7954.html' title='Multiple used in 3 places.'>__svml_dtanh_data_internal_typedef</a>
+<a id='L291' name='L291'></a> 291 typedef unsigned int VUINT32;
+<a id='L292' name='L292'></a> 292 typedef struct
+<a id='L293' name='L293'></a> 293 <em class='brace'>{</em>
+<a id='L294' name='L294'></a> 294         __declspec(align(32)) VUINT32 _dbP[60*16][2];
+<a id='L295' name='L295'></a> 295         __declspec(align(32)) VUINT32 _dbSignMask[4][2];
+<a id='L296' name='L296'></a> 296         __declspec(align(32)) VUINT32 _dbAbsMask[4][2];
+<a id='L297' name='L297'></a> 297         __declspec(align(32)) VUINT32 _iExpMantMask[8][1];
+<a id='L298' name='L298'></a> 298         __declspec(align(32)) VUINT32 _iExpMask[8][1];
+<a id='L299' name='L299'></a> 299         __declspec(align(32)) VUINT32 _iMinIdxOfsMask[8][1];
+<a id='L300' name='L300'></a> 300         __declspec(align(32)) VUINT32 _iMaxIdxMask[8][1];
+<a id='L301' name='L301'></a> 301 <em class='brace'>}</em> __svml_dtanh_data_internal;
+<a id='L302' name='L302'></a> 302 <em class='sharp'>#endif</em>
+<a id='L303' name='L303'></a> 303 __svml_dtanh_data_internal:
+<a id='L304' name='L304'></a> 304         <em class='comment'>/* Polynomial coefficients */</em>
+<a id='L305' name='L305'></a> 305         .quad 0x0000000000000000   <em class='comment'>/* PL0 = +0.000000000000000000000e-01 */</em>
+<a id='L306' name='L306'></a> 306         .quad 0x0000000000000000   <em class='comment'>/* PH0 = +0.000000000000000000000e-01 */</em>
+<a id='L307' name='L307'></a> 307         .quad 0x3FF0000000000000   <em class='comment'>/* P1  = +1.000000000000000014103e+00 */</em>
+<a id='L308' name='L308'></a> 308         .quad 0xBD197DEAD79668D3   <em class='comment'>/* P2  = -2.264132406596103056796e-14 */</em>
+<a id='L309' name='L309'></a> 309         .quad 0xBFD555555553AF3C   <em class='comment'>/* P3  = -3.333333333273349741024e-01 */</em>
+<a id='L310' name='L310'></a> 310         .quad 0xBE052F7CCA134846   <em class='comment'>/* P4  = -6.165791385711493738399e-10 */</em>
+<a id='L311' name='L311'></a> 311         .quad 0x3FC11111563849D6   <em class='comment'>/* P5  = +1.333333655353061107201e-01 */</em>
+<a id='L312' name='L312'></a> 312         .quad 0xBEB038623673FFB2   <em class='comment'>/* P6  = -9.668021563879858950855e-07 */</em>
+<a id='L313' name='L313'></a> 313         .quad 0xBFAB9F685E64022E   <em class='comment'>/* P7  = -5.395055916051593179252e-02 */</em>
+<a id='L314' name='L314'></a> 314         .quad 0xBF2A54E2B28F2207   <em class='comment'>/* P8  = -2.008940439550829012647e-04 */</em>
+<a id='L315' name='L315'></a> 315         .quad 0x3F97CFB9328A230E   <em class='comment'>/* P9  = +2.325333949059698582189e-02 */</em>
+<a id='L316' name='L316'></a> 316         .quad 0xBF75CA6D61723E02   <em class='comment'>/* P10 = -5.320002811586290441790e-03 */</em>
+<a id='L317' name='L317'></a> 317         .quad 0x0000000000000000   <em class='comment'>/* B = +0        */</em>
+<a id='L318' name='L318'></a> 318         .quad 0x3FF0000000000000   <em class='comment'>/* A = +1.0      */</em>
+<a id='L319' name='L319'></a> 319         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L320' name='L320'></a> 320         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L321' name='L321'></a> 321         .quad 0x3C3708A564FAD29A   <em class='comment'>/* PL0 = +1.248663375337163807466e-18 */</em>
+<a id='L322' name='L322'></a> 322         .quad 0x3FC0E6973998DA48   <em class='comment'>/* PH0 = +1.320370703922029154143e-01 */</em>
+<a id='L323' name='L323'></a> 323         .quad 0x3FEF712EB25C0888   <em class='comment'>/* P1  = +9.825662120422444519229e-01 */</em>
+<a id='L324' name='L324'></a> 324         .quad 0xBFC09B296F7C1EA9   <em class='comment'>/* P2  = -1.297351641044220078331e-01 */</em>
+<a id='L325' name='L325'></a> 325         .quad 0xBFD3DD77541EDDA7   <em class='comment'>/* P3  = -3.103922196855485849143e-01 */</em>
+<a id='L326' name='L326'></a> 326         .quad 0x3FB58FFCF4309615   <em class='comment'>/* P4  = +8.422833406128689275566e-02 */</em>
+<a id='L327' name='L327'></a> 327         .quad 0x3FBD3ABE845DCF49   <em class='comment'>/* P5  = +1.141776154670967208833e-01 */</em>
+<a id='L328' name='L328'></a> 328         .quad 0xBFA791DF538C37FA   <em class='comment'>/* P6  = -4.603479285115947936529e-02 */</em>
+<a id='L329' name='L329'></a> 329         .quad 0xBFA4F872F69CD6E8   <em class='comment'>/* P7  = -4.095801601799370195284e-02 */</em>
+<a id='L330' name='L330'></a> 330         .quad 0x3F9772E49EF6412B   <em class='comment'>/* P8  = +2.289921970583567527179e-02 */</em>
+<a id='L331' name='L331'></a> 331         .quad 0x3F8CBC0807393909   <em class='comment'>/* P9  = +1.403051635784581776625e-02 */</em>
+<a id='L332' name='L332'></a> 332         .quad 0xBF85F06A30F93319   <em class='comment'>/* P10 = -1.071246110873285040939e-02 */</em>
+<a id='L333' name='L333'></a> 333         .quad 0xBFC1000000000000   <em class='comment'>/* B = -.132813 */</em>
+<a id='L334' name='L334'></a> 334         .quad 0x3FF0000000000000   <em class='comment'>/* A = +1        */</em>
+<a id='L335' name='L335'></a> 335         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L336' name='L336'></a> 336         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L337' name='L337'></a> 337         .quad 0x3C6004EE5739DEAC   <em class='comment'>/* PL0 = +6.947247374112211856530e-18 */</em>
+<a id='L338' name='L338'></a> 338         .quad 0x3FC2DC968E6E0D62   <em class='comment'>/* PH0 = +1.473568149050193398786e-01 */</em>
+<a id='L339' name='L339'></a> 339         .quad 0x3FEF4E1E606D96DF   <em class='comment'>/* P1  = +9.782859691010478680677e-01 */</em>
+<a id='L340' name='L340'></a> 340         .quad 0xBFC273BD70994AB9   <em class='comment'>/* P2  = -1.441571044730005866646e-01 */</em>
+<a id='L341' name='L341'></a> 341         .quad 0xBFD382B548270D2C   <em class='comment'>/* P3  = -3.048527912726111386771e-01 */</em>
+<a id='L342' name='L342'></a> 342         .quad 0x3FB7CD2D582A6B29   <em class='comment'>/* P4  = +9.297450449450351894400e-02 */</em>
+<a id='L343' name='L343'></a> 343         .quad 0x3FBC1278CCCBF0DB   <em class='comment'>/* P5  = +1.096568584434324642303e-01 */</em>
+<a id='L344' name='L344'></a> 344         .quad 0xBFA9C7F5115B86A1   <em class='comment'>/* P6  = -5.035367810138536095866e-02 */</em>
+<a id='L345' name='L345'></a> 345         .quad 0xBFA371C21BAF618E   <em class='comment'>/* P7  = -3.797728145554222910481e-02 */</em>
+<a id='L346' name='L346'></a> 346         .quad 0x3F9958943F68417E   <em class='comment'>/* P8  = +2.475196492201935923783e-02 */</em>
+<a id='L347' name='L347'></a> 347         .quad 0x3F8930D5CFFD4152   <em class='comment'>/* P9  = +1.230017701132682667572e-02 */</em>
+<a id='L348' name='L348'></a> 348         .quad 0xBF875CF7ADD31B76   <em class='comment'>/* P10 = -1.140779017658897660092e-02 */</em>
+<a id='L349' name='L349'></a> 349         .quad 0xBFC3000000000000   <em class='comment'>/* B = -.148438 */</em>
+<a id='L350' name='L350'></a> 350         .quad 0x3FF0000000000000   <em class='comment'>/* A = +1        */</em>
+<a id='L351' name='L351'></a> 351         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L352' name='L352'></a> 352         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L353' name='L353'></a> 353         .quad 0x3C7EABE24E052A1F   <em class='comment'>/* PL0 = +2.660321779421749543501e-17 */</em>
+<a id='L354' name='L354'></a> 354         .quad 0x3FC4D04783618C71   <em class='comment'>/* PH0 = +1.626061812886266111366e-01 */</em>
+<a id='L355' name='L355'></a> 355         .quad 0x3FEF2765AF97A4B3   <em class='comment'>/* P1  = +9.735592298067302883212e-01 */</em>
+<a id='L356' name='L356'></a> 356         .quad 0xBFC443654205FEA5   <em class='comment'>/* P2  = -1.583067486171689074207e-01 */</em>
+<a id='L357' name='L357'></a> 357         .quad 0xBFD31F2E208A5B97   <em class='comment'>/* P3  = -2.987780874040536844467e-01 */</em>
+<a id='L358' name='L358'></a> 358         .quad 0x3FB9F235BD339878   <em class='comment'>/* P4  = +1.013520800512156573576e-01 */</em>
+<a id='L359' name='L359'></a> 359         .quad 0x3FBAD0B0DFCCA141   <em class='comment'>/* P5  = +1.047468706498238100104e-01 */</em>
+<a id='L360' name='L360'></a> 360         .quad 0xBFABD1B9600E608E   <em class='comment'>/* P6  = -5.433444306908184548967e-02 */</em>
+<a id='L361' name='L361'></a> 361         .quad 0xBFA1CEBEAF07DB58   <em class='comment'>/* P7  = -3.478046309094534453598e-02 */</em>
+<a id='L362' name='L362'></a> 362         .quad 0x3F9AFC9FB1D8EFD2   <em class='comment'>/* P8  = +2.635430834764902126383e-02 */</em>
+<a id='L363' name='L363'></a> 363         .quad 0x3F8573444F1AB502   <em class='comment'>/* P9  = +1.047376028449287564018e-02 */</em>
+<a id='L364' name='L364'></a> 364         .quad 0xBF8874FBC8F24406   <em class='comment'>/* P10 = -1.194187838544459322219e-02 */</em>
+<a id='L365' name='L365'></a> 365         .quad 0xBFC5000000000000   <em class='comment'>/* B = -.164063 */</em>
+<a id='L366' name='L366'></a> 366         .quad 0x3FF0000000000000   <em class='comment'>/* A = +1        */</em>
+<a id='L367' name='L367'></a> 367         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L368' name='L368'></a> 368         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L369' name='L369'></a> 369         .quad 0x3C7FB199D361A790   <em class='comment'>/* PL0 = +2.748994907060158996213e-17 */</em>
+<a id='L370' name='L370'></a> 370         .quad 0x3FC6C170259E21F7   <em class='comment'>/* PH0 = +1.777782615356639783766e-01 */</em>
+<a id='L371' name='L371'></a> 371         .quad 0x3FEEFD17479F7C65   <em class='comment'>/* P1  = +9.683948897253570478266e-01 */</em>
+<a id='L372' name='L372'></a> 372         .quad 0xBFC609530FE4DF8D   <em class='comment'>/* P2  = -1.721595599753950294577e-01 */</em>
+<a id='L373' name='L373'></a> 373         .quad 0xBFD2B3465D71B4DE   <em class='comment'>/* P3  = -2.921920692959484052676e-01 */</em>
+<a id='L374' name='L374'></a> 374         .quad 0x3FBBFD2D34AC509B   <em class='comment'>/* P4  = +1.093319181057403192166e-01 */</em>
+<a id='L375' name='L375'></a> 375         .quad 0x3FB9778C3C16A0FE   <em class='comment'>/* P5  = +9.948040453912551395183e-02 */</em>
+<a id='L376' name='L376'></a> 376         .quad 0xBFADAC4D9E63C665   <em class='comment'>/* P6  = -5.795519407719210697372e-02 */</em>
+<a id='L377' name='L377'></a> 377         .quad 0xBFA0139CCAD02D60   <em class='comment'>/* P7  = -3.139963126894929339124e-02 */</em>
+<a id='L378' name='L378'></a> 378         .quad 0x3F9C5BF43BA6F19D   <em class='comment'>/* P8  = +2.769452680671379432854e-02 */</em>
+<a id='L379' name='L379'></a> 379         .quad 0x3F8190B703350341   <em class='comment'>/* P9  = +8.576803002712575184772e-03 */</em>
+<a id='L380' name='L380'></a> 380         .quad 0xBF8936606782858A   <em class='comment'>/* P10 = -1.231074634444230850234e-02 */</em>
+<a id='L381' name='L381'></a> 381         .quad 0xBFC7000000000000   <em class='comment'>/* B = -.179688 */</em>
+<a id='L382' name='L382'></a> 382         .quad 0x3FF0000000000000   <em class='comment'>/* A = +1        */</em>
+<a id='L383' name='L383'></a> 383         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L384' name='L384'></a> 384         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L385' name='L385'></a> 385         .quad 0x3C6A917CA3624D50   <em class='comment'>/* PL0 = +1.152216693509785660691e-17 */</em>
+<a id='L386' name='L386'></a> 386         .quad 0x3FC8AFD7B974FABB   <em class='comment'>/* PH0 = +1.928662925292508878439e-01 */</em>
+<a id='L387' name='L387'></a> 387         .quad 0x3FEECF47624A5D03   <em class='comment'>/* P1  = +9.628025932060214187231e-01 */</em>
+<a id='L388' name='L388'></a> 388         .quad 0xBFC7C4C2CB4FDE4D   <em class='comment'>/* P2  = -1.856921665891938814679e-01 */</em>
+<a id='L389' name='L389'></a> 389         .quad 0xBFD23F69CB2C1F9D   <em class='comment'>/* P3  = -2.851204380135586155453e-01 */</em>
+<a id='L390' name='L390'></a> 390         .quad 0x3FBDEC5703A03814   <em class='comment'>/* P4  = +1.168875106670557712458e-01 */</em>
+<a id='L391' name='L391'></a> 391         .quad 0x3FB8095003D0CF15   <em class='comment'>/* P5  = +9.389209836154706616487e-02 */</em>
+<a id='L392' name='L392'></a> 392         .quad 0xBFAF554B47B10CBB   <em class='comment'>/* P6  = -6.119761705533607365968e-02 */</em>
+<a id='L393' name='L393'></a> 393         .quad 0xBF9C89743FE7BC1B   <em class='comment'>/* P7  = -2.786809577986213853937e-02 */</em>
+<a id='L394' name='L394'></a> 394         .quad 0x3F9D74725B746E7C   <em class='comment'>/* P8  = +2.876452143855921824991e-02 */</em>
+<a id='L395' name='L395'></a> 395         .quad 0x3F7B2D8AFB70B88C   <em class='comment'>/* P9  = +6.635229968237631511880e-03 */</em>
+<a id='L396' name='L396'></a> 396         .quad 0xBF89A0A2883EF6CB   <em class='comment'>/* P10 = -1.251341799058582545252e-02 */</em>
+<a id='L397' name='L397'></a> 397         .quad 0xBFC9000000000000   <em class='comment'>/* B = -.195313 */</em>
+<a id='L398' name='L398'></a> 398         .quad 0x3FF0000000000000   <em class='comment'>/* A = +1        */</em>
+<a id='L399' name='L399'></a> 399         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L400' name='L400'></a> 400         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L401' name='L401'></a> 401         .quad 0x3C7608279E8609CB   <em class='comment'>/* PL0 = +1.910958764623660748269e-17 */</em>
+<a id='L402' name='L402'></a> 402         .quad 0x3FCA9B46D2DDC5E3   <em class='comment'>/* PH0 = +2.078636674519166172015e-01 */</em>
+<a id='L403' name='L403'></a> 403         .quad 0x3FEE9E0BB72A01A1   <em class='comment'>/* P1  = +9.567926957534390123919e-01 */</em>
+<a id='L404' name='L404'></a> 404         .quad 0xBFC974FAD10C5330   <em class='comment'>/* P2  = -1.988824387305156976885e-01 */</em>
+<a id='L405' name='L405'></a> 405         .quad 0xBFD1C40ACCBA4044   <em class='comment'>/* P3  = -2.775904654781735703430e-01 */</em>
+<a id='L406' name='L406'></a> 406         .quad 0x3FBFBE24E2987853   <em class='comment'>/* P4  = +1.239951184474830487522e-01 */</em>
+<a id='L407' name='L407'></a> 407         .quad 0x3FB6885B4345E47F   <em class='comment'>/* P5  = +8.801813499839460539687e-02 */</em>
+<a id='L408' name='L408'></a> 408         .quad 0xBFB06563D5670584   <em class='comment'>/* P6  = -6.404708824176991770896e-02 */</em>
+<a id='L409' name='L409'></a> 409         .quad 0xBF98CD1D620DF6E2   <em class='comment'>/* P7  = -2.421995078065365147772e-02 */</em>
+<a id='L410' name='L410'></a> 410         .quad 0x3F9E44EF3E844D21   <em class='comment'>/* P8  = +2.955983943054463683119e-02 */</em>
+<a id='L411' name='L411'></a> 411         .quad 0x3F7325FA0148CAAE   <em class='comment'>/* P9  = +4.674889165971292322643e-03 */</em>
+<a id='L412' name='L412'></a> 412         .quad 0xBF89B4C8556C2D92   <em class='comment'>/* P10 = -1.255184660614964011319e-02 */</em>
+<a id='L413' name='L413'></a> 413         .quad 0xBFCB000000000000   <em class='comment'>/* B = -.210938 */</em>
+<a id='L414' name='L414'></a> 414         .quad 0x3FF0000000000000   <em class='comment'>/* A = +1        */</em>
+<a id='L415' name='L415'></a> 415         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L416' name='L416'></a> 416         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L417' name='L417'></a> 417         .quad 0x3C6F19DAA20F51D5   <em class='comment'>/* PL0 = +1.348790537832000351176e-17 */</em>
+<a id='L418' name='L418'></a> 418         .quad 0x3FCC83876CA98E15   <em class='comment'>/* PH0 = +2.227639465883021474557e-01 */</em>
+<a id='L419' name='L419'></a> 419         .quad 0x3FEE697B662D07CD   <em class='comment'>/* P1  = +9.503762241004040620296e-01 */</em>
+<a id='L420' name='L420'></a> 420         .quad 0xBFCB194C7ED76ACF   <em class='comment'>/* P2  = -2.117095584242946953999e-01 */</em>
+<a id='L421' name='L421'></a> 421         .quad 0xBFD141A19E419762   <em class='comment'>/* P3  = -2.696308179350720680191e-01 */</em>
+<a id='L422' name='L422'></a> 422         .quad 0x3FC0B89C64BC7B98   <em class='comment'>/* P4  = +1.306338779331468503007e-01 */</em>
+<a id='L423' name='L423'></a> 423         .quad 0x3FB4F721150BBFC5   <em class='comment'>/* P5  = +8.189589275184434216748e-02 */</em>
+<a id='L424' name='L424'></a> 424         .quad 0xBFB105AAFAB87898   <em class='comment'>/* P6  = -6.649273511036069461061e-02 */</em>
+<a id='L425' name='L425'></a> 425         .quad 0xBF94FB3B31248C01   <em class='comment'>/* P7  = -2.048962104266749732921e-02 */</em>
+<a id='L426' name='L426'></a> 426         .quad 0x3F9ECD31E588709C   <em class='comment'>/* P8  = +3.007963145692880855964e-02 */</em>
+<a id='L427' name='L427'></a> 427         .quad 0x3F664A91A335C105   <em class='comment'>/* P9  = +2.721104095762541127495e-03 */</em>
+<a id='L428' name='L428'></a> 428         .quad 0xBF89754E32E1E26E   <em class='comment'>/* P10 = -1.243077366619723806134e-02 */</em>
+<a id='L429' name='L429'></a> 429         .quad 0xBFCD000000000000   <em class='comment'>/* B = -.226563 */</em>
+<a id='L430' name='L430'></a> 430         .quad 0x3FF0000000000000   <em class='comment'>/* A = +1        */</em>
+<a id='L431' name='L431'></a> 431         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L432' name='L432'></a> 432         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L433' name='L433'></a> 433         .quad 0x3C6AC6C889D8111D   <em class='comment'>/* PL0 = +1.161245469312620769170e-17 */</em>
+<a id='L434' name='L434'></a> 434         .quad 0x3FCE6864FE55A3D0   <em class='comment'>/* PH0 = +2.375608674877001114112e-01 */</em>
+<a id='L435' name='L435'></a> 435         .quad 0x3FEE31AEE116B82B   <em class='comment'>/* P1  = +9.435648342384913826391e-01 */</em>
+<a id='L436' name='L436'></a> 436         .quad 0xBFCCB114B69E808B   <em class='comment'>/* P2  = -2.241540805525839833707e-01 */</em>
+<a id='L437' name='L437'></a> 437         .quad 0xBFD0B8AB913BA99D   <em class='comment'>/* P3  = -2.612713735858507980441e-01 */</em>
+<a id='L438' name='L438'></a> 438         .quad 0x3FC1823322BED48A   <em class='comment'>/* P4  = +1.367858810096190233514e-01 */</em>
+<a id='L439' name='L439'></a> 439         .quad 0x3FB35822B7929893   <em class='comment'>/* P5  = +7.556359273675842651653e-02 */</em>
+<a id='L440' name='L440'></a> 440         .quad 0xBFB18B03CC78D2DA   <em class='comment'>/* P6  = -6.852744810096158580830e-02 */</em>
+<a id='L441' name='L441'></a> 441         .quad 0xBF911CCC3C8D5E5D   <em class='comment'>/* P7  = -1.671141738492420009734e-02 */</em>
+<a id='L442' name='L442'></a> 442         .quad 0x3F9F0DEC2D99B12F   <em class='comment'>/* P8  = +3.032654789278515819797e-02 */</em>
+<a id='L443' name='L443'></a> 443         .quad 0x3F4A28398B4EBD98   <em class='comment'>/* P9  = +7.982521989244205404918e-04 */</em>
+<a id='L444' name='L444'></a> 444         .quad 0xBF88E60CB2FAB9A4   <em class='comment'>/* P10 = -1.215753480150000985458e-02 */</em>
+<a id='L445' name='L445'></a> 445         .quad 0xBFCF000000000000   <em class='comment'>/* B = -.242188 */</em>
+<a id='L446' name='L446'></a> 446         .quad 0x3FF0000000000000   <em class='comment'>/* A = +1        */</em>
+<a id='L447' name='L447'></a> 447         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L448' name='L448'></a> 448         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L449' name='L449'></a> 449         .quad 0x3C89D2B6774FB61D   <em class='comment'>/* PL0 = +4.479593208720169247958e-17 */</em>
+<a id='L450' name='L450'></a> 450         .quad 0x3FD09C744F539BE4   <em class='comment'>/* PH0 = +2.595492148088267558848e-01 */</em>
+<a id='L451' name='L451'></a> 451         .quad 0x3FEDD823B0400D42   <em class='comment'>/* P1  = +9.326342050921214825882e-01 */</em>
+<a id='L452' name='L452'></a> 452         .quad 0xBFCEFBF7FF305FCC   <em class='comment'>/* P2  = -2.420644756355144687086e-01 */</em>
+<a id='L453' name='L453'></a> 453         .quad 0xBFCFC01DC4F24A41   <em class='comment'>/* P3  = -2.480504237797323303990e-01 */</em>
+<a id='L454' name='L454'></a> 454         .quad 0x3FC291A2C26D5548   <em class='comment'>/* P4  = +1.450694512701977626753e-01 */</em>
+<a id='L455' name='L455'></a> 455         .quad 0x3FB0D562E672D188   <em class='comment'>/* P5  = +6.575601698097532991976e-02 */</em>
+<a id='L456' name='L456'></a> 456         .quad 0xBFB2201ECC119E06   <em class='comment'>/* P6  = -7.080261690281738261872e-02 */</em>
+<a id='L457' name='L457'></a> 457         .quad 0xBF8695D50F778D31   <em class='comment'>/* P7  = -1.102796987010509974642e-02 */</em>
+<a id='L458' name='L458'></a> 458         .quad 0x3F9EEC8CFBC031A0   <em class='comment'>/* P8  = +3.019924437107734972427e-02 */</em>
+<a id='L459' name='L459'></a> 459         .quad 0xBF6030F0A4D3660A   <em class='comment'>/* P9  = -1.976461417694923328722e-03 */</em>
+<a id='L460' name='L460'></a> 460         .quad 0xBF87845288A4AEF5   <em class='comment'>/* P10 = -1.148285369398347838494e-02 */</em>
+<a id='L461' name='L461'></a> 461         .quad 0xBFD1000000000000   <em class='comment'>/* B = -.265625 */</em>
+<a id='L462' name='L462'></a> 462         .quad 0x3FF0000000000000   <em class='comment'>/* A = +1        */</em>
+<a id='L463' name='L463'></a> 463         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L464' name='L464'></a> 464         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L465' name='L465'></a> 465         .quad 0x3C8B6AAB614D1C8D   <em class='comment'>/* PL0 = +4.756035418366735312727e-17 */</em>
+<a id='L466' name='L466'></a> 466         .quad 0x3FD275F7E1CF7F63   <em class='comment'>/* PH0 = +2.884502129727392616410e-01 */</em>
+<a id='L467' name='L467'></a> 467         .quad 0x3FED56658F74C9CC   <em class='comment'>/* P1  = +9.167964746359813351341e-01 */</em>
+<a id='L468' name='L468'></a> 468         .quad 0xBFD0ECC045EBD596   <em class='comment'>/* P2  = -2.644501383614054083635e-01 */</em>
+<a id='L469' name='L469'></a> 469         .quad 0xBFCD5A4BDE179180   <em class='comment'>/* P3  = -2.293181261476426808811e-01 */</em>
+<a id='L470' name='L470'></a> 470         .quad 0x3FC3C00047D34767   <em class='comment'>/* P4  = +1.542969084462655120552e-01 */</em>
+<a id='L471' name='L471'></a> 471         .quad 0x3FAAC7CE84FD609F   <em class='comment'>/* P5  = +5.230565427217581251974e-02 */</em>
+<a id='L472' name='L472'></a> 472         .quad 0xBFB288948D2E8B43   <em class='comment'>/* P6  = -7.239654967137902384931e-02 */</em>
+<a id='L473' name='L473'></a> 473         .quad 0xBF6D6605AAD5A1C0   <em class='comment'>/* P7  = -3.588687008847041164896e-03 */</em>
+<a id='L474' name='L474'></a> 474         .quad 0x3F9DDB0790848E97   <em class='comment'>/* P8  = +2.915584392134337382866e-02 */</em>
+<a id='L475' name='L475'></a> 475         .quad 0xBF75FDE291BAD5B4   <em class='comment'>/* P9  = -5.369076763306269573660e-03 */</em>
+<a id='L476' name='L476'></a> 476         .quad 0xBF84CEA5C52E0A78   <em class='comment'>/* P10 = -1.015977390284671071888e-02 */</em>
+<a id='L477' name='L477'></a> 477         .quad 0xBFD3000000000000   <em class='comment'>/* B = -.296875 */</em>
+<a id='L478' name='L478'></a> 478         .quad 0x3FF0000000000000   <em class='comment'>/* A = +1        */</em>
+<a id='L479' name='L479'></a> 479         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L480' name='L480'></a> 480         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L481' name='L481'></a> 481         .quad 0x3C7139A81C8A6ECF   <em class='comment'>/* PL0 = +1.494049799478574591322e-17 */</em>
+<a id='L482' name='L482'></a> 482         .quad 0x3FD4470650036407   <em class='comment'>/* PH0 = +3.168350011233659890841e-01 */</em>
+<a id='L483' name='L483'></a> 483         .quad 0x3FECC9A69DFDDD48   <em class='comment'>/* P1  = +8.996155820631566629678e-01 */</em>
+<a id='L484' name='L484'></a> 484         .quad 0xBFD23DED3A37A09F   <em class='comment'>/* P2  = -2.850297039535778028925e-01 */</em>
+<a id='L485' name='L485'></a> 485         .quad 0xBFCAD302395D51C1   <em class='comment'>/* P3  = -2.095644741153943890185e-01 */</em>
+<a id='L486' name='L486'></a> 486         .quad 0x3FC4A8FE3F309C22   <em class='comment'>/* P4  = +1.614072617096278705115e-01 */</em>
+<a id='L487' name='L487'></a> 487         .quad 0x3FA3D161188AA436   <em class='comment'>/* P5  = +3.870681213931741151586e-02 */</em>
+<a id='L488' name='L488'></a> 488         .quad 0xBFB288CFE5494E98   <em class='comment'>/* P6  = -7.240008685885823969403e-02 */</em>
+<a id='L489' name='L489'></a> 489         .quad 0x3F6C7903EED8D334   <em class='comment'>/* P7  = +3.475673371918475361081e-03 */</em>
+<a id='L490' name='L490'></a> 490         .quad 0x3F9BE023CDFB02F6   <em class='comment'>/* P8  = +2.722221321778569498033e-02 */</em>
+<a id='L491' name='L491'></a> 491         .quad 0xBF80F8296F2C3A95   <em class='comment'>/* P9  = -8.285831170295390358336e-03 */</em>
+<a id='L492' name='L492'></a> 492         .quad 0xBF8152DF4790049B   <em class='comment'>/* P10 = -8.458847400108650973189e-03 */</em>
+<a id='L493' name='L493'></a> 493         .quad 0xBFD5000000000000   <em class='comment'>/* B = -.328125 */</em>
+<a id='L494' name='L494'></a> 494         .quad 0x3FF0000000000000   <em class='comment'>/* A = +1        */</em>
+<a id='L495' name='L495'></a> 495         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L496' name='L496'></a> 496         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L497' name='L497'></a> 497         .quad 0x3C7751FE0FEE8335   <em class='comment'>/* PL0 = +2.022712113430213599928e-17 */</em>
+<a id='L498' name='L498'></a> 498         .quad 0x3FD60EF7120502A9   <em class='comment'>/* PH0 = +3.446633983585721261456e-01 */</em>
+<a id='L499' name='L499'></a> 499         .quad 0x3FEC32D951E56E6F   <em class='comment'>/* P1  = +8.812071418319202070776e-01 */</em>
+<a id='L500' name='L500'></a> 500         .quad 0xBFD370255FC004F8   <em class='comment'>/* P2  = -3.037198481616338996824e-01 */</em>
+<a id='L501' name='L501'></a> 501         .quad 0xBFC832F0EBC6BB41   <em class='comment'>/* P3  = -1.890545989276351359107e-01 */</em>
+<a id='L502' name='L502'></a> 502         .quad 0x3FC54C99A0FF432F   <em class='comment'>/* P4  = +1.664001499289269127540e-01 */</em>
+<a id='L503' name='L503'></a> 503         .quad 0x3F99DAC0CC283C18   <em class='comment'>/* P5  = +2.524853941036661688369e-02 */</em>
+<a id='L504' name='L504'></a> 504         .quad 0xBFB227B3896A026D   <em class='comment'>/* P6  = -7.091829399906553280461e-02 */</em>
+<a id='L505' name='L505'></a> 505         .quad 0x3F84663364E1FB19   <em class='comment'>/* P7  = +9.960557476231411602383e-03 */</em>
+<a id='L506' name='L506'></a> 506         .quad 0x3F9922D70DE07C57   <em class='comment'>/* P8  = +2.454696676442965935283e-02 */</em>
+<a id='L507' name='L507'></a> 507         .quad 0xBF85C4A4EB6F86BC   <em class='comment'>/* P9  = -1.062897532932837635222e-02 */</em>
+<a id='L508' name='L508'></a> 508         .quad 0xBF7AAB61214FFE17   <em class='comment'>/* P10 = -6.511096396024671890972e-03 */</em>
+<a id='L509' name='L509'></a> 509         .quad 0xBFD7000000000000   <em class='comment'>/* B = -.359375 */</em>
+<a id='L510' name='L510'></a> 510         .quad 0x3FF0000000000000   <em class='comment'>/* A = +1        */</em>
+<a id='L511' name='L511'></a> 511         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L512' name='L512'></a> 512         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L513' name='L513'></a> 513         .quad 0x3BFE67F266843B2C   <em class='comment'>/* PL0 = +1.030196791298162288777e-19 */</em>
+<a id='L514' name='L514'></a> 514         .quad 0x3FD7CD3115FC0F16   <em class='comment'>/* PH0 = +3.718989100163850869407e-01 */</em>
+<a id='L515' name='L515'></a> 515         .quad 0x3FEB92F96CCC2C5B   <em class='comment'>/* P1  = +8.616912007286247079761e-01 */</em>
+<a id='L516' name='L516'></a> 516         .quad 0xBFD4827320135092   <em class='comment'>/* P2  = -3.204620183216856200247e-01 */</em>
+<a id='L517' name='L517'></a> 517         .quad 0xBFC582B15550168A   <em class='comment'>/* P3  = -1.680509249273891977521e-01 */</em>
+<a id='L518' name='L518'></a> 518         .quad 0x3FC5AC3B9A2E4C31   <em class='comment'>/* P4  = +1.693186285816366254244e-01 */</em>
+<a id='L519' name='L519'></a> 519         .quad 0x3F88FA599FCADAFB   <em class='comment'>/* P5  = +1.219625491044728129762e-02 */</em>
+<a id='L520' name='L520'></a> 520         .quad 0xBFB16EC8F5CA169E   <em class='comment'>/* P6  = -6.809669495313605642174e-02 */</em>
+<a id='L521' name='L521'></a> 521         .quad 0x3F90140EFC748BBE   <em class='comment'>/* P7  = +1.570151725639922719844e-02 */</em>
+<a id='L522' name='L522'></a> 522         .quad 0x3F95CFC49C1A28DC   <em class='comment'>/* P8  = +2.130038454792147768770e-02 */</em>
+<a id='L523' name='L523'></a> 523         .quad 0xBF8946ED8B1BF454   <em class='comment'>/* P9  = -1.234231549050882816697e-02 */</em>
+<a id='L524' name='L524'></a> 524         .quad 0xBF7239E55C1DD50F   <em class='comment'>/* P10 = -4.449745117985472755606e-03 */</em>
+<a id='L525' name='L525'></a> 525         .quad 0xBFD9000000000000   <em class='comment'>/* B = -.390625 */</em>
+<a id='L526' name='L526'></a> 526         .quad 0x3FF0000000000000   <em class='comment'>/* A = +1        */</em>
+<a id='L527' name='L527'></a> 527         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L528' name='L528'></a> 528         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L529' name='L529'></a> 529         .quad 0x3C6412330191189C   <em class='comment'>/* PL0 = +8.704448096175471149661e-18 */</em>
+<a id='L530' name='L530'></a> 530         .quad 0x3FD9812B3B03F0A5   <em class='comment'>/* PH0 = +3.985088421175169703936e-01 */</em>
+<a id='L531' name='L531'></a> 531         .quad 0x3FEAEB08C3C0E84D   <em class='comment'>/* P1  = +8.411907027541559254748e-01 */</em>
+<a id='L532' name='L532'></a> 532         .quad 0xBFD57446B1BC46CF   <em class='comment'>/* P2  = -3.352219329545790787820e-01 */</em>
+<a id='L533' name='L533'></a> 533         .quad 0xBFC2CA9ABC0444AD   <em class='comment'>/* P3  = -1.468079965639267634401e-01 */</em>
+<a id='L534' name='L534'></a> 534         .quad 0x3FC5CA95F9460D18   <em class='comment'>/* P4  = +1.702449290424759093710e-01 */</em>
+<a id='L535' name='L535'></a> 535         .quad 0xBF2C2DAA35DD05C3   <em class='comment'>/* P5  = -2.149839664813813012186e-04 */</em>
+<a id='L536' name='L536'></a> 536         .quad 0xBFB069A516EEB75D   <em class='comment'>/* P6  = -6.411201295733578195472e-02 */</em>
+<a id='L537' name='L537'></a> 537         .quad 0x3F9512716416FDC7   <em class='comment'>/* P7  = +2.057816670798986720058e-02 */</em>
+<a id='L538' name='L538'></a> 538         .quad 0x3F921630CB1319A3   <em class='comment'>/* P8  = +1.766277541607908852593e-02 */</em>
+<a id='L539' name='L539'></a> 539         .quad 0xBF8B76DA2EC99526   <em class='comment'>/* P9  = -1.341028647693549562145e-02 */</em>
+<a id='L540' name='L540'></a> 540         .quad 0xBF63A97474A161E4   <em class='comment'>/* P10 = -2.400138332671485493040e-03 */</em>
+<a id='L541' name='L541'></a> 541         .quad 0xBFDB000000000000   <em class='comment'>/* B = -.421875 */</em>
+<a id='L542' name='L542'></a> 542         .quad 0x3FF0000000000000   <em class='comment'>/* A = +1        */</em>
+<a id='L543' name='L543'></a> 543         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L544' name='L544'></a> 544         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L545' name='L545'></a> 545         .quad 0x3C89B79F5783381C   <em class='comment'>/* PL0 = +4.461236087774530799537e-17 */</em>
+<a id='L546' name='L546'></a> 546         .quad 0x3FDB2A6C993B829D   <em class='comment'>/* PH0 = +4.244643684778937609003e-01 */</em>
+<a id='L547' name='L547'></a> 547         .quad 0x3FEA3C0C1FBA328C   <em class='comment'>/* P1  = +8.198299998926627915155e-01 */</em>
+<a id='L548' name='L548'></a> 548         .quad 0xBFD6457212F78DE0   <em class='comment'>/* P2  = -3.479886231636708581604e-01 */</em>
+<a id='L549' name='L549'></a> 549         .quad 0xBFC0129BDA380A66   <em class='comment'>/* P3  = -1.255678954622282824818e-01 */</em>
+<a id='L550' name='L550'></a> 550         .quad 0x3FC5AB77F388FBDE   <em class='comment'>/* P4  = +1.692953051696965507089e-01 */</em>
+<a id='L551' name='L551'></a> 551         .quad 0xBF8822F3A6CADB7C   <em class='comment'>/* P5  = -1.178541519889874597783e-02 */</em>
+<a id='L552' name='L552'></a> 552         .quad 0xBFAE4A876370A4BD   <em class='comment'>/* P6  = -5.916236008517603590739e-02 */</em>
+<a id='L553' name='L553'></a> 553         .quad 0x3F991A89BC3B7710   <em class='comment'>/* P7  = +2.451529704455085335710e-02 */</em>
+<a id='L554' name='L554'></a> 554         .quad 0x3F8C4A4328204D4B   <em class='comment'>/* P8  = +1.381351915555364098800e-02 */</em>
+<a id='L555' name='L555'></a> 555         .quad 0xBF8C5F921D01EC0B   <em class='comment'>/* P9  = -1.385416174911393178490e-02 */</em>
+<a id='L556' name='L556'></a> 556         .quad 0xBF3EE844C5B79FB8   <em class='comment'>/* P10 = -4.716079617694784908234e-04 */</em>
+<a id='L557' name='L557'></a> 557         .quad 0xBFDD000000000000   <em class='comment'>/* B = -.453125 */</em>
+<a id='L558' name='L558'></a> 558         .quad 0x3FF0000000000000   <em class='comment'>/* A = +1        */</em>
+<a id='L559' name='L559'></a> 559         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L560' name='L560'></a> 560         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L561' name='L561'></a> 561         .quad 0x3C73FA437AD7AD87   <em class='comment'>/* PL0 = +1.732779905745858845932e-17 */</em>
+<a id='L562' name='L562'></a> 562         .quad 0x3FDCC88C9902CF45   <em class='comment'>/* PH0 = +4.497405523536495697279e-01 */</em>
+<a id='L563' name='L563'></a> 563         .quad 0x3FE9870845162D1D   <em class='comment'>/* P1  = +7.977334355686341748810e-01 */</em>
+<a id='L564' name='L564'></a> 564         .quad 0xBFD6F62358F73DA8   <em class='comment'>/* P2  = -3.587730759436120677668e-01 */</em>
+<a id='L565' name='L565'></a> 565         .quad 0xBFBAC4345D675FE1   <em class='comment'>/* P3  = -1.045563438450467661101e-01 */</em>
+<a id='L566' name='L566'></a> 566         .quad 0x3FC5539DA8287019   <em class='comment'>/* P4  = +1.666142531474868131862e-01 */</em>
+<a id='L567' name='L567'></a> 567         .quad 0xBF96E3E0DC04A09F   <em class='comment'>/* P5  = -2.235366194614185212822e-02 */</em>
+<a id='L568' name='L568'></a> 568         .quad 0xBFAB5EC7147C207D   <em class='comment'>/* P6  = -5.345747113284546871398e-02 */</em>
+<a id='L569' name='L569'></a> 569         .quad 0x3F9C24166FFA7A58   <em class='comment'>/* P7  = +2.748141344511120915667e-02 */</em>
+<a id='L570' name='L570'></a> 570         .quad 0x3F8451B907819844   <em class='comment'>/* P8  = +9.921498815128277696693e-03 */</em>
+<a id='L571' name='L571'></a> 571         .quad 0xBF8C1C6D19191FCB   <em class='comment'>/* P9  = -1.372609360545586670239e-02 */</em>
+<a id='L572' name='L572'></a> 572         .quad 0x3F547372DF72E35A   <em class='comment'>/* P10 = +1.248228245272117756098e-03 */</em>
+<a id='L573' name='L573'></a> 573         .quad 0xBFDF000000000000   <em class='comment'>/* B = -.484375 */</em>
+<a id='L574' name='L574'></a> 574         .quad 0x3FF0000000000000   <em class='comment'>/* A = +1        */</em>
+<a id='L575' name='L575'></a> 575         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L576' name='L576'></a> 576         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L577' name='L577'></a> 577         .quad 0x3C848FE06EE49950   <em class='comment'>/* PL0 = +3.566941590788961528958e-17 */</em>
+<a id='L578' name='L578'></a> 578         .quad 0x3FDF20211A36475D   <em class='comment'>/* PH0 = +4.863360172249622803697e-01 */</em>
+<a id='L579' name='L579'></a> 579         .quad 0x3FE86E67E6B80AC2   <em class='comment'>/* P1  = +7.634772783497611574659e-01 */</em>
+<a id='L580' name='L580'></a> 580         .quad 0xBFD7C37C55474D9B   <em class='comment'>/* P2  = -3.713064987943767913461e-01 */</em>
+<a id='L581' name='L581'></a> 581         .quad 0xBFB2EBF15F3CB036   <em class='comment'>/* P3  = -7.391270232318521952684e-02 */</em>
+<a id='L582' name='L582'></a> 582         .quad 0x3FC4718C8EF6E3AA   <em class='comment'>/* P4  = +1.597152422016539530950e-01 */</em>
+<a id='L583' name='L583'></a> 583         .quad 0xBFA277F8394E9B07   <em class='comment'>/* P5  = -3.607154559658991932071e-02 */</em>
+<a id='L584' name='L584'></a> 584         .quad 0xBFA680312AB207E3   <em class='comment'>/* P6  = -4.394677778419955009224e-02 */</em>
+<a id='L585' name='L585'></a> 585         .quad 0x3F9EDC9A8B57E286   <em class='comment'>/* P7  = +3.013841128810892143223e-02 */</em>
+<a id='L586' name='L586'></a> 586         .quad 0x3F71B8C5E648EAF6   <em class='comment'>/* P8  = +4.326603932492947851719e-03 */</em>
+<a id='L587' name='L587'></a> 587         .quad 0xBF89DB218356730C   <em class='comment'>/* P9  = -1.262499029217558458029e-02 */</em>
+<a id='L588' name='L588'></a> 588         .quad 0x3F6B05728E6EBC8E   <em class='comment'>/* P10 = +3.298496001171330815865e-03 */</em>
+<a id='L589' name='L589'></a> 589         .quad 0xBFE1000000000000   <em class='comment'>/* B = -.53125  */</em>
+<a id='L590' name='L590'></a> 590         .quad 0x3FF0000000000000   <em class='comment'>/* A = +1        */</em>
+<a id='L591' name='L591'></a> 591         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L592' name='L592'></a> 592         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L593' name='L593'></a> 593         .quad 0x3C8429831EDD94DE   <em class='comment'>/* PL0 = +3.497576705878673192147e-17 */</em>
+<a id='L594' name='L594'></a> 594         .quad 0x3FE10AF47E0BF610   <em class='comment'>/* PH0 = +5.325872861719194162333e-01 */</em>
+<a id='L595' name='L595'></a> 595         .quad 0x3FE6EC5879F87EEE   <em class='comment'>/* P1  = +7.163507826080299761242e-01 */</em>
+<a id='L596' name='L596'></a> 596         .quad 0xBFD86AD001BFE200   <em class='comment'>/* P2  = -3.815193192563413204129e-01 */</em>
+<a id='L597' name='L597'></a> 597         .quad 0xBFA239045B661385   <em class='comment'>/* P3  = -3.559125533778398983564e-02 */</em>
+<a id='L598' name='L598'></a> 598         .quad 0x3FC2B4572D9CC147   <em class='comment'>/* P4  = +1.461285565105845078038e-01 */</em>
+<a id='L599' name='L599'></a> 599         .quad 0xBFA99F4F01740705   <em class='comment'>/* P5  = -5.004355328311586406115e-02 */</em>
+<a id='L600' name='L600'></a> 600         .quad 0xBF9F449C484F4879   <em class='comment'>/* P6  = -3.053516570418721511214e-02 */</em>
+<a id='L601' name='L601'></a> 601         .quad 0x3F9F5F42169D7DDE   <em class='comment'>/* P7  = +3.063681853325116830798e-02 */</em>
+<a id='L602' name='L602'></a> 602         .quad 0xBF6111B1BA632A97   <em class='comment'>/* P8  = -2.083632588527460989469e-03 */</em>
+<a id='L603' name='L603'></a> 603         .quad 0xBF84725FBE5B6E61   <em class='comment'>/* P9  = -9.983776089419639342530e-03 */</em>
+<a id='L604' name='L604'></a> 604         .quad 0x3F7438A2986CFA9C   <em class='comment'>/* P10 = +4.936823976832951342488e-03 */</em>
+<a id='L605' name='L605'></a> 605         .quad 0xBFE3000000000000   <em class='comment'>/* B = -.59375  */</em>
+<a id='L606' name='L606'></a> 606         .quad 0x3FF0000000000000   <em class='comment'>/* A = +1        */</em>
+<a id='L607' name='L607'></a> 607         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L608' name='L608'></a> 608         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L609' name='L609'></a> 609         .quad 0x3C6BE9160BFB3505   <em class='comment'>/* PL0 = +1.210424670976053242391e-17 */</em>
+<a id='L610' name='L610'></a> 610         .quad 0x3FE26D76F73233C7   <em class='comment'>/* PH0 = +5.758623912857893101247e-01 */</em>
+<a id='L611' name='L611'></a> 611         .quad 0x3FE56363B5B93937   <em class='comment'>/* P1  = +6.683825063026124740752e-01 */</em>
+<a id='L612' name='L612'></a> 612         .quad 0xBFD8A2244B27297E   <em class='comment'>/* P2  = -3.848963483730115724200e-01 */</em>
+<a id='L613' name='L613'></a> 613         .quad 0xBF52CA2F101EEF63   <em class='comment'>/* P3  = -1.146837196286797844817e-03 */</em>
+<a id='L614' name='L614'></a> 614         .quad 0x3FC081BC342243AD   <em class='comment'>/* P4  = +1.289592032012739958675e-01 */</em>
+<a id='L615' name='L615'></a> 615         .quad 0xBFAE38DB4A932344   <em class='comment'>/* P5  = -5.902753148399722719732e-02 */</em>
+<a id='L616' name='L616'></a> 616         .quad 0xBF91F814D4AE90C6   <em class='comment'>/* P6  = -1.754791782481459457885e-02 */</em>
+<a id='L617' name='L617'></a> 617         .quad 0x3F9D056AE193C4F3   <em class='comment'>/* P7  = +2.834097863973723355792e-02 */</em>
+<a id='L618' name='L618'></a> 618         .quad 0xBF7BD0B502D8F3A0   <em class='comment'>/* P8  = -6.790835451792626336974e-03 */</em>
+<a id='L619' name='L619'></a> 619         .quad 0xBF7B763F7BB8AE2F   <em class='comment'>/* P9  = -6.704566938008179114124e-03 */</em>
+<a id='L620' name='L620'></a> 620         .quad 0x3F76036F42D9AB69   <em class='comment'>/* P10 = +5.374369252971835729099e-03 */</em>
+<a id='L621' name='L621'></a> 621         .quad 0xBFE5000000000000   <em class='comment'>/* B = -.65625  */</em>
+<a id='L622' name='L622'></a> 622         .quad 0x3FF0000000000000   <em class='comment'>/* A = +1        */</em>
+<a id='L623' name='L623'></a> 623         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L624' name='L624'></a> 624         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L625' name='L625'></a> 625         .quad 0x3C8B64AF0450486E   <em class='comment'>/* PL0 = +4.751979286662385162741e-17 */</em>
+<a id='L626' name='L626'></a> 626         .quad 0x3FE3B75F8BCB742D   <em class='comment'>/* PH0 = +6.161344271055263499548e-01 */</em>
+<a id='L627' name='L627'></a> 627         .quad 0x3FE3DA23BC12369F   <em class='comment'>/* P1  = +6.203783677353447780947e-01 */</em>
+<a id='L628' name='L628'></a> 628         .quad 0xBFD8768FF4B46416   <em class='comment'>/* P2  = -3.822364701932782367281e-01 */</em>
+<a id='L629' name='L629'></a> 629         .quad 0x3F9D67CB8AD9CB1A   <em class='comment'>/* P3  = +2.871625933625941117406e-02 */</em>
+<a id='L630' name='L630'></a> 630         .quad 0x3FBC168CB7827DF4   <em class='comment'>/* P4  = +1.097190807363331305006e-01 */</em>
+<a id='L631' name='L631'></a> 631         .quad 0xBFB03A2B83C9272E   <em class='comment'>/* P5  = -6.338760344911228324430e-02 */</em>
+<a id='L632' name='L632'></a> 632         .quad 0xBF789FEB595297DC   <em class='comment'>/* P6  = -6.011885959344067548074e-03 */</em>
+<a id='L633' name='L633'></a> 633         .quad 0x3F98BD01B4C335E7   <em class='comment'>/* P7  = +2.415850320612902513532e-02 */</em>
+<a id='L634' name='L634'></a> 634         .quad 0xBF83BADC303D6535   <em class='comment'>/* P8  = -9.633751127398152979976e-03 */</em>
+<a id='L635' name='L635'></a> 635         .quad 0xBF6C54E7A1C1E3F3   <em class='comment'>/* P9  = -3.458454519258407989501e-03 */</em>
+<a id='L636' name='L636'></a> 636         .quad 0x3F7408394B7EF3E7   <em class='comment'>/* P10 = +4.890655334688332484537e-03 */</em>
+<a id='L637' name='L637'></a> 637         .quad 0xBFE7000000000000   <em class='comment'>/* B = -.71875  */</em>
+<a id='L638' name='L638'></a> 638         .quad 0x3FF0000000000000   <em class='comment'>/* A = +1        */</em>
+<a id='L639' name='L639'></a> 639         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L640' name='L640'></a> 640         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L641' name='L641'></a> 641         .quad 0x3C6A48557F6E0D3E   <em class='comment'>/* PL0 = +1.139824111505584215867e-17 */</em>
+<a id='L642' name='L642'></a> 642         .quad 0x3FE4E8D895B010DC   <em class='comment'>/* PH0 = +6.534235881413468227663e-01 */</em>
+<a id='L643' name='L643'></a> 643         .quad 0x3FE25652FAAF8A73   <em class='comment'>/* P1  = +5.730376144604875448991e-01 */</em>
+<a id='L644' name='L644'></a> 644         .quad 0xBFD7F6C3A57C444B   <em class='comment'>/* P2  = -3.744362941807295084434e-01 */</em>
+<a id='L645' name='L645'></a> 645         .quad 0x3FAB7866E3F99EBE   <em class='comment'>/* P3  = +5.365296872042567001598e-02 */</em>
+<a id='L646' name='L646'></a> 646         .quad 0x3FB6FA1DF47CCD40   <em class='comment'>/* P4  = +8.975398272450707099784e-02 */</em>
+<a id='L647' name='L647'></a> 647         .quad 0xBFB05508D3741B8E   <em class='comment'>/* P5  = -6.379752314033580026840e-02 */</em>
+<a id='L648' name='L648'></a> 648         .quad 0x3F6C3EFDF7BB279C   <em class='comment'>/* P6  = +3.448005705512137236209e-03 */</em>
+<a id='L649' name='L649'></a> 649         .quad 0x3F9372BADD6D3E27   <em class='comment'>/* P7  = +1.899234749299530050806e-02 */</em>
+<a id='L650' name='L650'></a> 650         .quad 0xBF860FD5AE65F3DA   <em class='comment'>/* P8  = -1.077238977881649471165e-02 */</em>
+<a id='L651' name='L651'></a> 651         .quad 0xBF47266FFB07E628   <em class='comment'>/* P9  = -7.064863949032872448118e-04 */</em>
+<a id='L652' name='L652'></a> 652         .quad 0x3F6F9763992C2A05   <em class='comment'>/* P10 = +3.856367614735181120799e-03 */</em>
+<a id='L653' name='L653'></a> 653         .quad 0xBFE9000000000000   <em class='comment'>/* B = -.78125  */</em>
+<a id='L654' name='L654'></a> 654         .quad 0x3FF0000000000000   <em class='comment'>/* A = +1        */</em>
+<a id='L655' name='L655'></a> 655         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L656' name='L656'></a> 656         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L657' name='L657'></a> 657         .quad 0x3C6BB6A2B194E3AB   <em class='comment'>/* PL0 = +1.201878007209462528697e-17 */</em>
+<a id='L658' name='L658'></a> 658         .quad 0x3FE602609AAE7C22   <em class='comment'>/* PH0 = +6.877902051090851731630e-01 */</em>
+<a id='L659' name='L659'></a> 659         .quad 0x3FE0DCBAFE191C7F   <em class='comment'>/* P1  = +5.269446337560025312137e-01 */</em>
+<a id='L660' name='L660'></a> 660         .quad 0xBFD732028428A9FB   <em class='comment'>/* P2  = -3.624273577321727538225e-01 */</em>
+<a id='L661' name='L661'></a> 661         .quad 0x3FB2D92389BE065B   <em class='comment'>/* P3  = +7.362577545975439796588e-02 */</em>
+<a id='L662' name='L662'></a> 662         .quad 0x3FB1F6A9C8C49993   <em class='comment'>/* P4  = +7.017003203927733370937e-02 */</em>
+<a id='L663' name='L663'></a> 663         .quad 0xBFAF47C0B50B56EE   <em class='comment'>/* P5  = -6.109430513394707378526e-02 */</em>
+<a id='L664' name='L664'></a> 664         .quad 0x3F85A8EDD1356223   <em class='comment'>/* P6  = +1.057611269668352068104e-02 */</em>
+<a id='L665' name='L665'></a> 665         .quad 0x3F8BE05C5CD1B4FA   <em class='comment'>/* P7  = +1.361152799855823798207e-02 */</em>
+<a id='L666' name='L666'></a> 666         .quad 0xBF85A0EFE4552F76   <em class='comment'>/* P8  = -1.056086936537046752272e-02 */</em>
+<a id='L667' name='L667'></a> 667         .quad 0x3F559F2A6A356194   <em class='comment'>/* P9  = +1.319686337259627831943e-03 */</em>
+<a id='L668' name='L668'></a> 668         .quad 0x3F6576F5E989208D   <em class='comment'>/* P10 = +2.620201394425042596201e-03 */</em>
+<a id='L669' name='L669'></a> 669         .quad 0xBFEB000000000000   <em class='comment'>/* B = -.84375  */</em>
+<a id='L670' name='L670'></a> 670         .quad 0x3FF0000000000000   <em class='comment'>/* A = +1        */</em>
+<a id='L671' name='L671'></a> 671         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L672' name='L672'></a> 672         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L673' name='L673'></a> 673         .quad 0x3C80328BD86C8B74   <em class='comment'>/* PL0 = +2.809809047161267929701e-17 */</em>
+<a id='L674' name='L674'></a> 674         .quad 0x3FE704BB1B7FCB81   <em class='comment'>/* PH0 = +7.193275010198335595035e-01 */</em>
+<a id='L675' name='L675'></a> 675         .quad 0x3FDEE264AAD6C40C   <em class='comment'>/* P1  = +4.825679462765613089739e-01 */</em>
+<a id='L676' name='L676'></a> 676         .quad 0xBFD637493CE659F1   <em class='comment'>/* P2  = -3.471243948673921548357e-01 */</em>
+<a id='L677' name='L677'></a> 677         .quad 0x3FB6BE3A3DEE6F4A   <em class='comment'>/* P3  = +8.884014141079635303208e-02 */</em>
+<a id='L678' name='L678'></a> 678         .quad 0x3FAA85EB6470AC0F   <em class='comment'>/* P4  = +5.180297471118688523488e-02 */</em>
+<a id='L679' name='L679'></a> 679         .quad 0xBFACC0146EA4858D   <em class='comment'>/* P5  = -5.615295267694895314457e-02 */</em>
+<a id='L680' name='L680'></a> 680         .quad 0x3F8F8FB683CDDAC5   <em class='comment'>/* P6  = +1.541082944616557159055e-02 */</em>
+<a id='L681' name='L681'></a> 681         .quad 0x3F819515DEE2CB91   <em class='comment'>/* P7  = +8.585139145315585602547e-03 */</em>
+<a id='L682' name='L682'></a> 682         .quad 0xBF834E45E6AF9EA1   <em class='comment'>/* P8  = -9.426637747267209169415e-03 */</em>
+<a id='L683' name='L683'></a> 683         .quad 0x3F65250F197CA56D   <em class='comment'>/* P9  = +2.581147662472352252568e-03 */</em>
+<a id='L684' name='L684'></a> 684         .quad 0x3F57A766026D036C   <em class='comment'>/* P10 = +1.443719500187702367690e-03 */</em>
+<a id='L685' name='L685'></a> 685         .quad 0xBFED000000000000   <em class='comment'>/* B = -.90625  */</em>
+<a id='L686' name='L686'></a> 686         .quad 0x3FF0000000000000   <em class='comment'>/* A = +1        */</em>
+<a id='L687' name='L687'></a> 687         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L688' name='L688'></a> 688         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L689' name='L689'></a> 689         .quad 0x3C716F7EEF7B61AD   <em class='comment'>/* PL0 = +1.512291215142578135651e-17 */</em>
+<a id='L690' name='L690'></a> 690         .quad 0x3FE7F0E1A4CD846E   <em class='comment'>/* PH0 = +7.481544703297353660076e-01 */</em>
+<a id='L691' name='L691'></a> 691         .quad 0x3FDC2D4CC872DC09   <em class='comment'>/* P1  = +4.402648885256331012598e-01 */</em>
+<a id='L692' name='L692'></a> 692         .quad 0xBFD514A99F92ED53   <em class='comment'>/* P2  = -3.293861444796750250530e-01 */</em>
+<a id='L693' name='L693'></a> 693         .quad 0x3FB9846A6CF2F337   <em class='comment'>/* P3  = +9.967675361526749494844e-02 */</em>
+<a id='L694' name='L694'></a> 694         .quad 0x3FA20896939AB161   <em class='comment'>/* P4  = +3.522177268800664413493e-02 */</em>
+<a id='L695' name='L695'></a> 695         .quad 0xBFA97E801F31EE0D   <em class='comment'>/* P5  = -4.979324703978358553405e-02 */</em>
+<a id='L696' name='L696'></a> 696         .quad 0x3F92A11F47B82085   <em class='comment'>/* P6  = +1.819275737037219740638e-02 */</em>
+<a id='L697' name='L697'></a> 697         .quad 0x3F717D70FE289C34   <em class='comment'>/* P7  = +4.270020845559097605514e-03 */</em>
+<a id='L698' name='L698'></a> 698         .quad 0xBF7FDCF1D3F6CE2D   <em class='comment'>/* P8  = -7.779068604054678540132e-03 */</em>
+<a id='L699' name='L699'></a> 699         .quad 0x3F69F607E81AF6B6   <em class='comment'>/* P9  = +3.169074480722534625181e-03 */</em>
+<a id='L700' name='L700'></a> 700         .quad 0x3F3F925C80D0F889   <em class='comment'>/* P10 = +4.817462766516585511824e-04 */</em>
+<a id='L701' name='L701'></a> 701         .quad 0xBFEF000000000000   <em class='comment'>/* B = -.96875  */</em>
+<a id='L702' name='L702'></a> 702         .quad 0x3FF0000000000000   <em class='comment'>/* A = +1        */</em>
+<a id='L703' name='L703'></a> 703         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L704' name='L704'></a> 704         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L705' name='L705'></a> 705         .quad 0x3C931A11D7E8606E   <em class='comment'>/* PL0 = +6.627280241435322692188e-17 */</em>
+<a id='L706' name='L706'></a> 706         .quad 0x3FE92BFB370D9B71   <em class='comment'>/* PH0 = +7.866188121086975515439e-01 */</em>
+<a id='L707' name='L707'></a> 707         .quad 0x3FD866160E454111   <em class='comment'>/* P1  = +3.812308444367014680480e-01 */</em>
+<a id='L708' name='L708'></a> 708         .quad 0xBFD33149F3801DBA   <em class='comment'>/* P2  = -2.998833539899937679796e-01 */</em>
+<a id='L709' name='L709'></a> 709         .quad 0x3FBBDB6D4C949899   <em class='comment'>/* P3  = +1.088169395412442909023e-01 */</em>
+<a id='L710' name='L710'></a> 710         .quad 0x3F8D6AB2A74B9343   <em class='comment'>/* P4  = +1.436366627735597372494e-02 */</em>
+<a id='L711' name='L711'></a> 711         .quad 0xBFA404D1047C5D72   <em class='comment'>/* P5  = -3.909924678571997970917e-02 */</em>
+<a id='L712' name='L712'></a> 712         .quad 0x3F93C47D9ACCD919   <em class='comment'>/* P6  = +1.930423981976856424661e-02 */</em>
+<a id='L713' name='L713'></a> 713         .quad 0xBF41B755642CFF1B   <em class='comment'>/* P7  = -5.406538915408738478158e-04 */</em>
+<a id='L714' name='L714'></a> 714         .quad 0xBF74B5301AA1E788   <em class='comment'>/* P8  = -5.055606752756853900641e-03 */</em>
+<a id='L715' name='L715'></a> 715         .quad 0x3F69A84C5B2A3E68   <em class='comment'>/* P9  = +3.132008679422249529120e-03 */</em>
+<a id='L716' name='L716'></a> 716         .quad 0xBF3CF47830328C11   <em class='comment'>/* P10 = -4.418176105877589308931e-04 */</em>
+<a id='L717' name='L717'></a> 717         .quad 0xBFF1000000000000   <em class='comment'>/* B = -1.0625   */</em>
+<a id='L718' name='L718'></a> 718         .quad 0x3FF0000000000000   <em class='comment'>/* A = +1        */</em>
+<a id='L719' name='L719'></a> 719         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L720' name='L720'></a> 720         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L721' name='L721'></a> 721         .quad 0x3C884D471B8FD396   <em class='comment'>/* PL0 = +4.215701792312937090514e-17 */</em>
+<a id='L722' name='L722'></a> 722         .quad 0x3FEA8DBCBC31897A   <em class='comment'>/* PH0 = +8.298019099859594849278e-01 */</em>
+<a id='L723' name='L723'></a> 723         .quad 0x3FD3EE730537C8EA   <em class='comment'>/* P1  = +3.114287901836535219818e-01 */</em>
+<a id='L724' name='L724'></a> 724         .quad 0xBFD08A05AD27CE32   <em class='comment'>/* P2  = -2.584242049190123217982e-01 */</em>
+<a id='L725' name='L725'></a> 725         .quad 0x3FBC5255406F84B6   <em class='comment'>/* P3  = +1.106313021005175045399e-01 */</em>
+<a id='L726' name='L726'></a> 726         .quad 0xBF772FA2F633AA5E   <em class='comment'>/* P4  = -5.660664147607434209241e-03 */</em>
+<a id='L727' name='L727'></a> 727         .quad 0xBF99DD8E4C473FC4   <em class='comment'>/* P5  = -2.525923100057504533247e-02 */</em>
+<a id='L728' name='L728'></a> 728         .quad 0x3F9183C935B6495D   <em class='comment'>/* P6  = +1.710428610165003372069e-02 */</em>
+<a id='L729' name='L729'></a> 729         .quad 0xBF70471A3A591480   <em class='comment'>/* P7  = -3.974058583087303228038e-03 */</em>
+<a id='L730' name='L730'></a> 730         .quad 0xBF603DDD4DEBB9A4   <em class='comment'>/* P8  = -1.982624278176818987264e-03 */</em>
+<a id='L731' name='L731'></a> 731         .quad 0x3F62591E44D3C17F   <em class='comment'>/* P9  = +2.239760512218135956425e-03 */</em>
+<a id='L732' name='L732'></a> 732         .quad 0xBF4C195D3A9B1AB4   <em class='comment'>/* P10 = -8.575158328419569430544e-04 */</em>
+<a id='L733' name='L733'></a> 733         .quad 0xBFF3000000000000   <em class='comment'>/* B = -1.1875   */</em>
+<a id='L734' name='L734'></a> 734         .quad 0x3FF0000000000000   <em class='comment'>/* A = +1        */</em>
+<a id='L735' name='L735'></a> 735         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L736' name='L736'></a> 736         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L737' name='L737'></a> 737         .quad 0x3C90DD1C9BFF7F64   <em class='comment'>/* PL0 = +5.850777430004479798187e-17 */</em>
+<a id='L738' name='L738'></a> 738         .quad 0x3FEBAD50A4A68BC1   <em class='comment'>/* PH0 = +8.649066177207417327466e-01 */</em>
+<a id='L739' name='L739'></a> 739         .quad 0x3FD01FBA72CEE1A5   <em class='comment'>/* P1  = +2.519365426228666233893e-01 */</em>
+<a id='L740' name='L740'></a> 740         .quad 0xBFCBE432F647C4D6   <em class='comment'>/* P2  = -2.179015829602010702633e-01 */</em>
+<a id='L741' name='L741'></a> 741         .quad 0x3FBABF92B6E5AC73   <em class='comment'>/* P3  = +1.044856735731387955105e-01 */</em>
+<a id='L742' name='L742'></a> 742         .quad 0xBF922983AA24E217   <em class='comment'>/* P4  = -1.773648954369563555378e-02 */</em>
+<a id='L743' name='L743'></a> 743         .quad 0xBF8C72214C14E23A   <em class='comment'>/* P5  = -1.388956082756564056328e-02 */</em>
+<a id='L744' name='L744'></a> 744         .quad 0x3F8ACB4D1F388E8B   <em class='comment'>/* P6  = +1.308307887581540972153e-02 */</em>
+<a id='L745' name='L745'></a> 745         .quad 0xBF740EF8B4A2EE3B   <em class='comment'>/* P7  = -4.897090441029978580995e-03 */</em>
+<a id='L746' name='L746'></a> 746         .quad 0xBF0EA9F30C8DC900   <em class='comment'>/* P8  = -5.848668076326342477133e-05 */</em>
+<a id='L747' name='L747'></a> 747         .quad 0x3F53CC40D18713AE   <em class='comment'>/* P9  = +1.208365725788622757410e-03 */</em>
+<a id='L748' name='L748'></a> 748         .quad 0xBF4848B86029CBA1   <em class='comment'>/* P10 = -7.410908004444779592485e-04 */</em>
+<a id='L749' name='L749'></a> 749         .quad 0xBFF5000000000000   <em class='comment'>/* B = -1.3125   */</em>
+<a id='L750' name='L750'></a> 750         .quad 0x3FF0000000000000   <em class='comment'>/* A = +1        */</em>
+<a id='L751' name='L751'></a> 751         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L752' name='L752'></a> 752         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L753' name='L753'></a> 753         .quad 0x3C8FB61781D22681   <em class='comment'>/* PL0 = +5.501032995458057064843e-17 */</em>
+<a id='L754' name='L754'></a> 754         .quad 0x3FEC950A3340C8BF   <em class='comment'>/* PH0 = +8.931933404003514764824e-01 */</em>
+<a id='L755' name='L755'></a> 755         .quad 0x3FC9E1DFFD385423   <em class='comment'>/* P1  = +2.022056566644617586005e-01 */</em>
+<a id='L756' name='L756'></a> 756         .quad 0xBFC71E2FF88EBA23   <em class='comment'>/* P2  = -1.806087459239772032583e-01 */</em>
+<a id='L757' name='L757'></a> 757         .quad 0x3FB80AEBD07AB5BA   <em class='comment'>/* P3  = +9.391664352252506838449e-02 */</em>
+<a id='L758' name='L758'></a> 758         .quad 0xBF98404E27EAE6ED   <em class='comment'>/* P4  = -2.368280523908243895884e-02 */</em>
+<a id='L759' name='L759'></a> 759         .quad 0xBF772DA520B5006E   <em class='comment'>/* P5  = -5.658764868087568802107e-03 */</em>
+<a id='L760' name='L760'></a> 760         .quad 0x3F824C9268AF9423   <em class='comment'>/* P6  = +8.935111827620250551925e-03 */</em>
+<a id='L761' name='L761'></a> 761         .quad 0xBF722AE76D206AE3   <em class='comment'>/* P7  = -4.435447701349490160113e-03 */</em>
+<a id='L762' name='L762'></a> 762         .quad 0x3F4B807F56298D5E   <em class='comment'>/* P8  = +8.392926941493230644497e-04 */</em>
+<a id='L763' name='L763'></a> 763         .quad 0x3F3D71027DF95D2A   <em class='comment'>/* P9  = +4.492407879061627603159e-04 */</em>
+<a id='L764' name='L764'></a> 764         .quad 0xBF3EBD17676755FB   <em class='comment'>/* P10 = -4.690343988874298905483e-04 */</em>
+<a id='L765' name='L765'></a> 765         .quad 0xBFF7000000000000   <em class='comment'>/* B = -1.4375   */</em>
+<a id='L766' name='L766'></a> 766         .quad 0x3FF0000000000000   <em class='comment'>/* A = +1        */</em>
+<a id='L767' name='L767'></a> 767         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L768' name='L768'></a> 768         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L769' name='L769'></a> 769         .quad 0x3C95393C63CE8224   <em class='comment'>/* PL0 = +7.363407705201031038415e-17 */</em>
+<a id='L770' name='L770'></a> 770         .quad 0x3FED4E6F464286B0   <em class='comment'>/* PH0 = +9.158245441687622445670e-01 */</em>
+<a id='L771' name='L771'></a> 771         .quad 0x3FC4A45842B7DE1E   <em class='comment'>/* P1  = +1.612654042980787191461e-01 */</em>
+<a id='L772' name='L772'></a> 772         .quad 0xBFC2E7885AFDD3D0   <em class='comment'>/* P2  = -1.476908153814791087327e-01 */</em>
+<a id='L773' name='L773'></a> 773         .quad 0x3FB4DD6DD51D3FEB   <em class='comment'>/* P3  = +8.150373890862254580204e-02 */</em>
+<a id='L774' name='L774'></a> 774         .quad 0xBF9A05D3ADAB489C   <em class='comment'>/* P4  = -2.541285274021075503042e-02 */</em>
+<a id='L775' name='L775'></a> 775         .quad 0xBF3459B643B4995C   <em class='comment'>/* P5  = -3.105230313899165257622e-04 */</em>
+<a id='L776' name='L776'></a> 776         .quad 0x3F766B30745F2E3A   <em class='comment'>/* P6  = +5.473317409222350365811e-03 */</em>
+<a id='L777' name='L777'></a> 777         .quad 0xBF6C2C891E555BDF   <em class='comment'>/* P7  = -3.439204988051155730940e-03 */</em>
+<a id='L778' name='L778'></a> 778         .quad 0x3F5194F30D6C576D   <em class='comment'>/* P8  = +1.073109966176012791522e-03 */</em>
+<a id='L779' name='L779'></a> 779         .quad 0x3EF4DBB43C3132A2   <em class='comment'>/* P9  = +1.989194766975849961365e-05 */</em>
+<a id='L780' name='L780'></a> 780         .quad 0xBF2E45EBAB3C15A0   <em class='comment'>/* P10 = -2.309656316514087783666e-04 */</em>
+<a id='L781' name='L781'></a> 781         .quad 0xBFF9000000000000   <em class='comment'>/* B = -1.5625   */</em>
+<a id='L782' name='L782'></a> 782         .quad 0x3FF0000000000000   <em class='comment'>/* A = +1        */</em>
+<a id='L783' name='L783'></a> 783         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L784' name='L784'></a> 784         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L785' name='L785'></a> 785         .quad 0x3C75111669651DAA   <em class='comment'>/* PL0 = +1.827249135453834384396e-17 */</em>
+<a id='L786' name='L786'></a> 786         .quad 0x3FEDE1EB5937518F   <em class='comment'>/* PH0 = +9.338280432225917193634e-01 */</em>
+<a id='L787' name='L787'></a> 787         .quad 0x3FC06129C7C8EBB1   <em class='comment'>/* P1  = +1.279651856910653382507e-01 */</em>
+<a id='L788' name='L788'></a> 788         .quad 0xBFBE9763041064E1   <em class='comment'>/* P2  = -1.194974789545031421774e-01 */</em>
+<a id='L789' name='L789'></a> 789         .quad 0x3FB1A5B9F9113928   <em class='comment'>/* P3  = +6.893503504509068635308e-02 */</em>
+<a id='L790' name='L790'></a> 790         .quad 0xBF992145039F9AFE   <em class='comment'>/* P4  = -2.454097590080105816526e-02 */</em>
+<a id='L791' name='L791'></a> 791         .quad 0x3F66CB116EA49C89   <em class='comment'>/* P5  = +2.782377288116648315142e-03 */</em>
+<a id='L792' name='L792'></a> 792         .quad 0x3F67F972FDF30001   <em class='comment'>/* P6  = +2.926563829163342740100e-03 */</em>
+<a id='L793' name='L793'></a> 793         .quad 0xBF63A7B5975F02F3   <em class='comment'>/* P7  = -2.399305983061922438601e-03 */</em>
+<a id='L794' name='L794'></a> 794         .quad 0x3F4FDE7B8777F4C8   <em class='comment'>/* P8  = +9.725669069095216373599e-04 */</em>
+<a id='L795' name='L795'></a> 795         .quad 0xBF25918876626BA4   <em class='comment'>/* P9  = -1.645545082212515656240e-04 */</em>
+<a id='L796' name='L796'></a> 796         .quad 0xBF1495123C991F00   <em class='comment'>/* P10 = -7.851527984669912693674e-05 */</em>
+<a id='L797' name='L797'></a> 797         .quad 0xBFFB000000000000   <em class='comment'>/* B = -1.6875   */</em>
+<a id='L798' name='L798'></a> 798         .quad 0x3FF0000000000000   <em class='comment'>/* A = +1        */</em>
+<a id='L799' name='L799'></a> 799         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L800' name='L800'></a> 800         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L801' name='L801'></a> 801         .quad 0x3C9F29A5B7426D27   <em class='comment'>/* PL0 = +1.081172820484012446345e-16 */</em>
+<a id='L802' name='L802'></a> 802         .quad 0x3FEE56B6F3EFABFC   <em class='comment'>/* PH0 = +9.480852856044061915952e-01 */</em>
+<a id='L803' name='L803'></a> 803         .quad 0x3FB9E3EFD94BB9FC   <em class='comment'>/* P1  = +1.011342912204113371518e-01 */</em>
+<a id='L804' name='L804'></a> 804         .quad 0xBFB88BD9760FECA7   <em class='comment'>/* P2  = -9.588393337610288420285e-02 */</em>
+<a id='L805' name='L805'></a> 805         .quad 0x3FAD48A0350B3ACF   <em class='comment'>/* P3  = +5.719471595295077387313e-02 */</em>
+<a id='L806' name='L806'></a> 806         .quad 0xBF96CC6A5110F129   <em class='comment'>/* P4  = -2.226415748394675367257e-02 */</em>
+<a id='L807' name='L807'></a> 807         .quad 0x3F71934687170384   <em class='comment'>/* P5  = +4.290843485649345772606e-03 */</em>
+<a id='L808' name='L808'></a> 808         .quad 0x3F5407BAF73B3DF9   <em class='comment'>/* P6  = +1.222546180475235334287e-03 */</em>
+<a id='L809' name='L809'></a> 809         .quad 0xBF591B626C0646DD   <em class='comment'>/* P7  = -1.532407870488964407324e-03 */</em>
+<a id='L810' name='L810'></a> 810         .quad 0x3F48B0E1DD283558   <em class='comment'>/* P8  = +7.535078860329375669277e-04 */</em>
+<a id='L811' name='L811'></a> 811         .quad 0xBF2B322292840D2B   <em class='comment'>/* P9  = -2.074877932117605962646e-04 */</em>
+<a id='L812' name='L812'></a> 812         .quad 0xBE99E4061120C741   <em class='comment'>/* P10 = -3.858017559892704559672e-07 */</em>
+<a id='L813' name='L813'></a> 813         .quad 0xBFFD000000000000   <em class='comment'>/* B = -1.8125   */</em>
+<a id='L814' name='L814'></a> 814         .quad 0x3FF0000000000000   <em class='comment'>/* A = +1        */</em>
+<a id='L815' name='L815'></a> 815         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L816' name='L816'></a> 816         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L817' name='L817'></a> 817         .quad 0x3C6AF8C2041C67CD   <em class='comment'>/* PL0 = +1.169711482626385762338e-17 */</em>
+<a id='L818' name='L818'></a> 818         .quad 0x3FEEB2DFEDD5EC93   <em class='comment'>/* PH0 = +9.593352933146824801369e-01 */</em>
+<a id='L819' name='L819'></a> 819         .quad 0x3FB465A205CFB638   <em class='comment'>/* P1  = +7.967579500083210999681e-02 */</em>
+<a id='L820' name='L820'></a> 820         .quad 0xBFB3914BF68D39FF   <em class='comment'>/* P2  = -7.643580216720378576778e-02 */</em>
+<a id='L821' name='L821'></a> 821         .quad 0x3FA7F21A08C5C734   <em class='comment'>/* P3  = +4.676896435820623621673e-02 */</em>
+<a id='L822' name='L822'></a> 822         .quad 0xBF93DA9560EA9960   <em class='comment'>/* P4  = -1.938851741820124550772e-02 */</em>
+<a id='L823' name='L823'></a> 823         .quad 0x3F73953FEC62820E   <em class='comment'>/* P5  = +4.781007481284861359820e-03 */</em>
+<a id='L824' name='L824'></a> 824         .quad 0x3F2749D5E1273E3C   <em class='comment'>/* P6  = +1.776765426044646108071e-04 */</em>
+<a id='L825' name='L825'></a> 825         .quad 0xBF4D46B0B498CE5A   <em class='comment'>/* P7  = -8.934367007839658352859e-04 */</em>
+<a id='L826' name='L826'></a> 826         .quad 0x3F4153D680E1F4C4   <em class='comment'>/* P8  = +5.287930851093571206574e-04 */</em>
+<a id='L827' name='L827'></a> 827         .quad 0xBF28477014ECA6A2   <em class='comment'>/* P9  = -1.852344816708944640949e-04 */</em>
+<a id='L828' name='L828'></a> 828         .quad 0x3EFFAC54E07CEB4B   <em class='comment'>/* P10 = +3.020588886147182143902e-05 */</em>
+<a id='L829' name='L829'></a> 829         .quad 0xBFFF000000000000   <em class='comment'>/* B = -1.9375   */</em>
+<a id='L830' name='L830'></a> 830         .quad 0x3FF0000000000000   <em class='comment'>/* A = +1        */</em>
+<a id='L831' name='L831'></a> 831         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L832' name='L832'></a> 832         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L833' name='L833'></a> 833         .quad 0x3C7A8AF2BB2231F2   <em class='comment'>/* PL0 = +2.302217989249372577466e-17 */</em>
+<a id='L834' name='L834'></a> 834         .quad 0x3FEF1994DF724FC8   <em class='comment'>/* PH0 = +9.718727459135090285258e-01 */</em>
+<a id='L835' name='L835'></a> 835         .quad 0x3FAC65B1BC0C9D58   <em class='comment'>/* P1  = +5.546336575053583942603e-02 */</em>
+<a id='L836' name='L836'></a> 836         .quad 0xBFAB9937BDA747C8   <em class='comment'>/* P2  = -5.390333356957871365599e-02 */</em>
+<a id='L837' name='L837'></a> 837         .quad 0x3FA15B42D9EF931C   <em class='comment'>/* P3  = +3.389939222669210777241e-02 */</em>
+<a id='L838' name='L838'></a> 838         .quad 0xBF8EACD8E8507A3C   <em class='comment'>/* P4  = -1.497811755149058215502e-02 */</em>
+<a id='L839' name='L839'></a> 839         .quad 0x3F7263A15721C682   <em class='comment'>/* P5  = +4.489546046998806349050e-03 */</em>
+<a id='L840' name='L840'></a> 840         .quad 0xBF42A032ACDC3B32   <em class='comment'>/* P6  = -5.684134900735048121829e-04 */</em>
+<a id='L841' name='L841'></a> 841         .quad 0xBF3431E79B5AD185   <em class='comment'>/* P7  = -3.081503340170088810438e-04 */</em>
+<a id='L842' name='L842'></a> 842         .quad 0x3F31B51667C7DF5E   <em class='comment'>/* P8  = +2.701930714290502424828e-04 */</em>
+<a id='L843' name='L843'></a> 843         .quad 0xBF1F8709579250AD   <em class='comment'>/* P9  = -1.202678157759563704341e-04 */</em>
+<a id='L844' name='L844'></a> 844         .quad 0x3F01ED8ED1BF9595   <em class='comment'>/* P10 = +3.419487094883790833778e-05 */</em>
+<a id='L845' name='L845'></a> 845         .quad 0xC001000000000000   <em class='comment'>/* B = -2.125    */</em>
+<a id='L846' name='L846'></a> 846         .quad 0x3FF0000000000000   <em class='comment'>/* A = +1        */</em>
+<a id='L847' name='L847'></a> 847         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L848' name='L848'></a> 848         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L849' name='L849'></a> 849         .quad 0x3C86F3F7C3DAFC55   <em class='comment'>/* PL0 = +3.981710680748877459333e-17 */</em>
+<a id='L850' name='L850'></a> 850         .quad 0x3FEF73776B2AA2DB   <em class='comment'>/* PH0 = +9.828450291725759901951e-01 */</em>
+<a id='L851' name='L851'></a> 851         .quad 0x3FA16A7FC4D7B900   <em class='comment'>/* P1  = +3.401564863075812007064e-02 */</em>
+<a id='L852' name='L852'></a> 852         .quad 0xBFA11E03803AD621   <em class='comment'>/* P2  = -3.343211117082156940532e-02 */</em>
+<a id='L853' name='L853'></a> 853         .quad 0x3F9609591597297F   <em class='comment'>/* P3  = +2.152003473546803654658e-02 */</em>
+<a id='L854' name='L854'></a> 854         .quad 0xBF847E74ED9BBB0C   <em class='comment'>/* P4  = -1.000682211039596246436e-02 */</em>
+<a id='L855' name='L855'></a> 855         .quad 0x3F6BFF771725CD65   <em class='comment'>/* P5  = +3.417713736035987187864e-03 */</em>
+<a id='L856' name='L856'></a> 856         .quad 0xBF491D1FF73C18FA   <em class='comment'>/* P6  = -7.664114077392807421000e-04 */</em>
+<a id='L857' name='L857'></a> 857         .quad 0x3EF53EE467B51DC5   <em class='comment'>/* P7  = +2.026145237479599375099e-05 */</em>
+<a id='L858' name='L858'></a> 858         .quad 0x3F160135BE0D94A0   <em class='comment'>/* P8  = +8.394136922403255700685e-05 */</em>
+<a id='L859' name='L859'></a> 859         .quad 0xBF0B32CB1D276A40   <em class='comment'>/* P9  = -5.187685350778849443841e-05 */</em>
+<a id='L860' name='L860'></a> 860         .quad 0x3EF4DAF70C12D555   <em class='comment'>/* P10 = +1.988919462255396826584e-05 */</em>
+<a id='L861' name='L861'></a> 861         .quad 0xC003000000000000   <em class='comment'>/* B = -2.375    */</em>
+<a id='L862' name='L862'></a> 862         .quad 0x3FF0000000000000   <em class='comment'>/* A = +1        */</em>
+<a id='L863' name='L863'></a> 863         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L864' name='L864'></a> 864         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L865' name='L865'></a> 865         .quad 0x3C19DBF4E2E5B7DC   <em class='comment'>/* PL0 = +3.504575836708380670219e-19 */</em>
+<a id='L866' name='L866'></a> 866         .quad 0x3FEFAA7934B75EBD   <em class='comment'>/* PH0 = +9.895597486128832054320e-01 */</em>
+<a id='L867' name='L867'></a> 867         .quad 0x3F9545200830A42C   <em class='comment'>/* P1  = +2.077150392520736492125e-02 */</em>
+<a id='L868' name='L868'></a> 868         .quad 0xBF950C46D285F6BC   <em class='comment'>/* P2  = -2.055464420253970271376e-02 */</em>
+<a id='L869' name='L869'></a> 869         .quad 0x3F8B79F5BFC6513F   <em class='comment'>/* P3  = +1.341621390819425058164e-02 */</em>
+<a id='L870' name='L870'></a> 870         .quad 0xBF7A50ADAD777898   <em class='comment'>/* P4  = -6.424597194806612772505e-03 */</em>
+<a id='L871' name='L871'></a> 871         .quad 0x3F633A19BE8255E3   <em class='comment'>/* P5  = +2.347040444940816227383e-03 */</em>
+<a id='L872' name='L872'></a> 872         .quad 0xBF44E609BC2557B7   <em class='comment'>/* P6  = -6.377742322836087134324e-04 */</em>
+<a id='L873' name='L873'></a> 873         .quad 0x3F1AFCBAD60EAACD   <em class='comment'>/* P7  = +1.029480968230231421206e-04 */</em>
+<a id='L874' name='L874'></a> 874         .quad 0x3EE80476AC34A8EF   <em class='comment'>/* P8  = +1.145240583485084317660e-05 */</em>
+<a id='L875' name='L875'></a> 875         .quad 0xBEF278E23DE463E9   <em class='comment'>/* P9  = -1.761646478213091821804e-05 */</em>
+<a id='L876' name='L876'></a> 876         .quad 0x3EE209FAF377264D   <em class='comment'>/* P10 = +8.601658563106529694651e-06 */</em>
+<a id='L877' name='L877'></a> 877         .quad 0xC005000000000000   <em class='comment'>/* B = -2.625    */</em>
+<a id='L878' name='L878'></a> 878         .quad 0x3FF0000000000000   <em class='comment'>/* A = +1        */</em>
+<a id='L879' name='L879'></a> 879         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L880' name='L880'></a> 880         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L881' name='L881'></a> 881         .quad 0x3C979D62702C631C   <em class='comment'>/* PL0 = +8.193023793215066385979e-17 */</em>
+<a id='L882' name='L882'></a> 882         .quad 0x3FEFCC04CDBCDC4B   <em class='comment'>/* PH0 = +9.936546343150295390600e-01 */</em>
+<a id='L883' name='L883'></a> 883         .quad 0x3F89E87D088D269A   <em class='comment'>/* P1  = +1.265046770426474576547e-02 */</em>
+<a id='L884' name='L884'></a> 884         .quad 0xBF89BE6721012B80   <em class='comment'>/* P2  = -1.257019586059526836624e-02 */</em>
+<a id='L885' name='L885'></a> 885         .quad 0x3F80F1C13E8D39D3   <em class='comment'>/* P3  = +8.273610803056031004326e-03 */</em>
+<a id='L886' name='L886'></a> 886         .quad 0xBF7082DBC9602757   <em class='comment'>/* P4  = -4.031046430108839563004e-03 */</em>
+<a id='L887' name='L887'></a> 887         .quad 0x3F590BE9BD4E0A11   <em class='comment'>/* P5  = +1.528719197467002507978e-03 */</em>
+<a id='L888' name='L888'></a> 888         .quad 0xBF3DCC2BEF6D0283   <em class='comment'>/* P6  = -4.546744598208711809986e-04 */</em>
+<a id='L889' name='L889'></a> 889         .quad 0x3F1A08065C4A8E85   <em class='comment'>/* P7  = +9.930170842636406837764e-05 */</em>
+<a id='L890' name='L890'></a> 890         .quad 0xBEE528117D0410F3   <em class='comment'>/* P8  = -1.008821337267942266431e-05 */</em>
+<a id='L891' name='L891'></a> 891         .quad 0xBED0BE73A44FF565   <em class='comment'>/* P9  = -3.992069257383521775961e-06 */</em>
+<a id='L892' name='L892'></a> 892         .quad 0x3EC9B0C11E342E38   <em class='comment'>/* P10 = +3.062539904901699218737e-06 */</em>
+<a id='L893' name='L893'></a> 893         .quad 0xC007000000000000   <em class='comment'>/* B = -2.875    */</em>
+<a id='L894' name='L894'></a> 894         .quad 0x3FF0000000000000   <em class='comment'>/* A = +1        */</em>
+<a id='L895' name='L895'></a> 895         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L896' name='L896'></a> 896         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L897' name='L897'></a> 897         .quad 0x3C804B931AD7A3CC   <em class='comment'>/* PL0 = +2.826768921701616830245e-17 */</em>
+<a id='L898' name='L898'></a> 898         .quad 0x3FEFE06EB0688212   <em class='comment'>/* PH0 = +9.961465306733450209009e-01 */</em>
+<a id='L899' name='L899'></a> 899         .quad 0x3F7F81BD8876224D   <em class='comment'>/* P1  = +7.692089427458426472642e-03 */</em>
+<a id='L900' name='L900'></a> 900         .quad 0xBF7F62A8C699A963   <em class='comment'>/* P2  = -7.662448196791823756776e-03 */</em>
+<a id='L901' name='L901'></a> 901         .quad 0x3F74C31E2B2A6A28   <em class='comment'>/* P3  = +5.068891378551522166321e-03 */</em>
+<a id='L902' name='L902'></a> 902         .quad 0xBF6470D537F16227   <em class='comment'>/* P4  = -2.495209162173734080001e-03 */</em>
+<a id='L903' name='L903'></a> 903         .quad 0x3F4FAEEF61C89673   <em class='comment'>/* P5  = +9.668988091717359455754e-04 */</em>
+<a id='L904' name='L904'></a> 904         .quad 0xBF33C5E80B349783   <em class='comment'>/* P6  = -3.017131341088651514023e-04 */</em>
+<a id='L905' name='L905'></a> 905         .quad 0x3F138F3D31037A6B   <em class='comment'>/* P7  = +7.461367590931028650557e-05 */</em>
+<a id='L906' name='L906'></a> 906         .quad 0xBEEB3C780996FFE3   <em class='comment'>/* P8  = -1.298723536791163711556e-05 */</em>
+<a id='L907' name='L907'></a> 907         .quad 0x3E9D0C75BC8BFEFC   <em class='comment'>/* P9  = +4.328589367358221917138e-07 */</em>
+<a id='L908' name='L908'></a> 908         .quad 0x3EAC3865227764D4   <em class='comment'>/* P10 = +8.410302755848104487452e-07 */</em>
+<a id='L909' name='L909'></a> 909         .quad 0xC009000000000000   <em class='comment'>/* B = -3.125    */</em>
+<a id='L910' name='L910'></a> 910         .quad 0x3FF0000000000000   <em class='comment'>/* A = +1        */</em>
+<a id='L911' name='L911'></a> 911         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L912' name='L912'></a> 912         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L913' name='L913'></a> 913         .quad 0x3C5B978B202749F9   <em class='comment'>/* PL0 = +5.983054034451594408315e-18 */</em>
+<a id='L914' name='L914'></a> 914         .quad 0x3FEFECD6B7EA3128   <em class='comment'>/* PH0 = +9.976609794698889643882e-01 */</em>
+<a id='L915' name='L915'></a> 915         .quad 0x3F73238B786137FE   <em class='comment'>/* P1  = +4.672570043181776968058e-03 */</em>
+<a id='L916' name='L916'></a> 916         .quad 0xBF731815ACEA072E   <em class='comment'>/* P2  = -4.661640805922390930706e-03 */</em>
+<a id='L917' name='L917'></a> 917         .quad 0x3F6956F0816D5AEE   <em class='comment'>/* P3  = +3.093213784647877798933e-03 */</em>
+<a id='L918' name='L918'></a> 918         .quad 0xBF591A16286C4885   <em class='comment'>/* P4  = -1.532098425461232453877e-03 */</em>
+<a id='L919' name='L919'></a> 919         .quad 0x3F43B3E3A00C6096   <em class='comment'>/* P5  = +6.012784434430592468442e-04 */</em>
+<a id='L920' name='L920'></a> 920         .quad 0xBF29441B2A56DEC7   <em class='comment'>/* P6  = -1.927645836710038499293e-04 */</em>
+<a id='L921' name='L921'></a> 921         .quad 0x3F0A99C3A2E857B6   <em class='comment'>/* P7  = +5.073669705184196724674e-05 */</em>
+<a id='L922' name='L922'></a> 922         .quad 0xBEE61CB034DDC151   <em class='comment'>/* P8  = -1.054385361573597042258e-05 */</em>
+<a id='L923' name='L923'></a> 923         .quad 0x3EB792BBC76D6107   <em class='comment'>/* P9  = +1.405070887824641788698e-06 */</em>
+<a id='L924' name='L924'></a> 924         .quad 0x3E761472362A16F0   <em class='comment'>/* P10 = +8.225391704739515383837e-08 */</em>
+<a id='L925' name='L925'></a> 925         .quad 0xC00B000000000000   <em class='comment'>/* B = -3.375    */</em>
+<a id='L926' name='L926'></a> 926         .quad 0x3FF0000000000000   <em class='comment'>/* A = +1        */</em>
+<a id='L927' name='L927'></a> 927         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L928' name='L928'></a> 928         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L929' name='L929'></a> 929         .quad 0x3C9C290AFCBDE00D   <em class='comment'>/* PL0 = +9.770074992945060684926e-17 */</em>
+<a id='L930' name='L930'></a> 930         .quad 0x3FEFF45F6D36133A   <em class='comment'>/* PH0 = +9.985806592017987259879e-01 */</em>
+<a id='L931' name='L931'></a> 931         .quad 0x3F673CEC093032DE   <em class='comment'>/* P1  = +2.836667068100913999228e-03 */</em>
+<a id='L932' name='L932'></a> 932         .quad 0xBF67347A7CD844D5   <em class='comment'>/* P2  = -2.832640870800243808078e-03 */</em>
+<a id='L933' name='L933'></a> 933         .quad 0x3F5EDA25530355DB   <em class='comment'>/* P3  = +1.883064698679040793627e-03 */</em>
+<a id='L934' name='L934'></a> 934         .quad 0xBF4EAD3BBABC1BA9   <em class='comment'>/* P4  = -9.361783645268534848806e-04 */</em>
+<a id='L935' name='L935'></a> 935         .quad 0x3F3842E61CD35432   <em class='comment'>/* P5  = +3.701984213198588740338e-04 */</em>
+<a id='L936' name='L936'></a> 936         .quad 0xBF1F9AB7FD1A3DDD   <em class='comment'>/* P6  = -1.205611036090218544867e-04 */</em>
+<a id='L937' name='L937'></a> 937         .quad 0x3F0136C154EA3DED   <em class='comment'>/* P7  = +3.283288480304320224929e-05 */</em>
+<a id='L938' name='L938'></a> 938         .quad 0xBEDF12807F721E66   <em class='comment'>/* P8  = -7.408207230892235753013e-06 */</em>
+<a id='L939' name='L939'></a> 939         .quad 0x3EB5B53687AD5112   <em class='comment'>/* P9  = +1.293889481520047941659e-06 */</em>
+<a id='L940' name='L940'></a> 940         .quad 0xBE801E90FBFED147   <em class='comment'>/* P10 = -1.200988872775447204019e-07 */</em>
+<a id='L941' name='L941'></a> 941         .quad 0xC00D000000000000   <em class='comment'>/* B = -3.625    */</em>
+<a id='L942' name='L942'></a> 942         .quad 0x3FF0000000000000   <em class='comment'>/* A = +1        */</em>
+<a id='L943' name='L943'></a> 943         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L944' name='L944'></a> 944         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L945' name='L945'></a> 945         .quad 0x3C9E323294294877   <em class='comment'>/* PL0 = +1.047637125334028950603e-16 */</em>
+<a id='L946' name='L946'></a> 946         .quad 0x3FEFF8F21CDAAA62   <em class='comment'>/* PH0 = +9.991388858373506653976e-01 */</em>
+<a id='L947' name='L947'></a> 947         .quad 0x3F5C3470628813F2   <em class='comment'>/* P1  = +1.721486807697344658108e-03 */</em>
+<a id='L948' name='L948'></a> 948         .quad 0xBF5C2E38AC6FF8D2   <em class='comment'>/* P2  = -1.720004411026422324849e-03 */</em>
+<a id='L949' name='L949'></a> 949         .quad 0x3F52C13234626F43   <em class='comment'>/* P3  = +1.144694354969070234454e-03 */</em>
+<a id='L950' name='L950'></a> 950         .quad 0xBF42B0A47DF47BB4   <em class='comment'>/* P4  = -5.703738387728891173354e-04 */</em>
+<a id='L951' name='L951'></a> 951         .quad 0x3F2DB2889E32FBFD   <em class='comment'>/* P5  = +2.265731592156760387344e-04 */</em>
+<a id='L952' name='L952'></a> 952         .quad 0xBF1385FBD54C5A55   <em class='comment'>/* P6  = -7.447576110695385196414e-05 */</em>
+<a id='L953' name='L953'></a> 953         .quad 0x3EF5AFA812C6984E   <em class='comment'>/* P7  = +2.068153223579892541184e-05 */</em>
+<a id='L954' name='L954'></a> 954         .quad 0xBED47097C188A03C   <em class='comment'>/* P8  = -4.873231795467276043290e-06 */</em>
+<a id='L955' name='L955'></a> 955         .quad 0x3EAFF2B982F7EE8C   <em class='comment'>/* P9  = +9.521288628073486288914e-07 */</em>
+<a id='L956' name='L956'></a> 956         .quad 0xBE828EC5B57D424D   <em class='comment'>/* P10 = -1.382656715739529384702e-07 */</em>
+<a id='L957' name='L957'></a> 957         .quad 0xC00F000000000000   <em class='comment'>/* B = -3.875    */</em>
+<a id='L958' name='L958'></a> 958         .quad 0x3FF0000000000000   <em class='comment'>/* A = +1        */</em>
+<a id='L959' name='L959'></a> 959         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L960' name='L960'></a> 960         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L961' name='L961'></a> 961         .quad 0x3C9BA40DA6983BEC   <em class='comment'>/* PL0 = +9.589840482158163453169e-17 */</em>
+<a id='L962' name='L962'></a> 962         .quad 0x3FEFFCAAC3F20E65   <em class='comment'>/* PH0 = +9.995931460438894911036e-01 */</em>
+<a id='L963' name='L963'></a> 963         .quad 0x3F4AA87CF664754C   <em class='comment'>/* P1  = +8.135423820793490331956e-04 */</em>
+<a id='L964' name='L964'></a> 964         .quad 0xBF4AA5B62919E224   <em class='comment'>/* P2  = -8.132113891426467676310e-04 */</em>
+<a id='L965' name='L965'></a> 965         .quad 0x3F41C01B53B0B312   <em class='comment'>/* P3  = +5.416997368051531710388e-04 */</em>
+<a id='L966' name='L966'></a> 966         .quad 0xBF31B8B54D091751   <em class='comment'>/* P4  = -2.704088811110632606347e-04 */</em>
+<a id='L967' name='L967'></a> 967         .quad 0x3F1C431305954ECC   <em class='comment'>/* P5  = +1.078110084525254933728e-04 */</em>
+<a id='L968' name='L968'></a> 968         .quad 0xBF02B7DEAD0D44E6   <em class='comment'>/* P6  = -3.570221236393906131126e-05 */</em>
+<a id='L969' name='L969'></a> 969         .quad 0x3EE51C6EFF109EA9   <em class='comment'>/* P7  = +1.006654199116272154479e-05 */</em>
+<a id='L970' name='L970'></a> 970         .quad 0xBEC48CFB08072D17   <em class='comment'>/* P8  = -2.449834994621594976610e-06 */</em>
+<a id='L971' name='L971'></a> 971         .quad 0x3EA1585EC59CAE34   <em class='comment'>/* P9  = +5.169271261920604503617e-07 */</em>
+<a id='L972' name='L972'></a> 972         .quad 0xBE78832BAF950BA9   <em class='comment'>/* P10 = -9.131575131209528255629e-08 */</em>
+<a id='L973' name='L973'></a> 973         .quad 0xC011000000000000   <em class='comment'>/* B = -4.25     */</em>
+<a id='L974' name='L974'></a> 974         .quad 0x3FF0000000000000   <em class='comment'>/* A = +1        */</em>
+<a id='L975' name='L975'></a> 975         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L976' name='L976'></a> 976         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L977' name='L977'></a> 977         .quad 0x3C8FBF237F4AFE10   <em class='comment'>/* PL0 = +5.507163370275307643966e-17 */</em>
+<a id='L978' name='L978'></a> 978         .quad 0x3FEFFEC61279A3A4   <em class='comment'>/* PH0 = +9.998503075449787225182e-01 */</em>
+<a id='L979' name='L979'></a> 979         .quad 0x3F339E78281A00EA   <em class='comment'>/* P1  = +2.993625022114214863645e-04 */</em>
+<a id='L980' name='L980'></a> 980         .quad 0xBF339DB7B072AD62   <em class='comment'>/* P2  = -2.993176899035080028902e-04 */</em>
+<a id='L981' name='L981'></a> 981         .quad 0x3F2A259E658EF4E4   <em class='comment'>/* P3  = +1.994853835451177669594e-04 */</em>
+<a id='L982' name='L982'></a> 982         .quad 0xBF1A219C312B10BA   <em class='comment'>/* P4  = -9.968295880030927192162e-05 */</em>
+<a id='L983' name='L983'></a> 983         .quad 0x3F04E146B4F5F4B7   <em class='comment'>/* P5  = +3.982541113154699160876e-05 */</em>
+<a id='L984' name='L984'></a> 984         .quad 0xBEEBC5F137088210   <em class='comment'>/* P6  = -1.324329943580649487333e-05 */</em>
+<a id='L985' name='L985'></a> 985         .quad 0x3ECF96736E300B00   <em class='comment'>/* P7  = +3.765547135882256916132e-06 */</em>
+<a id='L986' name='L986'></a> 986         .quad 0xBEAF4874840B91EB   <em class='comment'>/* P8  = -9.323068824421825762292e-07 */</em>
+<a id='L987' name='L987'></a> 987         .quad 0x3E8B6AB2B5C8FD3F   <em class='comment'>/* P9  = +2.042709991312793245971e-07 */</em>
+<a id='L988' name='L988'></a> 988         .quad 0xBE650BCCE62FD2B7   <em class='comment'>/* P10 = -3.920140725219944650830e-08 */</em>
+<a id='L989' name='L989'></a> 989         .quad 0xC013000000000000   <em class='comment'>/* B = -4.75     */</em>
+<a id='L990' name='L990'></a> 990         .quad 0x3FF0000000000000   <em class='comment'>/* A = +1        */</em>
+<a id='L991' name='L991'></a> 991         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L992' name='L992'></a> 992         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L993' name='L993'></a> 993         .quad 0x3C9C869C85471703   <em class='comment'>/* PL0 = +9.896883942603146946483e-17 */</em>
+<a id='L994' name='L994'></a> 994         .quad 0x3FEFFF8C81C6DC33   <em class='comment'>/* PH0 = +9.999449286177707341139e-01 */</em>
+<a id='L995' name='L995'></a> 995         .quad 0x3F1CDF5A2E4D7C69   <em class='comment'>/* P1  = +1.101397316012206760643e-04 */</em>
+<a id='L996' name='L996'></a> 996         .quad 0xBF1CDEF1F9BE63BE   <em class='comment'>/* P2  = -1.101336660539594564027e-04 */</em>
+<a id='L997' name='L997'></a> 997         .quad 0x3F133EC10C83AAA0   <em class='comment'>/* P3  = +7.341435696487731017506e-05 */</em>
+<a id='L998' name='L998'></a> 998         .quad 0xBF033DAB325FAACB   <em class='comment'>/* P4  = -3.669909192168459445238e-05 */</em>
+<a id='L999' name='L999'></a> 999         .quad 0x3EEEC598FA98BAD8   <em class='comment'>/* P5  = +1.467316890843338172161e-05 */</em>
+<a id='L1000' name='L1000'></a>1000         .quad 0xBED47F1A15BA368E   <em class='comment'>/* P6  = -4.886744445221253126882e-06 */</em>
+<a id='L1001' name='L1001'></a>1001         .quad 0x3EB761FBE7D201C1   <em class='comment'>/* P7  = +1.393720509029845064726e-06 */</em>
+<a id='L1002' name='L1002'></a>1002         .quad 0xBE974CD75A43BF6B   <em class='comment'>/* P8  = -3.471994551992448536007e-07 */</em>
+<a id='L1003' name='L1003'></a>1003         .quad 0x3E74B02965BBF8DC   <em class='comment'>/* P9  = +7.706929621914905669946e-08 */</em>
+<a id='L1004' name='L1004'></a>1004         .quad 0xBE504EF4E3892A66   <em class='comment'>/* P10 = -1.518840362012570189110e-08 */</em>
+<a id='L1005' name='L1005'></a>1005         .quad 0xC015000000000000   <em class='comment'>/* B = -5.25     */</em>
+<a id='L1006' name='L1006'></a>1006         .quad 0x3FF0000000000000   <em class='comment'>/* A = +1        */</em>
+<a id='L1007' name='L1007'></a>1007         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L1008' name='L1008'></a>1008         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L1009' name='L1009'></a>1009         .quad 0x3C643810400471B0   <em class='comment'>/* PL0 = +8.768592603904887599187e-18 */</em>
+<a id='L1010' name='L1010'></a>1010         .quad 0x3FEFFFD583014825   <em class='comment'>/* PH0 = +9.999797400180382433987e-01 */</em>
+<a id='L1011' name='L1011'></a>1011         .quad 0x3F053E71416C43CA   <em class='comment'>/* P1  = +4.051955345663706869871e-05 */</em>
+<a id='L1012' name='L1012'></a>1012         .quad 0xBF053E550C7C8CC9   <em class='comment'>/* P2  = -4.051873253121394012080e-05 */</em>
+<a id='L1013' name='L1013'></a>1013         .quad 0x3EFC52D0D90D4843   <em class='comment'>/* P3  = +2.701139380018752534477e-05 */</em>
+<a id='L1014' name='L1014'></a>1014         .quad 0xBEEC523A6ADBE142   <em class='comment'>/* P4  = -1.350460237457883558350e-05 */</em>
+<a id='L1015' name='L1015'></a>1015         .quad 0x3ED6A73E22D844B3   <em class='comment'>/* P5  = +5.400965660055565196396e-06 */</em>
+<a id='L1016' name='L1016'></a>1016         .quad 0xBEBE31D10F23ACD0   <em class='comment'>/* P6  = -1.799738182979224868919e-06 */</em>
+<a id='L1017' name='L1017'></a>1017         .quad 0x3EA13E14264DEAB2   <em class='comment'>/* P7  = +5.138663935333241981438e-07 */</em>
+<a id='L1018' name='L1018'></a>1018         .quad 0xBE81385ABB98EDCC   <em class='comment'>/* P8  = -1.282999997786486835638e-07 */</em>
+<a id='L1019' name='L1019'></a>1019         .quad 0x3E5EB9164593E0B6   <em class='comment'>/* P9  = +2.861301981891537161158e-08 */</em>
+<a id='L1020' name='L1020'></a>1020         .quad 0xBE387218CFE7772E   <em class='comment'>/* P10 = -5.691705994073124478195e-09 */</em>
+<a id='L1021' name='L1021'></a>1021         .quad 0xC017000000000000   <em class='comment'>/* B = -5.75     */</em>
+<a id='L1022' name='L1022'></a>1022         .quad 0x3FF0000000000000   <em class='comment'>/* A = +1        */</em>
+<a id='L1023' name='L1023'></a>1023         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L1024' name='L1024'></a>1024         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L1025' name='L1025'></a>1025         .quad 0x3C92530433F4C703   <em class='comment'>/* PL0 = +6.357512739163799046861e-17 */</em>
+<a id='L1026' name='L1026'></a>1026         .quad 0x3FEFFFF05E8D3191   <em class='comment'>/* PH0 = +9.999925467214315633058e-01 */</em>
+<a id='L1027' name='L1027'></a>1027         .quad 0x3EEF42DDFA52B575   <em class='comment'>/* P1  = +1.490650158538873335176e-05 */</em>
+<a id='L1028' name='L1028'></a>1028         .quad 0xBEEF42CEB54212AA   <em class='comment'>/* P2  = -1.490639048307961378200e-05 */</em>
+<a id='L1029' name='L1029'></a>1029         .quad 0x3EE4D7201CBCB853   <em class='comment'>/* P3  = +9.937445518550804010127e-06 */</em>
+<a id='L1030' name='L1030'></a>1030         .quad 0xBED4D6F764B66C37   <em class='comment'>/* P4  = -4.968574624976280456686e-06 */</em>
+<a id='L1031' name='L1031'></a>1031         .quad 0x3EC0ABB806EBDE71   <em class='comment'>/* P5  = +1.987311456171617620608e-06 */</em>
+<a id='L1032' name='L1032'></a>1032         .quad 0xBEA6399CF854F876   <em class='comment'>/* P6  = -6.623581475862682369330e-07 */</em>
+<a id='L1033' name='L1033'></a>1033         .quad 0x3E8964B91728D7C9   <em class='comment'>/* P7  = +1.891959403186505598965e-07 */</em>
+<a id='L1034' name='L1034'></a>1034         .quad 0xBE6961A0528444D6   <em class='comment'>/* P8  = -4.727645325404986954168e-08 */</em>
+<a id='L1035' name='L1035'></a>1035         .quad 0x3E46AE3B0814EE00   <em class='comment'>/* P9  = +1.056147192151514779549e-08 */</em>
+<a id='L1036' name='L1036'></a>1036         .quad 0xBE221B8194DACD16   <em class='comment'>/* P10 = -2.107984154277957626641e-09 */</em>
+<a id='L1037' name='L1037'></a>1037         .quad 0xC019000000000000   <em class='comment'>/* B = -6.25     */</em>
+<a id='L1038' name='L1038'></a>1038         .quad 0x3FF0000000000000   <em class='comment'>/* A = +1        */</em>
+<a id='L1039' name='L1039'></a>1039         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L1040' name='L1040'></a>1040         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L1041' name='L1041'></a>1041         .quad 0x3C7BB5622CE1A79E   <em class='comment'>/* PL0 = +2.403331811901679167526e-17 */</em>
+<a id='L1042' name='L1042'></a>1042         .quad 0x3FEFFFFA3FF22708   <em class='comment'>/* PH0 = +9.999972580855862602789e-01 */</em>
+<a id='L1043' name='L1043'></a>1043         .quad 0x3ED7003552D53503   <em class='comment'>/* P1  = +5.483821309338170039906e-06 */</em>
+<a id='L1044' name='L1044'></a>1044         .quad 0xBED7003130C1AB92   <em class='comment'>/* P2  = -5.483806273169366545037e-06 */</em>
+<a id='L1045' name='L1045'></a>1045         .quad 0x3ECEAAE13B699C45   <em class='comment'>/* P3  = +3.655850800133043324271e-06 */</em>
+<a id='L1046' name='L1046'></a>1046         .quad 0xBEBEAACB305F3D07   <em class='comment'>/* P4  = -1.827905351959291114416e-06 */</em>
+<a id='L1047' name='L1047'></a>1047         .quad 0x3EA8887F5F9C87EF   <em class='comment'>/* P5  = +7.311461438267648556646e-07 */</em>
+<a id='L1048' name='L1048'></a>1048         .quad 0xBE905AD08DF8454F   <em class='comment'>/* P6  = -2.437046884027860662692e-07 */</em>
+<a id='L1049' name='L1049'></a>1049         .quad 0x3E72B068300B703F   <em class='comment'>/* P7  = +6.962228483613086736676e-08 */</em>
+<a id='L1050' name='L1050'></a>1050         .quad 0xBE52AF921A71C058   <em class='comment'>/* P8  = -1.740252888706390465423e-08 */</em>
+<a id='L1051' name='L1051'></a>1051         .quad 0x3E30B53EAA35300D   <em class='comment'>/* P9  = +3.890131469838137725119e-09 */</em>
+<a id='L1052' name='L1052'></a>1052         .quad 0xBE0AB60CDAD7E22E   <em class='comment'>/* P10 = -7.773963050435300060566e-10 */</em>
+<a id='L1053' name='L1053'></a>1053         .quad 0xC01B000000000000   <em class='comment'>/* B = -6.75     */</em>
+<a id='L1054' name='L1054'></a>1054         .quad 0x3FF0000000000000   <em class='comment'>/* A = +1        */</em>
+<a id='L1055' name='L1055'></a>1055         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L1056' name='L1056'></a>1056         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L1057' name='L1057'></a>1057         .quad 0x3C8BD1ACF80D7256   <em class='comment'>/* PL0 = +4.825835138930451121169e-17 */</em>
+<a id='L1058' name='L1058'></a>1058         .quad 0x3FEFFFFDE2760A41   <em class='comment'>/* PH0 = +9.999989913051835488389e-01 */</em>
+<a id='L1059' name='L1059'></a>1059         .quad 0x3EC0EC4F1EC27E55   <em class='comment'>/* P1  = +2.017388615341105998718e-06 */</em>
+<a id='L1060' name='L1060'></a>1060         .quad 0xBEC0EC4E005E6EAC   <em class='comment'>/* P2  = -2.017386580411626200507e-06 */</em>
+<a id='L1061' name='L1061'></a>1061         .quad 0x3EB6906504BC4610   <em class='comment'>/* P3  = +1.344921673533307001969e-06 */</em>
+<a id='L1062' name='L1062'></a>1062         .quad 0xBEA6905F0D52C8B5   <em class='comment'>/* P4  = -6.724581235377781360384e-07 */</em>
+<a id='L1063' name='L1063'></a>1063         .quad 0x3E920D0F5CCE152B   <em class='comment'>/* P5  = +2.689810941136721216499e-07 */</em>
+<a id='L1064' name='L1064'></a>1064         .quad 0xBE7811505B10E753   <em class='comment'>/* P6  = -8.965891741619763761543e-08 */</em>
+<a id='L1065' name='L1065'></a>1065         .quad 0x3E5B811EE4F9B8EE   <em class='comment'>/* P7  = +2.561544781706659619288e-08 */</em>
+<a id='L1066' name='L1066'></a>1066         .quad 0xBE3B80ABC067E840   <em class='comment'>/* P8  = -6.403452884688571158579e-09 */</em>
+<a id='L1067' name='L1067'></a>1067         .quad 0x3E1898E394E09335   <em class='comment'>/* P9  = +1.431746793613569087489e-09 */</em>
+<a id='L1068' name='L1068'></a>1068         .quad 0xBDF3ABB5BA711DB7   <em class='comment'>/* P10 = -2.862469657501951918569e-10 */</em>
+<a id='L1069' name='L1069'></a>1069         .quad 0xC01D000000000000   <em class='comment'>/* B = -7.25     */</em>
+<a id='L1070' name='L1070'></a>1070         .quad 0x3FF0000000000000   <em class='comment'>/* A = +1        */</em>
+<a id='L1071' name='L1071'></a>1071         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L1072' name='L1072'></a>1072         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L1073' name='L1073'></a>1073         .quad 0x3C8AE01DB39A3791   <em class='comment'>/* PL0 = +4.662147961093911873193e-17 */</em>
+<a id='L1074' name='L1074'></a>1074         .quad 0x3FEFFFFF38C76668   <em class='comment'>/* PH0 = +9.999996289217962797125e-01 */</em>
+<a id='L1075' name='L1075'></a>1075         .quad 0x3EA8E712E56E1188   <em class='comment'>/* P1  = +7.421562696484951529573e-07 */</em>
+<a id='L1076' name='L1076'></a>1076         .quad 0xBEA8E7124A650791   <em class='comment'>/* P2  = -7.421559942504648535596e-07 */</em>
+<a id='L1077' name='L1077'></a>1077         .quad 0x3EA09A0B62D8EF94   <em class='comment'>/* P3  = +4.947702955735978541097e-07 */</em>
+<a id='L1078' name='L1078'></a>1078         .quad 0xBE909A09C56C2107   <em class='comment'>/* P4  = -2.473847805916120382218e-07 */</em>
+<a id='L1079' name='L1079'></a>1079         .quad 0x3E7A900A90A54A6E   <em class='comment'>/* P5  = +9.895362410487317236618e-08 */</em>
+<a id='L1080' name='L1080'></a>1080         .quad 0xBE61B5557BB449B6   <em class='comment'>/* P6  = -3.298434544432568302770e-08 */</em>
+<a id='L1081' name='L1081'></a>1081         .quad 0x3E443CC74732CDCA   <em class='comment'>/* P7  = +9.423781066565733462466e-09 */</em>
+<a id='L1082' name='L1082'></a>1082         .quad 0xBE243CA8AA8D6E54   <em class='comment'>/* P8  = -2.355890888986360997159e-09 */</em>
+<a id='L1083' name='L1083'></a>1083         .quad 0x3E0219C341E0D1B4   <em class='comment'>/* P9  = +5.267978308406275552691e-10 */</em>
+<a id='L1084' name='L1084'></a>1084         .quad 0xBDDCF49A10950F13   <em class='comment'>/* P10 = -1.053394074620716018815e-10 */</em>
+<a id='L1085' name='L1085'></a>1085         .quad 0xC01F000000000000   <em class='comment'>/* B = -7.75     */</em>
+<a id='L1086' name='L1086'></a>1086         .quad 0x3FF0000000000000   <em class='comment'>/* A = +1        */</em>
+<a id='L1087' name='L1087'></a>1087         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L1088' name='L1088'></a>1088         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L1089' name='L1089'></a>1089         .quad 0x3C75CB18F3775414   <em class='comment'>/* PL0 = +1.890271747518592444083e-17 */</em>
+<a id='L1090' name='L1090'></a>1090         .quad 0x3FEFFFFFD38C39F0   <em class='comment'>/* PH0 = +9.999999172012490333827e-01 */</em>
+<a id='L1091' name='L1091'></a>1091         .quad 0x3E8639E2F89493BB   <em class='comment'>/* P1  = +1.655974950855472979393e-07 */</em>
+<a id='L1092' name='L1092'></a>1092         .quad 0xBE8639E2D9B29562   <em class='comment'>/* P2  = -1.655974813708346974914e-07 */</em>
+<a id='L1093' name='L1093'></a>1093         .quad 0x3E7DA2836A1F706E   <em class='comment'>/* P3  = +1.103982989742589616541e-07 */</em>
+<a id='L1094' name='L1094'></a>1094         .quad 0xBE6DA282C6733DAE   <em class='comment'>/* P4  = -5.519913131581509871840e-08 */</em>
+<a id='L1095' name='L1095'></a>1095         .quad 0x3E57B53A278851FD   <em class='comment'>/* P5  = +2.207971980430773309147e-08 */</em>
+<a id='L1096' name='L1096'></a>1096         .quad 0xBE3F9C4A72536E22   <em class='comment'>/* P6  = -7.359895614149337484810e-09 */</em>
+<a id='L1097' name='L1097'></a>1097         .quad 0x3E220E81FBE19CDD   <em class='comment'>/* P7  = +2.102073153607135257714e-09 */</em>
+<a id='L1098' name='L1098'></a>1098         .quad 0xBE020E8875ADA8D8   <em class='comment'>/* P8  = -5.255211642212584097407e-10 */</em>
+<a id='L1099' name='L1099'></a>1099         .quad 0x3DE07634328384FC   <em class='comment'>/* P9  = +1.197748786062966341989e-10 */</em>
+<a id='L1100' name='L1100'></a>1100         .quad 0xBDBA54078E3C351F   <em class='comment'>/* P10 = -2.394539505021488953905e-11 */</em>
+<a id='L1101' name='L1101'></a>1101         .quad 0xC021000000000000   <em class='comment'>/* B = -8.5      */</em>
+<a id='L1102' name='L1102'></a>1102         .quad 0x3FF0000000000000   <em class='comment'>/* A = +1        */</em>
+<a id='L1103' name='L1103'></a>1103         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L1104' name='L1104'></a>1104         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L1105' name='L1105'></a>1105         .quad 0x3C98B78738B0EDEF   <em class='comment'>/* PL0 = +8.575399788039081964921e-17 */</em>
+<a id='L1106' name='L1106'></a>1106         .quad 0x3FEFFFFFF9FBEA40   <em class='comment'>/* PH0 = +9.999999887944071019774e-01 */</em>
+<a id='L1107' name='L1107'></a>1107         .quad 0x3E581056FAC28C46   <em class='comment'>/* P1  = +2.241118550516412682327e-08 */</em>
+<a id='L1108' name='L1108'></a>1108         .quad 0xBE581056F63A4351   <em class='comment'>/* P2  = -2.241118525356742542550e-08 */</em>
+<a id='L1109' name='L1109'></a>1109         .quad 0x3E500AE49533790A   <em class='comment'>/* P3  = +1.494078933911655875521e-08 */</em>
+<a id='L1110' name='L1110'></a>1110         .quad 0xBE400AE489ACBA90   <em class='comment'>/* P4  = -7.470394349637968945652e-09 */</em>
+<a id='L1111' name='L1111'></a>1111         .quad 0x3E29AB0D59A1967B   <em class='comment'>/* P5  = +2.988168557255271725494e-09 */</em>
+<a id='L1112' name='L1112'></a>1112         .quad 0xBE111CB32D6EEF2B   <em class='comment'>/* P6  = -9.960558400070350772418e-10 */</em>
+<a id='L1113' name='L1113'></a>1113         .quad 0x3DF38CBADF396908   <em class='comment'>/* P7  = +2.844859618921805216353e-10 */</em>
+<a id='L1114' name='L1114'></a>1114         .quad 0xBDD38CC7B92CECD3   <em class='comment'>/* P8  = -7.112220386749926320915e-11 */</em>
+<a id='L1115' name='L1115'></a>1115         .quad 0x3DB1D2BBE2705032   <em class='comment'>/* P9  = +1.621008722427575444686e-11 */</em>
+<a id='L1116' name='L1116'></a>1116         .quad 0xBD8C8199294E6380   <em class='comment'>/* P10 = -3.240784656869469020111e-12 */</em>
+<a id='L1117' name='L1117'></a>1117         .quad 0xC023000000000000   <em class='comment'>/* B = -9.5      */</em>
+<a id='L1118' name='L1118'></a>1118         .quad 0x3FF0000000000000   <em class='comment'>/* A = +1        */</em>
+<a id='L1119' name='L1119'></a>1119         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L1120' name='L1120'></a>1120         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L1121' name='L1121'></a>1121         .quad 0x3C8EEEC16618B984   <em class='comment'>/* PL0 = +5.365957423487855307906e-17 */</em>
+<a id='L1122' name='L1122'></a>1122         .quad 0x3FEFFFFFFF2F9279   <em class='comment'>/* PH0 = +9.999999984834878619111e-01 */</em>
+<a id='L1123' name='L1123'></a>1123         .quad 0x3E2A0DB0D052B148   <em class='comment'>/* P1  = +3.033024167396880687734e-09 */</em>
+<a id='L1124' name='L1124'></a>1124         .quad 0xBE2A0DB0CFA6AB71   <em class='comment'>/* P2  = -3.033024162734192808028e-09 */</em>
+<a id='L1125' name='L1125'></a>1125         .quad 0x3E215E75D53A3105   <em class='comment'>/* P3  = +2.022016035353114070618e-09 */</em>
+<a id='L1126' name='L1126'></a>1126         .quad 0xBE115E75D40AA47F   <em class='comment'>/* P4  = -1.011008013562702155050e-09 */</em>
+<a id='L1127' name='L1127'></a>1127         .quad 0x3DFBCA5CDC12ED1C   <em class='comment'>/* P5  = +4.044047007631481841556e-10 */</em>
+<a id='L1128' name='L1128'></a>1128         .quad 0xBDE286E85704FC22   <em class='comment'>/* P6  = -1.348015410318274576187e-10 */</em>
+<a id='L1129' name='L1129'></a>1129         .quad 0x3DC52A8925354517   <em class='comment'>/* P7  = +3.850101197145027796396e-11 */</em>
+<a id='L1130' name='L1130'></a>1130         .quad 0xBDA52A97EA3F5F4A   <em class='comment'>/* P8  = -9.625355478142550638468e-12 */</em>
+<a id='L1131' name='L1131'></a>1131         .quad 0x3D834C011A2AC0F7   <em class='comment'>/* P9  = +2.193802608697321032841e-12 */</em>
+<a id='L1132' name='L1132'></a>1132         .quad 0xBD5EDD05BDCB3A62   <em class='comment'>/* P10 = -4.385948508419928563300e-13 */</em>
+<a id='L1133' name='L1133'></a>1133         .quad 0xC025000000000000   <em class='comment'>/* B = -10.5      */</em>
+<a id='L1134' name='L1134'></a>1134         .quad 0x3FF0000000000000   <em class='comment'>/* A = +1        */</em>
+<a id='L1135' name='L1135'></a>1135         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L1136' name='L1136'></a>1136         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L1137' name='L1137'></a>1137         .quad 0x3C6BD8B474BBF792   <em class='comment'>/* PL0 = +1.207649585364892639612e-17 */</em>
+<a id='L1138' name='L1138'></a>1138         .quad 0x3FEFFFFFFFE3CAD8   <em class='comment'>/* PH0 = +9.999999997947623953110e-01 */</em>
+<a id='L1139' name='L1139'></a>1139         .quad 0x3DFC3527E43C565F   <em class='comment'>/* P1  = +4.104751852963940338559e-10 */</em>
+<a id='L1140' name='L1140'></a>1140         .quad 0xBDFC3527E420F415   <em class='comment'>/* P2  = -4.104751852036136216697e-10 */</em>
+<a id='L1141' name='L1141'></a>1141         .quad 0x3DF2CE1A8D806DAD   <em class='comment'>/* P3  = +2.736501142887952919489e-10 */</em>
+<a id='L1142' name='L1142'></a>1142         .quad 0xBDE2CE1A8DDF690A   <em class='comment'>/* P4  = -1.368250573053032426141e-10 */</em>
+<a id='L1143' name='L1143'></a>1143         .quad 0x3DCE169832D8BD68   <em class='comment'>/* P5  = +5.473022586854025789680e-11 */</em>
+<a id='L1144' name='L1144'></a>1144         .quad 0xBDB40F0FE853DA5B   <em class='comment'>/* P6  = -1.824340550195944358477e-11 */</em>
+<a id='L1145' name='L1145'></a>1145         .quad 0x3D96EA8D930D31A1   <em class='comment'>/* P7  = +5.210545794901128943676e-12 */</em>
+<a id='L1146' name='L1146'></a>1146         .quad 0xBD76EA9DB0D09839   <em class='comment'>/* P8  = -1.302650427355019556441e-12 */</em>
+<a id='L1147' name='L1147'></a>1147         .quad 0x3D54E474FD4303A1   <em class='comment'>/* P9  = +2.968990047962355000258e-13 */</em>
+<a id='L1148' name='L1148'></a>1148         .quad 0xBD30B526CA2B228A   <em class='comment'>/* P10 = -5.935740124899435401321e-14 */</em>
+<a id='L1149' name='L1149'></a>1149         .quad 0xC027000000000000   <em class='comment'>/* B = -11.5      */</em>
+<a id='L1150' name='L1150'></a>1150         .quad 0x3FF0000000000000   <em class='comment'>/* A = +1        */</em>
+<a id='L1151' name='L1151'></a>1151         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L1152' name='L1152'></a>1152         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L1153' name='L1153'></a>1153         .quad 0x3C56E8953D525FD5   <em class='comment'>/* PL0 = +4.967494994909661698725e-18 */</em>
+<a id='L1154' name='L1154'></a>1154         .quad 0x3FEFFFFFFFFC2EB9   <em class='comment'>/* PH0 = +9.999999999722241073030e-01 */</em>
+<a id='L1155' name='L1155'></a>1155         .quad 0x3DCE8A37A48016C2   <em class='comment'>/* P1  = +5.555177547354687971427e-11 */</em>
+<a id='L1156' name='L1156'></a>1156         .quad 0xBDCE8A37A479B7D4   <em class='comment'>/* P2  = -5.555177547084873157964e-11 */</em>
+<a id='L1157' name='L1157'></a>1157         .quad 0x3DC45C250CFA9C16   <em class='comment'>/* P3  = +3.703451575129414499553e-11 */</em>
+<a id='L1158' name='L1158'></a>1158         .quad 0xBDB45C250D9F8467   <em class='comment'>/* P4  = -1.851725791056759260154e-11 */</em>
+<a id='L1159' name='L1159'></a>1159         .quad 0x3DA049BB33CBD4E9   <em class='comment'>/* P5  = +7.406930640558963265190e-12 */</em>
+<a id='L1160' name='L1160'></a>1160         .quad 0xBD85B7A407C422C1   <em class='comment'>/* P6  = -2.468976464832073512208e-12 */</em>
+<a id='L1161' name='L1161'></a>1161         .quad 0x3D68CF9CED2B3FD5   <em class='comment'>/* P7  = +7.051706989348171774536e-13 */</em>
+<a id='L1162' name='L1162'></a>1162         .quad 0xBD48CFAE64C352B3   <em class='comment'>/* P8  = -1.762945685274427023683e-13 */</em>
+<a id='L1163' name='L1163'></a>1163         .quad 0x3D269EAE08690D52   <em class='comment'>/* P9  = +4.018091287355461204663e-14 */</em>
+<a id='L1164' name='L1164'></a>1164         .quad 0xBD0216CBEAFFF5AA   <em class='comment'>/* P10 = -8.033151495672990022322e-15 */</em>
+<a id='L1165' name='L1165'></a>1165         .quad 0xC029000000000000   <em class='comment'>/* B = -12.5      */</em>
+<a id='L1166' name='L1166'></a>1166         .quad 0x3FF0000000000000   <em class='comment'>/* A = +1        */</em>
+<a id='L1167' name='L1167'></a>1167         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L1168' name='L1168'></a>1168         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L1169' name='L1169'></a>1169         .quad 0x3C8ACF1392B106D3   <em class='comment'>/* PL0 = +4.650601502940921454330e-17 */</em>
+<a id='L1170' name='L1170'></a>1170         .quad 0x3FEFFFFFFFFF7BBD   <em class='comment'>/* PH0 = +9.999999999962408958609e-01 */</em>
+<a id='L1171' name='L1171'></a>1171         .quad 0x3DA088529889B316   <em class='comment'>/* P1  = +7.518115268189742464885e-12 */</em>
+<a id='L1172' name='L1172'></a>1172         .quad 0xBDA088529887F4C4   <em class='comment'>/* P2  = -7.518115268005149164680e-12 */</em>
+<a id='L1173' name='L1173'></a>1173         .quad 0x3D960B18BF1DF711   <em class='comment'>/* P3  = +5.012076679213679703380e-12 */</em>
+<a id='L1174' name='L1174'></a>1174         .quad 0xBD860B18BFD99A48   <em class='comment'>/* P4  = -2.506038344573564868987e-12 */</em>
+<a id='L1175' name='L1175'></a>1175         .quad 0x3D71A27E7CA64143   <em class='comment'>/* P5  = +1.002419056539285288454e-12 */</em>
+<a id='L1176' name='L1176'></a>1176         .quad 0xBD5783530EA76D91   <em class='comment'>/* P6  = -3.341396294294381580191e-13 */</em>
+<a id='L1177' name='L1177'></a>1177         .quad 0x3D3ADCC75CBD2A03   <em class='comment'>/* P7  = +9.543447641637910477850e-14 */</em>
+<a id='L1178' name='L1178'></a>1178         .quad 0xBD1ADCDA46BE5F17   <em class='comment'>/* P8  = -2.385887543769010971872e-14 */</em>
+<a id='L1179' name='L1179'></a>1179         .quad 0x3CF87D77650BE5B8   <em class='comment'>/* P9  = +5.437895260471143131391e-15 */</em>
+<a id='L1180' name='L1180'></a>1180         .quad 0xBCD395AE6E74C6D2   <em class='comment'>/* P10 = -1.087168847335561258239e-15 */</em>
+<a id='L1181' name='L1181'></a>1181         .quad 0xC02B000000000000   <em class='comment'>/* B = -13.5      */</em>
+<a id='L1182' name='L1182'></a>1182         .quad 0x3FF0000000000000   <em class='comment'>/* A = +1        */</em>
+<a id='L1183' name='L1183'></a>1183         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L1184' name='L1184'></a>1184         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L1185' name='L1185'></a>1185         .quad 0x3C97A8A295292858   <em class='comment'>/* PL0 = +8.208271151146829171896e-17 */</em>
+<a id='L1186' name='L1186'></a>1186         .quad 0x3FEFFFFFFFFFEE19   <em class='comment'>/* PH0 = +9.999999999994911847878e-01 */</em>
+<a id='L1187' name='L1187'></a>1187         .quad 0x3D71E642BB008F95   <em class='comment'>/* P1  = +1.017466259229268282255e-12 */</em>
+<a id='L1188' name='L1188'></a>1188         .quad 0xBD71E642BAFEEC54   <em class='comment'>/* P2  = -1.017466259207593392022e-12 */</em>
+<a id='L1189' name='L1189'></a>1189         .quad 0x3D67DDAE41647741   <em class='comment'>/* P3  = +6.783108169938233581038e-13 */</em>
+<a id='L1190' name='L1190'></a>1190         .quad 0xBD57DDAE4230F34B   <em class='comment'>/* P4  = -3.391554091734942426856e-13 */</em>
+<a id='L1191' name='L1191'></a>1191         .quad 0x3D4317C33FAE2536   <em class='comment'>/* P5  = +1.356626669455791324801e-13 */</em>
+<a id='L1192' name='L1192'></a>1192         .quad 0xBD2975040D3E26B9   <em class='comment'>/* P6  = -4.522088139411435138867e-14 */</em>
+<a id='L1193' name='L1193'></a>1193         .quad 0x3D0D155DCD0F0AFB   <em class='comment'>/* P7  = +1.291565189902030307333e-14 */</em>
+<a id='L1194' name='L1194'></a>1194         .quad 0xBCED157247832B20   <em class='comment'>/* P8  = -3.228947666403019234175e-15 */</em>
+<a id='L1195' name='L1195'></a>1195         .quad 0x3CCA83D70F607C28   <em class='comment'>/* P9  = +7.359390959466796619024e-16 */</em>
+<a id='L1196' name='L1196'></a>1196         .quad 0xBCA5343952C1E19E   <em class='comment'>/* P10 = -1.471323041436694087188e-16 */</em>
+<a id='L1197' name='L1197'></a>1197         .quad 0xC02D000000000000   <em class='comment'>/* B = -14.5      */</em>
+<a id='L1198' name='L1198'></a>1198         .quad 0x3FF0000000000000   <em class='comment'>/* A = +1        */</em>
+<a id='L1199' name='L1199'></a>1199         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L1200' name='L1200'></a>1200         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L1201' name='L1201'></a>1201         .quad 0x3C9B7876CBC5306E   <em class='comment'>/* PL0 = +9.530765996816607711732e-17 */</em>
+<a id='L1202' name='L1202'></a>1202         .quad 0x3FEFFFFFFFFFFD93   <em class='comment'>/* PH0 = +9.999999999999310551502e-01 */</em>
+<a id='L1203' name='L1203'></a>1203         .quad 0x3D436121E2640D76   <em class='comment'>/* P1  = +1.376990843765503869546e-13 */</em>
+<a id='L1204' name='L1204'></a>1204         .quad 0xBD436121E26250EA   <em class='comment'>/* P2  = -1.376990843736775811281e-13 */</em>
+<a id='L1205' name='L1205'></a>1205         .quad 0x3D39D6D7CA259186   <em class='comment'>/* P3  = +9.179938654047876451320e-14 */</em>
+<a id='L1206' name='L1206'></a>1206         .quad 0xBD29D6D7CB0327CE   <em class='comment'>/* P4  = -4.589969336188563660531e-14 */</em>
+<a id='L1207' name='L1207'></a>1207         .quad 0x3D14ABE4DC31244A   <em class='comment'>/* P5  = +1.835994545584345768382e-14 */</em>
+<a id='L1208' name='L1208'></a>1208         .quad 0xBCFB8FDB82AB6BB7   <em class='comment'>/* P6  = -6.119980791767901275443e-15 */</em>
+<a id='L1209' name='L1209'></a>1209         .quad 0x3CDF7CF757491B60   <em class='comment'>/* P7  = +1.747943407988343076526e-15 */</em>
+<a id='L1210' name='L1210'></a>1210         .quad 0xBCBF7D0D833640FB   <em class='comment'>/* P8  = -4.369905470133249448357e-16 */</em>
+<a id='L1211' name='L1211'></a>1211         .quad 0x3C9CB512F6BDC754   <em class='comment'>/* P9  = +9.959852600692493655511e-17 */</em>
+<a id='L1212' name='L1212'></a>1212         .quad 0xBC76F50AB1B0E9BA   <em class='comment'>/* P10 = -1.991219205936492089091e-17 */</em>
+<a id='L1213' name='L1213'></a>1213         .quad 0xC02F000000000000   <em class='comment'>/* B = -15.5      */</em>
+<a id='L1214' name='L1214'></a>1214         .quad 0x3FF0000000000000   <em class='comment'>/* A = +1        */</em>
+<a id='L1215' name='L1215'></a>1215         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L1216' name='L1216'></a>1216         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L1217' name='L1217'></a>1217         .quad 0x3C6FFE15D5F78543   <em class='comment'>/* PL0 = +1.387454417328248962819e-17 */</em>
+<a id='L1218' name='L1218'></a>1218         .quad 0x3FEFFFFFFFFFFFE1   <em class='comment'>/* PH0 = +9.999999999999965583086e-01 */</em>
+<a id='L1219' name='L1219'></a>1219         .quad 0x3CFEE00288B99C26   <em class='comment'>/* P1  = +6.855635762864742358597e-15 */</em>
+<a id='L1220' name='L1220'></a>1220         .quad 0xBCFEE0027D060EE2   <em class='comment'>/* P2  = -6.855635607998342735403e-15 */</em>
+<a id='L1221' name='L1221'></a>1221         .quad 0x3CF4954AA23148A2   <em class='comment'>/* P3  = +4.570381865813341696777e-15 */</em>
+<a id='L1222' name='L1222'></a>1222         .quad 0xBCE4954B5DAD3010   <em class='comment'>/* P4  = -2.285192173571711474199e-15 */</em>
+<a id='L1223' name='L1223'></a>1223         .quad 0x3CD07883DD8793BD   <em class='comment'>/* P5  = +9.143109661358222028007e-16 */</em>
+<a id='L1224' name='L1224'></a>1224         .quad 0xBCB5F5F4BB87ADCF   <em class='comment'>/* P6  = -3.047668447080103869032e-16 */</em>
+<a id='L1225' name='L1225'></a>1225         .quad 0x3C98F1A905097685   <em class='comment'>/* P7  = +8.654183371862458774513e-17 */</em>
+<a id='L1226' name='L1226'></a>1226         .quad 0xBC78F2D585007222   <em class='comment'>/* P8  = -2.163943551222030413627e-17 */</em>
+<a id='L1227' name='L1227'></a>1227         .quad 0x3C58A37CC5082B5F   <em class='comment'>/* P9  = +5.342649626494471588064e-18 */</em>
+<a id='L1228' name='L1228'></a>1228         .quad 0xBC33AE7917F94D17   <em class='comment'>/* P10 = -1.066938163384541013918e-18 */</em>
+<a id='L1229' name='L1229'></a>1229         .quad 0xC031000000000000   <em class='comment'>/* B = -17        */</em>
+<a id='L1230' name='L1230'></a>1230         .quad 0x3FF0000000000000   <em class='comment'>/* A = +1        */</em>
+<a id='L1231' name='L1231'></a>1231         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L1232' name='L1232'></a>1232         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L1233' name='L1233'></a>1233         .quad 0x3C91BF1D80474F0F   <em class='comment'>/* PL0 = +6.157069264461989135096e-17 */</em>
+<a id='L1234' name='L1234'></a>1234         .quad 0x3FEFFFFFFFFFFFFE   <em class='comment'>/* PH0 = +9.999999999999997779554e-01 */</em>
+<a id='L1235' name='L1235'></a>1235         .quad 0x3CB72071400E6275   <em class='comment'>/* P1  = +3.209478247225075961360e-16 */</em>
+<a id='L1236' name='L1236'></a>1236         .quad 0xBCB72071400A9F37   <em class='comment'>/* P2  = -3.209478247103497434502e-16 */</em>
+<a id='L1237' name='L1237'></a>1237         .quad 0x3CAED5EC39A77629   <em class='comment'>/* P3  = +2.139652050028423711308e-16 */</em>
+<a id='L1238' name='L1238'></a>1238         .quad 0xBC9ED5EC3B530600   <em class='comment'>/* P4  = -1.069826028468029104719e-16 */</em>
+<a id='L1239' name='L1239'></a>1239         .quad 0x3C88AB2BFED159DE   <em class='comment'>/* P5  = +4.279326904335078988705e-17 */</em>
+<a id='L1240' name='L1240'></a>1240         .quad 0xBC70721D1220B3FC   <em class='comment'>/* P6  = -1.426441958074916244382e-17 */</em>
+<a id='L1241' name='L1241'></a>1241         .quad 0x3C52C96049721FB8   <em class='comment'>/* P7  = +4.073700029965821523731e-18 */</em>
+<a id='L1242' name='L1242'></a>1242         .quad 0xBC32C971215735DC   <em class='comment'>/* P8  = -1.018438939975201710113e-18 */</em>
+<a id='L1243' name='L1243'></a>1243         .quad 0x3C112EF658AB41A9   <em class='comment'>/* P9  = +2.328791246104218830028e-19 */</em>
+<a id='L1244' name='L1244'></a>1244         .quad 0xBBEB7B598C6AD3DE   <em class='comment'>/* P10 = -4.655603964908654142787e-20 */</em>
+<a id='L1245' name='L1245'></a>1245         .quad 0xC03287E0C98F84E5   <em class='comment'>/* B = -18.530774 */</em>
+<a id='L1246' name='L1246'></a>1246         .quad 0x3FF0000000000000   <em class='comment'>/* A = +1        */</em>
+<a id='L1247' name='L1247'></a>1247         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L1248' name='L1248'></a>1248         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L1249' name='L1249'></a>1249         .quad 0x0000000000000000   <em class='comment'>/* PL0 = +0.000000000000000000000e-01 */</em>
+<a id='L1250' name='L1250'></a>1250         .quad 0x3FF0000000000000   <em class='comment'>/* PH0 = +1.000000000000000000000e+00 */</em>
+<a id='L1251' name='L1251'></a>1251         .quad 0x0000000000000000   <em class='comment'>/* P1  = +0.000000000000000000000e-01 */</em>
+<a id='L1252' name='L1252'></a>1252         .quad 0x0000000000000000   <em class='comment'>/* P2  = +0.000000000000000000000e-01 */</em>
+<a id='L1253' name='L1253'></a>1253         .quad 0x0000000000000000   <em class='comment'>/* P3  = +0.000000000000000000000e-01 */</em>
+<a id='L1254' name='L1254'></a>1254         .quad 0x0000000000000000   <em class='comment'>/* P4  = +0.000000000000000000000e-01 */</em>
+<a id='L1255' name='L1255'></a>1255         .quad 0x0000000000000000   <em class='comment'>/* P5  = +0.000000000000000000000e-01 */</em>
+<a id='L1256' name='L1256'></a>1256         .quad 0x0000000000000000   <em class='comment'>/* P6  = +0.000000000000000000000e-01 */</em>
+<a id='L1257' name='L1257'></a>1257         .quad 0x0000000000000000   <em class='comment'>/* P7  = +0.000000000000000000000e-01 */</em>
+<a id='L1258' name='L1258'></a>1258         .quad 0x0000000000000000   <em class='comment'>/* P8  = +0.000000000000000000000e-01 */</em>
+<a id='L1259' name='L1259'></a>1259         .quad 0x0000000000000000   <em class='comment'>/* P9  = +0.000000000000000000000e-01 */</em>
+<a id='L1260' name='L1260'></a>1260         .quad 0x0000000000000000   <em class='comment'>/* P10 = +0.000000000000000000000e-01 */</em>
+<a id='L1261' name='L1261'></a>1261         .quad 0x0000000000000000   <em class='comment'>/* B = +0        */</em>
+<a id='L1262' name='L1262'></a>1262         .quad 0x0000000000000000   <em class='comment'>/* A = +0        */</em>
+<a id='L1263' name='L1263'></a>1263         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L1264' name='L1264'></a>1264         .quad 0x0000000000000000   <em class='comment'>/* Align value = +0        */</em>
+<a id='L1265' name='L1265'></a>1265         .align 32
+<a id='L1266' name='L1266'></a>1266         .quad 0x8000000000000000, 0x8000000000000000, 0x8000000000000000, 0x8000000000000000   <em class='comment'>/* _dbSignMask       */</em>
+<a id='L1267' name='L1267'></a>1267         .align 32
+<a id='L1268' name='L1268'></a>1268         .quad 0x7fffffffffffffff, 0x7fffffffffffffff, 0x7fffffffffffffff, 0x7fffffffffffffff   <em class='comment'>/* _dbAbsMask        */</em>
+<a id='L1269' name='L1269'></a>1269         .align 32
+<a id='L1270' name='L1270'></a>1270         .long 0x7ffe0000, 0x7ffe0000, 0x7ffe0000, 0x7ffe0000, 0x7ffe0000, 0x7ffe0000, 0x7ffe0000, 0x7ffe0000           <em class='comment'>/* _iExpMantMask     */</em>
+<a id='L1271' name='L1271'></a>1271         .align 32
+<a id='L1272' name='L1272'></a>1272         .long 0x7fe00000, 0x7fe00000, 0x7fe00000, 0x7fe00000, 0x7fe00000, 0x7fe00000, 0x7fe00000, 0x7fe00000           <em class='comment'>/* _iExpMask         */</em>
+<a id='L1273' name='L1273'></a>1273         .align 32
+<a id='L1274' name='L1274'></a>1274         .long 0x3fbe0000, 0x3fbe0000, 0x3fbe0000, 0x3fbe0000, 0x3fbe0000, 0x3fbe0000, 0x3fbe0000, 0x3fbe0000           <em class='comment'>/* _iMinIdxOfsMask   */</em>
+<a id='L1275' name='L1275'></a>1275         .align 32
+<a id='L1276' name='L1276'></a>1276         .long 0x00760000, 0x00760000, 0x00760000, 0x00760000, 0x00760000, 0x00760000, 0x00760000, 0x00760000           <em class='comment'>/* _iMaxIdxMask      */</em>
+<a id='L1277' name='L1277'></a>1277         .align 32
+<a id='L1278' name='L1278'></a>1278         .type   __svml_dtanh_data_internal,@object
+<a id='L1279' name='L1279'></a>1279         .size   __svml_dtanh_data_internal,.-__svml_dtanh_data_internal
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;][^][v]<a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

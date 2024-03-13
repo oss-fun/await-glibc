@@ -1,0 +1,145 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>sysdeps/powerpc/powerpc32/lshift.S</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18977.html'>sysdeps</a>/<a href='../files/19149.html'>powerpc</a>/<a href='../files/19157.html'>powerpc32</a>/lshift.S</h2>
+<em class='comment'>/* [&lt;][&gt;][^][v][top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* Shift a limb left, low level routine.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   Copyright (C) 1996-2022 Free Software Foundation, Inc.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'></em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'></em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'></em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   License along with the GNU C Library; if not, see</em>
+<a id='L17' name='L17'></a>  17 <em class='comment'>   &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L18' name='L18'></a>  18 
+<a id='L19' name='L19'></a>  19 <em class='sharp'>#include</em> &lt;<a href='../I/5967.html'>sysdep.h</a>&gt;
+<a id='L20' name='L20'></a>  20 
+<a id='L21' name='L21'></a>  21 <em class='comment'>/* mp_limb_t mpn_lshift (mp_ptr wp, mp_srcptr up, mp_size_t usize,</em>
+<a id='L22' name='L22'></a>  22 <em class='comment'>             unsigned int cnt)  */</em>
+<a id='L23' name='L23'></a>  23 
+<a id='L24' name='L24'></a>  24 EALIGN (__mpn_lshift, 3, 0)
+<a id='L25' name='L25'></a>  25 
+<a id='L26' name='L26'></a>  26     mtctr   r5      # copy size into CTR
+<a id='L27' name='L27'></a>  27     cmplwi  cr0,r5,16   # is size &lt; 16
+<a id='L28' name='L28'></a>  28     slwi    r0,r5,2
+<a id='L29' name='L29'></a>  29     add r7,r3,r0    # make r7 point at end of res
+<a id='L30' name='L30'></a>  30     add r4,r4,r0    # make r4 point at end of s1
+<a id='L31' name='L31'></a>  31     lwzu    r11,-4(r4)  # load first s1 limb
+<a id='L32' name='L32'></a>  32     subfic  r8,r6,32
+<a id='L33' name='L33'></a>  33     srw r3,r11,r8   # compute function return value
+<a id='L34' name='L34'></a>  34     bge cr0,L(big)  # branch if size &gt;= 16
+<a id='L35' name='L35'></a>  35 
+<a id='L36' name='L36'></a>  36     bdz L(end1)
+<a id='L37' name='L37'></a>  37 
+<a id='L38' name='L38'></a>  38 L(0):   lwzu    r10,-4(r4)
+<a id='L39' name='L39'></a>  39     slw r9,r11,r6
+<a id='L40' name='L40'></a>  40     srw r12,r10,r8
+<a id='L41' name='L41'></a>  41     or  r9,r9,r12
+<a id='L42' name='L42'></a>  42     stwu    r9,-4(r7)
+<a id='L43' name='L43'></a>  43     bdz L(end2)
+<a id='L44' name='L44'></a>  44     lwzu    r11,-4(r4)
+<a id='L45' name='L45'></a>  45     slw r9,r10,r6
+<a id='L46' name='L46'></a>  46     srw r12,r11,r8
+<a id='L47' name='L47'></a>  47     or  r9,r9,r12
+<a id='L48' name='L48'></a>  48     stwu    r9,-4(r7)
+<a id='L49' name='L49'></a>  49     bdnz    L(0)
+<a id='L50' name='L50'></a>  50 
+<a id='L51' name='L51'></a>  51 L(end1):slw r0,r11,r6
+<a id='L52' name='L52'></a>  52     stw r0,-4(r7)
+<a id='L53' name='L53'></a>  53     blr
+<a id='L54' name='L54'></a>  54 
+<a id='L55' name='L55'></a>  55 
+<a id='L56' name='L56'></a>  56 <em class='comment'>/* Guaranteed not to succeed.  */</em>
+<a id='L57' name='L57'></a>  57 L(boom): tweq    r0,r0
+<a id='L58' name='L58'></a>  58 
+<a id='L59' name='L59'></a>  59 <em class='comment'>/* We imitate a case statement, by using (yuk!) fixed-length code chunks,</em>
+<a id='L60' name='L60'></a>  60 <em class='comment'>   of size 4*12 bytes.  We have to do this (or something) to make this PIC.  */</em>
+<a id='L61' name='L61'></a>  61 L(big): mflr    r9
+<a id='L62' name='L62'></a>  62     cfi_register(lr,r9)
+<a id='L63' name='L63'></a>  63     bltl-   cr0,L(boom) # Never taken, only used to set LR.
+<a id='L64' name='L64'></a>  64     slwi    r10,r6,4
+<a id='L65' name='L65'></a>  65     mflr    r12
+<a id='L66' name='L66'></a>  66     add     r10,r12,r10
+<a id='L67' name='L67'></a>  67     slwi    r8,r6,5
+<a id='L68' name='L68'></a>  68     add     r10,r8,r10
+<a id='L69' name='L69'></a>  69     mtctr   r10
+<a id='L70' name='L70'></a>  70     addi    r5,r5,-1
+<a id='L71' name='L71'></a>  71     mtlr    r9
+<a id='L72' name='L72'></a>  72     cfi_same_value (lr)
+<a id='L73' name='L73'></a>  73     bctr
+<a id='L74' name='L74'></a>  74 
+<a id='L75' name='L75'></a>  75 L(end2):slw r0,r10,r6
+<a id='L76' name='L76'></a>  76     stw r0,-4(r7)
+<a id='L77' name='L77'></a>  77     blr
+<a id='L78' name='L78'></a>  78 
+<a id='L79' name='L79'></a>  79 <em class='sharp'>#define</em> DO_LSHIFT(n) \
+<a id='L80' name='L80'></a>  80     mtctr   r5;                         \
+<a id='L81' name='L81'></a>  81 L(n):   lwzu    r10,-4(r4);                     \
+<a id='L82' name='L82'></a>  82     slwi    r9,r11,n;                       \
+<a id='L83' name='L83'></a>  83     inslwi  r9,r10,n,32-n;                  \
+<a id='L84' name='L84'></a>  84     stwu    r9,-4(r7);                      \
+<a id='L85' name='L85'></a>  85     bdz-    L(end2);                        \
+<a id='L86' name='L86'></a>  86     lwzu    r11,-4(r4);                     \
+<a id='L87' name='L87'></a>  87     slwi    r9,r10,n;                       \
+<a id='L88' name='L88'></a>  88     inslwi  r9,r11,n,32-n;                  \
+<a id='L89' name='L89'></a>  89     stwu    r9,-4(r7);                      \
+<a id='L90' name='L90'></a>  90     bdnz    L(n);                           \
+<a id='L91' name='L91'></a>  91     b   L(end1)
+<a id='L92' name='L92'></a>  92 
+<a id='L93' name='L93'></a>  93     DO_LSHIFT(1)
+<a id='L94' name='L94'></a>  94     DO_LSHIFT(2)
+<a id='L95' name='L95'></a>  95     DO_LSHIFT(3)
+<a id='L96' name='L96'></a>  96     DO_LSHIFT(4)
+<a id='L97' name='L97'></a>  97     DO_LSHIFT(5)
+<a id='L98' name='L98'></a>  98     DO_LSHIFT(6)
+<a id='L99' name='L99'></a>  99     DO_LSHIFT(7)
+<a id='L100' name='L100'></a> 100     DO_LSHIFT(8)
+<a id='L101' name='L101'></a> 101     DO_LSHIFT(9)
+<a id='L102' name='L102'></a> 102     DO_LSHIFT(10)
+<a id='L103' name='L103'></a> 103     DO_LSHIFT(11)
+<a id='L104' name='L104'></a> 104     DO_LSHIFT(12)
+<a id='L105' name='L105'></a> 105     DO_LSHIFT(13)
+<a id='L106' name='L106'></a> 106     DO_LSHIFT(14)
+<a id='L107' name='L107'></a> 107     DO_LSHIFT(15)
+<a id='L108' name='L108'></a> 108     DO_LSHIFT(16)
+<a id='L109' name='L109'></a> 109     DO_LSHIFT(17)
+<a id='L110' name='L110'></a> 110     DO_LSHIFT(18)
+<a id='L111' name='L111'></a> 111     DO_LSHIFT(19)
+<a id='L112' name='L112'></a> 112     DO_LSHIFT(20)
+<a id='L113' name='L113'></a> 113     DO_LSHIFT(21)
+<a id='L114' name='L114'></a> 114     DO_LSHIFT(22)
+<a id='L115' name='L115'></a> 115     DO_LSHIFT(23)
+<a id='L116' name='L116'></a> 116     DO_LSHIFT(24)
+<a id='L117' name='L117'></a> 117     DO_LSHIFT(25)
+<a id='L118' name='L118'></a> 118     DO_LSHIFT(26)
+<a id='L119' name='L119'></a> 119     DO_LSHIFT(27)
+<a id='L120' name='L120'></a> 120     DO_LSHIFT(28)
+<a id='L121' name='L121'></a> 121     DO_LSHIFT(29)
+<a id='L122' name='L122'></a> 122     DO_LSHIFT(30)
+<a id='L123' name='L123'></a> 123     DO_LSHIFT(31)
+<a id='L124' name='L124'></a> 124 
+<a id='L125' name='L125'></a> 125 END (__mpn_lshift)
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;][^][v]<a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

@@ -1,0 +1,169 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>iconv/gconv.h</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18880.html'>iconv</a>/gconv.h</h2>
+<em class='comment'>/* [&lt;][&gt;][^][v][top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<h2 class='header'><a href='../J/1328.html' title='Multiple included from 59 places.'>INCLUDED FROM</a></h2>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* Copyright (C) 1997-2022 Free Software Foundation, Inc.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'></em>
+<a id='L4' name='L4'></a>   4 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'></em>
+<a id='L9' name='L9'></a>   9 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'></em>
+<a id='L14' name='L14'></a>  14 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   License along with the GNU C Library; if not, see</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L17' name='L17'></a>  17 
+<a id='L18' name='L18'></a>  18 <em class='comment'>/* This header provides no interface for a user to the internals of</em>
+<a id='L19' name='L19'></a>  19 <em class='comment'>   the gconv implementation in the libc.  Therefore there is no use</em>
+<a id='L20' name='L20'></a>  20 <em class='comment'>   for these definitions beside for writing additional gconv modules.  */</em>
+<a id='L21' name='L21'></a>  21 
+<a id='L22' name='L22'></a>  22 <em class='sharp'>#ifndef</em> <a href='../S/7047.html#L23' title='Defined at 23 in iconv/gconv.h.'>_GCONV_H</a>
+<a id='L23' name='L23'></a>  23 <em class='sharp'>#define</em> <a href='../S/7047.html#L22' title='Referred from 22 in iconv/gconv.h.'>_GCONV_H</a>    1
+<a id='L24' name='L24'></a>  24 
+<a id='L25' name='L25'></a>  25 <em class='sharp'>#include</em> &lt;<a href='17866.html'>features.h</a>&gt;
+<a id='L26' name='L26'></a>  26 <em class='sharp'>#include</em> &lt;<a href='../I/1792.html'>bits/types/__mbstate_t.h</a>&gt;
+<a id='L27' name='L27'></a>  27 <em class='sharp'>#include</em> &lt;<a href='../I/1818.html'>bits/types/wint_t.h</a>&gt;
+<a id='L28' name='L28'></a>  28 
+<a id='L29' name='L29'></a>  29 <em class='sharp'>#define</em> __need_size_t
+<a id='L30' name='L30'></a>  30 <em class='sharp'>#define</em> __need_wchar_t
+<a id='L31' name='L31'></a>  31 <em class='sharp'>#include</em> &lt;stddef.h&gt;
+<a id='L32' name='L32'></a>  32 
+<a id='L33' name='L33'></a>  33 <em class='comment'>/* ISO 10646 value used to signal invalid value.  */</em>
+<a id='L34' name='L34'></a>  34 <em class='sharp'>#define</em> <a href='../R/13271.html' title='Multiple referred from 135 places.'>__UNKNOWN_10646_CHAR</a>    ((<a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a>) 0xfffd)
+<a id='L35' name='L35'></a>  35 
+<a id='L36' name='L36'></a>  36 <em class='comment'>/* Error codes for gconv functions.  */</em>
+<a id='L37' name='L37'></a>  37 <strong class='reserved'>enum</strong>
+<a id='L38' name='L38'></a>  38 <em class='brace'>{</em>
+<a id='L39' name='L39'></a>  39   <a href='../R/12677.html' title='Multiple referred from 88 places.'>__GCONV_OK</a> = 0,
+<a id='L40' name='L40'></a>  40   <a href='../R/12673.html' title='Multiple referred from 18 places.'>__GCONV_NOCONV</a>,
+<a id='L41' name='L41'></a>  41   <a href='../R/12674.html' title='Multiple referred from 3 places.'>__GCONV_NODB</a>,
+<a id='L42' name='L42'></a>  42   <a href='../R/12675.html' title='Multiple referred from 14 places.'>__GCONV_NOMEM</a>,
+<a id='L43' name='L43'></a>  43 
+<a id='L44' name='L44'></a>  44   <a href='../R/12665.html' title='Multiple referred from 55 places.'>__GCONV_EMPTY_INPUT</a>,
+<a id='L45' name='L45'></a>  45   <a href='../R/12666.html' title='Multiple referred from 254 places.'>__GCONV_FULL_OUTPUT</a>,
+<a id='L46' name='L46'></a>  46   <a href='../R/12669.html' title='Multiple referred from 151 places.'>__GCONV_ILLEGAL_INPUT</a>,
+<a id='L47' name='L47'></a>  47   <a href='../R/12670.html' title='Multiple referred from 109 places.'>__GCONV_INCOMPLETE_INPUT</a>,
+<a id='L48' name='L48'></a>  48 
+<a id='L49' name='L49'></a>  49   <a href='../R/12668.html' title='Multiple referred from 2 places.'>__GCONV_ILLEGAL_DESCRIPTOR</a>,
+<a id='L50' name='L50'></a>  50   <a href='../R/12671.html' title='Multiple referred from 2 places.'>__GCONV_INTERNAL_ERROR</a>
+<a id='L51' name='L51'></a>  51 <em class='brace'>}</em>;
+<a id='L52' name='L52'></a>  52 
+<a id='L53' name='L53'></a>  53 
+<a id='L54' name='L54'></a>  54 <em class='comment'>/* Flags the `__gconv_open' function can set.  */</em>
+<a id='L55' name='L55'></a>  55 <strong class='reserved'>enum</strong>
+<a id='L56' name='L56'></a>  56 <em class='brace'>{</em>
+<a id='L57' name='L57'></a>  57   <a href='../R/12672.html' title='Multiple referred from 23 places.'>__GCONV_IS_LAST</a> = 0x0001,
+<a id='L58' name='L58'></a>  58   <a href='../R/12667.html' title='Multiple referred from 10 places.'>__GCONV_IGNORE_ERRORS</a> = 0x0002,
+<a id='L59' name='L59'></a>  59   <a href='../R/12678.html' title='Multiple referred from 8 places.'>__GCONV_SWAP</a> = 0x0004,
+<a id='L60' name='L60'></a>  60   <a href='../R/12679.html' title='Multiple referred from 4 places.'>__GCONV_TRANSLIT</a> = 0x0008
+<a id='L61' name='L61'></a>  61 <em class='brace'>}</em>;
+<a id='L62' name='L62'></a>  62 
+<a id='L63' name='L63'></a>  63 
+<a id='L64' name='L64'></a>  64 <em class='comment'>/* Forward declarations.  */</em>
+<a id='L65' name='L65'></a>  65 <strong class='reserved'>struct</strong> <a href='../S/7047.html#L84' title='Defined at 84 in iconv/gconv.h.'>__gconv_step</a>;
+<a id='L66' name='L66'></a>  66 <strong class='reserved'>struct</strong> <a href='../S/7047.html#L116' title='Defined at 116 in iconv/gconv.h.'>__gconv_step_data</a>;
+<a id='L67' name='L67'></a>  67 <strong class='reserved'>struct</strong> <a href='../S/7062.html#L41' title='Defined at 41 in iconv/gconv_int.h.'>__gconv_loaded_object</a>;
+<a id='L68' name='L68'></a>  68 
+<a id='L69' name='L69'></a>  69 
+<a id='L70' name='L70'></a>  70 <em class='comment'>/* Type of a conversion function.  */</em>
+<a id='L71' name='L71'></a>  71 <strong class='reserved'>typedef</strong> <strong class='reserved'>int</strong> (*<a href='../Y/4695.html' title='Multiple used in 19 places.'>__gconv_fct</a>) (<strong class='reserved'>struct</strong> <a href='../S/7047.html#L84' title='Defined at 84 in iconv/gconv.h.'>__gconv_step</a> *, <strong class='reserved'>struct</strong> <a href='../S/7047.html#L116' title='Defined at 116 in iconv/gconv.h.'>__gconv_step_data</a> *,
+<a id='L72' name='L72'></a>  72                 <strong class='reserved'>const</strong> <strong class='reserved'>unsigned</strong> <strong class='reserved'>char</strong> **, <strong class='reserved'>const</strong> <strong class='reserved'>unsigned</strong> <strong class='reserved'>char</strong> *,
+<a id='L73' name='L73'></a>  73                 <strong class='reserved'>unsigned</strong> <strong class='reserved'>char</strong> **, <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> *, <strong class='reserved'>int</strong>, <strong class='reserved'>int</strong>);
+<a id='L74' name='L74'></a>  74 
+<a id='L75' name='L75'></a>  75 <em class='comment'>/* Type of a specialized conversion function for a single byte to INTERNAL.  */</em>
+<a id='L76' name='L76'></a>  76 <strong class='reserved'>typedef</strong> <a href='../D/39101.html' title='Multiple defined in 2 places.'>wint_t</a> (*<a href='../Y/4692.html' title='Multiple used in 4 places.'>__gconv_btowc_fct</a>) (<strong class='reserved'>struct</strong> <a href='../S/7047.html#L84' title='Defined at 84 in iconv/gconv.h.'>__gconv_step</a> *, <strong class='reserved'>unsigned</strong> <strong class='reserved'>char</strong>);
+<a id='L77' name='L77'></a>  77 
+<a id='L78' name='L78'></a>  78 <em class='comment'>/* Constructor and destructor for local data for conversion step.  */</em>
+<a id='L79' name='L79'></a>  79 <strong class='reserved'>typedef</strong> <strong class='reserved'>int</strong> (*<a href='../Y/4697.html' title='Multiple used in 6 places.'>__gconv_init_fct</a>) (<strong class='reserved'>struct</strong> <a href='../S/7047.html#L84' title='Defined at 84 in iconv/gconv.h.'>__gconv_step</a> *);
+<a id='L80' name='L80'></a>  80 <strong class='reserved'>typedef</strong> <strong class='reserved'>void</strong> (*<a href='../Y/4694.html' title='Multiple used in 5 places.'>__gconv_end_fct</a>) (<strong class='reserved'>struct</strong> <a href='../S/7047.html#L84' title='Defined at 84 in iconv/gconv.h.'>__gconv_step</a> *);
+<a id='L81' name='L81'></a>  81 
+<a id='L82' name='L82'></a>  82 
+<a id='L83' name='L83'></a>  83 <em class='comment'>/* Description of a conversion step.  */</em>
+<a id='L84' name='L84'></a>  84 <strong class='reserved'>struct</strong> <a href='../R/14212.html' title='Multiple referred from 116 places.'>__gconv_step</a>
+<a id='L85' name='L85'></a>  85 <em class='brace'>{</em>
+<a id='L86' name='L86'></a>  86   <strong class='reserved'>struct</strong> <a href='../S/7062.html#L41' title='Defined at 41 in iconv/gconv_int.h.'>__gconv_loaded_object</a> *<a href='../Y/7425.html' title='Multiple used in 38 places.'>__shlib_handle</a>;
+<a id='L87' name='L87'></a>  87   <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../Y/5938.html' title='Multiple used in 8 places.'>__modname</a>;
+<a id='L88' name='L88'></a>  88 
+<a id='L89' name='L89'></a>  89   <em class='comment'>/* For internal use by glibc.  (Accesses to this member must occur</em>
+<a id='L90' name='L90'></a>  90 <em class='comment'>     when the internal __gconv_lock mutex is acquired).  */</em>
+<a id='L91' name='L91'></a>  91   <strong class='reserved'>int</strong> <a href='../Y/4090.html' title='Multiple used in 15 places.'>__counter</a>;
+<a id='L92' name='L92'></a>  92 
+<a id='L93' name='L93'></a>  93   <strong class='reserved'>char</strong> *<a href='../Y/4592.html' title='Multiple used in 30 places.'>__from_name</a>;
+<a id='L94' name='L94'></a>  94   <strong class='reserved'>char</strong> *<a href='../Y/8185.html' title='Multiple used in 35 places.'>__to_name</a>;
+<a id='L95' name='L95'></a>  95 
+<a id='L96' name='L96'></a>  96   <a href='../Y/4695.html' title='Multiple used in 19 places.'>__gconv_fct</a> <a href='../Y/4425.html' title='Multiple used in 28 places.'>__fct</a>;
+<a id='L97' name='L97'></a>  97   <a href='../Y/4692.html' title='Multiple used in 4 places.'>__gconv_btowc_fct</a> <a href='../Y/3703.html' title='Multiple used in 12 places.'>__btowc_fct</a>;
+<a id='L98' name='L98'></a>  98   <a href='../Y/4697.html' title='Multiple used in 6 places.'>__gconv_init_fct</a> <a href='../Y/5148.html' title='Multiple used in 10 places.'>__init_fct</a>;
+<a id='L99' name='L99'></a>  99   <a href='../Y/4694.html' title='Multiple used in 5 places.'>__gconv_end_fct</a> <a href='../Y/4311.html' title='Multiple used in 12 places.'>__end_fct</a>;
+<a id='L100' name='L100'></a> 100 
+<a id='L101' name='L101'></a> 101   <em class='comment'>/* Information about the number of bytes needed or produced in this</em>
+<a id='L102' name='L102'></a> 102 <em class='comment'>     step.  This helps optimizing the buffer sizes.  */</em>
+<a id='L103' name='L103'></a> 103   <strong class='reserved'>int</strong> <a href='../Y/5908.html' title='Multiple used in 25 places.'>__min_needed_from</a>;
+<a id='L104' name='L104'></a> 104   <strong class='reserved'>int</strong> <a href='../Y/5625.html' title='Multiple used in 23 places.'>__max_needed_from</a>;
+<a id='L105' name='L105'></a> 105   <strong class='reserved'>int</strong> <a href='../Y/5909.html' title='Multiple used in 22 places.'>__min_needed_to</a>;
+<a id='L106' name='L106'></a> 106   <strong class='reserved'>int</strong> <a href='../Y/5626.html' title='Multiple used in 23 places.'>__max_needed_to</a>;
+<a id='L107' name='L107'></a> 107 
+<a id='L108' name='L108'></a> 108   <em class='comment'>/* Flag whether this is a stateful encoding or not.  */</em>
+<a id='L109' name='L109'></a> 109   <strong class='reserved'>int</strong> <a href='../Y/7589.html' title='Multiple used in 19 places.'>__stateful</a>;
+<a id='L110' name='L110'></a> 110 
+<a id='L111' name='L111'></a> 111   <strong class='reserved'>void</strong> *<a href='../Y/4155.html' title='Multiple used in 633 places.'>__data</a>;     <em class='comment'>/* Pointer to step-local data.  */</em>
+<a id='L112' name='L112'></a> 112 <em class='brace'>}</em>;
+<a id='L113' name='L113'></a> 113 
+<a id='L114' name='L114'></a> 114 <em class='comment'>/* Additional data for steps in use of conversion descriptor.  This is</em>
+<a id='L115' name='L115'></a> 115 <em class='comment'>   allocated by the `init' function.  */</em>
+<a id='L116' name='L116'></a> 116 <strong class='reserved'>struct</strong> <a href='../R/14213.html' title='Multiple referred from 41 places.'>__gconv_step_data</a>
+<a id='L117' name='L117'></a> 117 <em class='brace'>{</em>
+<a id='L118' name='L118'></a> 118   <strong class='reserved'>unsigned</strong> <strong class='reserved'>char</strong> *<a href='../Y/6434.html' title='Multiple used in 61 places.'>__outbuf</a>;    <em class='comment'>/* Output buffer for this step.  */</em>
+<a id='L119' name='L119'></a> 119   <strong class='reserved'>unsigned</strong> <strong class='reserved'>char</strong> *<a href='../Y/6435.html' title='Multiple used in 22 places.'>__outbufend</a>; <em class='comment'>/* Address of first byte after the output</em>
+<a id='L120' name='L120'></a> 120 <em class='comment'>                 buffer.  */</em>
+<a id='L121' name='L121'></a> 121 
+<a id='L122' name='L122'></a> 122   <em class='comment'>/* Is this the last module in the chain.  */</em>
+<a id='L123' name='L123'></a> 123   <strong class='reserved'>int</strong> <a href='../Y/4502.html' title='Multiple used in 335 places.'>__flags</a>;
+<a id='L124' name='L124'></a> 124 
+<a id='L125' name='L125'></a> 125   <em class='comment'>/* Counter for number of invocations of the module function for this</em>
+<a id='L126' name='L126'></a> 126 <em class='comment'>     descriptor.  */</em>
+<a id='L127' name='L127'></a> 127   <strong class='reserved'>int</strong> <a href='../Y/5182.html' title='Multiple used in 28 places.'>__invocation_counter</a>;
+<a id='L128' name='L128'></a> 128 
+<a id='L129' name='L129'></a> 129   <em class='comment'>/* Flag whether this is an internal use of the module (in the mb*towc*</em>
+<a id='L130' name='L130'></a> 130 <em class='comment'>     and wc*tomb* functions) or regular with iconv(3).  */</em>
+<a id='L131' name='L131'></a> 131   <strong class='reserved'>int</strong> <a href='../Y/5176.html' title='Multiple used in 22 places.'>__internal_use</a>;
+<a id='L132' name='L132'></a> 132 
+<a id='L133' name='L133'></a> 133   <a href='../S/4096.html#L21' title='Defined at 21 in wcsmbs/bits/types/__mbstate_t.h.'>__mbstate_t</a> *<a href='../Y/7591.html' title='Multiple used in 152 places.'>__statep</a>;
+<a id='L134' name='L134'></a> 134   <a href='../S/4096.html#L21' title='Defined at 21 in wcsmbs/bits/types/__mbstate_t.h.'>__mbstate_t</a> <a href='../Y/7587.html' title='Multiple used in 29 places.'>__state</a>;  <em class='comment'>/* This element must not be used directly by</em>
+<a id='L135' name='L135'></a> 135 <em class='comment'>               any module; always use STATEP!  */</em>
+<a id='L136' name='L136'></a> 136 <em class='brace'>}</em>;
+<a id='L137' name='L137'></a> 137 
+<a id='L138' name='L138'></a> 138 
+<a id='L139' name='L139'></a> 139 <em class='comment'>/* Combine conversion step description with data.  */</em>
+<a id='L140' name='L140'></a> 140 <strong class='reserved'>typedef</strong> <strong class='reserved'>struct</strong> <a href='../S/7060.html#L77' title='Referred from 77 in iconv/gconv_open.c.'>__gconv_info</a>
+<a id='L141' name='L141'></a> 141 <em class='brace'>{</em>
+<a id='L142' name='L142'></a> 142   <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/6261.html' title='Multiple used in 4 places.'>__nsteps</a>;
+<a id='L143' name='L143'></a> 143   <strong class='reserved'>struct</strong> <a href='../S/7047.html#L84' title='Defined at 84 in iconv/gconv.h.'>__gconv_step</a> *<a href='../Y/7604.html' title='Multiple used in 8 places.'>__steps</a>;
+<a id='L144' name='L144'></a> 144   <strong class='reserved'>__extension__</strong> <strong class='reserved'>struct</strong> <a href='../S/7047.html#L116' title='Defined at 116 in iconv/gconv.h.'>__gconv_step_data</a> <a href='../Y/4155.html' title='Multiple used in 633 places.'>__data</a>[0];
+<a id='L145' name='L145'></a> 145 <em class='brace'>}</em> *<a href='../R/14214.html' title='Multiple referred from 18 places.'>__gconv_t</a>;
+<a id='L146' name='L146'></a> 146 
+<a id='L147' name='L147'></a> 147 <em class='sharp'>#endif</em> <em class='comment'>/* gconv.h */</em>
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;][^][v]<a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

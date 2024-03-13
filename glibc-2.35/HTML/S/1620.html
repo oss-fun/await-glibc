@@ -1,0 +1,345 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>nscd/nscd_conf.c</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18933.html'>nscd</a>/nscd_conf.c</h2>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L47'>[^]</a><a href='#L58'>[v]</a>[top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<h2 class='header'>DEFINITIONS</h2>
+This source file includes following definitions.
+<ol>
+<li><a href='#L47' title='Defined at 47.'>find_db</a></li>
+<li><a href='#L58' title='Defined at 58.'>nscd_parse_file</a></li>
+</ol>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* Copyright (c) 1998-2022 Free Software Foundation, Inc.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'></em>
+<a id='L4' name='L4'></a>   4 <em class='comment'>   This program is free software; you can redistribute it and/or modify</em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   it under the terms of the GNU General Public License as published</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   by the Free Software Foundation; version 2 of the License, or</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   (at your option) any later version.</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'></em>
+<a id='L9' name='L9'></a>   9 <em class='comment'>   This program is distributed in the hope that it will be useful,</em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   GNU General Public License for more details.</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'></em>
+<a id='L14' name='L14'></a>  14 <em class='comment'>   You should have received a copy of the GNU General Public License</em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   along with this program; if not, see &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L16' name='L16'></a>  16 
+<a id='L17' name='L17'></a>  17 <em class='sharp'>#include</em> &lt;<a href='../I/252.html'>ctype.h</a>&gt;
+<a id='L18' name='L18'></a>  18 <em class='sharp'>#include</em> &lt;<a href='../I/116.html'>errno.h</a>&gt;
+<a id='L19' name='L19'></a>  19 <em class='sharp'>#include</em> &lt;<a href='../I/1753.html'>error.h</a>&gt;
+<a id='L20' name='L20'></a>  20 <em class='sharp'>#include</em> &lt;<a href='../I/1881.html'>libintl.h</a>&gt;
+<a id='L21' name='L21'></a>  21 <em class='sharp'>#include</em> &lt;<a href='../I/1888.html'>malloc.h</a>&gt;
+<a id='L22' name='L22'></a>  22 <em class='sharp'>#include</em> &lt;<a href='../I/1921.html'>pwd.h</a>&gt;
+<a id='L23' name='L23'></a>  23 <em class='sharp'>#include</em> &lt;<a href='../I/1776.html'>stdio.h</a>&gt;
+<a id='L24' name='L24'></a>  24 <em class='sharp'>#include</em> &lt;<a href='../I/1971.html'>stdio_ext.h</a>&gt;
+<a id='L25' name='L25'></a>  25 <em class='sharp'>#include</em> &lt;<a href='../I/1780.html'>stdlib.h</a>&gt;
+<a id='L26' name='L26'></a>  26 <em class='sharp'>#include</em> &lt;<a href='../I/1973.html'>string.h</a>&gt;
+<a id='L27' name='L27'></a>  27 <em class='sharp'>#include</em> &lt;<a href='../I/1819.html'>unistd.h</a>&gt;
+<a id='L28' name='L28'></a>  28 <em class='sharp'>#include</em> &lt;<a href='../I/144.html'>sys/param.h</a>&gt;
+<a id='L29' name='L29'></a>  29 <em class='sharp'>#include</em> &lt;<a href='../I/1786.html'>sys/types.h</a>&gt;
+<a id='L30' name='L30'></a>  30 
+<a id='L31' name='L31'></a>  31 <em class='sharp'>#include</em> "<a href='1636.html'>dbg_log.h</a>"
+<a id='L32' name='L32'></a>  32 <em class='sharp'>#include</em> "<a href='1637.html'>nscd.h</a>"
+<a id='L33' name='L33'></a>  33 
+<a id='L34' name='L34'></a>  34 
+<a id='L35' name='L35'></a>  35 <em class='comment'>/* Names of the databases.  */</em>
+<a id='L36' name='L36'></a>  36 <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<strong class='reserved'>const</strong> <a href='../Y/12524.html' title='Multiple used in 17 places.'>dbnames</a>[<a href='../S/1637.html#L40' title='Defined at 40 in nscd/nscd.h.'>lastdb</a>] =
+<a id='L37' name='L37'></a>  37 <em class='brace'>{</em>
+<a id='L38' name='L38'></a>  38   [<a href='../S/1637.html#L35' title='Defined at 35 in nscd/nscd.h.'>pwddb</a>] = "passwd",
+<a id='L39' name='L39'></a>  39   [<a href='../S/1637.html#L36' title='Defined at 36 in nscd/nscd.h.'>grpdb</a>] = "group",
+<a id='L40' name='L40'></a>  40   [<a href='../S/1637.html#L37' title='Defined at 37 in nscd/nscd.h.'>hstdb</a>] = "hosts",
+<a id='L41' name='L41'></a>  41   [<a href='../S/1637.html#L38' title='Defined at 38 in nscd/nscd.h.'>servdb</a>] = "services",
+<a id='L42' name='L42'></a>  42   [<a href='../S/1637.html#L39' title='Defined at 39 in nscd/nscd.h.'>netgrdb</a>] = "netgroup"
+<a id='L43' name='L43'></a>  43 <em class='brace'>}</em>;
+<a id='L44' name='L44'></a>  44 
+<a id='L45' name='L45'></a>  45 
+<a id='L46' name='L46'></a>  46 <strong class='reserved'>static</strong> <strong class='reserved'>int</strong>
+<a id='L47' name='L47'></a>  47 <a href='../R/19453.html' title='Multiple referred from 9 places.'>find_db</a> (<strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../D/33817.html' title='Multiple defined in 21 places.'>name</a>)
+<a id='L48' name='L48'></a>  48 <em class='brace'>{</em>
+<a id='L49' name='L49'></a>  49   <strong class='reserved'>for</strong> (<strong class='reserved'>int</strong> <a href='../D/28982.html' title='Multiple defined in 8 places.'>cnt</a> = 0; <a href='../D/28982.html' title='Multiple defined in 8 places.'>cnt</a> &lt; <a href='../S/1637.html#L40' title='Defined at 40 in nscd/nscd.h.'>lastdb</a>; ++<a href='../D/28982.html' title='Multiple defined in 8 places.'>cnt</a>)
+<a id='L50' name='L50'></a>  50     <strong class='reserved'>if</strong> (<a href='../D/37067.html' title='Multiple defined in 17 places.'>strcmp</a> (<a href='../D/33817.html' title='Multiple defined in 21 places.'>name</a>, <a href='../Y/12524.html' title='Multiple used in 17 places.'>dbnames</a>[<a href='../D/28982.html' title='Multiple defined in 8 places.'>cnt</a>]) == 0)
+<a id='L51' name='L51'></a>  51       <strong class='reserved'>return</strong> <a href='../D/28982.html' title='Multiple defined in 8 places.'>cnt</a>;
+<a id='L52' name='L52'></a>  52 
+<a id='L53' name='L53'></a>  53   <a href='../D/30024.html' title='Multiple defined in 4 places.'>error</a> (0, 0, <a href='../D/17731.html' title='Multiple defined in 12 places.'>_</a>("database %s is not supported"), <a href='../D/33817.html' title='Multiple defined in 21 places.'>name</a>);
+<a id='L54' name='L54'></a>  54   <strong class='reserved'>return</strong> -1;
+<a id='L55' name='L55'></a>  55 <em class='brace'>}</em>
+<a id='L56' name='L56'></a>  56 
+<a id='L57' name='L57'></a>  57 <strong class='reserved'>int</strong>
+<a id='L58' name='L58'></a>  58 <a href='../R/22505.html' title='Multiple referred from 2 places.'>nscd_parse_file</a> (<strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../Y/14738.html' title='Multiple used in 494 places.'>fname</a>, <strong class='reserved'>struct</strong> <a href='../S/1637.html#L126' title='Defined at 126 in nscd/nscd.h.'>database_dyn</a> <a href='../Y/12527.html' title='Multiple used in 236 places.'>dbs</a>[<a href='../S/1637.html#L40' title='Defined at 40 in nscd/nscd.h.'>lastdb</a>])
+<a id='L59' name='L59'></a>  59 <em class='brace'>{</em>
+<a id='L60' name='L60'></a>  60   <a href='../S/5474.html#L7' title='Defined at 7 in libio/bits/types/FILE.h.'>FILE</a> *<a href='../D/30705.html' title='Multiple defined in 2 places.'>fp</a>;
+<a id='L61' name='L61'></a>  61   <strong class='reserved'>char</strong> *<a href='../Y/18209.html' title='Multiple used in 710 places.'>line</a>, *<a href='../Y/12086.html' title='Multiple used in 2816 places.'>cp</a>, *<a href='../D/29966.html' title='Multiple defined in 3 places.'>entry</a>, *<a href='../Y/10328.html' title='Multiple used in 313 places.'>arg1</a>, *<a href='../Y/10331.html' title='Multiple used in 253 places.'>arg2</a>;
+<a id='L62' name='L62'></a>  62   <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../D/32598.html' title='Multiple defined in 10 places.'>len</a>;
+<a id='L63' name='L63'></a>  63   <strong class='reserved'>int</strong> <a href='../D/28982.html' title='Multiple defined in 8 places.'>cnt</a>;
+<a id='L64' name='L64'></a>  64   <strong class='reserved'>const</strong> <strong class='reserved'>unsigned</strong> <strong class='reserved'>int</strong> <a href='../Y/16845.html' title='Multiple used in 2 places.'>initial_error_message_count</a> = <a href='../Y/13939.html' title='Multiple used in 7 places.'>error_message_count</a>;
+<a id='L65' name='L65'></a>  65 
+<a id='L66' name='L66'></a>  66   <em class='comment'>/* Open the configuration file.  */</em>
+<a id='L67' name='L67'></a>  67   <a href='../D/30705.html' title='Multiple defined in 2 places.'>fp</a> = <a href='../D/30674.html' title='Multiple defined in 2 places.'>fopen</a> (<a href='../Y/14738.html' title='Multiple used in 494 places.'>fname</a>, "r");
+<a id='L68' name='L68'></a>  68   <strong class='reserved'>if</strong> (<a href='../D/30705.html' title='Multiple defined in 2 places.'>fp</a> == <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>)
+<a id='L69' name='L69'></a>  69     <strong class='reserved'>return</strong> -1;
+<a id='L70' name='L70'></a>  70 
+<a id='L71' name='L71'></a>  71   <em class='comment'>/* The stream is not used by more than one thread.  */</em>
+<a id='L72' name='L72'></a>  72   (<strong class='reserved'>void</strong>) <a href='../D/23993.html' title='Multiple defined in 3 places.'>__fsetlocking</a> (<a href='../D/30705.html' title='Multiple defined in 2 places.'>fp</a>, <a href='../D/4732.html' title='Multiple defined in 3 places.'>FSETLOCKING_BYCALLER</a>);
+<a id='L73' name='L73'></a>  73 
+<a id='L74' name='L74'></a>  74   <a href='../Y/18209.html' title='Multiple used in 710 places.'>line</a> = <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>;
+<a id='L75' name='L75'></a>  75   <a href='../D/32598.html' title='Multiple defined in 10 places.'>len</a> = 0;
+<a id='L76' name='L76'></a>  76 
+<a id='L77' name='L77'></a>  77   <strong class='reserved'>do</strong>
+<a id='L78' name='L78'></a>  78     <em class='brace'>{</em>
+<a id='L79' name='L79'></a>  79       <a href='../D/36972.html' title='Multiple defined in 5 places.'>ssize_t</a> <a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a> = <a href='../S/5468.html#L118' title='Defined at 118 in libio/bits/stdio.h.'>getline</a> (&amp;<a href='../Y/18209.html' title='Multiple used in 710 places.'>line</a>, &amp;<a href='../D/32598.html' title='Multiple defined in 10 places.'>len</a>, <a href='../D/30705.html' title='Multiple defined in 2 places.'>fp</a>);
+<a id='L80' name='L80'></a>  80       <strong class='reserved'>if</strong> (<a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a> &lt; 0)
+<a id='L81' name='L81'></a>  81     <strong class='reserved'>break</strong>;
+<a id='L82' name='L82'></a>  82       <strong class='reserved'>if</strong> (<a href='../Y/18209.html' title='Multiple used in 710 places.'>line</a>[<a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a> - 1] == '\n')
+<a id='L83' name='L83'></a>  83     <a href='../Y/18209.html' title='Multiple used in 710 places.'>line</a>[<a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a> - 1] = '\0';
+<a id='L84' name='L84'></a>  84 
+<a id='L85' name='L85'></a>  85       <em class='comment'>/* Because the file format does not know any form of quoting we</em>
+<a id='L86' name='L86'></a>  86 <em class='comment'>     can search forward for the next '#' character and if found</em>
+<a id='L87' name='L87'></a>  87 <em class='comment'>     make it terminating the line.  */</em>
+<a id='L88' name='L88'></a>  88       *<a href='../D/37066.html' title='Multiple defined in 3 places.'>strchrnul</a> (<a href='../Y/18209.html' title='Multiple used in 710 places.'>line</a>, '#') = '\0';
+<a id='L89' name='L89'></a>  89 
+<a id='L90' name='L90'></a>  90       <em class='comment'>/* If the line is blank it is ignored.  */</em>
+<a id='L91' name='L91'></a>  91       <strong class='reserved'>if</strong> (<a href='../Y/18209.html' title='Multiple used in 710 places.'>line</a>[0] == '\0')
+<a id='L92' name='L92'></a>  92     <strong class='reserved'>continue</strong>;
+<a id='L93' name='L93'></a>  93 
+<a id='L94' name='L94'></a>  94       <a href='../D/29966.html' title='Multiple defined in 3 places.'>entry</a> = <a href='../Y/18209.html' title='Multiple used in 710 places.'>line</a>;
+<a id='L95' name='L95'></a>  95       <strong class='reserved'>while</strong> (<a href='../D/32363.html' title='Multiple defined in 3 places.'>isspace</a> (*<a href='../D/29966.html' title='Multiple defined in 3 places.'>entry</a>) &amp;&amp; *<a href='../D/29966.html' title='Multiple defined in 3 places.'>entry</a> != '\0')
+<a id='L96' name='L96'></a>  96     ++<a href='../D/29966.html' title='Multiple defined in 3 places.'>entry</a>;
+<a id='L97' name='L97'></a>  97       <a href='../Y/12086.html' title='Multiple used in 2816 places.'>cp</a> = <a href='../D/29966.html' title='Multiple defined in 3 places.'>entry</a>;
+<a id='L98' name='L98'></a>  98       <strong class='reserved'>while</strong> (!<a href='../D/32363.html' title='Multiple defined in 3 places.'>isspace</a> (*<a href='../Y/12086.html' title='Multiple used in 2816 places.'>cp</a>) &amp;&amp; *<a href='../Y/12086.html' title='Multiple used in 2816 places.'>cp</a> != '\0')
+<a id='L99' name='L99'></a>  99     ++<a href='../Y/12086.html' title='Multiple used in 2816 places.'>cp</a>;
+<a id='L100' name='L100'></a> 100       <a href='../Y/10328.html' title='Multiple used in 313 places.'>arg1</a> = <a href='../Y/12086.html' title='Multiple used in 2816 places.'>cp</a>;
+<a id='L101' name='L101'></a> 101       ++<a href='../Y/10328.html' title='Multiple used in 313 places.'>arg1</a>;
+<a id='L102' name='L102'></a> 102       *<a href='../Y/12086.html' title='Multiple used in 2816 places.'>cp</a> = '\0';
+<a id='L103' name='L103'></a> 103       <strong class='reserved'>if</strong> (<a href='../D/37108.html' title='Multiple defined in 42 places.'>strlen</a> (<a href='../D/29966.html' title='Multiple defined in 3 places.'>entry</a>) == 0)
+<a id='L104' name='L104'></a> 104     <a href='../D/30024.html' title='Multiple defined in 4 places.'>error</a> (0, 0, <a href='../D/17731.html' title='Multiple defined in 12 places.'>_</a>("Parse error: %s"), <a href='../Y/18209.html' title='Multiple used in 710 places.'>line</a>);
+<a id='L105' name='L105'></a> 105       <strong class='reserved'>while</strong> (<a href='../D/32363.html' title='Multiple defined in 3 places.'>isspace</a> (*<a href='../Y/10328.html' title='Multiple used in 313 places.'>arg1</a>) &amp;&amp; *<a href='../Y/10328.html' title='Multiple used in 313 places.'>arg1</a> != '\0')
+<a id='L106' name='L106'></a> 106     ++<a href='../Y/10328.html' title='Multiple used in 313 places.'>arg1</a>;
+<a id='L107' name='L107'></a> 107       <a href='../Y/12086.html' title='Multiple used in 2816 places.'>cp</a> = <a href='../Y/10328.html' title='Multiple used in 313 places.'>arg1</a>;
+<a id='L108' name='L108'></a> 108       <strong class='reserved'>while</strong> (!<a href='../D/32363.html' title='Multiple defined in 3 places.'>isspace</a> (*<a href='../Y/12086.html' title='Multiple used in 2816 places.'>cp</a>) &amp;&amp; *<a href='../Y/12086.html' title='Multiple used in 2816 places.'>cp</a> != '\0')
+<a id='L109' name='L109'></a> 109     ++<a href='../Y/12086.html' title='Multiple used in 2816 places.'>cp</a>;
+<a id='L110' name='L110'></a> 110       <a href='../Y/10331.html' title='Multiple used in 253 places.'>arg2</a> = <a href='../Y/12086.html' title='Multiple used in 2816 places.'>cp</a>;
+<a id='L111' name='L111'></a> 111       ++<a href='../Y/10331.html' title='Multiple used in 253 places.'>arg2</a>;
+<a id='L112' name='L112'></a> 112       *<a href='../Y/12086.html' title='Multiple used in 2816 places.'>cp</a> = '\0';
+<a id='L113' name='L113'></a> 113       <strong class='reserved'>if</strong> (<a href='../D/37108.html' title='Multiple defined in 42 places.'>strlen</a> (<a href='../Y/10331.html' title='Multiple used in 253 places.'>arg2</a>) &gt; 0)
+<a id='L114' name='L114'></a> 114     <em class='brace'>{</em>
+<a id='L115' name='L115'></a> 115       <strong class='reserved'>while</strong> (<a href='../D/32363.html' title='Multiple defined in 3 places.'>isspace</a> (*<a href='../Y/10331.html' title='Multiple used in 253 places.'>arg2</a>) &amp;&amp; *<a href='../Y/10331.html' title='Multiple used in 253 places.'>arg2</a> != '\0')
+<a id='L116' name='L116'></a> 116         ++<a href='../Y/10331.html' title='Multiple used in 253 places.'>arg2</a>;
+<a id='L117' name='L117'></a> 117       <a href='../Y/12086.html' title='Multiple used in 2816 places.'>cp</a> = <a href='../Y/10331.html' title='Multiple used in 253 places.'>arg2</a>;
+<a id='L118' name='L118'></a> 118       <strong class='reserved'>while</strong> (!<a href='../D/32363.html' title='Multiple defined in 3 places.'>isspace</a> (*<a href='../Y/12086.html' title='Multiple used in 2816 places.'>cp</a>) &amp;&amp; *<a href='../Y/12086.html' title='Multiple used in 2816 places.'>cp</a> != '\0')
+<a id='L119' name='L119'></a> 119         ++<a href='../Y/12086.html' title='Multiple used in 2816 places.'>cp</a>;
+<a id='L120' name='L120'></a> 120       *<a href='../Y/12086.html' title='Multiple used in 2816 places.'>cp</a> = '\0';
+<a id='L121' name='L121'></a> 121     <em class='brace'>}</em>
+<a id='L122' name='L122'></a> 122 
+<a id='L123' name='L123'></a> 123       <strong class='reserved'>if</strong> (<a href='../D/37067.html' title='Multiple defined in 17 places.'>strcmp</a> (<a href='../D/29966.html' title='Multiple defined in 3 places.'>entry</a>, "positive-time-to-live") == 0)
+<a id='L124' name='L124'></a> 124     <em class='brace'>{</em>
+<a id='L125' name='L125'></a> 125       <strong class='reserved'>int</strong> <a href='../Y/16490.html' title='Multiple used in 24848 places.'>idx</a> = <a href='../S/1620.html#L47' title='Defined at 47 in nscd/nscd_conf.c.'>find_db</a> (<a href='../Y/10328.html' title='Multiple used in 313 places.'>arg1</a>);
+<a id='L126' name='L126'></a> 126       <strong class='reserved'>if</strong> (<a href='../Y/16490.html' title='Multiple used in 24848 places.'>idx</a> &gt;= 0)
+<a id='L127' name='L127'></a> 127         <a href='../Y/12527.html' title='Multiple used in 236 places.'>dbs</a>[<a href='../Y/16490.html' title='Multiple used in 24848 places.'>idx</a>].<a href='../Y/22595.html' title='Multiple used in 21 places.'>postimeout</a> = <a href='../D/27886.html' title='Multiple defined in 2 places.'>atol</a> (<a href='../Y/10331.html' title='Multiple used in 253 places.'>arg2</a>);
+<a id='L128' name='L128'></a> 128     <em class='brace'>}</em>
+<a id='L129' name='L129'></a> 129       <strong class='reserved'>else</strong> <strong class='reserved'>if</strong> (<a href='../D/37067.html' title='Multiple defined in 17 places.'>strcmp</a> (<a href='../D/29966.html' title='Multiple defined in 3 places.'>entry</a>, "negative-time-to-live") == 0)
+<a id='L130' name='L130'></a> 130     <em class='brace'>{</em>
+<a id='L131' name='L131'></a> 131       <strong class='reserved'>int</strong> <a href='../Y/16490.html' title='Multiple used in 24848 places.'>idx</a> = <a href='../S/1620.html#L47' title='Defined at 47 in nscd/nscd_conf.c.'>find_db</a> (<a href='../Y/10328.html' title='Multiple used in 313 places.'>arg1</a>);
+<a id='L132' name='L132'></a> 132       <strong class='reserved'>if</strong> (<a href='../Y/16490.html' title='Multiple used in 24848 places.'>idx</a> &gt;= 0)
+<a id='L133' name='L133'></a> 133         <a href='../Y/12527.html' title='Multiple used in 236 places.'>dbs</a>[<a href='../Y/16490.html' title='Multiple used in 24848 places.'>idx</a>].<a href='../Y/20388.html' title='Multiple used in 24 places.'>negtimeout</a> = <a href='../D/27886.html' title='Multiple defined in 2 places.'>atol</a> (<a href='../Y/10331.html' title='Multiple used in 253 places.'>arg2</a>);
+<a id='L134' name='L134'></a> 134     <em class='brace'>}</em>
+<a id='L135' name='L135'></a> 135       <strong class='reserved'>else</strong> <strong class='reserved'>if</strong> (<a href='../D/37067.html' title='Multiple defined in 17 places.'>strcmp</a> (<a href='../D/29966.html' title='Multiple defined in 3 places.'>entry</a>, "suggested-size") == 0)
+<a id='L136' name='L136'></a> 136     <em class='brace'>{</em>
+<a id='L137' name='L137'></a> 137       <strong class='reserved'>int</strong> <a href='../Y/16490.html' title='Multiple used in 24848 places.'>idx</a> = <a href='../S/1620.html#L47' title='Defined at 47 in nscd/nscd_conf.c.'>find_db</a> (<a href='../Y/10328.html' title='Multiple used in 313 places.'>arg1</a>);
+<a id='L138' name='L138'></a> 138       <strong class='reserved'>if</strong> (<a href='../Y/16490.html' title='Multiple used in 24848 places.'>idx</a> &gt;= 0)
+<a id='L139' name='L139'></a> 139         <a href='../Y/12527.html' title='Multiple used in 236 places.'>dbs</a>[<a href='../Y/16490.html' title='Multiple used in 24848 places.'>idx</a>].<a href='../Y/26472.html' title='Multiple used in 18 places.'>suggested_module</a>
+<a id='L140' name='L140'></a> 140           = <a href='../D/27886.html' title='Multiple defined in 2 places.'>atol</a> (<a href='../Y/10331.html' title='Multiple used in 253 places.'>arg2</a>) ?: <a href='../S/1637.html#L184' title='Defined at 184 in nscd/nscd.h.'>DEFAULT_SUGGESTED_MODULE</a>;
+<a id='L141' name='L141'></a> 141     <em class='brace'>}</em>
+<a id='L142' name='L142'></a> 142       <strong class='reserved'>else</strong> <strong class='reserved'>if</strong> (<a href='../D/37067.html' title='Multiple defined in 17 places.'>strcmp</a> (<a href='../D/29966.html' title='Multiple defined in 3 places.'>entry</a>, "enable-cache") == 0)
+<a id='L143' name='L143'></a> 143     <em class='brace'>{</em>
+<a id='L144' name='L144'></a> 144       <strong class='reserved'>int</strong> <a href='../Y/16490.html' title='Multiple used in 24848 places.'>idx</a> = <a href='../S/1620.html#L47' title='Defined at 47 in nscd/nscd_conf.c.'>find_db</a> (<a href='../Y/10328.html' title='Multiple used in 313 places.'>arg1</a>);
+<a id='L145' name='L145'></a> 145       <strong class='reserved'>if</strong> (<a href='../Y/16490.html' title='Multiple used in 24848 places.'>idx</a> &gt;= 0)
+<a id='L146' name='L146'></a> 146         <em class='brace'>{</em>
+<a id='L147' name='L147'></a> 147           <strong class='reserved'>if</strong> (<a href='../D/37067.html' title='Multiple defined in 17 places.'>strcmp</a> (<a href='../Y/10331.html' title='Multiple used in 253 places.'>arg2</a>, "no") == 0)
+<a id='L148' name='L148'></a> 148         <a href='../Y/12527.html' title='Multiple used in 236 places.'>dbs</a>[<a href='../Y/16490.html' title='Multiple used in 24848 places.'>idx</a>].<a href='../Y/13692.html' title='Multiple used in 34 places.'>enabled</a> = 0;
+<a id='L149' name='L149'></a> 149           <strong class='reserved'>else</strong> <strong class='reserved'>if</strong> (<a href='../D/37067.html' title='Multiple defined in 17 places.'>strcmp</a> (<a href='../Y/10331.html' title='Multiple used in 253 places.'>arg2</a>, "yes") == 0)
+<a id='L150' name='L150'></a> 150         <a href='../Y/12527.html' title='Multiple used in 236 places.'>dbs</a>[<a href='../Y/16490.html' title='Multiple used in 24848 places.'>idx</a>].<a href='../Y/13692.html' title='Multiple used in 34 places.'>enabled</a> = 1;
+<a id='L151' name='L151'></a> 151         <em class='brace'>}</em>
+<a id='L152' name='L152'></a> 152     <em class='brace'>}</em>
+<a id='L153' name='L153'></a> 153       <strong class='reserved'>else</strong> <strong class='reserved'>if</strong> (<a href='../D/37067.html' title='Multiple defined in 17 places.'>strcmp</a> (<a href='../D/29966.html' title='Multiple defined in 3 places.'>entry</a>, "check-files") == 0)
+<a id='L154' name='L154'></a> 154     <em class='brace'>{</em>
+<a id='L155' name='L155'></a> 155       <strong class='reserved'>int</strong> <a href='../Y/16490.html' title='Multiple used in 24848 places.'>idx</a> = <a href='../S/1620.html#L47' title='Defined at 47 in nscd/nscd_conf.c.'>find_db</a> (<a href='../Y/10328.html' title='Multiple used in 313 places.'>arg1</a>);
+<a id='L156' name='L156'></a> 156       <strong class='reserved'>if</strong> (<a href='../Y/16490.html' title='Multiple used in 24848 places.'>idx</a> &gt;= 0)
+<a id='L157' name='L157'></a> 157         <em class='brace'>{</em>
+<a id='L158' name='L158'></a> 158           <strong class='reserved'>if</strong> (<a href='../D/37067.html' title='Multiple defined in 17 places.'>strcmp</a> (<a href='../Y/10331.html' title='Multiple used in 253 places.'>arg2</a>, "no") == 0)
+<a id='L159' name='L159'></a> 159         <a href='../Y/12527.html' title='Multiple used in 236 places.'>dbs</a>[<a href='../Y/16490.html' title='Multiple used in 24848 places.'>idx</a>].<a href='../S/1660.html#L1796' title='Defined at 1796 in nscd/connections.c.'>check_file</a> = 0;
+<a id='L160' name='L160'></a> 160           <strong class='reserved'>else</strong> <strong class='reserved'>if</strong> (<a href='../D/37067.html' title='Multiple defined in 17 places.'>strcmp</a> (<a href='../Y/10331.html' title='Multiple used in 253 places.'>arg2</a>, "yes") == 0)
+<a id='L161' name='L161'></a> 161         <a href='../Y/12527.html' title='Multiple used in 236 places.'>dbs</a>[<a href='../Y/16490.html' title='Multiple used in 24848 places.'>idx</a>].<a href='../S/1660.html#L1796' title='Defined at 1796 in nscd/connections.c.'>check_file</a> = 1;
+<a id='L162' name='L162'></a> 162         <em class='brace'>}</em>
+<a id='L163' name='L163'></a> 163     <em class='brace'>}</em>
+<a id='L164' name='L164'></a> 164       <strong class='reserved'>else</strong> <strong class='reserved'>if</strong> (<a href='../D/37067.html' title='Multiple defined in 17 places.'>strcmp</a> (<a href='../D/29966.html' title='Multiple defined in 3 places.'>entry</a>, "max-db-size") == 0)
+<a id='L165' name='L165'></a> 165     <em class='brace'>{</em>
+<a id='L166' name='L166'></a> 166       <strong class='reserved'>int</strong> <a href='../Y/16490.html' title='Multiple used in 24848 places.'>idx</a> = <a href='../S/1620.html#L47' title='Defined at 47 in nscd/nscd_conf.c.'>find_db</a> (<a href='../Y/10328.html' title='Multiple used in 313 places.'>arg1</a>);
+<a id='L167' name='L167'></a> 167       <strong class='reserved'>if</strong> (<a href='../Y/16490.html' title='Multiple used in 24848 places.'>idx</a> &gt;= 0)
+<a id='L168' name='L168'></a> 168         <a href='../Y/12527.html' title='Multiple used in 236 places.'>dbs</a>[<a href='../Y/16490.html' title='Multiple used in 24848 places.'>idx</a>].<a href='../Y/19019.html' title='Multiple used in 14 places.'>max_db_size</a> = <a href='../D/27886.html' title='Multiple defined in 2 places.'>atol</a> (<a href='../Y/10331.html' title='Multiple used in 253 places.'>arg2</a>) ?: <a href='../S/1637.html#L178' title='Defined at 178 in nscd/nscd.h.'>DEFAULT_MAX_DB_SIZE</a>;
+<a id='L169' name='L169'></a> 169     <em class='brace'>}</em>
+<a id='L170' name='L170'></a> 170       <strong class='reserved'>else</strong> <strong class='reserved'>if</strong> (<a href='../D/37067.html' title='Multiple defined in 17 places.'>strcmp</a> (<a href='../D/29966.html' title='Multiple defined in 3 places.'>entry</a>, "logfile") == 0)
+<a id='L171' name='L171'></a> 171     <a href='../S/1647.html#L34' title='Defined at 34 in nscd/dbg_log.c.'>set_logfile</a> (<a href='../Y/10328.html' title='Multiple used in 313 places.'>arg1</a>);
+<a id='L172' name='L172'></a> 172       <strong class='reserved'>else</strong> <strong class='reserved'>if</strong> (<a href='../D/37067.html' title='Multiple defined in 17 places.'>strcmp</a> (<a href='../D/29966.html' title='Multiple defined in 3 places.'>entry</a>, "debug-level") == 0)
+<a id='L173' name='L173'></a> 173     <em class='brace'>{</em>
+<a id='L174' name='L174'></a> 174       <strong class='reserved'>int</strong> <a href='../Y/18051.html' title='Multiple used in 202 places.'>level</a> = <a href='../D/27885.html' title='Multiple defined in 2 places.'>atoi</a> (<a href='../Y/10328.html' title='Multiple used in 313 places.'>arg1</a>);
+<a id='L175' name='L175'></a> 175       <strong class='reserved'>if</strong> (<a href='../Y/18051.html' title='Multiple used in 202 places.'>level</a> &gt; 0)
+<a id='L176' name='L176'></a> 176         <a href='../Y/12553.html' title='Multiple used in 48 places.'>debug_level</a> = <a href='../Y/18051.html' title='Multiple used in 202 places.'>level</a>;
+<a id='L177' name='L177'></a> 177     <em class='brace'>}</em>
+<a id='L178' name='L178'></a> 178       <strong class='reserved'>else</strong> <strong class='reserved'>if</strong> (<a href='../D/37067.html' title='Multiple defined in 17 places.'>strcmp</a> (<a href='../D/29966.html' title='Multiple defined in 3 places.'>entry</a>, "threads") == 0)
+<a id='L179' name='L179'></a> 179     <em class='brace'>{</em>
+<a id='L180' name='L180'></a> 180       <strong class='reserved'>if</strong> (<a href='../Y/21296.html' title='Multiple used in 72 places.'>nthreads</a> == -1)
+<a id='L181' name='L181'></a> 181         <a href='../Y/21296.html' title='Multiple used in 72 places.'>nthreads</a> = <a href='../D/7674.html' title='Multiple defined in 8 places.'>MAX</a> (<a href='../D/27886.html' title='Multiple defined in 2 places.'>atol</a> (<a href='../Y/10328.html' title='Multiple used in 313 places.'>arg1</a>), <a href='../S/1637.html#L40' title='Defined at 40 in nscd/nscd.h.'>lastdb</a>);
+<a id='L182' name='L182'></a> 182     <em class='brace'>}</em>
+<a id='L183' name='L183'></a> 183       <strong class='reserved'>else</strong> <strong class='reserved'>if</strong> (<a href='../D/37067.html' title='Multiple defined in 17 places.'>strcmp</a> (<a href='../D/29966.html' title='Multiple defined in 3 places.'>entry</a>, "max-threads") == 0)
+<a id='L184' name='L184'></a> 184     <em class='brace'>{</em>
+<a id='L185' name='L185'></a> 185       <a href='../Y/19042.html' title='Multiple used in 9 places.'>max_nthreads</a> = <a href='../D/7674.html' title='Multiple defined in 8 places.'>MAX</a> (<a href='../D/27886.html' title='Multiple defined in 2 places.'>atol</a> (<a href='../Y/10328.html' title='Multiple used in 313 places.'>arg1</a>), <a href='../S/1637.html#L40' title='Defined at 40 in nscd/nscd.h.'>lastdb</a>);
+<a id='L186' name='L186'></a> 186     <em class='brace'>}</em>
+<a id='L187' name='L187'></a> 187       <strong class='reserved'>else</strong> <strong class='reserved'>if</strong> (<a href='../D/37067.html' title='Multiple defined in 17 places.'>strcmp</a> (<a href='../D/29966.html' title='Multiple defined in 3 places.'>entry</a>, "server-user") == 0)
+<a id='L188' name='L188'></a> 188     <em class='brace'>{</em>
+<a id='L189' name='L189'></a> 189       <strong class='reserved'>if</strong> (!<a href='../Y/10328.html' title='Multiple used in 313 places.'>arg1</a>)
+<a id='L190' name='L190'></a> 190         <a href='../D/30024.html' title='Multiple defined in 4 places.'>error</a> (0, 0, <a href='../D/17731.html' title='Multiple defined in 12 places.'>_</a>("Must specify user name for server-user option"));
+<a id='L191' name='L191'></a> 191       <strong class='reserved'>else</strong>
+<a id='L192' name='L192'></a> 192         <em class='brace'>{</em>
+<a id='L193' name='L193'></a> 193           <a href='../D/30785.html' title='Multiple defined in 5 places.'>free</a> ((<strong class='reserved'>char</strong> *) <a href='../Y/25052.html' title='Multiple used in 19 places.'>server_user</a>);
+<a id='L194' name='L194'></a> 194           <a href='../Y/25052.html' title='Multiple used in 19 places.'>server_user</a> = <a href='../D/39634.html' title='Multiple defined in 3 places.'>xstrdup</a> (<a href='../Y/10328.html' title='Multiple used in 313 places.'>arg1</a>);
+<a id='L195' name='L195'></a> 195         <em class='brace'>}</em>
+<a id='L196' name='L196'></a> 196     <em class='brace'>}</em>
+<a id='L197' name='L197'></a> 197       <strong class='reserved'>else</strong> <strong class='reserved'>if</strong> (<a href='../D/37067.html' title='Multiple defined in 17 places.'>strcmp</a> (<a href='../D/29966.html' title='Multiple defined in 3 places.'>entry</a>, "stat-user") == 0)
+<a id='L198' name='L198'></a> 198     <em class='brace'>{</em>
+<a id='L199' name='L199'></a> 199       <strong class='reserved'>if</strong> (<a href='../Y/10328.html' title='Multiple used in 313 places.'>arg1</a> == <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>)
+<a id='L200' name='L200'></a> 200         <a href='../D/30024.html' title='Multiple defined in 4 places.'>error</a> (0, 0, <a href='../D/17731.html' title='Multiple defined in 12 places.'>_</a>("Must specify user name for stat-user option"));
+<a id='L201' name='L201'></a> 201       <strong class='reserved'>else</strong>
+<a id='L202' name='L202'></a> 202         <em class='brace'>{</em>
+<a id='L203' name='L203'></a> 203           <a href='../D/30785.html' title='Multiple defined in 5 places.'>free</a> ((<strong class='reserved'>char</strong> *) <a href='../Y/26121.html' title='Multiple used in 8 places.'>stat_user</a>);
+<a id='L204' name='L204'></a> 204           <a href='../Y/26121.html' title='Multiple used in 8 places.'>stat_user</a> = <a href='../D/39634.html' title='Multiple defined in 3 places.'>xstrdup</a> (<a href='../Y/10328.html' title='Multiple used in 313 places.'>arg1</a>);
+<a id='L205' name='L205'></a> 205 
+<a id='L206' name='L206'></a> 206           <strong class='reserved'>struct</strong> <a href='../S/1228.html#L49' title='Defined at 49 in pwd/pwd.h.'>passwd</a> *<a href='../Y/23149.html' title='Multiple used in 64 places.'>pw</a> = <a href='../Y/15559.html' title='Multiple used in 24 places.'>getpwnam</a> (<a href='../Y/26121.html' title='Multiple used in 8 places.'>stat_user</a>);
+<a id='L207' name='L207'></a> 207           <strong class='reserved'>if</strong> (<a href='../Y/23149.html' title='Multiple used in 64 places.'>pw</a> != <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>)
+<a id='L208' name='L208'></a> 208         <a href='../Y/26120.html' title='Multiple used in 5 places.'>stat_uid</a> = <a href='../Y/23149.html' title='Multiple used in 64 places.'>pw</a>-&gt;<a href='../Y/23164.html' title='Multiple used in 74 places.'>pw_uid</a>;
+<a id='L209' name='L209'></a> 209         <em class='brace'>}</em>
+<a id='L210' name='L210'></a> 210     <em class='brace'>}</em>
+<a id='L211' name='L211'></a> 211       <strong class='reserved'>else</strong> <strong class='reserved'>if</strong> (<a href='../D/37067.html' title='Multiple defined in 17 places.'>strcmp</a> (<a href='../D/29966.html' title='Multiple defined in 3 places.'>entry</a>, "persistent") == 0)
+<a id='L212' name='L212'></a> 212     <em class='brace'>{</em>
+<a id='L213' name='L213'></a> 213       <strong class='reserved'>int</strong> <a href='../Y/16490.html' title='Multiple used in 24848 places.'>idx</a> = <a href='../S/1620.html#L47' title='Defined at 47 in nscd/nscd_conf.c.'>find_db</a> (<a href='../Y/10328.html' title='Multiple used in 313 places.'>arg1</a>);
+<a id='L214' name='L214'></a> 214       <strong class='reserved'>if</strong> (<a href='../Y/16490.html' title='Multiple used in 24848 places.'>idx</a> &gt;= 0)
+<a id='L215' name='L215'></a> 215         <em class='brace'>{</em>
+<a id='L216' name='L216'></a> 216           <strong class='reserved'>if</strong> (<a href='../D/37067.html' title='Multiple defined in 17 places.'>strcmp</a> (<a href='../Y/10331.html' title='Multiple used in 253 places.'>arg2</a>, "no") == 0)
+<a id='L217' name='L217'></a> 217         <a href='../Y/12527.html' title='Multiple used in 236 places.'>dbs</a>[<a href='../Y/16490.html' title='Multiple used in 24848 places.'>idx</a>].<a href='../Y/22339.html' title='Multiple used in 38 places.'>persistent</a> = 0;
+<a id='L218' name='L218'></a> 218           <strong class='reserved'>else</strong> <strong class='reserved'>if</strong> (<a href='../D/37067.html' title='Multiple defined in 17 places.'>strcmp</a> (<a href='../Y/10331.html' title='Multiple used in 253 places.'>arg2</a>, "yes") == 0)
+<a id='L219' name='L219'></a> 219         <a href='../Y/12527.html' title='Multiple used in 236 places.'>dbs</a>[<a href='../Y/16490.html' title='Multiple used in 24848 places.'>idx</a>].<a href='../Y/22339.html' title='Multiple used in 38 places.'>persistent</a> = 1;
+<a id='L220' name='L220'></a> 220         <em class='brace'>}</em>
+<a id='L221' name='L221'></a> 221     <em class='brace'>}</em>
+<a id='L222' name='L222'></a> 222       <strong class='reserved'>else</strong> <strong class='reserved'>if</strong> (<a href='../D/37067.html' title='Multiple defined in 17 places.'>strcmp</a> (<a href='../D/29966.html' title='Multiple defined in 3 places.'>entry</a>, "shared") == 0)
+<a id='L223' name='L223'></a> 223     <em class='brace'>{</em>
+<a id='L224' name='L224'></a> 224       <strong class='reserved'>int</strong> <a href='../Y/16490.html' title='Multiple used in 24848 places.'>idx</a> = <a href='../S/1620.html#L47' title='Defined at 47 in nscd/nscd_conf.c.'>find_db</a> (<a href='../Y/10328.html' title='Multiple used in 313 places.'>arg1</a>);
+<a id='L225' name='L225'></a> 225       <strong class='reserved'>if</strong> (<a href='../Y/16490.html' title='Multiple used in 24848 places.'>idx</a> &gt;= 0)
+<a id='L226' name='L226'></a> 226         <em class='brace'>{</em>
+<a id='L227' name='L227'></a> 227           <strong class='reserved'>if</strong> (<a href='../D/37067.html' title='Multiple defined in 17 places.'>strcmp</a> (<a href='../Y/10331.html' title='Multiple used in 253 places.'>arg2</a>, "no") == 0)
+<a id='L228' name='L228'></a> 228         <a href='../Y/12527.html' title='Multiple used in 236 places.'>dbs</a>[<a href='../Y/16490.html' title='Multiple used in 24848 places.'>idx</a>].<a href='../D/36651.html' title='Multiple defined in 2 places.'>shared</a> = 0;
+<a id='L229' name='L229'></a> 229           <strong class='reserved'>else</strong> <strong class='reserved'>if</strong> (<a href='../D/37067.html' title='Multiple defined in 17 places.'>strcmp</a> (<a href='../Y/10331.html' title='Multiple used in 253 places.'>arg2</a>, "yes") == 0)
+<a id='L230' name='L230'></a> 230         <a href='../Y/12527.html' title='Multiple used in 236 places.'>dbs</a>[<a href='../Y/16490.html' title='Multiple used in 24848 places.'>idx</a>].<a href='../D/36651.html' title='Multiple defined in 2 places.'>shared</a> = 1;
+<a id='L231' name='L231'></a> 231         <em class='brace'>}</em>
+<a id='L232' name='L232'></a> 232     <em class='brace'>}</em>
+<a id='L233' name='L233'></a> 233       <strong class='reserved'>else</strong> <strong class='reserved'>if</strong> (<a href='../D/37067.html' title='Multiple defined in 17 places.'>strcmp</a> (<a href='../D/29966.html' title='Multiple defined in 3 places.'>entry</a>, "reload-count") == 0)
+<a id='L234' name='L234'></a> 234     <em class='brace'>{</em>
+<a id='L235' name='L235'></a> 235       <strong class='reserved'>if</strong> (<a href='../D/37061.html' title='Multiple defined in 7 places.'>strcasecmp</a> (<a href='../Y/10328.html' title='Multiple used in 313 places.'>arg1</a>, "unlimited") == 0)
+<a id='L236' name='L236'></a> 236         <a href='../Y/23725.html' title='Multiple used in 22 places.'>reload_count</a> = <a href='../D/16656.html' title='Multiple defined in 3 places.'>UINT_MAX</a>;
+<a id='L237' name='L237'></a> 237       <strong class='reserved'>else</strong>
+<a id='L238' name='L238'></a> 238         <em class='brace'>{</em>
+<a id='L239' name='L239'></a> 239           <strong class='reserved'>unsigned</strong> <strong class='reserved'>long</strong> <strong class='reserved'>int</strong> <a href='../D/29146.html' title='Multiple defined in 21 places.'>count</a> = <a href='../Y/26349.html' title='Multiple used in 75 places.'>strtoul</a> (<a href='../Y/10328.html' title='Multiple used in 313 places.'>arg1</a>, <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>, 0);
+<a id='L240' name='L240'></a> 240           <strong class='reserved'>if</strong> (<a href='../D/29146.html' title='Multiple defined in 21 places.'>count</a> &gt; <a href='../S/6759.html#L127' title='Defined at 127 in stdlib/stdint.h.'>UINT8_MAX</a> - 1)
+<a id='L241' name='L241'></a> 241         <a href='../Y/23725.html' title='Multiple used in 22 places.'>reload_count</a> = <a href='../D/16656.html' title='Multiple defined in 3 places.'>UINT_MAX</a>;
+<a id='L242' name='L242'></a> 242           <strong class='reserved'>else</strong>
+<a id='L243' name='L243'></a> 243         <a href='../Y/23725.html' title='Multiple used in 22 places.'>reload_count</a> = <a href='../D/29146.html' title='Multiple defined in 21 places.'>count</a>;
+<a id='L244' name='L244'></a> 244         <em class='brace'>}</em>
+<a id='L245' name='L245'></a> 245     <em class='brace'>}</em>
+<a id='L246' name='L246'></a> 246       <strong class='reserved'>else</strong> <strong class='reserved'>if</strong> (<a href='../D/37067.html' title='Multiple defined in 17 places.'>strcmp</a> (<a href='../D/29966.html' title='Multiple defined in 3 places.'>entry</a>, "paranoia") == 0)
+<a id='L247' name='L247'></a> 247     <em class='brace'>{</em>
+<a id='L248' name='L248'></a> 248       <strong class='reserved'>if</strong> (<a href='../D/37067.html' title='Multiple defined in 17 places.'>strcmp</a> (<a href='../Y/10328.html' title='Multiple used in 313 places.'>arg1</a>, "no") == 0)
+<a id='L249' name='L249'></a> 249         <a href='../Y/22186.html' title='Multiple used in 19 places.'>paranoia</a> = 0;
+<a id='L250' name='L250'></a> 250       <strong class='reserved'>else</strong> <strong class='reserved'>if</strong> (<a href='../D/37067.html' title='Multiple defined in 17 places.'>strcmp</a> (<a href='../Y/10328.html' title='Multiple used in 313 places.'>arg1</a>, "yes") == 0)
+<a id='L251' name='L251'></a> 251         <a href='../Y/22186.html' title='Multiple used in 19 places.'>paranoia</a> = 1;
+<a id='L252' name='L252'></a> 252     <em class='brace'>}</em>
+<a id='L253' name='L253'></a> 253       <strong class='reserved'>else</strong> <strong class='reserved'>if</strong> (<a href='../D/37067.html' title='Multiple defined in 17 places.'>strcmp</a> (<a href='../D/29966.html' title='Multiple defined in 3 places.'>entry</a>, "restart-interval") == 0)
+<a id='L254' name='L254'></a> 254     <em class='brace'>{</em>
+<a id='L255' name='L255'></a> 255       <strong class='reserved'>if</strong> (<a href='../Y/10328.html' title='Multiple used in 313 places.'>arg1</a> != <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>)
+<a id='L256' name='L256'></a> 256         <a href='../Y/23923.html' title='Multiple used in 7 places.'>restart_interval</a> = <a href='../D/27886.html' title='Multiple defined in 2 places.'>atol</a> (<a href='../Y/10328.html' title='Multiple used in 313 places.'>arg1</a>);
+<a id='L257' name='L257'></a> 257       <strong class='reserved'>else</strong>
+<a id='L258' name='L258'></a> 258         <a href='../D/30024.html' title='Multiple defined in 4 places.'>error</a> (0, 0, <a href='../D/17731.html' title='Multiple defined in 12 places.'>_</a>("Must specify value for restart-interval option"));
+<a id='L259' name='L259'></a> 259     <em class='brace'>}</em>
+<a id='L260' name='L260'></a> 260       <strong class='reserved'>else</strong> <strong class='reserved'>if</strong> (<a href='../D/37067.html' title='Multiple defined in 17 places.'>strcmp</a> (<a href='../D/29966.html' title='Multiple defined in 3 places.'>entry</a>, "auto-propagate") == 0)
+<a id='L261' name='L261'></a> 261     <em class='brace'>{</em>
+<a id='L262' name='L262'></a> 262       <strong class='reserved'>int</strong> <a href='../Y/16490.html' title='Multiple used in 24848 places.'>idx</a> = <a href='../S/1620.html#L47' title='Defined at 47 in nscd/nscd_conf.c.'>find_db</a> (<a href='../Y/10328.html' title='Multiple used in 313 places.'>arg1</a>);
+<a id='L263' name='L263'></a> 263       <strong class='reserved'>if</strong> (<a href='../Y/16490.html' title='Multiple used in 24848 places.'>idx</a> &gt;= 0)
+<a id='L264' name='L264'></a> 264         <em class='brace'>{</em>
+<a id='L265' name='L265'></a> 265           <strong class='reserved'>if</strong> (<a href='../D/37067.html' title='Multiple defined in 17 places.'>strcmp</a> (<a href='../Y/10331.html' title='Multiple used in 253 places.'>arg2</a>, "no") == 0)
+<a id='L266' name='L266'></a> 266         <a href='../Y/12527.html' title='Multiple used in 236 places.'>dbs</a>[<a href='../Y/16490.html' title='Multiple used in 24848 places.'>idx</a>].<a href='../Y/22860.html' title='Multiple used in 18 places.'>propagate</a> = 0;
+<a id='L267' name='L267'></a> 267           <strong class='reserved'>else</strong> <strong class='reserved'>if</strong> (<a href='../D/37067.html' title='Multiple defined in 17 places.'>strcmp</a> (<a href='../Y/10331.html' title='Multiple used in 253 places.'>arg2</a>, "yes") == 0)
+<a id='L268' name='L268'></a> 268         <a href='../Y/12527.html' title='Multiple used in 236 places.'>dbs</a>[<a href='../Y/16490.html' title='Multiple used in 24848 places.'>idx</a>].<a href='../Y/22860.html' title='Multiple used in 18 places.'>propagate</a> = 1;
+<a id='L269' name='L269'></a> 269         <em class='brace'>}</em>
+<a id='L270' name='L270'></a> 270     <em class='brace'>}</em>
+<a id='L271' name='L271'></a> 271       <strong class='reserved'>else</strong>
+<a id='L272' name='L272'></a> 272     <a href='../D/30024.html' title='Multiple defined in 4 places.'>error</a> (0, 0, <a href='../D/17731.html' title='Multiple defined in 12 places.'>_</a>("Unknown option: %s %s %s"), <a href='../D/29966.html' title='Multiple defined in 3 places.'>entry</a>, <a href='../Y/10328.html' title='Multiple used in 313 places.'>arg1</a>, <a href='../Y/10331.html' title='Multiple used in 253 places.'>arg2</a>);
+<a id='L273' name='L273'></a> 273     <em class='brace'>}</em>
+<a id='L274' name='L274'></a> 274   <strong class='reserved'>while</strong> (!<a href='../D/30437.html' title='Multiple defined in 4 places.'>feof_unlocked</a> (<a href='../D/30705.html' title='Multiple defined in 2 places.'>fp</a>));
+<a id='L275' name='L275'></a> 275 
+<a id='L276' name='L276'></a> 276   <strong class='reserved'>if</strong> (<a href='../Y/22186.html' title='Multiple used in 19 places.'>paranoia</a>)
+<a id='L277' name='L277'></a> 277     <em class='brace'>{</em>
+<a id='L278' name='L278'></a> 278       <a href='../Y/23924.html' title='Multiple used in 4 places.'>restart_time</a> = <a href='../D/38101.html' title='Multiple defined in 5 places.'>time</a> (<a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>) + <a href='../Y/23923.html' title='Multiple used in 7 places.'>restart_interval</a>;
+<a id='L279' name='L279'></a> 279 
+<a id='L280' name='L280'></a> 280       <em class='comment'>/* Save the old current workding directory if we are in paranoia</em>
+<a id='L281' name='L281'></a> 281 <em class='comment'>     mode.  We have to change back to it.  */</em>
+<a id='L282' name='L282'></a> 282       <a href='../Y/21641.html' title='Multiple used in 5 places.'>oldcwd</a> = <a href='../S/5279.html#L28' title='Defined at 28 in io/getdirname.c.'>get_current_dir_name</a> ();
+<a id='L283' name='L283'></a> 283       <strong class='reserved'>if</strong> (<a href='../Y/21641.html' title='Multiple used in 5 places.'>oldcwd</a> == <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>)
+<a id='L284' name='L284'></a> 284     <em class='brace'>{</em>
+<a id='L285' name='L285'></a> 285       <a href='../D/30024.html' title='Multiple defined in 4 places.'>error</a> (0, 0, <a href='../D/17731.html' title='Multiple defined in 12 places.'>_</a>("\
+<a id='L286' name='L286'></a> 286 cannot get current working directory: %s; disabling paranoia mode"),
+<a id='L287' name='L287'></a> 287            <a href='../S/1932.html#L22' title='Defined at 22 in string/strerror.c.'>strerror</a> (<a href='../D/30023.html' title='Multiple defined in 13 places.'>errno</a>));
+<a id='L288' name='L288'></a> 288       <a href='../Y/22186.html' title='Multiple used in 19 places.'>paranoia</a> = 0;
+<a id='L289' name='L289'></a> 289     <em class='brace'>}</em>
+<a id='L290' name='L290'></a> 290     <em class='brace'>}</em>
+<a id='L291' name='L291'></a> 291 
+<a id='L292' name='L292'></a> 292   <em class='comment'>/* Enforce sanity.  */</em>
+<a id='L293' name='L293'></a> 293   <strong class='reserved'>if</strong> (<a href='../Y/19042.html' title='Multiple used in 9 places.'>max_nthreads</a> &lt; <a href='../Y/21296.html' title='Multiple used in 72 places.'>nthreads</a>)
+<a id='L294' name='L294'></a> 294     <a href='../Y/19042.html' title='Multiple used in 9 places.'>max_nthreads</a> = <a href='../Y/21296.html' title='Multiple used in 72 places.'>nthreads</a>;
+<a id='L295' name='L295'></a> 295 
+<a id='L296' name='L296'></a> 296   <strong class='reserved'>for</strong> (<a href='../D/28982.html' title='Multiple defined in 8 places.'>cnt</a> = 0; <a href='../D/28982.html' title='Multiple defined in 8 places.'>cnt</a> &lt; <a href='../S/1637.html#L40' title='Defined at 40 in nscd/nscd.h.'>lastdb</a>; ++<a href='../D/28982.html' title='Multiple defined in 8 places.'>cnt</a>)
+<a id='L297' name='L297'></a> 297     <em class='brace'>{</em>
+<a id='L298' name='L298'></a> 298       <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/12492.html' title='Multiple used in 22 places.'>datasize</a> = (<strong class='reserved'>sizeof</strong> (<strong class='reserved'>struct</strong> <a href='../S/1643.html#L316' title='Defined at 316 in nscd/nscd-client.h.'>database_pers_head</a>)
+<a id='L299' name='L299'></a> 299              + <a href='../D/36120.html' title='Multiple defined in 2 places.'>roundup</a> (<a href='../Y/12527.html' title='Multiple used in 236 places.'>dbs</a>[<a href='../D/28982.html' title='Multiple defined in 8 places.'>cnt</a>].<a href='../Y/26472.html' title='Multiple used in 18 places.'>suggested_module</a>
+<a id='L300' name='L300'></a> 300                     * <strong class='reserved'>sizeof</strong> (<a href='../S/1643.html#L195' title='Defined at 195 in nscd/nscd-client.h.'>ref_t</a>), <a href='../D/196.html' title='Multiple defined in 24 places.'>ALIGN</a>)
+<a id='L301' name='L301'></a> 301              + (<a href='../Y/12527.html' title='Multiple used in 236 places.'>dbs</a>[<a href='../D/28982.html' title='Multiple defined in 8 places.'>cnt</a>].<a href='../Y/26472.html' title='Multiple used in 18 places.'>suggested_module</a>
+<a id='L302' name='L302'></a> 302                 * <a href='../S/1637.html#L181' title='Defined at 181 in nscd/nscd.h.'>DEFAULT_DATASIZE_PER_BUCKET</a>));
+<a id='L303' name='L303'></a> 303       <strong class='reserved'>if</strong> (<a href='../Y/12492.html' title='Multiple used in 22 places.'>datasize</a> &gt; <a href='../Y/12527.html' title='Multiple used in 236 places.'>dbs</a>[<a href='../D/28982.html' title='Multiple defined in 8 places.'>cnt</a>].<a href='../Y/19019.html' title='Multiple used in 14 places.'>max_db_size</a>)
+<a id='L304' name='L304'></a> 304     <em class='brace'>{</em>
+<a id='L305' name='L305'></a> 305       <a href='../D/30024.html' title='Multiple defined in 4 places.'>error</a> (0, 0, <a href='../D/17731.html' title='Multiple defined in 12 places.'>_</a>("maximum file size for %s database too small"),
+<a id='L306' name='L306'></a> 306            <a href='../Y/12524.html' title='Multiple used in 17 places.'>dbnames</a>[<a href='../D/28982.html' title='Multiple defined in 8 places.'>cnt</a>]);
+<a id='L307' name='L307'></a> 307       <a href='../Y/12527.html' title='Multiple used in 236 places.'>dbs</a>[<a href='../D/28982.html' title='Multiple defined in 8 places.'>cnt</a>].<a href='../Y/19019.html' title='Multiple used in 14 places.'>max_db_size</a> = <a href='../Y/12492.html' title='Multiple used in 22 places.'>datasize</a>;
+<a id='L308' name='L308'></a> 308     <em class='brace'>}</em>
+<a id='L309' name='L309'></a> 309 
+<a id='L310' name='L310'></a> 310     <em class='brace'>}</em>
+<a id='L311' name='L311'></a> 311 
+<a id='L312' name='L312'></a> 312   <em class='comment'>/* Free the buffer.  */</em>
+<a id='L313' name='L313'></a> 313   <a href='../D/30785.html' title='Multiple defined in 5 places.'>free</a> (<a href='../Y/18209.html' title='Multiple used in 710 places.'>line</a>);
+<a id='L314' name='L314'></a> 314   <em class='comment'>/* Close configuration file.  */</em>
+<a id='L315' name='L315'></a> 315   <a href='../S/17955.html#L194' title='Defined at 194 in include/stdio.h.'>fclose</a> (<a href='../D/30705.html' title='Multiple defined in 2 places.'>fp</a>);
+<a id='L316' name='L316'></a> 316 
+<a id='L317' name='L317'></a> 317   <strong class='reserved'>return</strong> <a href='../Y/13939.html' title='Multiple used in 7 places.'>error_message_count</a> != <a href='../Y/16845.html' title='Multiple used in 2 places.'>initial_error_message_count</a>;
+<a id='L318' name='L318'></a> 318 <em class='brace'>}</em>
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L47'>[^]</a><a href='#L58'>[v]</a><a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

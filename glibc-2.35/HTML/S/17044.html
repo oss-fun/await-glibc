@@ -1,0 +1,275 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>sysdeps/alpha/alphaev6/memcpy.S</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18977.html'>sysdeps</a>/<a href='../files/18985.html'>alpha</a>/<a href='../files/18987.html'>alphaev6</a>/memcpy.S</h2>
+<em class='comment'>/* [&lt;][&gt;][^][v][top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* Copyright (C) 2000-2022 Free Software Foundation, Inc.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'>   EV6 optimized by Rick Gorton &lt;rick.gorton@alpha-processor.com&gt;.</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'></em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'></em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'></em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   License along with the GNU C Library.  If not, see</em>
+<a id='L17' name='L17'></a>  17 <em class='comment'>   &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L18' name='L18'></a>  18 
+<a id='L19' name='L19'></a>  19 <em class='comment'>/*</em>
+<a id='L20' name='L20'></a>  20 <em class='comment'> * Much of the information about 21264 scheduling/coding comes from:</em>
+<a id='L21' name='L21'></a>  21 <em class='comment'> *  Compiler Writer's Guide for the Alpha 21264</em>
+<a id='L22' name='L22'></a>  22 <em class='comment'> *  abbreviated as 'CWG' in other comments here</em>
+<a id='L23' name='L23'></a>  23 <em class='comment'> *  ftp.digital.com/pub/Digital/info/semiconductor/literature/dsc-library.html</em>
+<a id='L24' name='L24'></a>  24 <em class='comment'> * Scheduling notation:</em>
+<a id='L25' name='L25'></a>  25 <em class='comment'> *  E   - either cluster</em>
+<a id='L26' name='L26'></a>  26 <em class='comment'> *  U   - upper subcluster; U0 - subcluster U0; U1 - subcluster U1</em>
+<a id='L27' name='L27'></a>  27 <em class='comment'> *  L   - lower subcluster; L0 - subcluster L0; L1 - subcluster L1</em>
+<a id='L28' name='L28'></a>  28 <em class='comment'> *</em>
+<a id='L29' name='L29'></a>  29 <em class='comment'> * Temp usage notes:</em>
+<a id='L30' name='L30'></a>  30 <em class='comment'> *  $0      - destination address</em>
+<a id='L31' name='L31'></a>  31 <em class='comment'> *  $1,$2,      - scratch</em>
+<a id='L32' name='L32'></a>  32 <em class='comment'> */</em>
+<a id='L33' name='L33'></a>  33 
+<a id='L34' name='L34'></a>  34 <em class='sharp'>#include</em> &lt;<a href='../I/5967.html'>sysdep.h</a>&gt;
+<a id='L35' name='L35'></a>  35 
+<a id='L36' name='L36'></a>  36     .arch ev6
+<a id='L37' name='L37'></a>  37     .set noreorder
+<a id='L38' name='L38'></a>  38     .set noat
+<a id='L39' name='L39'></a>  39 
+<a id='L40' name='L40'></a>  40 <a href='../D/3651.html' title='Multiple defined in 54 places.'>ENTRY</a>(<a href='../R/21812.html' title='Multiple referred from 989 places.'>memcpy</a>)
+<a id='L41' name='L41'></a>  41     .prologue 0
+<a id='L42' name='L42'></a>  42 
+<a id='L43' name='L43'></a>  43     mov $16, $0         # E : copy dest to return
+<a id='L44' name='L44'></a>  44     ble $18, $nomoredata    # U : done with the copy?
+<a id='L45' name='L45'></a>  45     xor $16, $17, $1        # E : are source and dest alignments the same?
+<a id='L46' name='L46'></a>  46     and $1, 7, $1       # E : are they the same mod 8?
+<a id='L47' name='L47'></a>  47 
+<a id='L48' name='L48'></a>  48     bne $1, $misaligned     # U : Nope - gotta do this the slow way
+<a id='L49' name='L49'></a>  49     <em class='comment'>/* source and dest are same mod 8 address */</em>
+<a id='L50' name='L50'></a>  50     and $16, 7, $1      # E : Are both 0mod8?
+<a id='L51' name='L51'></a>  51     beq $1, $both_0mod8     # U : Yes
+<a id='L52' name='L52'></a>  52     nop             # E :
+<a id='L53' name='L53'></a>  53 
+<a id='L54' name='L54'></a>  54     <em class='comment'>/*</em>
+<a id='L55' name='L55'></a>  55 <em class='comment'>     * source and dest are same misalignment.  move a byte at a time</em>
+<a id='L56' name='L56'></a>  56 <em class='comment'>     * until a 0mod8 alignment for both is reached.</em>
+<a id='L57' name='L57'></a>  57 <em class='comment'>     * At least one byte more to move</em>
+<a id='L58' name='L58'></a>  58 <em class='comment'>     */</em>
+<a id='L59' name='L59'></a>  59 
+<a id='L60' name='L60'></a>  60 $head_align:
+<a id='L61' name='L61'></a>  61     ldbu    $1, 0($17)      # L : grab a byte
+<a id='L62' name='L62'></a>  62     subq    $18, 1, $18     # E : count--
+<a id='L63' name='L63'></a>  63     addq    $17, 1, $17     # E : src++
+<a id='L64' name='L64'></a>  64     stb $1, 0($16)      # L :
+<a id='L65' name='L65'></a>  65     addq    $16, 1, $16     # E : dest++
+<a id='L66' name='L66'></a>  66     and $16, 7, $1      # E : Are we at 0mod8 yet?
+<a id='L67' name='L67'></a>  67     ble $18, $nomoredata    # U : done with the copy?
+<a id='L68' name='L68'></a>  68     bne $1, $head_align     # U :
+<a id='L69' name='L69'></a>  69 
+<a id='L70' name='L70'></a>  70 $both_0mod8:
+<a id='L71' name='L71'></a>  71     cmple   $18, 127, $1        # E : Can we unroll the loop?
+<a id='L72' name='L72'></a>  72     bne $1, $no_unroll      # U :
+<a id='L73' name='L73'></a>  73     and $16, 63, $1     # E : get mod64 alignment
+<a id='L74' name='L74'></a>  74     beq $1, $do_unroll      # U : no single quads to fiddle
+<a id='L75' name='L75'></a>  75 
+<a id='L76' name='L76'></a>  76 $single_head_quad:
+<a id='L77' name='L77'></a>  77     ldq $1, 0($17)      # L : get 8 bytes
+<a id='L78' name='L78'></a>  78     subq    $18, 8, $18     # E : count -= 8
+<a id='L79' name='L79'></a>  79     addq    $17, 8, $17     # E : src += 8
+<a id='L80' name='L80'></a>  80     nop             # E :
+<a id='L81' name='L81'></a>  81 
+<a id='L82' name='L82'></a>  82     stq $1, 0($16)      # L : store
+<a id='L83' name='L83'></a>  83     addq    $16, 8, $16     # E : dest += 8
+<a id='L84' name='L84'></a>  84     and $16, 63, $1     # E : get mod64 alignment
+<a id='L85' name='L85'></a>  85     bne $1, $single_head_quad   # U : still not fully aligned
+<a id='L86' name='L86'></a>  86 
+<a id='L87' name='L87'></a>  87 $do_unroll:
+<a id='L88' name='L88'></a>  88     addq    $16, 64, $7     # E : Initial (+1 trip) wh64 address
+<a id='L89' name='L89'></a>  89     cmple   $18, 127, $1        # E : Can we go through the unrolled loop?
+<a id='L90' name='L90'></a>  90     bne $1, $tail_quads     # U : Nope
+<a id='L91' name='L91'></a>  91     nop             # E :
+<a id='L92' name='L92'></a>  92 
+<a id='L93' name='L93'></a>  93 $unroll_body:
+<a id='L94' name='L94'></a>  94     wh64    ($7)            # L1 : memory subsystem hint: 64 bytes at
+<a id='L95' name='L95'></a>  95 <em class='sharp'>                    #</em> ($7) are about to be over-written
+<a id='L96' name='L96'></a>  96     ldq $6, 0($17)      # L0 : bytes 0..7
+<a id='L97' name='L97'></a>  97     nop             # E :
+<a id='L98' name='L98'></a>  98     nop             # E :
+<a id='L99' name='L99'></a>  99 
+<a id='L100' name='L100'></a> 100     ldq $4, 8($17)      # L : bytes 8..15
+<a id='L101' name='L101'></a> 101     ldq $5, 16($17)     # L : bytes 16..23
+<a id='L102' name='L102'></a> 102     addq    $7, 64, $7      # E : Update next wh64 address
+<a id='L103' name='L103'></a> 103     nop             # E :
+<a id='L104' name='L104'></a> 104 
+<a id='L105' name='L105'></a> 105     ldq $3, 24($17)     # L : bytes 24..31
+<a id='L106' name='L106'></a> 106     addq    $16, 64, $1     # E : fallback value for wh64
+<a id='L107' name='L107'></a> 107     nop             # E :
+<a id='L108' name='L108'></a> 108     nop             # E :
+<a id='L109' name='L109'></a> 109 
+<a id='L110' name='L110'></a> 110     addq    $17, 32, $17        # E : src += 32 bytes
+<a id='L111' name='L111'></a> 111     stq $6, 0($16)      # L : bytes 0..7
+<a id='L112' name='L112'></a> 112     nop             # E :
+<a id='L113' name='L113'></a> 113     nop             # E :
+<a id='L114' name='L114'></a> 114 
+<a id='L115' name='L115'></a> 115     stq $4, 8($16)      # L : bytes 8..15
+<a id='L116' name='L116'></a> 116     stq $5, 16($16)     # L : bytes 16..23
+<a id='L117' name='L117'></a> 117     subq    $18, 192, $2        # E : At least two more trips to go?
+<a id='L118' name='L118'></a> 118     nop             # E :
+<a id='L119' name='L119'></a> 119 
+<a id='L120' name='L120'></a> 120     stq $3, 24($16)     # L : bytes 24..31
+<a id='L121' name='L121'></a> 121     addq    $16, 32, $16        # E : dest += 32 bytes
+<a id='L122' name='L122'></a> 122     nop             # E :
+<a id='L123' name='L123'></a> 123     nop             # E :
+<a id='L124' name='L124'></a> 124 
+<a id='L125' name='L125'></a> 125     ldq $6, 0($17)      # L : bytes 0..7
+<a id='L126' name='L126'></a> 126     ldq $4, 8($17)      # L : bytes 8..15
+<a id='L127' name='L127'></a> 127     cmovlt  $2, $1, $7      # E : Latency 2, extra map slot - Use
+<a id='L128' name='L128'></a> 128 <em class='comment'>                    # fallback wh64 address if &lt; 2 more trips</em>
+<a id='L129' name='L129'></a> 129     nop             # E :
+<a id='L130' name='L130'></a> 130 
+<a id='L131' name='L131'></a> 131     ldq $5, 16($17)     # L : bytes 16..23
+<a id='L132' name='L132'></a> 132     ldq $3, 24($17)     # L : bytes 24..31
+<a id='L133' name='L133'></a> 133     addq    $16, 32, $16        # E : dest += 32
+<a id='L134' name='L134'></a> 134     subq    $18, 64, $18        # E : count -= 64
+<a id='L135' name='L135'></a> 135 
+<a id='L136' name='L136'></a> 136     addq    $17, 32, $17        # E : src += 32
+<a id='L137' name='L137'></a> 137     stq $6, -32($16)        # L : bytes 0..7
+<a id='L138' name='L138'></a> 138     stq $4, -24($16)        # L : bytes 8..15
+<a id='L139' name='L139'></a> 139     cmple   $18, 63, $1     # E : At least one more trip?
+<a id='L140' name='L140'></a> 140 
+<a id='L141' name='L141'></a> 141     stq $5, -16($16)        # L : bytes 16..23
+<a id='L142' name='L142'></a> 142     stq $3, -8($16)     # L : bytes 24..31
+<a id='L143' name='L143'></a> 143     nop             # E :
+<a id='L144' name='L144'></a> 144     beq $1, $unroll_body
+<a id='L145' name='L145'></a> 145 
+<a id='L146' name='L146'></a> 146 $tail_quads:
+<a id='L147' name='L147'></a> 147 $no_unroll:
+<a id='L148' name='L148'></a> 148     .align 4
+<a id='L149' name='L149'></a> 149     subq    $18, 8, $18     # E : At least a quad left?
+<a id='L150' name='L150'></a> 150     blt $18, $less_than_8   # U : Nope
+<a id='L151' name='L151'></a> 151     nop             # E :
+<a id='L152' name='L152'></a> 152     nop             # E :
+<a id='L153' name='L153'></a> 153 
+<a id='L154' name='L154'></a> 154 $move_a_quad:
+<a id='L155' name='L155'></a> 155     ldq $1, 0($17)      # L : fetch 8
+<a id='L156' name='L156'></a> 156     subq    $18, 8, $18     # E : count -= 8
+<a id='L157' name='L157'></a> 157     addq    $17, 8, $17     # E : src += 8
+<a id='L158' name='L158'></a> 158     nop             # E :
+<a id='L159' name='L159'></a> 159 
+<a id='L160' name='L160'></a> 160     stq $1, 0($16)      # L : store 8
+<a id='L161' name='L161'></a> 161     addq    $16, 8, $16     # E : dest += 8
+<a id='L162' name='L162'></a> 162     bge $18, $move_a_quad   # U :
+<a id='L163' name='L163'></a> 163     nop             # E :
+<a id='L164' name='L164'></a> 164 
+<a id='L165' name='L165'></a> 165 $less_than_8:
+<a id='L166' name='L166'></a> 166     .align 4
+<a id='L167' name='L167'></a> 167     addq    $18, 8, $18     # E : add back for trailing bytes
+<a id='L168' name='L168'></a> 168     ble $18, $nomoredata    # U : All-done
+<a id='L169' name='L169'></a> 169     nop             # E :
+<a id='L170' name='L170'></a> 170     nop             # E :
+<a id='L171' name='L171'></a> 171 
+<a id='L172' name='L172'></a> 172     <em class='comment'>/* Trailing bytes */</em>
+<a id='L173' name='L173'></a> 173 $tail_bytes:
+<a id='L174' name='L174'></a> 174     subq    $18, 1, $18     # E : count--
+<a id='L175' name='L175'></a> 175     ldbu    $1, 0($17)      # L : fetch a byte
+<a id='L176' name='L176'></a> 176     addq    $17, 1, $17     # E : src++
+<a id='L177' name='L177'></a> 177     nop             # E :
+<a id='L178' name='L178'></a> 178 
+<a id='L179' name='L179'></a> 179     stb $1, 0($16)      # L : store a byte
+<a id='L180' name='L180'></a> 180     addq    $16, 1, $16     # E : dest++
+<a id='L181' name='L181'></a> 181     bgt $18, $tail_bytes    # U : more to be done?
+<a id='L182' name='L182'></a> 182     nop             # E :
+<a id='L183' name='L183'></a> 183 
+<a id='L184' name='L184'></a> 184     <em class='comment'>/* branching to exit takes 3 extra cycles, so replicate exit here */</em>
+<a id='L185' name='L185'></a> 185     ret $31, ($26), 1       # L0 :
+<a id='L186' name='L186'></a> 186     nop             # E :
+<a id='L187' name='L187'></a> 187     nop             # E :
+<a id='L188' name='L188'></a> 188     nop             # E :
+<a id='L189' name='L189'></a> 189 
+<a id='L190' name='L190'></a> 190 $misaligned:
+<a id='L191' name='L191'></a> 191     mov $0, $4          # E : dest temp
+<a id='L192' name='L192'></a> 192     and $0, 7, $1       # E : dest alignment mod8
+<a id='L193' name='L193'></a> 193     beq $1, $dest_0mod8     # U : life doesnt totally suck
+<a id='L194' name='L194'></a> 194     nop
+<a id='L195' name='L195'></a> 195 
+<a id='L196' name='L196'></a> 196 $aligndest:
+<a id='L197' name='L197'></a> 197     ble $18, $nomoredata    # U :
+<a id='L198' name='L198'></a> 198     ldbu    $1, 0($17)      # L : fetch a byte
+<a id='L199' name='L199'></a> 199     subq    $18, 1, $18     # E : count--
+<a id='L200' name='L200'></a> 200     addq    $17, 1, $17     # E : src++
+<a id='L201' name='L201'></a> 201 
+<a id='L202' name='L202'></a> 202     stb $1, 0($4)       # L : store it
+<a id='L203' name='L203'></a> 203     addq    $4, 1, $4       # E : dest++
+<a id='L204' name='L204'></a> 204     and $4, 7, $1       # E : dest 0mod8 yet?
+<a id='L205' name='L205'></a> 205     bne $1, $aligndest      # U : go until we are aligned.
+<a id='L206' name='L206'></a> 206 
+<a id='L207' name='L207'></a> 207     <em class='comment'>/* Source has unknown alignment, but dest is known to be 0mod8 */</em>
+<a id='L208' name='L208'></a> 208 $dest_0mod8:
+<a id='L209' name='L209'></a> 209     subq    $18, 8, $18     # E : At least a quad left?
+<a id='L210' name='L210'></a> 210     blt $18, $misalign_tail # U : Nope
+<a id='L211' name='L211'></a> 211     ldq_u   $3, 0($17)      # L : seed (rotating load) of 8 bytes
+<a id='L212' name='L212'></a> 212     nop             # E :
+<a id='L213' name='L213'></a> 213 
+<a id='L214' name='L214'></a> 214 $mis_quad:
+<a id='L215' name='L215'></a> 215     ldq_u   $16, 8($17)     # L : Fetch next 8
+<a id='L216' name='L216'></a> 216     extql   $3, $17, $3     # U : masking
+<a id='L217' name='L217'></a> 217     extqh   $16, $17, $1        # U : masking
+<a id='L218' name='L218'></a> 218     bis $3, $1, $1      # E : merged bytes to store
+<a id='L219' name='L219'></a> 219 
+<a id='L220' name='L220'></a> 220     subq    $18, 8, $18     # E : count -= 8
+<a id='L221' name='L221'></a> 221     addq    $17, 8, $17     # E : src += 8
+<a id='L222' name='L222'></a> 222     stq $1, 0($4)       # L : store 8 (aligned)
+<a id='L223' name='L223'></a> 223     mov $16, $3         # E : "rotate" source data
+<a id='L224' name='L224'></a> 224 
+<a id='L225' name='L225'></a> 225     addq    $4, 8, $4       # E : dest += 8
+<a id='L226' name='L226'></a> 226     bge $18, $mis_quad      # U : More quads to move
+<a id='L227' name='L227'></a> 227     nop
+<a id='L228' name='L228'></a> 228     nop
+<a id='L229' name='L229'></a> 229 
+<a id='L230' name='L230'></a> 230 $misalign_tail:
+<a id='L231' name='L231'></a> 231     addq    $18, 8, $18     # E : account for tail stuff
+<a id='L232' name='L232'></a> 232     ble $18, $nomoredata    # U :
+<a id='L233' name='L233'></a> 233     nop
+<a id='L234' name='L234'></a> 234     nop
+<a id='L235' name='L235'></a> 235 
+<a id='L236' name='L236'></a> 236 $misalign_byte:
+<a id='L237' name='L237'></a> 237     ldbu    $1, 0($17)      # L : fetch 1
+<a id='L238' name='L238'></a> 238     subq    $18, 1, $18     # E : count--
+<a id='L239' name='L239'></a> 239     addq    $17, 1, $17     # E : src++
+<a id='L240' name='L240'></a> 240     nop             # E :
+<a id='L241' name='L241'></a> 241 
+<a id='L242' name='L242'></a> 242     stb $1, 0($4)       # L : store
+<a id='L243' name='L243'></a> 243     addq    $4, 1, $4       # E : dest++
+<a id='L244' name='L244'></a> 244     bgt $18, $misalign_byte # U : more to go?
+<a id='L245' name='L245'></a> 245     nop
+<a id='L246' name='L246'></a> 246 
+<a id='L247' name='L247'></a> 247 
+<a id='L248' name='L248'></a> 248 $nomoredata:
+<a id='L249' name='L249'></a> 249     ret $31, ($26), 1       # L0 :
+<a id='L250' name='L250'></a> 250     nop             # E :
+<a id='L251' name='L251'></a> 251     nop             # E :
+<a id='L252' name='L252'></a> 252     nop             # E :
+<a id='L253' name='L253'></a> 253 
+<a id='L254' name='L254'></a> 254 END(memcpy)
+<a id='L255' name='L255'></a> 255 libc_hidden_builtin_def (memcpy)
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;][^][v]<a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

@@ -1,0 +1,96 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>sysdeps/ieee754/dbl-64/s_cbrt.c</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18977.html'>sysdeps</a>/<a href='../files/19058.html'>ieee754</a>/<a href='../files/19059.html'>dbl-64</a>/s_cbrt.c</h2>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L37'>[^]</a>[v][top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<h2 class='header'>DEFINITIONS</h2>
+This source file includes following definitions.
+<ol>
+<li><a href='#L37' title='Defined at 37.'>__cbrt</a></li>
+</ol>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* Compute cubic root of double value.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   Copyright (C) 1997-2022 Free Software Foundation, Inc.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'></em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'></em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'></em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   License along with the GNU C Library; if not, see</em>
+<a id='L17' name='L17'></a>  17 <em class='comment'>   &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L18' name='L18'></a>  18 
+<a id='L19' name='L19'></a>  19 <em class='sharp'>#include</em> &lt;<a href='../I/1890.html'>math.h</a>&gt;
+<a id='L20' name='L20'></a>  20 <em class='sharp'>#include</em> &lt;<a href='../I/6503.html'>libm-alias-double.h</a>&gt;
+<a id='L21' name='L21'></a>  21 
+<a id='L22' name='L22'></a>  22 
+<a id='L23' name='L23'></a>  23 <em class='sharp'>#define</em> <a href='../R/730.html' title='Multiple referred from 10 places.'>CBRT2</a> 1.2599210498948731648     <em class='comment'>/* 2^(1/3) */</em>
+<a id='L24' name='L24'></a>  24 <em class='sharp'>#define</em> <a href='../R/7956.html' title='Multiple referred from 6 places.'>SQR_CBRT2</a> 1.5874010519681994748     <em class='comment'>/* 2^(2/3) */</em>
+<a id='L25' name='L25'></a>  25 
+<a id='L26' name='L26'></a>  26 <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <strong class='reserved'>double</strong> <a href='../Y/14330.html' title='Multiple used in 15 places.'>factor</a>[5] =
+<a id='L27' name='L27'></a>  27 <em class='brace'>{</em>
+<a id='L28' name='L28'></a>  28   1.0 / <a href='../D/14660.html' title='Multiple defined in 6 places.'>SQR_CBRT2</a>,
+<a id='L29' name='L29'></a>  29   1.0 / <a href='../D/1108.html' title='Multiple defined in 6 places.'>CBRT2</a>,
+<a id='L30' name='L30'></a>  30   1.0,
+<a id='L31' name='L31'></a>  31   <a href='../D/1108.html' title='Multiple defined in 6 places.'>CBRT2</a>,
+<a id='L32' name='L32'></a>  32   <a href='../D/14660.html' title='Multiple defined in 6 places.'>SQR_CBRT2</a>
+<a id='L33' name='L33'></a>  33 <em class='brace'>}</em>;
+<a id='L34' name='L34'></a>  34 
+<a id='L35' name='L35'></a>  35 
+<a id='L36' name='L36'></a>  36 <strong class='reserved'>double</strong>
+<a id='L37' name='L37'></a>  37 <a href='../R/13767.html' title='Multiple referred from 4 places.'>__cbrt</a> (<strong class='reserved'>double</strong> <a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a>)
+<a id='L38' name='L38'></a>  38 <em class='brace'>{</em>
+<a id='L39' name='L39'></a>  39   <strong class='reserved'>double</strong> <a href='../Y/29444.html' title='Multiple used in 29 places.'>xm</a>, <a href='../Y/29573.html' title='Multiple used in 6 places.'>ym</a>, <a href='../S/9112.html#L29' title='Defined at 29 in sysdeps/ieee754/ldbl-128ibm/test-fmodrem-ldbl-128ibm.c.'>u</a>, <a href='../D/37437.html' title='Multiple defined in 4 places.'>t2</a>;
+<a id='L40' name='L40'></a>  40   <strong class='reserved'>int</strong> <a href='../Y/29414.html' title='Multiple used in 15 places.'>xe</a>;
+<a id='L41' name='L41'></a>  41 
+<a id='L42' name='L42'></a>  42   <em class='comment'>/* Reduce X.  XM now is an range 1.0 to 0.5.  */</em>
+<a id='L43' name='L43'></a>  43   <a href='../Y/29444.html' title='Multiple used in 29 places.'>xm</a> = <a href='../D/23986.html' title='Multiple defined in 2 places.'>__frexp</a> (<a href='../S/3342.html#L815' title='Defined at 815 in math/tgmath.h.'>fabs</a> (<a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a>), &amp;<a href='../Y/29414.html' title='Multiple used in 15 places.'>xe</a>);
+<a id='L44' name='L44'></a>  44 
+<a id='L45' name='L45'></a>  45   <em class='comment'>/* If X is not finite or is null return it (with raising exceptions</em>
+<a id='L46' name='L46'></a>  46 <em class='comment'>     if necessary.</em>
+<a id='L47' name='L47'></a>  47 <em class='comment'>     Note: *Our* version of `frexp' sets XE to zero if the argument is</em>
+<a id='L48' name='L48'></a>  48 <em class='comment'>     Inf or NaN.  This is not portable but faster.  */</em>
+<a id='L49' name='L49'></a>  49   <strong class='reserved'>if</strong> (<a href='../Y/29414.html' title='Multiple used in 15 places.'>xe</a> == 0 &amp;&amp; <a href='../D/30762.html' title='Multiple defined in 2 places.'>fpclassify</a> (<a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a>) &lt;= <a href='../S/3686.html#L942' title='Defined at 942 in math/math.h.'>FP_ZERO</a>)
+<a id='L50' name='L50'></a>  50     <strong class='reserved'>return</strong> <a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a> + <a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a>;
+<a id='L51' name='L51'></a>  51 
+<a id='L52' name='L52'></a>  52   <a href='../S/9112.html#L29' title='Defined at 29 in sysdeps/ieee754/ldbl-128ibm/test-fmodrem-ldbl-128ibm.c.'>u</a> = (0.354895765043919860
+<a id='L53' name='L53'></a>  53        + ((1.50819193781584896
+<a id='L54' name='L54'></a>  54        + ((-2.11499494167371287
+<a id='L55' name='L55'></a>  55            + ((2.44693122563534430
+<a id='L56' name='L56'></a>  56            + ((-1.83469277483613086
+<a id='L57' name='L57'></a>  57                + (0.784932344976639262 - 0.145263899385486377 * <a href='../Y/29444.html' title='Multiple used in 29 places.'>xm</a>)
+<a id='L58' name='L58'></a>  58                       * <a href='../Y/29444.html' title='Multiple used in 29 places.'>xm</a>)
+<a id='L59' name='L59'></a>  59               * <a href='../Y/29444.html' title='Multiple used in 29 places.'>xm</a>))
+<a id='L60' name='L60'></a>  60           * <a href='../Y/29444.html' title='Multiple used in 29 places.'>xm</a>))
+<a id='L61' name='L61'></a>  61           * <a href='../Y/29444.html' title='Multiple used in 29 places.'>xm</a>))
+<a id='L62' name='L62'></a>  62       * <a href='../Y/29444.html' title='Multiple used in 29 places.'>xm</a>));
+<a id='L63' name='L63'></a>  63 
+<a id='L64' name='L64'></a>  64   <a href='../D/37437.html' title='Multiple defined in 4 places.'>t2</a> = <a href='../S/9112.html#L29' title='Defined at 29 in sysdeps/ieee754/ldbl-128ibm/test-fmodrem-ldbl-128ibm.c.'>u</a> * <a href='../S/9112.html#L29' title='Defined at 29 in sysdeps/ieee754/ldbl-128ibm/test-fmodrem-ldbl-128ibm.c.'>u</a> * <a href='../S/9112.html#L29' title='Defined at 29 in sysdeps/ieee754/ldbl-128ibm/test-fmodrem-ldbl-128ibm.c.'>u</a>;
+<a id='L65' name='L65'></a>  65 
+<a id='L66' name='L66'></a>  66   <a href='../Y/29573.html' title='Multiple used in 6 places.'>ym</a> = <a href='../S/9112.html#L29' title='Defined at 29 in sysdeps/ieee754/ldbl-128ibm/test-fmodrem-ldbl-128ibm.c.'>u</a> * (<a href='../D/37437.html' title='Multiple defined in 4 places.'>t2</a> + 2.0 * <a href='../Y/29444.html' title='Multiple used in 29 places.'>xm</a>) / (2.0 * <a href='../D/37437.html' title='Multiple defined in 4 places.'>t2</a> + <a href='../Y/29444.html' title='Multiple used in 29 places.'>xm</a>) * <a href='../Y/14330.html' title='Multiple used in 15 places.'>factor</a>[2 + <a href='../Y/29414.html' title='Multiple used in 15 places.'>xe</a> % 3];
+<a id='L67' name='L67'></a>  67 
+<a id='L68' name='L68'></a>  68   <strong class='reserved'>return</strong> <a href='../Y/5316.html' title='Multiple used in 5 places.'>__ldexp</a> (<a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a> &gt; 0.0 ? <a href='../Y/29573.html' title='Multiple used in 6 places.'>ym</a> : -<a href='../Y/29573.html' title='Multiple used in 6 places.'>ym</a>, <a href='../Y/29414.html' title='Multiple used in 15 places.'>xe</a> / 3);
+<a id='L69' name='L69'></a>  69 <em class='brace'>}</em>
+<a id='L70' name='L70'></a>  70 <a href='../D/32822.html' title='Multiple defined in 18 places.'>libm_alias_double</a> (<a href='../D/23461.html' title='Multiple defined in 2 places.'>__cbrt</a>, <a href='../S/3342.html#L806' title='Defined at 806 in math/tgmath.h.'>cbrt</a>)
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;][^]<a href='#L37'>[v]</a><a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

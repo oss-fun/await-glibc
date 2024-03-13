@@ -1,0 +1,144 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>resolv/ns_date.c</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18942.html'>resolv</a>/ns_date.c</h2>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L43'>[^]</a><a href='#L101'>[v]</a>[top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<h2 class='header'>DEFINITIONS</h2>
+This source file includes following definitions.
+<ol>
+<li><a href='#L43' title='Defined at 43.'>ns_datetosecs</a></li>
+<li><a href='#L101' title='Defined at 101.'>datepart</a></li>
+</ol>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/*</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'> * Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'> * Copyright (c) 1999 by Internet Software Consortium.</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'> *</em>
+<a id='L5' name='L5'></a>   5 <em class='comment'> * Permission to use, copy, modify, and distribute this software for any</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'> * purpose with or without fee is hereby granted, provided that the above</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'> * copyright notice and this permission notice appear in all copies.</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'> *</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'> * THE SOFTWARE IS PROVIDED "AS IS" AND ISC DISCLAIMS ALL WARRANTIES</em>
+<a id='L10' name='L10'></a>  10 <em class='comment'> * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'> * MERCHANTABILITY AND FITNESS.  IN NO EVENT SHALL ISC BE LIABLE FOR</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'> * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'> * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'> * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT</em>
+<a id='L15' name='L15'></a>  15 <em class='comment'> * OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'> */</em>
+<a id='L17' name='L17'></a>  17 
+<a id='L18' name='L18'></a>  18 <em class='comment'>/* Import. */</em>
+<a id='L19' name='L19'></a>  19 
+<a id='L20' name='L20'></a>  20 <em class='sharp'>#include</em> &lt;<a href='../I/1736.html'>arpa/nameser.h</a>&gt;
+<a id='L21' name='L21'></a>  21 
+<a id='L22' name='L22'></a>  22 <em class='sharp'>#include</em> &lt;<a href='../I/252.html'>ctype.h</a>&gt;
+<a id='L23' name='L23'></a>  23 <em class='sharp'>#include</em> &lt;<a href='../I/116.html'>errno.h</a>&gt;
+<a id='L24' name='L24'></a>  24 <em class='sharp'>#include</em> &lt;<a href='../I/1776.html'>stdio.h</a>&gt;
+<a id='L25' name='L25'></a>  25 <em class='sharp'>#include</em> &lt;<a href='../I/1973.html'>string.h</a>&gt;
+<a id='L26' name='L26'></a>  26 <em class='sharp'>#include</em> &lt;<a href='../I/176.html'>time.h</a>&gt;
+<a id='L27' name='L27'></a>  27 
+<a id='L28' name='L28'></a>  28 <em class='sharp'>#define</em> <a href='../R/7950.html' title='Multiple referred from 27 places.'>SPRINTF</a>(<a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a>) ((<a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a>)<a href='../D/36942.html' title='Multiple defined in 2 places.'>sprintf</a> <a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a>)
+<a id='L29' name='L29'></a>  29 
+<a id='L30' name='L30'></a>  30 <em class='comment'>/* Forward. */</em>
+<a id='L31' name='L31'></a>  31 
+<a id='L32' name='L32'></a>  32 <strong class='reserved'>static</strong> <strong class='reserved'>int</strong>  <a href='../S/6276.html#L101' title='Defined at 101 in resolv/ns_date.c.'>datepart</a>(<strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *, <strong class='reserved'>int</strong>, <strong class='reserved'>int</strong>, <strong class='reserved'>int</strong>, <strong class='reserved'>int</strong> *);
+<a id='L33' name='L33'></a>  33 
+<a id='L34' name='L34'></a>  34 <em class='comment'>/* Public. */</em>
+<a id='L35' name='L35'></a>  35 
+<a id='L36' name='L36'></a>  36 <em class='comment'>/*%</em>
+<a id='L37' name='L37'></a>  37 <em class='comment'> * Convert a date in ASCII into the number of seconds since</em>
+<a id='L38' name='L38'></a>  38 <em class='comment'> * 1 January 1970 (GMT assumed).  Format is yyyymmddhhmmss, all</em>
+<a id='L39' name='L39'></a>  39 <em class='comment'> * digits required, no spaces allowed.</em>
+<a id='L40' name='L40'></a>  40 <em class='comment'> */</em>
+<a id='L41' name='L41'></a>  41 
+<a id='L42' name='L42'></a>  42 <a href='../S/223.html#L26' title='Defined at 26 in bits/stdint-uintn.h.'>uint32_t</a>
+<a id='L43' name='L43'></a>  43 <a href='../S/6372.html#L420' title='Referred from 420 in resolv/arpa/nameser.h.'>ns_datetosecs</a>(<strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../Y/12086.html' title='Multiple used in 2816 places.'>cp</a>, <strong class='reserved'>int</strong> *<a href='../Y/13952.html' title='Multiple used in 30 places.'>errp</a>) <em class='brace'>{</em>
+<a id='L44' name='L44'></a>  44     <strong class='reserved'>struct</strong> <a href='../S/3988.html#L7' title='Defined at 7 in time/bits/types/struct_tm.h.'>tm</a> <a href='../D/38101.html' title='Multiple defined in 5 places.'>time</a>;
+<a id='L45' name='L45'></a>  45     <a href='../S/223.html#L26' title='Defined at 26 in bits/stdint-uintn.h.'>uint32_t</a> <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a>;
+<a id='L46' name='L46'></a>  46     <strong class='reserved'>int</strong> <a href='../Y/19208.html' title='Multiple used in 4 places.'>mdays</a>, <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>;
+<a id='L47' name='L47'></a>  47     <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <strong class='reserved'>int</strong> <a href='../Y/12509.html' title='Multiple used in 5 places.'>days_per_month</a>[12] =
+<a id='L48' name='L48'></a>  48         <em class='brace'>{</em>31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31<em class='brace'>}</em>;
+<a id='L49' name='L49'></a>  49 
+<a id='L50' name='L50'></a>  50     <strong class='reserved'>if</strong> (<a href='../D/37108.html' title='Multiple defined in 42 places.'>strlen</a>(<a href='../Y/12086.html' title='Multiple used in 2816 places.'>cp</a>) != 14U) <em class='brace'>{</em>
+<a id='L51' name='L51'></a>  51         *<a href='../Y/13952.html' title='Multiple used in 30 places.'>errp</a> = 1;
+<a id='L52' name='L52'></a>  52         <strong class='reserved'>return</strong> (0);
+<a id='L53' name='L53'></a>  53     <em class='brace'>}</em>
+<a id='L54' name='L54'></a>  54     *<a href='../Y/13952.html' title='Multiple used in 30 places.'>errp</a> = 0;
+<a id='L55' name='L55'></a>  55 
+<a id='L56' name='L56'></a>  56     <a href='../D/33462.html' title='Multiple defined in 30 places.'>memset</a>(&amp;<a href='../D/38101.html' title='Multiple defined in 5 places.'>time</a>, 0, <strong class='reserved'>sizeof</strong> <a href='../D/38101.html' title='Multiple defined in 5 places.'>time</a>);
+<a id='L57' name='L57'></a>  57     <a href='../D/38101.html' title='Multiple defined in 5 places.'>time</a>.<a href='../Y/27421.html' title='Multiple used in 107 places.'>tm_year</a>  = <a href='../S/6276.html#L101' title='Defined at 101 in resolv/ns_date.c.'>datepart</a>(<a href='../Y/12086.html' title='Multiple used in 2816 places.'>cp</a> +  0, 4, 1990, 9999, <a href='../Y/13952.html' title='Multiple used in 30 places.'>errp</a>) - 1900;
+<a id='L58' name='L58'></a>  58     <a href='../D/38101.html' title='Multiple defined in 5 places.'>time</a>.<a href='../Y/27415.html' title='Multiple used in 93 places.'>tm_mon</a>   = <a href='../S/6276.html#L101' title='Defined at 101 in resolv/ns_date.c.'>datepart</a>(<a href='../Y/12086.html' title='Multiple used in 2816 places.'>cp</a> +  4, 2,   01,   12, <a href='../Y/13952.html' title='Multiple used in 30 places.'>errp</a>) - 1;
+<a id='L59' name='L59'></a>  59     <a href='../D/38101.html' title='Multiple defined in 5 places.'>time</a>.<a href='../Y/27413.html' title='Multiple used in 76 places.'>tm_mday</a>  = <a href='../S/6276.html#L101' title='Defined at 101 in resolv/ns_date.c.'>datepart</a>(<a href='../Y/12086.html' title='Multiple used in 2816 places.'>cp</a> +  6, 2,   01,   31, <a href='../Y/13952.html' title='Multiple used in 30 places.'>errp</a>);
+<a id='L60' name='L60'></a>  60     <a href='../D/38101.html' title='Multiple defined in 5 places.'>time</a>.<a href='../Y/27411.html' title='Multiple used in 68 places.'>tm_hour</a>  = <a href='../S/6276.html#L101' title='Defined at 101 in resolv/ns_date.c.'>datepart</a>(<a href='../Y/12086.html' title='Multiple used in 2816 places.'>cp</a> +  8, 2,   00,   23, <a href='../Y/13952.html' title='Multiple used in 30 places.'>errp</a>);
+<a id='L61' name='L61'></a>  61     <a href='../D/38101.html' title='Multiple defined in 5 places.'>time</a>.<a href='../Y/27414.html' title='Multiple used in 58 places.'>tm_min</a>   = <a href='../S/6276.html#L101' title='Defined at 101 in resolv/ns_date.c.'>datepart</a>(<a href='../Y/12086.html' title='Multiple used in 2816 places.'>cp</a> + 10, 2,   00,   59, <a href='../Y/13952.html' title='Multiple used in 30 places.'>errp</a>);
+<a id='L62' name='L62'></a>  62     <a href='../D/38101.html' title='Multiple defined in 5 places.'>time</a>.<a href='../Y/27417.html' title='Multiple used in 67 places.'>tm_sec</a>   = <a href='../S/6276.html#L101' title='Defined at 101 in resolv/ns_date.c.'>datepart</a>(<a href='../Y/12086.html' title='Multiple used in 2816 places.'>cp</a> + 12, 2,   00,   59, <a href='../Y/13952.html' title='Multiple used in 30 places.'>errp</a>);
+<a id='L63' name='L63'></a>  63     <strong class='reserved'>if</strong> (*<a href='../Y/13952.html' title='Multiple used in 30 places.'>errp</a>)      <em class='comment'>/*%&lt; Any parse errors? */</em>
+<a id='L64' name='L64'></a>  64         <strong class='reserved'>return</strong> (0);
+<a id='L65' name='L65'></a>  65 
+<a id='L66' name='L66'></a>  66     <em class='comment'>/*</em>
+<a id='L67' name='L67'></a>  67 <em class='comment'>     * OK, now because timegm() is not available in all environments,</em>
+<a id='L68' name='L68'></a>  68 <em class='comment'>     * we will do it by hand.  Roll up sleeves, curse the gods, begin!</em>
+<a id='L69' name='L69'></a>  69 <em class='comment'>     */</em>
+<a id='L70' name='L70'></a>  70 
+<a id='L71' name='L71'></a>  71 <em class='sharp'>#define</em> <a href='../R/7527.html' title='Multiple referred from 10 places.'>SECS_PER_DAY</a>    ((<a href='../S/223.html#L26' title='Defined at 26 in bits/stdint-uintn.h.'>uint32_t</a>)24*60*60)
+<a id='L72' name='L72'></a>  72 <em class='sharp'>#define</em> <a href='../R/20829.html' title='Multiple referred from 14 places.'>isleap</a>(<a href='../D/39646.html' title='Multiple defined in 4 places.'>y</a>) ((((<a href='../D/39646.html' title='Multiple defined in 4 places.'>y</a>) % 4) == 0 &amp;&amp; ((<a href='../D/39646.html' title='Multiple defined in 4 places.'>y</a>) % 100) != 0) || ((<a href='../D/39646.html' title='Multiple defined in 4 places.'>y</a>) % 400) == 0)
+<a id='L73' name='L73'></a>  73 
+<a id='L74' name='L74'></a>  74     <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a>  = <a href='../D/38101.html' title='Multiple defined in 5 places.'>time</a>.<a href='../Y/27417.html' title='Multiple used in 67 places.'>tm_sec</a>;              <em class='comment'>/*%&lt; Seconds */</em>
+<a id='L75' name='L75'></a>  75     <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a> += <a href='../D/38101.html' title='Multiple defined in 5 places.'>time</a>.<a href='../Y/27414.html' title='Multiple used in 58 places.'>tm_min</a> * 60;         <em class='comment'>/*%&lt; Minutes */</em>
+<a id='L76' name='L76'></a>  76     <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a> += <a href='../D/38101.html' title='Multiple defined in 5 places.'>time</a>.<a href='../Y/27411.html' title='Multiple used in 68 places.'>tm_hour</a> * (60*60);       <em class='comment'>/*%&lt; Hours */</em>
+<a id='L77' name='L77'></a>  77     <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a> += (<a href='../D/38101.html' title='Multiple defined in 5 places.'>time</a>.<a href='../Y/27413.html' title='Multiple used in 76 places.'>tm_mday</a> - 1) * <a href='../D/13715.html' title='Multiple defined in 2 places.'>SECS_PER_DAY</a>;    <em class='comment'>/*%&lt; Days */</em>
+<a id='L78' name='L78'></a>  78     <em class='comment'>/* Months are trickier.  Look without leaping, then leap */</em>
+<a id='L79' name='L79'></a>  79     <a href='../Y/19208.html' title='Multiple used in 4 places.'>mdays</a> = 0;
+<a id='L80' name='L80'></a>  80     <strong class='reserved'>for</strong> (<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> = 0; <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> &lt; <a href='../D/38101.html' title='Multiple defined in 5 places.'>time</a>.<a href='../Y/27415.html' title='Multiple used in 93 places.'>tm_mon</a>; <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>++)
+<a id='L81' name='L81'></a>  81         <a href='../Y/19208.html' title='Multiple used in 4 places.'>mdays</a> += <a href='../Y/12509.html' title='Multiple used in 5 places.'>days_per_month</a>[<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>];
+<a id='L82' name='L82'></a>  82     <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a> += <a href='../Y/19208.html' title='Multiple used in 4 places.'>mdays</a> * <a href='../D/13715.html' title='Multiple defined in 2 places.'>SECS_PER_DAY</a>;         <em class='comment'>/*%&lt; Months */</em>
+<a id='L83' name='L83'></a>  83     <strong class='reserved'>if</strong> (<a href='../D/38101.html' title='Multiple defined in 5 places.'>time</a>.<a href='../Y/27415.html' title='Multiple used in 93 places.'>tm_mon</a> &gt; 1 &amp;&amp; <a href='../D/32337.html' title='Multiple defined in 2 places.'>isleap</a>(1900+<a href='../D/38101.html' title='Multiple defined in 5 places.'>time</a>.<a href='../Y/27421.html' title='Multiple used in 107 places.'>tm_year</a>))
+<a id='L84' name='L84'></a>  84         <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a> += <a href='../D/13715.html' title='Multiple defined in 2 places.'>SECS_PER_DAY</a>;     <em class='comment'>/*%&lt; Add leapday for this year */</em>
+<a id='L85' name='L85'></a>  85     <em class='comment'>/* First figure years without leapdays, then add them in.  */</em>
+<a id='L86' name='L86'></a>  86     <em class='comment'>/* The loop is slow, FIXME, but simple and accurate.  */</em>
+<a id='L87' name='L87'></a>  87     <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a> += (<a href='../D/38101.html' title='Multiple defined in 5 places.'>time</a>.<a href='../Y/27421.html' title='Multiple used in 107 places.'>tm_year</a> - 70) * (<a href='../D/13715.html' title='Multiple defined in 2 places.'>SECS_PER_DAY</a>*365); <em class='comment'>/*%&lt; Years */</em>
+<a id='L88' name='L88'></a>  88     <strong class='reserved'>for</strong> (<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> = 70; <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> &lt; <a href='../D/38101.html' title='Multiple defined in 5 places.'>time</a>.<a href='../Y/27421.html' title='Multiple used in 107 places.'>tm_year</a>; <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>++)
+<a id='L89' name='L89'></a>  89         <strong class='reserved'>if</strong> (<a href='../D/32337.html' title='Multiple defined in 2 places.'>isleap</a>(1900+<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>))
+<a id='L90' name='L90'></a>  90             <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a> += <a href='../D/13715.html' title='Multiple defined in 2 places.'>SECS_PER_DAY</a>; <em class='comment'>/*%&lt; Add leapday for prev year */</em>
+<a id='L91' name='L91'></a>  91     <strong class='reserved'>return</strong> (<a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a>);
+<a id='L92' name='L92'></a>  92 <em class='brace'>}</em>
+<a id='L93' name='L93'></a>  93 
+<a id='L94' name='L94'></a>  94 <em class='comment'>/* Private. */</em>
+<a id='L95' name='L95'></a>  95 
+<a id='L96' name='L96'></a>  96 <em class='comment'>/*%</em>
+<a id='L97' name='L97'></a>  97 <em class='comment'> * Parse part of a date.  Set error flag if any error.</em>
+<a id='L98' name='L98'></a>  98 <em class='comment'> * Don't reset the flag if there is no error.</em>
+<a id='L99' name='L99'></a>  99 <em class='comment'> */</em>
+<a id='L100' name='L100'></a> 100 <strong class='reserved'>static</strong> <strong class='reserved'>int</strong>
+<a id='L101' name='L101'></a> 101 <a href='../R/18449.html' title='Multiple referred from 7 places.'>datepart</a>(<strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>, <strong class='reserved'>int</strong> <a href='../D/36819.html' title='Multiple defined in 18 places.'>size</a>, <strong class='reserved'>int</strong> <a href='../D/33498.html' title='Multiple defined in 5 places.'>min</a>, <strong class='reserved'>int</strong> <a href='../S/9052.html#L32' title='Defined at 32 in sysdeps/ieee754/dbl-64/mydefs.h.'>max</a>, <strong class='reserved'>int</strong> *<a href='../Y/13952.html' title='Multiple used in 30 places.'>errp</a>) <em class='brace'>{</em>
+<a id='L102' name='L102'></a> 102     <strong class='reserved'>int</strong> <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a> = 0;
+<a id='L103' name='L103'></a> 103     <strong class='reserved'>int</strong> <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>;
+<a id='L104' name='L104'></a> 104 
+<a id='L105' name='L105'></a> 105     <strong class='reserved'>for</strong> (<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> = 0; <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> &lt; <a href='../D/36819.html' title='Multiple defined in 18 places.'>size</a>; <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>++) <em class='brace'>{</em>
+<a id='L106' name='L106'></a> 106         <strong class='reserved'>if</strong> (!<a href='../D/32324.html' title='Multiple defined in 3 places.'>isdigit</a>((<strong class='reserved'>unsigned</strong> <strong class='reserved'>char</strong>)(<a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>[<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>])))
+<a id='L107' name='L107'></a> 107             *<a href='../Y/13952.html' title='Multiple used in 30 places.'>errp</a> = 1;
+<a id='L108' name='L108'></a> 108         <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a> = (<a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a> * 10) + <a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>[<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>] - '0';
+<a id='L109' name='L109'></a> 109     <em class='brace'>}</em>
+<a id='L110' name='L110'></a> 110     <strong class='reserved'>if</strong> (<a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a> &lt; <a href='../D/33498.html' title='Multiple defined in 5 places.'>min</a>)
+<a id='L111' name='L111'></a> 111         *<a href='../Y/13952.html' title='Multiple used in 30 places.'>errp</a> = 1;
+<a id='L112' name='L112'></a> 112     <strong class='reserved'>if</strong> (<a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a> &gt; <a href='../S/9052.html#L32' title='Defined at 32 in sysdeps/ieee754/dbl-64/mydefs.h.'>max</a>)
+<a id='L113' name='L113'></a> 113         *<a href='../Y/13952.html' title='Multiple used in 30 places.'>errp</a> = 1;
+<a id='L114' name='L114'></a> 114     <strong class='reserved'>return</strong> (<a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a>);
+<a id='L115' name='L115'></a> 115 <em class='brace'>}</em>
+<a id='L116' name='L116'></a> 116 
+<a id='L117' name='L117'></a> 117 <em class='comment'>/*! \file */</em>
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L43'>[^]</a><a href='#L101'>[v]</a><a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

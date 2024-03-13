@@ -1,0 +1,98 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>sysdeps/ieee754/dbl-64/s_fmaf.c</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18977.html'>sysdeps</a>/<a href='../files/19058.html'>ieee754</a>/<a href='../files/19059.html'>dbl-64</a>/s_fmaf.c</h2>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L35'>[^]</a>[v][top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<h2 class='header'>DEFINITIONS</h2>
+This source file includes following definitions.
+<ol>
+<li><a href='#L35' title='Defined at 35.'>__fmaf</a></li>
+</ol>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* Compute x * y + z as ternary operation.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   Copyright (C) 2010-2022 Free Software Foundation, Inc.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'></em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'></em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'></em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   License along with the GNU C Library; if not, see</em>
+<a id='L17' name='L17'></a>  17 <em class='comment'>   &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L18' name='L18'></a>  18 
+<a id='L19' name='L19'></a>  19 <em class='sharp'>#define</em> <a href='../S/18168.html#L134' title='Referred from 134 in include/math.h.'>NO_MATH_REDIRECT</a>
+<a id='L20' name='L20'></a>  20 <em class='sharp'>#include</em> &lt;<a href='../I/1890.html'>math.h</a>&gt;
+<a id='L21' name='L21'></a>  21 <em class='sharp'>#include</em> &lt;<a href='../I/118.html'>fenv.h</a>&gt;
+<a id='L22' name='L22'></a>  22 <em class='sharp'>#include</em> &lt;<a href='../I/7709.html'>ieee754.h</a>&gt;
+<a id='L23' name='L23'></a>  23 <em class='sharp'>#include</em> &lt;<a href='../I/5881.html'>math-barriers.h</a>&gt;
+<a id='L24' name='L24'></a>  24 <em class='sharp'>#include</em> &lt;<a href='../I/5869.html'>fenv_private.h</a>&gt;
+<a id='L25' name='L25'></a>  25 <em class='sharp'>#include</em> &lt;<a href='12190.html'>libm-alias-float.h</a>&gt;
+<a id='L26' name='L26'></a>  26 <em class='sharp'>#include</em> &lt;<a href='12337.html'>math-use-builtins.h</a>&gt;
+<a id='L27' name='L27'></a>  27 
+<a id='L28' name='L28'></a>  28 <em class='comment'>/* This implementation relies on double being more than twice as</em>
+<a id='L29' name='L29'></a>  29 <em class='comment'>   precise as float and uses rounding to odd in order to avoid problems</em>
+<a id='L30' name='L30'></a>  30 <em class='comment'>   with double rounding.</em>
+<a id='L31' name='L31'></a>  31 <em class='comment'>   See a paper by Boldo and Melquiond:</em>
+<a id='L32' name='L32'></a>  32 <em class='comment'>   http://www.lri.fr/~melquion/doc/08-tc.pdf  */</em>
+<a id='L33' name='L33'></a>  33 
+<a id='L34' name='L34'></a>  34 <strong class='reserved'>float</strong>
+<a id='L35' name='L35'></a>  35 <a href='../R/14080.html' title='Multiple referred from 7 places.'>__fmaf</a> (<strong class='reserved'>float</strong> <a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a>, <strong class='reserved'>float</strong> <a href='../D/39646.html' title='Multiple defined in 4 places.'>y</a>, <strong class='reserved'>float</strong> <a href='../D/39723.html' title='Multiple defined in 4 places.'>z</a>)
+<a id='L36' name='L36'></a>  36 <em class='brace'>{</em>
+<a id='L37' name='L37'></a>  37 <em class='sharp'>#if</em> <a href='../D/16814.html' title='Multiple defined in 5 places.'>USE_FMAF_BUILTIN</a>
+<a id='L38' name='L38'></a>  38   <strong class='reserved'>return</strong> <a href='../Y/3772.html' title='Multiple used in 11 places.'>__builtin_fmaf</a> (<a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a>, <a href='../D/39646.html' title='Multiple defined in 4 places.'>y</a>, <a href='../D/39723.html' title='Multiple defined in 4 places.'>z</a>);
+<a id='L39' name='L39'></a>  39 <em class='sharp'>#else</em>
+<a id='L40' name='L40'></a>  40   <em class='comment'>/* Use generic implementation.  */</em>
+<a id='L41' name='L41'></a>  41   <a href='../D/30434.html' title='Multiple defined in 20 places.'>fenv_t</a> <a href='../Y/13803.html' title='Multiple used in 487 places.'>env</a>;
+<a id='L42' name='L42'></a>  42 
+<a id='L43' name='L43'></a>  43   <em class='comment'>/* Multiplication is always exact.  */</em>
+<a id='L44' name='L44'></a>  44   <strong class='reserved'>double</strong> <a href='../Y/26948.html' title='Multiple used in 493 places.'>temp</a> = (<strong class='reserved'>double</strong>) <a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a> * (<strong class='reserved'>double</strong>) <a href='../D/39646.html' title='Multiple defined in 4 places.'>y</a>;
+<a id='L45' name='L45'></a>  45 
+<a id='L46' name='L46'></a>  46   <em class='comment'>/* Ensure correct sign of an exact zero result by performing the</em>
+<a id='L47' name='L47'></a>  47 <em class='comment'>     addition in the original rounding mode in that case.  */</em>
+<a id='L48' name='L48'></a>  48   <strong class='reserved'>if</strong> (<a href='../Y/26948.html' title='Multiple used in 493 places.'>temp</a> == -<a href='../D/39723.html' title='Multiple defined in 4 places.'>z</a>)
+<a id='L49' name='L49'></a>  49     <strong class='reserved'>return</strong> (<strong class='reserved'>float</strong>) <a href='../Y/26948.html' title='Multiple used in 493 places.'>temp</a> + <a href='../D/39723.html' title='Multiple defined in 4 places.'>z</a>;
+<a id='L50' name='L50'></a>  50 
+<a id='L51' name='L51'></a>  51   <strong class='reserved'>union</strong> <a href='../D/31674.html' title='Multiple defined in 6 places.'>ieee754_double</a> <a href='../S/9112.html#L29' title='Defined at 29 in sysdeps/ieee754/ldbl-128ibm/test-fmodrem-ldbl-128ibm.c.'>u</a>;
+<a id='L52' name='L52'></a>  52 
+<a id='L53' name='L53'></a>  53   <a href='../D/32630.html' title='Multiple defined in 14 places.'>libc_feholdexcept_setround</a> (&amp;<a href='../Y/13803.html' title='Multiple used in 487 places.'>env</a>, <a href='../D/4160.html' title='Multiple defined in 18 places.'>FE_TOWARDZERO</a>);
+<a id='L54' name='L54'></a>  54 
+<a id='L55' name='L55'></a>  55   <em class='comment'>/* Perform addition with round to odd.  */</em>
+<a id='L56' name='L56'></a>  56   <a href='../S/9112.html#L29' title='Defined at 29 in sysdeps/ieee754/ldbl-128ibm/test-fmodrem-ldbl-128ibm.c.'>u</a>.<a href='../D/29259.html' title='Multiple defined in 3 places.'>d</a> = <a href='../Y/26948.html' title='Multiple used in 493 places.'>temp</a> + (<strong class='reserved'>double</strong>) <a href='../D/39723.html' title='Multiple defined in 4 places.'>z</a>;
+<a id='L57' name='L57'></a>  57   <em class='comment'>/* Ensure the addition is not scheduled after fetestexcept call.  */</em>
+<a id='L58' name='L58'></a>  58   <a href='../D/33352.html' title='Multiple defined in 8 places.'>math_force_eval</a> (<a href='../S/9112.html#L29' title='Defined at 29 in sysdeps/ieee754/ldbl-128ibm/test-fmodrem-ldbl-128ibm.c.'>u</a>.<a href='../D/29259.html' title='Multiple defined in 3 places.'>d</a>);
+<a id='L59' name='L59'></a>  59 
+<a id='L60' name='L60'></a>  60   <em class='comment'>/* Reset rounding mode and test for inexact simultaneously.  */</em>
+<a id='L61' name='L61'></a>  61   <strong class='reserved'>int</strong> <a href='../Y/17344.html' title='Multiple used in 1543 places.'>j</a> = <a href='../D/32770.html' title='Multiple defined in 14 places.'>libc_feupdateenv_test</a> (&amp;<a href='../Y/13803.html' title='Multiple used in 487 places.'>env</a>, <a href='../D/4141.html' title='Multiple defined in 19 places.'>FE_INEXACT</a>) != 0;
+<a id='L62' name='L62'></a>  62 
+<a id='L63' name='L63'></a>  63   <strong class='reserved'>if</strong> ((<a href='../S/9112.html#L29' title='Defined at 29 in sysdeps/ieee754/ldbl-128ibm/test-fmodrem-ldbl-128ibm.c.'>u</a>.<a href='../Y/16509.html' title='Multiple used in 540 places.'>ieee</a>.<a href='../Y/18892.html' title='Multiple used in 197 places.'>mantissa1</a> &amp; 1) == 0 &amp;&amp; <a href='../S/9112.html#L29' title='Defined at 29 in sysdeps/ieee754/ldbl-128ibm/test-fmodrem-ldbl-128ibm.c.'>u</a>.<a href='../Y/16509.html' title='Multiple used in 540 places.'>ieee</a>.<a href='../Y/14211.html' title='Multiple used in 773 places.'>exponent</a> != 0x7ff)
+<a id='L64' name='L64'></a>  64     <a href='../S/9112.html#L29' title='Defined at 29 in sysdeps/ieee754/ldbl-128ibm/test-fmodrem-ldbl-128ibm.c.'>u</a>.<a href='../Y/16509.html' title='Multiple used in 540 places.'>ieee</a>.<a href='../Y/18892.html' title='Multiple used in 197 places.'>mantissa1</a> |= <a href='../Y/17344.html' title='Multiple used in 1543 places.'>j</a>;
+<a id='L65' name='L65'></a>  65 
+<a id='L66' name='L66'></a>  66   <em class='comment'>/* And finally truncation with round to nearest.  */</em>
+<a id='L67' name='L67'></a>  67   <strong class='reserved'>return</strong> (<strong class='reserved'>float</strong>) <a href='../S/9112.html#L29' title='Defined at 29 in sysdeps/ieee754/ldbl-128ibm/test-fmodrem-ldbl-128ibm.c.'>u</a>.<a href='../D/29259.html' title='Multiple defined in 3 places.'>d</a>;
+<a id='L68' name='L68'></a>  68 <em class='sharp'>#endif</em> <em class='comment'>/* ! USE_FMAF_BUILTIN  */</em>
+<a id='L69' name='L69'></a>  69 <em class='brace'>}</em>
+<a id='L70' name='L70'></a>  70 <em class='sharp'>#ifndef</em> <a href='../D/23934.html' title='Multiple defined in 8 places.'>__fmaf</a>
+<a id='L71' name='L71'></a>  71 <a href='../D/32836.html' title='Multiple defined in 17 places.'>libm_alias_float</a> (<a href='../D/23929.html' title='Multiple defined in 10 places.'>__fma</a>, <a href='../S/3342.html#L916' title='Defined at 916 in math/tgmath.h.'>fma</a>)
+<a id='L72' name='L72'></a>  72 <em class='sharp'>#endif</em>
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;][^]<a href='#L35'>[v]</a><a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

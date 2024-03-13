@@ -1,0 +1,907 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>wcsmbs/wchar.h</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/19407.html'>wcsmbs</a>/wchar.h</h2>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L87'>[^]</a><a href='#L330'>[v]</a>[top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<h2 class='header'><a href='../J/194.html' title='Multiple included from 376 places.'>INCLUDED FROM</a></h2>
+<hr />
+<h2 class='header'>DEFINITIONS</h2>
+This source file includes following definitions.
+<ol>
+<li><a href='#L87' title='Defined at 87.'>wcscpy</a></li>
+<li><a href='#L323' title='Defined at 323.'>__wctob_alias</a></li>
+<li><a href='#L330' title='Defined at 330.'>__NTH</a></li>
+</ol>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* Copyright (C) 1995-2022 Free Software Foundation, Inc.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'></em>
+<a id='L4' name='L4'></a>   4 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'></em>
+<a id='L9' name='L9'></a>   9 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'></em>
+<a id='L14' name='L14'></a>  14 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   License along with the GNU C Library; if not, see</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L17' name='L17'></a>  17 
+<a id='L18' name='L18'></a>  18 <em class='comment'>/*</em>
+<a id='L19' name='L19'></a>  19 <em class='comment'> *      ISO C99 Standard: 7.24</em>
+<a id='L20' name='L20'></a>  20 <em class='comment'> *  Extended multibyte and wide character utilities &lt;wchar.h&gt;</em>
+<a id='L21' name='L21'></a>  21 <em class='comment'> */</em>
+<a id='L22' name='L22'></a>  22 
+<a id='L23' name='L23'></a>  23 <em class='sharp'>#ifndef</em> <a href='../S/4210.html#L24' title='Defined at 24 in wcsmbs/wchar.h.'>_WCHAR_H</a>
+<a id='L24' name='L24'></a>  24 <em class='sharp'>#define</em> <a href='../R/12228.html' title='Multiple referred from 6 places.'>_WCHAR_H</a> 1
+<a id='L25' name='L25'></a>  25 
+<a id='L26' name='L26'></a>  26 <em class='sharp'>#define</em> <a href='../S/212.html#L27' title='Referred from 27 in bits/libc-header-start.h.'>__GLIBC_INTERNAL_STARTING_HEADER_IMPLEMENTATION</a>
+<a id='L27' name='L27'></a>  27 <em class='sharp'>#include</em> &lt;<a href='212.html'>bits/libc-header-start.h</a>&gt;
+<a id='L28' name='L28'></a>  28 
+<a id='L29' name='L29'></a>  29 <em class='comment'>/* Gather machine dependent type support.  */</em>
+<a id='L30' name='L30'></a>  30 <em class='sharp'>#include</em> &lt;<a href='../I/120.html'>bits/floatn.h</a>&gt;
+<a id='L31' name='L31'></a>  31 
+<a id='L32' name='L32'></a>  32 <em class='sharp'>#define</em> __need_size_t
+<a id='L33' name='L33'></a>  33 <em class='sharp'>#define</em> __need_wchar_t
+<a id='L34' name='L34'></a>  34 <em class='sharp'>#define</em> __need_NULL
+<a id='L35' name='L35'></a>  35 <em class='sharp'>#include</em> &lt;stddef.h&gt;
+<a id='L36' name='L36'></a>  36 
+<a id='L37' name='L37'></a>  37 <em class='sharp'>#define</em> __need___va_list
+<a id='L38' name='L38'></a>  38 <em class='sharp'>#include</em> &lt;stdarg.h&gt;
+<a id='L39' name='L39'></a>  39 
+<a id='L40' name='L40'></a>  40 <em class='sharp'>#include</em> &lt;<a href='../I/194.html'>bits/wchar.h</a>&gt;
+<a id='L41' name='L41'></a>  41 <em class='sharp'>#include</em> &lt;<a href='../I/1818.html'>bits/types/wint_t.h</a>&gt;
+<a id='L42' name='L42'></a>  42 <em class='sharp'>#include</em> &lt;<a href='../I/1798.html'>bits/types/mbstate_t.h</a>&gt;
+<a id='L43' name='L43'></a>  43 <em class='sharp'>#include</em> &lt;<a href='../I/1788.html'>bits/types/__FILE.h</a>&gt;
+<a id='L44' name='L44'></a>  44 
+<a id='L45' name='L45'></a>  45 <em class='sharp'>#if</em> <strong class='reserved'>defined</strong> <a href='../D/22862.html' title='Multiple defined in 2 places.'>__USE_UNIX98</a> || <strong class='reserved'>defined</strong> <a href='../D/22865.html' title='Multiple defined in 3 places.'>__USE_XOPEN2K</a>
+<a id='L46' name='L46'></a>  46 <em class='sharp'># include</em> &lt;<a href='../I/1787.html'>bits/types/FILE.h</a>&gt;
+<a id='L47' name='L47'></a>  47 <em class='sharp'>#endif</em>
+<a id='L48' name='L48'></a>  48 <em class='sharp'>#ifdef</em> <a href='../D/22866.html' title='Multiple defined in 3 places.'>__USE_XOPEN2K8</a>
+<a id='L49' name='L49'></a>  49 <em class='sharp'># include</em> &lt;<a href='../I/1797.html'>bits/types/locale_t.h</a>&gt;
+<a id='L50' name='L50'></a>  50 <em class='sharp'>#endif</em>
+<a id='L51' name='L51'></a>  51 
+<a id='L52' name='L52'></a>  52 <em class='comment'>/* Tell the caller that we provide correct C++ prototypes.  */</em>
+<a id='L53' name='L53'></a>  53 <em class='sharp'>#if</em> <strong class='reserved'>defined</strong> <a href='../Y/4094.html' title='Multiple used in 163 places.'>__cplusplus</a> &amp;&amp; <a href='../D/21626.html' title='Multiple defined in 2 places.'>__GNUC_PREREQ</a> (4, 4)
+<a id='L54' name='L54'></a>  54 <em class='sharp'># define</em> <a href='../R/12582.html' title='Multiple referred from 6 places.'>__CORRECT_ISO_CPP_WCHAR_H_PROTO</a>
+<a id='L55' name='L55'></a>  55 <em class='sharp'>#endif</em>
+<a id='L56' name='L56'></a>  56 
+<a id='L57' name='L57'></a>  57 <em class='sharp'>#ifndef</em> <a href='../D/17120.html' title='Multiple defined in 2 places.'>WCHAR_MIN</a>
+<a id='L58' name='L58'></a>  58 <em class='comment'>/* These constants might also be defined in &lt;inttypes.h&gt;.  */</em>
+<a id='L59' name='L59'></a>  59 <em class='sharp'># define</em> <a href='../R/9452.html' title='Multiple referred from 5 places.'>WCHAR_MIN</a> <a href='../D/22877.html' title='Multiple defined in 3 places.'>__WCHAR_MIN</a>
+<a id='L60' name='L60'></a>  60 <em class='sharp'># define</em> <a href='../R/9451.html' title='Multiple referred from 17 places.'>WCHAR_MAX</a> <a href='../D/22875.html' title='Multiple defined in 3 places.'>__WCHAR_MAX</a>
+<a id='L61' name='L61'></a>  61 <em class='sharp'>#endif</em>
+<a id='L62' name='L62'></a>  62 
+<a id='L63' name='L63'></a>  63 <em class='sharp'>#ifndef</em> <a href='../D/17206.html' title='Multiple defined in 2 places.'>WEOF</a>
+<a id='L64' name='L64'></a>  64 <em class='sharp'># define</em> <a href='../R/9532.html' title='Multiple referred from 158 places.'>WEOF</a> (0xffffffffu)
+<a id='L65' name='L65'></a>  65 <em class='sharp'>#endif</em>
+<a id='L66' name='L66'></a>  66 
+<a id='L67' name='L67'></a>  67 <em class='comment'>/* All versions of XPG prior to the publication of ISO C99 required</em>
+<a id='L68' name='L68'></a>  68 <em class='comment'>   the bulk of &lt;wctype.h&gt;'s declarations to appear in this header</em>
+<a id='L69' name='L69'></a>  69 <em class='comment'>   (because &lt;wctype.h&gt; did not exist prior to C99).  In POSIX.1-2001</em>
+<a id='L70' name='L70'></a>  70 <em class='comment'>   those declarations were marked as XSI extensions; in -2008 they</em>
+<a id='L71' name='L71'></a>  71 <em class='comment'>   were additionally marked as obsolescent.  _GNU_SOURCE mode</em>
+<a id='L72' name='L72'></a>  72 <em class='comment'>   anticipates the removal of these declarations in the next revision</em>
+<a id='L73' name='L73'></a>  73 <em class='comment'>   of POSIX.  */</em>
+<a id='L74' name='L74'></a>  74 <em class='sharp'>#if</em> (<strong class='reserved'>defined</strong> <a href='../D/22864.html' title='Multiple defined in 2 places.'>__USE_XOPEN</a> &amp;&amp; !<strong class='reserved'>defined</strong> <a href='../D/22845.html' title='Multiple defined in 3 places.'>__USE_GNU</a> \
+<a id='L75' name='L75'></a>  75      &amp;&amp; !(<strong class='reserved'>defined</strong> <a href='../D/22865.html' title='Multiple defined in 3 places.'>__USE_XOPEN2K</a> &amp;&amp; !<strong class='reserved'>defined</strong> <a href='../D/22868.html' title='Multiple defined in 2 places.'>__USE_XOPEN2KXSI</a>))
+<a id='L76' name='L76'></a>  76 <em class='sharp'># include</em> &lt;<a href='../I/1823.html'>bits/wctype-wchar.h</a>&gt;
+<a id='L77' name='L77'></a>  77 <em class='sharp'>#endif</em>
+<a id='L78' name='L78'></a>  78 
+<a id='L79' name='L79'></a>  79 <a href='../D/21188.html' title='Multiple defined in 2 places.'>__BEGIN_DECLS</a>
+<a id='L80' name='L80'></a>  80 
+<a id='L81' name='L81'></a>  81 <em class='comment'>/* This incomplete type is defined in &lt;time.h&gt; but needed here because</em>
+<a id='L82' name='L82'></a>  82 <em class='comment'>   of `wcsftime'.  */</em>
+<a id='L83' name='L83'></a>  83 <strong class='reserved'>struct</strong> <a href='../S/3988.html#L7' title='Defined at 7 in time/bits/types/struct_tm.h.'>tm</a>;
+<a id='L84' name='L84'></a>  84 
+<a id='L85' name='L85'></a>  85 
+<a id='L86' name='L86'></a>  86 <em class='comment'>/* Copy SRC to DEST.  */</em>
+<a id='L87' name='L87'></a>  87 <strong class='reserved'>extern</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<a href='../R/26444.html' title='Multiple referred from 41 places.'>wcscpy</a> (<a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/4196.html' title='Multiple used in 147 places.'>__dest</a>,
+<a id='L88' name='L88'></a>  88             <strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/7540.html' title='Multiple used in 136 places.'>__src</a>)
+<a id='L89' name='L89'></a>  89      <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a> <a href='../D/25190.html' title='Multiple defined in 18 places.'>__nonnull</a> ((1, 2));
+<a id='L90' name='L90'></a>  90 
+<a id='L91' name='L91'></a>  91 <em class='comment'>/* Copy no more than N wide-characters of SRC to DEST.  */</em>
+<a id='L92' name='L92'></a>  92 <strong class='reserved'>extern</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<a href='../Y/28948.html' title='Multiple used in 30 places.'>wcsncpy</a> (<a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/4196.html' title='Multiple used in 147 places.'>__dest</a>,
+<a id='L93' name='L93'></a>  93              <strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/7540.html' title='Multiple used in 136 places.'>__src</a>, <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/6016.html' title='Multiple used in 299 places.'>__n</a>)
+<a id='L94' name='L94'></a>  94      <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a> <a href='../D/25190.html' title='Multiple defined in 18 places.'>__nonnull</a> ((1, 2));
+<a id='L95' name='L95'></a>  95 
+<a id='L96' name='L96'></a>  96 <em class='comment'>/* Append SRC onto DEST.  */</em>
+<a id='L97' name='L97'></a>  97 <strong class='reserved'>extern</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<a href='../S/1048.html#L54' title='Defined at 54 in posix/fnmatch.c.'>wcscat</a> (<a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/4196.html' title='Multiple used in 147 places.'>__dest</a>,
+<a id='L98' name='L98'></a>  98             <strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/7540.html' title='Multiple used in 136 places.'>__src</a>)
+<a id='L99' name='L99'></a>  99      <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a> <a href='../D/25190.html' title='Multiple defined in 18 places.'>__nonnull</a> ((1, 2));
+<a id='L100' name='L100'></a> 100 <em class='comment'>/* Append no more than N wide-characters of SRC onto DEST.  */</em>
+<a id='L101' name='L101'></a> 101 <strong class='reserved'>extern</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<a href='../Y/28947.html' title='Multiple used in 26 places.'>wcsncat</a> (<a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/4196.html' title='Multiple used in 147 places.'>__dest</a>,
+<a id='L102' name='L102'></a> 102              <strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/7540.html' title='Multiple used in 136 places.'>__src</a>, <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/6016.html' title='Multiple used in 299 places.'>__n</a>)
+<a id='L103' name='L103'></a> 103      <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a> <a href='../D/25190.html' title='Multiple defined in 18 places.'>__nonnull</a> ((1, 2));
+<a id='L104' name='L104'></a> 104 
+<a id='L105' name='L105'></a> 105 <em class='comment'>/* Compare S1 and S2.  */</em>
+<a id='L106' name='L106'></a> 106 <strong class='reserved'>extern</strong> <strong class='reserved'>int</strong> <a href='../D/39041.html' title='Multiple defined in 4 places.'>wcscmp</a> (<strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<a href='../Y/7307.html' title='Multiple used in 62 places.'>__s1</a>, <strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<a href='../Y/7308.html' title='Multiple used in 56 places.'>__s2</a>)
+<a id='L107' name='L107'></a> 107      <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a> <a href='../D/23317.html' title='Multiple defined in 3 places.'>__attribute_pure__</a> <a href='../D/25190.html' title='Multiple defined in 18 places.'>__nonnull</a> ((1, 2));
+<a id='L108' name='L108'></a> 108 <em class='comment'>/* Compare N wide-characters of S1 and S2.  */</em>
+<a id='L109' name='L109'></a> 109 <strong class='reserved'>extern</strong> <strong class='reserved'>int</strong> <a href='../D/39047.html' title='Multiple defined in 2 places.'>wcsncmp</a> (<strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<a href='../Y/7307.html' title='Multiple used in 62 places.'>__s1</a>, <strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<a href='../Y/7308.html' title='Multiple used in 56 places.'>__s2</a>, <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/6016.html' title='Multiple used in 299 places.'>__n</a>)
+<a id='L110' name='L110'></a> 110      <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a> <a href='../D/23317.html' title='Multiple defined in 3 places.'>__attribute_pure__</a> <a href='../D/25190.html' title='Multiple defined in 18 places.'>__nonnull</a> ((1, 2));
+<a id='L111' name='L111'></a> 111 
+<a id='L112' name='L112'></a> 112 <em class='sharp'>#ifdef</em> <a href='../D/22866.html' title='Multiple defined in 3 places.'>__USE_XOPEN2K8</a>
+<a id='L113' name='L113'></a> 113 <em class='comment'>/* Compare S1 and S2, ignoring case.  */</em>
+<a id='L114' name='L114'></a> 114 <strong class='reserved'>extern</strong> <strong class='reserved'>int</strong> <a href='../Y/28934.html' title='Multiple used in 3 places.'>wcscasecmp</a> (<strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<a href='../Y/7307.html' title='Multiple used in 62 places.'>__s1</a>, <strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<a href='../Y/7308.html' title='Multiple used in 56 places.'>__s2</a>) <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a>;
+<a id='L115' name='L115'></a> 115 
+<a id='L116' name='L116'></a> 116 <em class='comment'>/* Compare no more than N chars of S1 and S2, ignoring case.  */</em>
+<a id='L117' name='L117'></a> 117 <strong class='reserved'>extern</strong> <strong class='reserved'>int</strong> <a href='../Y/28945.html' title='Multiple used in 3 places.'>wcsncasecmp</a> (<strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<a href='../Y/7307.html' title='Multiple used in 62 places.'>__s1</a>, <strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<a href='../Y/7308.html' title='Multiple used in 56 places.'>__s2</a>,
+<a id='L118' name='L118'></a> 118             <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/6016.html' title='Multiple used in 299 places.'>__n</a>) <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a>;
+<a id='L119' name='L119'></a> 119 
+<a id='L120' name='L120'></a> 120 <em class='comment'>/* Similar to the two functions above but take the information from</em>
+<a id='L121' name='L121'></a> 121 <em class='comment'>   the provided locale and not the global locale.  */</em>
+<a id='L122' name='L122'></a> 122 <strong class='reserved'>extern</strong> <strong class='reserved'>int</strong> <a href='../Y/28935.html' title='Multiple used in 3 places.'>wcscasecmp_l</a> (<strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<a href='../Y/7307.html' title='Multiple used in 62 places.'>__s1</a>, <strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<a href='../Y/7308.html' title='Multiple used in 56 places.'>__s2</a>,
+<a id='L123' name='L123'></a> 123              <a href='../S/2191.html#L24' title='Defined at 24 in locale/bits/types/locale_t.h.'>locale_t</a> <a href='../Y/5494.html' title='Multiple used in 50 places.'>__loc</a>) <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a>;
+<a id='L124' name='L124'></a> 124 
+<a id='L125' name='L125'></a> 125 <strong class='reserved'>extern</strong> <strong class='reserved'>int</strong> <a href='../Y/28946.html' title='Multiple used in 3 places.'>wcsncasecmp_l</a> (<strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<a href='../Y/7307.html' title='Multiple used in 62 places.'>__s1</a>, <strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<a href='../Y/7308.html' title='Multiple used in 56 places.'>__s2</a>,
+<a id='L126' name='L126'></a> 126               <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/6016.html' title='Multiple used in 299 places.'>__n</a>, <a href='../S/2191.html#L24' title='Defined at 24 in locale/bits/types/locale_t.h.'>locale_t</a> <a href='../Y/5494.html' title='Multiple used in 50 places.'>__loc</a>) <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a>;
+<a id='L127' name='L127'></a> 127 <em class='sharp'>#endif</em>
+<a id='L128' name='L128'></a> 128 
+<a id='L129' name='L129'></a> 129 <em class='comment'>/* Compare S1 and S2, both interpreted as appropriate to the</em>
+<a id='L130' name='L130'></a> 130 <em class='comment'>   LC_COLLATE category of the current locale.  */</em>
+<a id='L131' name='L131'></a> 131 <strong class='reserved'>extern</strong> <strong class='reserved'>int</strong> <a href='../Y/28939.html' title='Multiple used in 12 places.'>wcscoll</a> (<strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<a href='../Y/7307.html' title='Multiple used in 62 places.'>__s1</a>, <strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<a href='../Y/7308.html' title='Multiple used in 56 places.'>__s2</a>) <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a>;
+<a id='L132' name='L132'></a> 132 <em class='comment'>/* Transform S2 into array pointed to by S1 such that if wcscmp is</em>
+<a id='L133' name='L133'></a> 133 <em class='comment'>   applied to two transformed strings the result is the as applying</em>
+<a id='L134' name='L134'></a> 134 <em class='comment'>   `wcscoll' to the original strings.  */</em>
+<a id='L135' name='L135'></a> 135 <strong class='reserved'>extern</strong> <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/28974.html' title='Multiple used in 13 places.'>wcsxfrm</a> (<a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/7307.html' title='Multiple used in 62 places.'>__s1</a>,
+<a id='L136' name='L136'></a> 136                <strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/7308.html' title='Multiple used in 56 places.'>__s2</a>, <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/6016.html' title='Multiple used in 299 places.'>__n</a>) <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a>;
+<a id='L137' name='L137'></a> 137 
+<a id='L138' name='L138'></a> 138 <em class='sharp'>#ifdef</em> <a href='../D/22866.html' title='Multiple defined in 3 places.'>__USE_XOPEN2K8</a>
+<a id='L139' name='L139'></a> 139 <em class='comment'>/* Similar to the two functions above but take the information from</em>
+<a id='L140' name='L140'></a> 140 <em class='comment'>   the provided locale and not the global locale.  */</em>
+<a id='L141' name='L141'></a> 141 
+<a id='L142' name='L142'></a> 142 <em class='comment'>/* Compare S1 and S2, both interpreted as appropriate to the</em>
+<a id='L143' name='L143'></a> 143 <em class='comment'>   LC_COLLATE category of the given locale.  */</em>
+<a id='L144' name='L144'></a> 144 <strong class='reserved'>extern</strong> <strong class='reserved'>int</strong> <a href='../Y/28940.html' title='Multiple used in 3 places.'>wcscoll_l</a> (<strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<a href='../Y/7307.html' title='Multiple used in 62 places.'>__s1</a>, <strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<a href='../Y/7308.html' title='Multiple used in 56 places.'>__s2</a>,
+<a id='L145' name='L145'></a> 145               <a href='../S/2191.html#L24' title='Defined at 24 in locale/bits/types/locale_t.h.'>locale_t</a> <a href='../Y/5494.html' title='Multiple used in 50 places.'>__loc</a>) <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a>;
+<a id='L146' name='L146'></a> 146 
+<a id='L147' name='L147'></a> 147 <em class='comment'>/* Transform S2 into array pointed to by S1 such that if wcscmp is</em>
+<a id='L148' name='L148'></a> 148 <em class='comment'>   applied to two transformed strings the result is the as applying</em>
+<a id='L149' name='L149'></a> 149 <em class='comment'>   `wcscoll' to the original strings.  */</em>
+<a id='L150' name='L150'></a> 150 <strong class='reserved'>extern</strong> <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/28975.html' title='Multiple used in 3 places.'>wcsxfrm_l</a> (<a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<a href='../Y/7307.html' title='Multiple used in 62 places.'>__s1</a>, <strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<a href='../Y/7308.html' title='Multiple used in 56 places.'>__s2</a>,
+<a id='L151' name='L151'></a> 151              <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/6016.html' title='Multiple used in 299 places.'>__n</a>, <a href='../S/2191.html#L24' title='Defined at 24 in locale/bits/types/locale_t.h.'>locale_t</a> <a href='../Y/5494.html' title='Multiple used in 50 places.'>__loc</a>) <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a>;
+<a id='L152' name='L152'></a> 152 
+<a id='L153' name='L153'></a> 153 <em class='comment'>/* Duplicate S, returning an identical malloc'd string.  */</em>
+<a id='L154' name='L154'></a> 154 <strong class='reserved'>extern</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<a href='../S/4171.html#L25' title='Defined at 25 in wcsmbs/wcsdup.c.'>wcsdup</a> (<strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<a href='../Y/7305.html' title='Multiple used in 322 places.'>__s</a>) <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a>
+<a id='L155' name='L155'></a> 155   <a href='../D/23312.html' title='Multiple defined in 2 places.'>__attribute_malloc__</a> <a href='../D/23302.html' title='Multiple defined in 2 places.'>__attr_dealloc_free</a>;
+<a id='L156' name='L156'></a> 156 <em class='sharp'>#endif</em>
+<a id='L157' name='L157'></a> 157 
+<a id='L158' name='L158'></a> 158 <em class='comment'>/* Find the first occurrence of WC in WCS.  */</em>
+<a id='L159' name='L159'></a> 159 <em class='sharp'>#ifdef</em> <a href='../S/4210.html#L54' title='Defined at 54 in wcsmbs/wchar.h.'>__CORRECT_ISO_CPP_WCHAR_H_PROTO</a>
+<a id='L160' name='L160'></a> 160 <strong class='reserved'>extern</strong> "C++" <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<a href='../D/39040.html' title='Multiple defined in 6 places.'>wcschr</a> (<a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<a href='../Y/8487.html' title='Multiple used in 12 places.'>__wcs</a>, <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> <a href='../Y/8475.html' title='Multiple used in 58 places.'>__wc</a>)
+<a id='L161' name='L161'></a> 161      <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a> <strong class='reserved'>__asm</strong> ("wcschr") <a href='../D/23317.html' title='Multiple defined in 3 places.'>__attribute_pure__</a>;
+<a id='L162' name='L162'></a> 162 <strong class='reserved'>extern</strong> "C++" <strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<a href='../D/39040.html' title='Multiple defined in 6 places.'>wcschr</a> (<strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<a href='../Y/8487.html' title='Multiple used in 12 places.'>__wcs</a>, <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> <a href='../Y/8475.html' title='Multiple used in 58 places.'>__wc</a>)
+<a id='L163' name='L163'></a> 163      <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a> <strong class='reserved'>__asm</strong> ("wcschr") <a href='../D/23317.html' title='Multiple defined in 3 places.'>__attribute_pure__</a>;
+<a id='L164' name='L164'></a> 164 <em class='sharp'>#else</em>
+<a id='L165' name='L165'></a> 165 <strong class='reserved'>extern</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<a href='../D/39040.html' title='Multiple defined in 6 places.'>wcschr</a> (<strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<a href='../Y/8487.html' title='Multiple used in 12 places.'>__wcs</a>, <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> <a href='../Y/8475.html' title='Multiple used in 58 places.'>__wc</a>)
+<a id='L166' name='L166'></a> 166      <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a> <a href='../D/23317.html' title='Multiple defined in 3 places.'>__attribute_pure__</a>;
+<a id='L167' name='L167'></a> 167 <em class='sharp'>#endif</em>
+<a id='L168' name='L168'></a> 168 <em class='comment'>/* Find the last occurrence of WC in WCS.  */</em>
+<a id='L169' name='L169'></a> 169 <em class='sharp'>#ifdef</em> <a href='../S/4210.html#L54' title='Defined at 54 in wcsmbs/wchar.h.'>__CORRECT_ISO_CPP_WCHAR_H_PROTO</a>
+<a id='L170' name='L170'></a> 170 <strong class='reserved'>extern</strong> "C++" <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<a href='../D/39049.html' title='Multiple defined in 7 places.'>wcsrchr</a> (<a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<a href='../Y/8487.html' title='Multiple used in 12 places.'>__wcs</a>, <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> <a href='../Y/8475.html' title='Multiple used in 58 places.'>__wc</a>)
+<a id='L171' name='L171'></a> 171      <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a> <strong class='reserved'>__asm</strong> ("wcsrchr") <a href='../D/23317.html' title='Multiple defined in 3 places.'>__attribute_pure__</a>;
+<a id='L172' name='L172'></a> 172 <strong class='reserved'>extern</strong> "C++" <strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<a href='../D/39049.html' title='Multiple defined in 7 places.'>wcsrchr</a> (<strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<a href='../Y/8487.html' title='Multiple used in 12 places.'>__wcs</a>, <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> <a href='../Y/8475.html' title='Multiple used in 58 places.'>__wc</a>)
+<a id='L173' name='L173'></a> 173      <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a> <strong class='reserved'>__asm</strong> ("wcsrchr") <a href='../D/23317.html' title='Multiple defined in 3 places.'>__attribute_pure__</a>;
+<a id='L174' name='L174'></a> 174 <em class='sharp'>#else</em>
+<a id='L175' name='L175'></a> 175 <strong class='reserved'>extern</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<a href='../D/39049.html' title='Multiple defined in 7 places.'>wcsrchr</a> (<strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<a href='../Y/8487.html' title='Multiple used in 12 places.'>__wcs</a>, <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> <a href='../Y/8475.html' title='Multiple used in 58 places.'>__wc</a>)
+<a id='L176' name='L176'></a> 176      <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a> <a href='../D/23317.html' title='Multiple defined in 3 places.'>__attribute_pure__</a>;
+<a id='L177' name='L177'></a> 177 <em class='sharp'>#endif</em>
+<a id='L178' name='L178'></a> 178 
+<a id='L179' name='L179'></a> 179 <em class='sharp'>#ifdef</em> <a href='../D/22845.html' title='Multiple defined in 3 places.'>__USE_GNU</a>
+<a id='L180' name='L180'></a> 180 <em class='comment'>/* This function is similar to `wcschr'.  But it returns a pointer to</em>
+<a id='L181' name='L181'></a> 181 <em class='comment'>   the closing NUL wide character in case C is not found in S.  */</em>
+<a id='L182' name='L182'></a> 182 <strong class='reserved'>extern</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<a href='../Y/28938.html' title='Multiple used in 8 places.'>wcschrnul</a> (<strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<a href='../Y/7305.html' title='Multiple used in 322 places.'>__s</a>, <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> <a href='../Y/8475.html' title='Multiple used in 58 places.'>__wc</a>)
+<a id='L183' name='L183'></a> 183      <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a> <a href='../D/23317.html' title='Multiple defined in 3 places.'>__attribute_pure__</a>;
+<a id='L184' name='L184'></a> 184 <em class='sharp'>#endif</em>
+<a id='L185' name='L185'></a> 185 
+<a id='L186' name='L186'></a> 186 <em class='comment'>/* Return the length of the initial segmet of WCS which</em>
+<a id='L187' name='L187'></a> 187 <em class='comment'>   consists entirely of wide characters not in REJECT.  */</em>
+<a id='L188' name='L188'></a> 188 <strong class='reserved'>extern</strong> <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../D/39043.html' title='Multiple defined in 2 places.'>wcscspn</a> (<strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<a href='../Y/8487.html' title='Multiple used in 12 places.'>__wcs</a>, <strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<a href='../Y/7134.html' title='Multiple used in 6 places.'>__reject</a>)
+<a id='L189' name='L189'></a> 189      <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a> <a href='../D/23317.html' title='Multiple defined in 3 places.'>__attribute_pure__</a>;
+<a id='L190' name='L190'></a> 190 <em class='comment'>/* Return the length of the initial segmet of WCS which</em>
+<a id='L191' name='L191'></a> 191 <em class='comment'>   consists entirely of wide characters in  ACCEPT.  */</em>
+<a id='L192' name='L192'></a> 192 <strong class='reserved'>extern</strong> <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../D/39050.html' title='Multiple defined in 4 places.'>wcsspn</a> (<strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<a href='../Y/8487.html' title='Multiple used in 12 places.'>__wcs</a>, <strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<a href='../Y/3439.html' title='Multiple used in 14 places.'>__accept</a>)
+<a id='L193' name='L193'></a> 193      <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a> <a href='../D/23317.html' title='Multiple defined in 3 places.'>__attribute_pure__</a>;
+<a id='L194' name='L194'></a> 194 <em class='comment'>/* Find the first occurrence in WCS of any character in ACCEPT.  */</em>
+<a id='L195' name='L195'></a> 195 <em class='sharp'>#ifdef</em> <a href='../S/4210.html#L54' title='Defined at 54 in wcsmbs/wchar.h.'>__CORRECT_ISO_CPP_WCHAR_H_PROTO</a>
+<a id='L196' name='L196'></a> 196 <strong class='reserved'>extern</strong> "C++" <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<a href='../D/39048.html' title='Multiple defined in 4 places.'>wcspbrk</a> (<a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<a href='../Y/8487.html' title='Multiple used in 12 places.'>__wcs</a>, <strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<a href='../Y/3439.html' title='Multiple used in 14 places.'>__accept</a>)
+<a id='L197' name='L197'></a> 197      <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a> <strong class='reserved'>__asm</strong> ("wcspbrk") <a href='../D/23317.html' title='Multiple defined in 3 places.'>__attribute_pure__</a>;
+<a id='L198' name='L198'></a> 198 <strong class='reserved'>extern</strong> "C++" <strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<a href='../D/39048.html' title='Multiple defined in 4 places.'>wcspbrk</a> (<strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<a href='../Y/8487.html' title='Multiple used in 12 places.'>__wcs</a>,
+<a id='L199' name='L199'></a> 199                      <strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<a href='../Y/3439.html' title='Multiple used in 14 places.'>__accept</a>)
+<a id='L200' name='L200'></a> 200      <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a> <strong class='reserved'>__asm</strong> ("wcspbrk") <a href='../D/23317.html' title='Multiple defined in 3 places.'>__attribute_pure__</a>;
+<a id='L201' name='L201'></a> 201 <em class='sharp'>#else</em>
+<a id='L202' name='L202'></a> 202 <strong class='reserved'>extern</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<a href='../D/39048.html' title='Multiple defined in 4 places.'>wcspbrk</a> (<strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<a href='../Y/8487.html' title='Multiple used in 12 places.'>__wcs</a>, <strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<a href='../Y/3439.html' title='Multiple used in 14 places.'>__accept</a>)
+<a id='L203' name='L203'></a> 203      <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a> <a href='../D/23317.html' title='Multiple defined in 3 places.'>__attribute_pure__</a>;
+<a id='L204' name='L204'></a> 204 <em class='sharp'>#endif</em>
+<a id='L205' name='L205'></a> 205 <em class='comment'>/* Find the first occurrence of NEEDLE in HAYSTACK.  */</em>
+<a id='L206' name='L206'></a> 206 <em class='sharp'>#ifdef</em> <a href='../S/4210.html#L54' title='Defined at 54 in wcsmbs/wchar.h.'>__CORRECT_ISO_CPP_WCHAR_H_PROTO</a>
+<a id='L207' name='L207'></a> 207 <strong class='reserved'>extern</strong> "C++" <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<a href='../S/4152.html#L32' title='Defined at 32 in wcsmbs/wcsstr.c.'>wcsstr</a> (<a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<a href='../Y/4838.html' title='Multiple used in 18 places.'>__haystack</a>, <strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<a href='../Y/6036.html' title='Multiple used in 18 places.'>__needle</a>)
+<a id='L208' name='L208'></a> 208      <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a> <strong class='reserved'>__asm</strong> ("wcsstr") <a href='../D/23317.html' title='Multiple defined in 3 places.'>__attribute_pure__</a>;
+<a id='L209' name='L209'></a> 209 <strong class='reserved'>extern</strong> "C++" <strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<a href='../S/4152.html#L32' title='Defined at 32 in wcsmbs/wcsstr.c.'>wcsstr</a> (<strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<a href='../Y/4838.html' title='Multiple used in 18 places.'>__haystack</a>,
+<a id='L210' name='L210'></a> 210                     <strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<a href='../Y/6036.html' title='Multiple used in 18 places.'>__needle</a>)
+<a id='L211' name='L211'></a> 211      <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a> <strong class='reserved'>__asm</strong> ("wcsstr") <a href='../D/23317.html' title='Multiple defined in 3 places.'>__attribute_pure__</a>;
+<a id='L212' name='L212'></a> 212 <em class='sharp'>#else</em>
+<a id='L213' name='L213'></a> 213 <strong class='reserved'>extern</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<a href='../S/4152.html#L32' title='Defined at 32 in wcsmbs/wcsstr.c.'>wcsstr</a> (<strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<a href='../Y/4838.html' title='Multiple used in 18 places.'>__haystack</a>, <strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<a href='../Y/6036.html' title='Multiple used in 18 places.'>__needle</a>)
+<a id='L214' name='L214'></a> 214      <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a> <a href='../D/23317.html' title='Multiple defined in 3 places.'>__attribute_pure__</a>;
+<a id='L215' name='L215'></a> 215 <em class='sharp'>#endif</em>
+<a id='L216' name='L216'></a> 216 
+<a id='L217' name='L217'></a> 217 <em class='comment'>/* Divide WCS into tokens separated by characters in DELIM.  */</em>
+<a id='L218' name='L218'></a> 218 <strong class='reserved'>extern</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<a href='../S/4185.html#L25' title='Defined at 25 in wcsmbs/wcstok.c.'>wcstok</a> (<a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/7305.html' title='Multiple used in 322 places.'>__s</a>,
+<a id='L219' name='L219'></a> 219             <strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/4188.html' title='Multiple used in 9 places.'>__delim</a>,
+<a id='L220' name='L220'></a> 220             <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> **<strong class='reserved'>__restrict</strong> <a href='../Y/6684.html' title='Multiple used in 80 places.'>__ptr</a>) <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a>;
+<a id='L221' name='L221'></a> 221 
+<a id='L222' name='L222'></a> 222 <em class='comment'>/* Return the number of wide characters in S.  */</em>
+<a id='L223' name='L223'></a> 223 <strong class='reserved'>extern</strong> <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../S/1048.html#L55' title='Defined at 55 in posix/fnmatch.c.'>wcslen</a> (<strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<a href='../Y/7305.html' title='Multiple used in 322 places.'>__s</a>) <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a> <a href='../D/23317.html' title='Multiple defined in 3 places.'>__attribute_pure__</a>;
+<a id='L224' name='L224'></a> 224 
+<a id='L225' name='L225'></a> 225 <em class='sharp'>#ifdef</em> <a href='../D/22864.html' title='Multiple defined in 2 places.'>__USE_XOPEN</a>
+<a id='L226' name='L226'></a> 226 <em class='comment'>/* Another name for `wcsstr' from XPG4.  */</em>
+<a id='L227' name='L227'></a> 227 <em class='sharp'># ifdef</em> <a href='../S/4210.html#L54' title='Defined at 54 in wcsmbs/wchar.h.'>__CORRECT_ISO_CPP_WCHAR_H_PROTO</a>
+<a id='L228' name='L228'></a> 228 <strong class='reserved'>extern</strong> "C++" <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<a href='../Y/28973.html' title='Multiple used in 4 places.'>wcswcs</a> (<a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<a href='../Y/4838.html' title='Multiple used in 18 places.'>__haystack</a>, <strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<a href='../Y/6036.html' title='Multiple used in 18 places.'>__needle</a>)
+<a id='L229' name='L229'></a> 229      <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a> <strong class='reserved'>__asm</strong> ("wcswcs") <a href='../D/23317.html' title='Multiple defined in 3 places.'>__attribute_pure__</a>;
+<a id='L230' name='L230'></a> 230 <strong class='reserved'>extern</strong> "C++" <strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<a href='../Y/28973.html' title='Multiple used in 4 places.'>wcswcs</a> (<strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<a href='../Y/4838.html' title='Multiple used in 18 places.'>__haystack</a>,
+<a id='L231' name='L231'></a> 231                     <strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<a href='../Y/6036.html' title='Multiple used in 18 places.'>__needle</a>)
+<a id='L232' name='L232'></a> 232      <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a> <strong class='reserved'>__asm</strong> ("wcswcs") <a href='../D/23317.html' title='Multiple defined in 3 places.'>__attribute_pure__</a>;
+<a id='L233' name='L233'></a> 233 <em class='sharp'># else</em>
+<a id='L234' name='L234'></a> 234 <strong class='reserved'>extern</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<a href='../Y/28973.html' title='Multiple used in 4 places.'>wcswcs</a> (<strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<a href='../Y/4838.html' title='Multiple used in 18 places.'>__haystack</a>, <strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<a href='../Y/6036.html' title='Multiple used in 18 places.'>__needle</a>)
+<a id='L235' name='L235'></a> 235      <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a> <a href='../D/23317.html' title='Multiple defined in 3 places.'>__attribute_pure__</a>;
+<a id='L236' name='L236'></a> 236 <em class='sharp'># endif</em>
+<a id='L237' name='L237'></a> 237 <em class='sharp'>#endif</em>
+<a id='L238' name='L238'></a> 238 
+<a id='L239' name='L239'></a> 239 <em class='sharp'>#ifdef</em> <a href='../D/22866.html' title='Multiple defined in 3 places.'>__USE_XOPEN2K8</a>
+<a id='L240' name='L240'></a> 240 <em class='comment'>/* Return the number of wide characters in S, but at most MAXLEN.  */</em>
+<a id='L241' name='L241'></a> 241 <strong class='reserved'>extern</strong> <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/28949.html' title='Multiple used in 23 places.'>wcsnlen</a> (<strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<a href='../Y/7305.html' title='Multiple used in 322 places.'>__s</a>, <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/5630.html' title='Multiple used in 7 places.'>__maxlen</a>)
+<a id='L242' name='L242'></a> 242      <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a> <a href='../D/23317.html' title='Multiple defined in 3 places.'>__attribute_pure__</a>;
+<a id='L243' name='L243'></a> 243 <em class='sharp'>#endif</em>
+<a id='L244' name='L244'></a> 244 
+<a id='L245' name='L245'></a> 245 
+<a id='L246' name='L246'></a> 246 <em class='comment'>/* Search N wide characters of S for C.  */</em>
+<a id='L247' name='L247'></a> 247 <em class='sharp'>#ifdef</em> <a href='../S/4210.html#L54' title='Defined at 54 in wcsmbs/wchar.h.'>__CORRECT_ISO_CPP_WCHAR_H_PROTO</a>
+<a id='L248' name='L248'></a> 248 <strong class='reserved'>extern</strong> "C++" <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<a href='../D/39122.html' title='Multiple defined in 6 places.'>wmemchr</a> (<a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<a href='../Y/7305.html' title='Multiple used in 322 places.'>__s</a>, <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> <a href='../Y/3889.html' title='Multiple used in 149 places.'>__c</a>, <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/6016.html' title='Multiple used in 299 places.'>__n</a>)
+<a id='L249' name='L249'></a> 249      <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a> <strong class='reserved'>__asm</strong> ("wmemchr") <a href='../D/23317.html' title='Multiple defined in 3 places.'>__attribute_pure__</a>;
+<a id='L250' name='L250'></a> 250 <strong class='reserved'>extern</strong> "C++" <strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<a href='../D/39122.html' title='Multiple defined in 6 places.'>wmemchr</a> (<strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<a href='../Y/7305.html' title='Multiple used in 322 places.'>__s</a>, <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> <a href='../Y/3889.html' title='Multiple used in 149 places.'>__c</a>,
+<a id='L251' name='L251'></a> 251                      <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/6016.html' title='Multiple used in 299 places.'>__n</a>)
+<a id='L252' name='L252'></a> 252      <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a> <strong class='reserved'>__asm</strong> ("wmemchr") <a href='../D/23317.html' title='Multiple defined in 3 places.'>__attribute_pure__</a>;
+<a id='L253' name='L253'></a> 253 <em class='sharp'>#else</em>
+<a id='L254' name='L254'></a> 254 <strong class='reserved'>extern</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<a href='../D/39122.html' title='Multiple defined in 6 places.'>wmemchr</a> (<strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<a href='../Y/7305.html' title='Multiple used in 322 places.'>__s</a>, <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> <a href='../Y/3889.html' title='Multiple used in 149 places.'>__c</a>, <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/6016.html' title='Multiple used in 299 places.'>__n</a>)
+<a id='L255' name='L255'></a> 255      <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a> <a href='../D/23317.html' title='Multiple defined in 3 places.'>__attribute_pure__</a>;
+<a id='L256' name='L256'></a> 256 <em class='sharp'>#endif</em>
+<a id='L257' name='L257'></a> 257 
+<a id='L258' name='L258'></a> 258 <em class='comment'>/* Compare N wide characters of S1 and S2.  */</em>
+<a id='L259' name='L259'></a> 259 <strong class='reserved'>extern</strong> <strong class='reserved'>int</strong> <a href='../D/39123.html' title='Multiple defined in 4 places.'>wmemcmp</a> (<strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<a href='../Y/7307.html' title='Multiple used in 62 places.'>__s1</a>, <strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<a href='../Y/7308.html' title='Multiple used in 56 places.'>__s2</a>, <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/6016.html' title='Multiple used in 299 places.'>__n</a>)
+<a id='L260' name='L260'></a> 260      <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a> <a href='../D/23317.html' title='Multiple defined in 3 places.'>__attribute_pure__</a>;
+<a id='L261' name='L261'></a> 261 
+<a id='L262' name='L262'></a> 262 <em class='comment'>/* Copy N wide characters of SRC to DEST.  */</em>
+<a id='L263' name='L263'></a> 263 <strong class='reserved'>extern</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<a href='../Y/29097.html' title='Multiple used in 28 places.'>wmemcpy</a> (<a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/7307.html' title='Multiple used in 62 places.'>__s1</a>,
+<a id='L264' name='L264'></a> 264              <strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/7308.html' title='Multiple used in 56 places.'>__s2</a>, <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/6016.html' title='Multiple used in 299 places.'>__n</a>) <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a>;
+<a id='L265' name='L265'></a> 265 
+<a id='L266' name='L266'></a> 266 <em class='comment'>/* Copy N wide characters of SRC to DEST, guaranteeing</em>
+<a id='L267' name='L267'></a> 267 <em class='comment'>   correct behavior for overlapping strings.  */</em>
+<a id='L268' name='L268'></a> 268 <strong class='reserved'>extern</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<a href='../Y/29098.html' title='Multiple used in 12 places.'>wmemmove</a> (<a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<a href='../Y/7307.html' title='Multiple used in 62 places.'>__s1</a>, <strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<a href='../Y/7308.html' title='Multiple used in 56 places.'>__s2</a>, <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/6016.html' title='Multiple used in 299 places.'>__n</a>)
+<a id='L269' name='L269'></a> 269      <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a>;
+<a id='L270' name='L270'></a> 270 
+<a id='L271' name='L271'></a> 271 <em class='comment'>/* Set N wide characters of S to C.  */</em>
+<a id='L272' name='L272'></a> 272 <strong class='reserved'>extern</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<a href='../D/39125.html' title='Multiple defined in 4 places.'>wmemset</a> (<a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<a href='../Y/7305.html' title='Multiple used in 322 places.'>__s</a>, <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> <a href='../Y/3889.html' title='Multiple used in 149 places.'>__c</a>, <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/6016.html' title='Multiple used in 299 places.'>__n</a>) <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a>;
+<a id='L273' name='L273'></a> 273 
+<a id='L274' name='L274'></a> 274 <em class='sharp'>#ifdef</em> <a href='../D/22845.html' title='Multiple defined in 3 places.'>__USE_GNU</a>
+<a id='L275' name='L275'></a> 275 <em class='comment'>/* Copy N wide characters of SRC to DEST and return pointer to following</em>
+<a id='L276' name='L276'></a> 276 <em class='comment'>   wide character.  */</em>
+<a id='L277' name='L277'></a> 277 <strong class='reserved'>extern</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<a href='../S/1048.html#L58' title='Defined at 58 in posix/fnmatch.c.'>wmempcpy</a> (<a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/7307.html' title='Multiple used in 62 places.'>__s1</a>,
+<a id='L278' name='L278'></a> 278               <strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/7308.html' title='Multiple used in 56 places.'>__s2</a>, <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/6016.html' title='Multiple used in 299 places.'>__n</a>)
+<a id='L279' name='L279'></a> 279      <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a>;
+<a id='L280' name='L280'></a> 280 <em class='sharp'>#endif</em>
+<a id='L281' name='L281'></a> 281 
+<a id='L282' name='L282'></a> 282 
+<a id='L283' name='L283'></a> 283 <em class='comment'>/* Determine whether C constitutes a valid (one-byte) multibyte</em>
+<a id='L284' name='L284'></a> 284 <em class='comment'>   character.  */</em>
+<a id='L285' name='L285'></a> 285 <strong class='reserved'>extern</strong> <a href='../D/39101.html' title='Multiple defined in 2 places.'>wint_t</a> <a href='../S/1048.html#L48' title='Defined at 48 in posix/fnmatch.c.'>btowc</a> (<strong class='reserved'>int</strong> <a href='../Y/3889.html' title='Multiple used in 149 places.'>__c</a>) <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a>;
+<a id='L286' name='L286'></a> 286 
+<a id='L287' name='L287'></a> 287 <em class='comment'>/* Determine whether C corresponds to a member of the extended</em>
+<a id='L288' name='L288'></a> 288 <em class='comment'>   character set whose multibyte representation is a single byte.  */</em>
+<a id='L289' name='L289'></a> 289 <strong class='reserved'>extern</strong> <strong class='reserved'>int</strong> <a href='../S/4100.html#L29' title='Defined at 29 in wcsmbs/wctob.c.'>wctob</a> (<a href='../D/39101.html' title='Multiple defined in 2 places.'>wint_t</a> <a href='../Y/3889.html' title='Multiple used in 149 places.'>__c</a>) <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a>;
+<a id='L290' name='L290'></a> 290 
+<a id='L291' name='L291'></a> 291 <em class='comment'>/* Determine whether PS points to an object representing the initial</em>
+<a id='L292' name='L292'></a> 292 <em class='comment'>   state.  */</em>
+<a id='L293' name='L293'></a> 293 <strong class='reserved'>extern</strong> <strong class='reserved'>int</strong> <a href='../D/33398.html' title='Multiple defined in 3 places.'>mbsinit</a> (<strong class='reserved'>const</strong> <a href='../D/33400.html' title='Multiple defined in 2 places.'>mbstate_t</a> *<a href='../Y/6627.html' title='Multiple used in 44 places.'>__ps</a>) <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a> <a href='../D/23317.html' title='Multiple defined in 3 places.'>__attribute_pure__</a>;
+<a id='L294' name='L294'></a> 294 
+<a id='L295' name='L295'></a> 295 <em class='comment'>/* Write wide character representation of multibyte character pointed</em>
+<a id='L296' name='L296'></a> 296 <em class='comment'>   to by S to PWC.  */</em>
+<a id='L297' name='L297'></a> 297 <strong class='reserved'>extern</strong> <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/19159.html' title='Multiple used in 64 places.'>mbrtowc</a> (<a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/6693.html' title='Multiple used in 3 places.'>__pwc</a>,
+<a id='L298' name='L298'></a> 298                <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<strong class='reserved'>__restrict</strong> <a href='../Y/7305.html' title='Multiple used in 322 places.'>__s</a>, <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/6016.html' title='Multiple used in 299 places.'>__n</a>,
+<a id='L299' name='L299'></a> 299                <a href='../D/33400.html' title='Multiple defined in 2 places.'>mbstate_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/6445.html' title='Multiple used in 35 places.'>__p</a>) <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a>;
+<a id='L300' name='L300'></a> 300 
+<a id='L301' name='L301'></a> 301 <em class='comment'>/* Write multibyte representation of wide character WC to S.  */</em>
+<a id='L302' name='L302'></a> 302 <strong class='reserved'>extern</strong> <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/28931.html' title='Multiple used in 29 places.'>wcrtomb</a> (<strong class='reserved'>char</strong> *<strong class='reserved'>__restrict</strong> <a href='../Y/7305.html' title='Multiple used in 322 places.'>__s</a>, <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> <a href='../Y/8475.html' title='Multiple used in 58 places.'>__wc</a>,
+<a id='L303' name='L303'></a> 303                <a href='../D/33400.html' title='Multiple defined in 2 places.'>mbstate_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/6627.html' title='Multiple used in 44 places.'>__ps</a>) <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a>;
+<a id='L304' name='L304'></a> 304 
+<a id='L305' name='L305'></a> 305 <em class='comment'>/* Return number of bytes in multibyte character pointed to by S.  */</em>
+<a id='L306' name='L306'></a> 306 <strong class='reserved'>extern</strong> <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../S/4124.html#L26' title='Defined at 26 in wcsmbs/mbrlen.c.'>__mbrlen</a> (<strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<strong class='reserved'>__restrict</strong> <a href='../Y/7305.html' title='Multiple used in 322 places.'>__s</a>, <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/6016.html' title='Multiple used in 299 places.'>__n</a>,
+<a id='L307' name='L307'></a> 307             <a href='../D/33400.html' title='Multiple defined in 2 places.'>mbstate_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/6627.html' title='Multiple used in 44 places.'>__ps</a>) <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a>;
+<a id='L308' name='L308'></a> 308 <strong class='reserved'>extern</strong> <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../S/4069.html#L73' title='Defined at 73 in time/strftime_l.c.'>mbrlen</a> (<strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<strong class='reserved'>__restrict</strong> <a href='../Y/7305.html' title='Multiple used in 322 places.'>__s</a>, <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/6016.html' title='Multiple used in 299 places.'>__n</a>,
+<a id='L309' name='L309'></a> 309               <a href='../D/33400.html' title='Multiple defined in 2 places.'>mbstate_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/6627.html' title='Multiple used in 44 places.'>__ps</a>) <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a>;
+<a id='L310' name='L310'></a> 310 
+<a id='L311' name='L311'></a> 311 <em class='sharp'>#ifdef</em> <a href='../D/22842.html' title='Multiple defined in 5 places.'>__USE_EXTERN_INLINES</a>
+<a id='L312' name='L312'></a> 312 <em class='comment'>/* Define inline function as optimization.  */</em>
+<a id='L313' name='L313'></a> 313 
+<a id='L314' name='L314'></a> 314 <em class='comment'>/* We can use the BTOWC and WCTOB optimizations since we know that all</em>
+<a id='L315' name='L315'></a> 315 <em class='comment'>   locales must use ASCII encoding for the values in the ASCII range</em>
+<a id='L316' name='L316'></a> 316 <em class='comment'>   and because the wchar_t encoding is always ISO 10646.  */</em>
+<a id='L317' name='L317'></a> 317 <strong class='reserved'>extern</strong> <a href='../D/39101.html' title='Multiple defined in 2 places.'>wint_t</a> <a href='../Y/3702.html' title='Multiple used in 2 places.'>__btowc_alias</a> (<strong class='reserved'>int</strong> <a href='../Y/3889.html' title='Multiple used in 149 places.'>__c</a>) <strong class='reserved'>__asm</strong> ("btowc");
+<a id='L318' name='L318'></a> 318 <a href='../D/23780.html' title='Multiple defined in 6 places.'>__extern_inline</a> <a href='../D/39101.html' title='Multiple defined in 2 places.'>wint_t</a>
+<a id='L319' name='L319'></a> 319 <a href='../D/22513.html' title='Multiple defined in 45 places.'>__NTH</a> (<a href='../S/1048.html#L48' title='Defined at 48 in posix/fnmatch.c.'>btowc</a> (<strong class='reserved'>int</strong> <a href='../Y/3889.html' title='Multiple used in 149 places.'>__c</a>))
+<a id='L320' name='L320'></a> 320 <em class='brace'>{</em> <strong class='reserved'>return</strong> (<a href='../Y/3750.html' title='Multiple used in 63 places.'>__builtin_constant_p</a> (<a href='../Y/3889.html' title='Multiple used in 149 places.'>__c</a>) &amp;&amp; <a href='../Y/3889.html' title='Multiple used in 149 places.'>__c</a> &gt;= '\0' &amp;&amp; <a href='../Y/3889.html' title='Multiple used in 149 places.'>__c</a> &lt;= '\x7f'
+<a id='L321' name='L321'></a> 321       ? (<a href='../D/39101.html' title='Multiple defined in 2 places.'>wint_t</a>) <a href='../Y/3889.html' title='Multiple used in 149 places.'>__c</a> : <a href='../Y/3702.html' title='Multiple used in 2 places.'>__btowc_alias</a> (<a href='../Y/3889.html' title='Multiple used in 149 places.'>__c</a>)); <em class='brace'>}</em>
+<a id='L322' name='L322'></a> 322 
+<a id='L323' name='L323'></a> 323 <strong class='reserved'>extern</strong> <strong class='reserved'>int</strong> <a href='../S/4210.html#L327' title='Referred from 327 in wcsmbs/wchar.h.'>__wctob_alias</a> (<a href='../D/39101.html' title='Multiple defined in 2 places.'>wint_t</a> <a href='../Y/3889.html' title='Multiple used in 149 places.'>__c</a>) <strong class='reserved'>__asm</strong> ("wctob");
+<a id='L324' name='L324'></a> 324 <a href='../D/23780.html' title='Multiple defined in 6 places.'>__extern_inline</a> <strong class='reserved'>int</strong>
+<a id='L325' name='L325'></a> 325 <a href='../D/22513.html' title='Multiple defined in 45 places.'>__NTH</a> (<a href='../S/4100.html#L29' title='Defined at 29 in wcsmbs/wctob.c.'>wctob</a> (<a href='../D/39101.html' title='Multiple defined in 2 places.'>wint_t</a> <a href='../Y/8475.html' title='Multiple used in 58 places.'>__wc</a>))
+<a id='L326' name='L326'></a> 326 <em class='brace'>{</em> <strong class='reserved'>return</strong> (<a href='../Y/3750.html' title='Multiple used in 63 places.'>__builtin_constant_p</a> (<a href='../Y/8475.html' title='Multiple used in 58 places.'>__wc</a>) &amp;&amp; <a href='../Y/8475.html' title='Multiple used in 58 places.'>__wc</a> &gt;= L'\0' &amp;&amp; <a href='../Y/8475.html' title='Multiple used in 58 places.'>__wc</a> &lt;= L'\x7f'
+<a id='L327' name='L327'></a> 327       ? (<strong class='reserved'>int</strong>) <a href='../Y/8475.html' title='Multiple used in 58 places.'>__wc</a> : <a href='../S/4210.html#L323' title='Defined at 323 in wcsmbs/wchar.h.'>__wctob_alias</a> (<a href='../Y/8475.html' title='Multiple used in 58 places.'>__wc</a>)); <em class='brace'>}</em>
+<a id='L328' name='L328'></a> 328 
+<a id='L329' name='L329'></a> 329 <a href='../D/23780.html' title='Multiple defined in 6 places.'>__extern_inline</a> <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a>
+<a id='L330' name='L330'></a> 330 <a href='../R/12989.html' title='Multiple referred from 40 places.'>__NTH</a> (<a href='../S/4069.html#L73' title='Defined at 73 in time/strftime_l.c.'>mbrlen</a> (<strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<strong class='reserved'>__restrict</strong> <a href='../Y/7305.html' title='Multiple used in 322 places.'>__s</a>, <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/6016.html' title='Multiple used in 299 places.'>__n</a>,
+<a id='L331' name='L331'></a> 331            <a href='../D/33400.html' title='Multiple defined in 2 places.'>mbstate_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/6627.html' title='Multiple used in 44 places.'>__ps</a>))
+<a id='L332' name='L332'></a> 332 <em class='brace'>{</em> <strong class='reserved'>return</strong> (<a href='../Y/6627.html' title='Multiple used in 44 places.'>__ps</a> != <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>
+<a id='L333' name='L333'></a> 333       ? <a href='../Y/19159.html' title='Multiple used in 64 places.'>mbrtowc</a> (<a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>, <a href='../Y/7305.html' title='Multiple used in 322 places.'>__s</a>, <a href='../Y/6016.html' title='Multiple used in 299 places.'>__n</a>, <a href='../Y/6627.html' title='Multiple used in 44 places.'>__ps</a>) : <a href='../S/4124.html#L26' title='Defined at 26 in wcsmbs/mbrlen.c.'>__mbrlen</a> (<a href='../Y/7305.html' title='Multiple used in 322 places.'>__s</a>, <a href='../Y/6016.html' title='Multiple used in 299 places.'>__n</a>, <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>)); <em class='brace'>}</em>
+<a id='L334' name='L334'></a> 334 <em class='sharp'>#endif</em>
+<a id='L335' name='L335'></a> 335 
+<a id='L336' name='L336'></a> 336 <em class='comment'>/* Write wide character representation of multibyte character string</em>
+<a id='L337' name='L337'></a> 337 <em class='comment'>   SRC to DST.  */</em>
+<a id='L338' name='L338'></a> 338 <strong class='reserved'>extern</strong> <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../D/33399.html' title='Multiple defined in 2 places.'>mbsrtowcs</a> (<a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/4263.html' title='Multiple used in 47 places.'>__dst</a>,
+<a id='L339' name='L339'></a> 339              <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> **<strong class='reserved'>__restrict</strong> <a href='../Y/7540.html' title='Multiple used in 136 places.'>__src</a>, <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/5322.html' title='Multiple used in 234 places.'>__len</a>,
+<a id='L340' name='L340'></a> 340              <a href='../D/33400.html' title='Multiple defined in 2 places.'>mbstate_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/6627.html' title='Multiple used in 44 places.'>__ps</a>) <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a>;
+<a id='L341' name='L341'></a> 341 
+<a id='L342' name='L342'></a> 342 <em class='comment'>/* Write multibyte character representation of wide character string</em>
+<a id='L343' name='L343'></a> 343 <em class='comment'>   SRC to DST.  */</em>
+<a id='L344' name='L344'></a> 344 <strong class='reserved'>extern</strong> <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/28951.html' title='Multiple used in 24 places.'>wcsrtombs</a> (<strong class='reserved'>char</strong> *<strong class='reserved'>__restrict</strong> <a href='../Y/4263.html' title='Multiple used in 47 places.'>__dst</a>,
+<a id='L345' name='L345'></a> 345              <strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> **<strong class='reserved'>__restrict</strong> <a href='../Y/7540.html' title='Multiple used in 136 places.'>__src</a>, <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/5322.html' title='Multiple used in 234 places.'>__len</a>,
+<a id='L346' name='L346'></a> 346              <a href='../D/33400.html' title='Multiple defined in 2 places.'>mbstate_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/6627.html' title='Multiple used in 44 places.'>__ps</a>) <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a>;
+<a id='L347' name='L347'></a> 347 
+<a id='L348' name='L348'></a> 348 
+<a id='L349' name='L349'></a> 349 <em class='sharp'>#ifdef</em>  <a href='../D/22866.html' title='Multiple defined in 3 places.'>__USE_XOPEN2K8</a>
+<a id='L350' name='L350'></a> 350 <em class='comment'>/* Write wide character representation of at most NMC bytes of the</em>
+<a id='L351' name='L351'></a> 351 <em class='comment'>   multibyte character string SRC to DST.  */</em>
+<a id='L352' name='L352'></a> 352 <strong class='reserved'>extern</strong> <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/19168.html' title='Multiple used in 12 places.'>mbsnrtowcs</a> (<a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/4263.html' title='Multiple used in 47 places.'>__dst</a>,
+<a id='L353' name='L353'></a> 353               <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> **<strong class='reserved'>__restrict</strong> <a href='../Y/7540.html' title='Multiple used in 136 places.'>__src</a>, <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/6158.html' title='Multiple used in 7 places.'>__nmc</a>,
+<a id='L354' name='L354'></a> 354               <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/5322.html' title='Multiple used in 234 places.'>__len</a>, <a href='../D/33400.html' title='Multiple defined in 2 places.'>mbstate_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/6627.html' title='Multiple used in 44 places.'>__ps</a>) <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a>;
+<a id='L355' name='L355'></a> 355 
+<a id='L356' name='L356'></a> 356 <em class='comment'>/* Write multibyte character representation of at most NWC characters</em>
+<a id='L357' name='L357'></a> 357 <em class='comment'>   from the wide character string SRC to DST.  */</em>
+<a id='L358' name='L358'></a> 358 <strong class='reserved'>extern</strong> <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/28950.html' title='Multiple used in 8 places.'>wcsnrtombs</a> (<strong class='reserved'>char</strong> *<strong class='reserved'>__restrict</strong> <a href='../Y/4263.html' title='Multiple used in 47 places.'>__dst</a>,
+<a id='L359' name='L359'></a> 359               <strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> **<strong class='reserved'>__restrict</strong> <a href='../Y/7540.html' title='Multiple used in 136 places.'>__src</a>,
+<a id='L360' name='L360'></a> 360               <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/6274.html' title='Multiple used in 7 places.'>__nwc</a>, <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/5322.html' title='Multiple used in 234 places.'>__len</a>,
+<a id='L361' name='L361'></a> 361               <a href='../D/33400.html' title='Multiple defined in 2 places.'>mbstate_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/6627.html' title='Multiple used in 44 places.'>__ps</a>) <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a>;
+<a id='L362' name='L362'></a> 362 <em class='sharp'>#endif</em>  <em class='comment'>/* use POSIX 2008 */</em>
+<a id='L363' name='L363'></a> 363 
+<a id='L364' name='L364'></a> 364 
+<a id='L365' name='L365'></a> 365 <em class='comment'>/* The following functions are extensions found in X/Open CAE.  */</em>
+<a id='L366' name='L366'></a> 366 <em class='sharp'>#ifdef</em> <a href='../D/22864.html' title='Multiple defined in 2 places.'>__USE_XOPEN</a>
+<a id='L367' name='L367'></a> 367 <em class='comment'>/* Determine number of column positions required for C.  */</em>
+<a id='L368' name='L368'></a> 368 <strong class='reserved'>extern</strong> <strong class='reserved'>int</strong> <a href='../S/4118.html#L22' title='Defined at 22 in wcsmbs/wcwidth.c.'>wcwidth</a> (<a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> <a href='../Y/3889.html' title='Multiple used in 149 places.'>__c</a>) <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a>;
+<a id='L369' name='L369'></a> 369 
+<a id='L370' name='L370'></a> 370 <em class='comment'>/* Determine number of column positions required for first N wide</em>
+<a id='L371' name='L371'></a> 371 <em class='comment'>   characters (or fewer if S ends before this) in S.  */</em>
+<a id='L372' name='L372'></a> 372 <strong class='reserved'>extern</strong> <strong class='reserved'>int</strong> <a href='../S/4180.html#L23' title='Defined at 23 in wcsmbs/wcswidth.c.'>wcswidth</a> (<strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<a href='../Y/7305.html' title='Multiple used in 322 places.'>__s</a>, <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/6016.html' title='Multiple used in 299 places.'>__n</a>) <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a>;
+<a id='L373' name='L373'></a> 373 <em class='sharp'>#endif</em>  <em class='comment'>/* Use X/Open.  */</em>
+<a id='L374' name='L374'></a> 374 
+<a id='L375' name='L375'></a> 375 
+<a id='L376' name='L376'></a> 376 <em class='comment'>/* Convert initial portion of the wide string NPTR to `double'</em>
+<a id='L377' name='L377'></a> 377 <em class='comment'>   representation.  */</em>
+<a id='L378' name='L378'></a> 378 <strong class='reserved'>extern</strong> <strong class='reserved'>double</strong> <a href='../Y/28953.html' title='Multiple used in 17 places.'>wcstod</a> (<strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/6214.html' title='Multiple used in 100 places.'>__nptr</a>,
+<a id='L379' name='L379'></a> 379               <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> **<strong class='reserved'>__restrict</strong> <a href='../Y/4312.html' title='Multiple used in 89 places.'>__endptr</a>) <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a>;
+<a id='L380' name='L380'></a> 380 
+<a id='L381' name='L381'></a> 381 <em class='sharp'>#ifdef</em> <a href='../D/22849.html' title='Multiple defined in 7 places.'>__USE_ISOC99</a>
+<a id='L382' name='L382'></a> 382 <em class='comment'>/* Likewise for `float' and `long double' sizes of floating-point numbers.  */</em>
+<a id='L383' name='L383'></a> 383 <strong class='reserved'>extern</strong> <strong class='reserved'>float</strong> <a href='../Y/28955.html' title='Multiple used in 5 places.'>wcstof</a> (<strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/6214.html' title='Multiple used in 100 places.'>__nptr</a>,
+<a id='L384' name='L384'></a> 384              <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> **<strong class='reserved'>__restrict</strong> <a href='../Y/4312.html' title='Multiple used in 89 places.'>__endptr</a>) <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a>;
+<a id='L385' name='L385'></a> 385 <strong class='reserved'>extern</strong> <strong class='reserved'>long</strong> <strong class='reserved'>double</strong> <a href='../D/39063.html' title='Multiple defined in 3 places.'>wcstold</a> (<strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/6214.html' title='Multiple used in 100 places.'>__nptr</a>,
+<a id='L386' name='L386'></a> 386                 <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> **<strong class='reserved'>__restrict</strong> <a href='../Y/4312.html' title='Multiple used in 89 places.'>__endptr</a>) <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a>;
+<a id='L387' name='L387'></a> 387 <em class='sharp'>#endif</em> <em class='comment'>/* C99 */</em>
+<a id='L388' name='L388'></a> 388 
+<a id='L389' name='L389'></a> 389 <em class='comment'>/* Likewise for `_FloatN' and `_FloatNx' when support is enabled.  */</em>
+<a id='L390' name='L390'></a> 390 
+<a id='L391' name='L391'></a> 391 <em class='sharp'>#if</em> <a href='../S/206.html#L34' title='Defined at 34 in bits/floatn-common.h.'>__HAVE_FLOAT16</a> &amp;&amp; <strong class='reserved'>defined</strong> <a href='../D/22845.html' title='Multiple defined in 3 places.'>__USE_GNU</a>
+<a id='L392' name='L392'></a> 392 <strong class='reserved'>extern</strong> <a href='../S/206.html#L199' title='Defined at 199 in bits/floatn-common.h.'>_Float16</a> wcstof16 (<strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/6214.html' title='Multiple used in 100 places.'>__nptr</a>,
+<a id='L393' name='L393'></a> 393               <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> **<strong class='reserved'>__restrict</strong> <a href='../Y/4312.html' title='Multiple used in 89 places.'>__endptr</a>) <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a>;
+<a id='L394' name='L394'></a> 394 <em class='sharp'>#endif</em>
+<a id='L395' name='L395'></a> 395 
+<a id='L396' name='L396'></a> 396 <em class='sharp'>#if</em> <a href='../S/206.html#L35' title='Defined at 35 in bits/floatn-common.h.'>__HAVE_FLOAT32</a> &amp;&amp; <strong class='reserved'>defined</strong> <a href='../D/22845.html' title='Multiple defined in 3 places.'>__USE_GNU</a>
+<a id='L397' name='L397'></a> 397 <strong class='reserved'>extern</strong> <a href='../S/206.html#L214' title='Defined at 214 in bits/floatn-common.h.'>_Float32</a> <a href='../D/39054.html' title='Multiple defined in 2 places.'>wcstof32</a> (<strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/6214.html' title='Multiple used in 100 places.'>__nptr</a>,
+<a id='L398' name='L398'></a> 398               <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> **<strong class='reserved'>__restrict</strong> <a href='../Y/4312.html' title='Multiple used in 89 places.'>__endptr</a>) <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a>;
+<a id='L399' name='L399'></a> 399 <em class='sharp'>#endif</em>
+<a id='L400' name='L400'></a> 400 
+<a id='L401' name='L401'></a> 401 <em class='sharp'>#if</em> <a href='../S/206.html#L36' title='Defined at 36 in bits/floatn-common.h.'>__HAVE_FLOAT64</a> &amp;&amp; <strong class='reserved'>defined</strong> <a href='../D/22845.html' title='Multiple defined in 3 places.'>__USE_GNU</a>
+<a id='L402' name='L402'></a> 402 <strong class='reserved'>extern</strong> <a href='../D/18527.html' title='Multiple defined in 2 places.'>_Float64</a> <a href='../S/6806.html#L30' title='Defined at 30 in stdlib/strtod.c.'>wcstof64</a> (<strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/6214.html' title='Multiple used in 100 places.'>__nptr</a>,
+<a id='L403' name='L403'></a> 403               <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> **<strong class='reserved'>__restrict</strong> <a href='../Y/4312.html' title='Multiple used in 89 places.'>__endptr</a>) <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a>;
+<a id='L404' name='L404'></a> 404 <em class='sharp'>#endif</em>
+<a id='L405' name='L405'></a> 405 
+<a id='L406' name='L406'></a> 406 <em class='sharp'>#if</em> <a href='../D/21648.html' title='Multiple defined in 11 places.'>__HAVE_FLOAT128</a> &amp;&amp; <strong class='reserved'>defined</strong> <a href='../D/22845.html' title='Multiple defined in 3 places.'>__USE_GNU</a>
+<a id='L407' name='L407'></a> 407 <strong class='reserved'>extern</strong> <a href='../D/18523.html' title='Multiple defined in 13 places.'>_Float128</a> <a href='../S/6684.html#L27' title='Defined at 27 in stdlib/strtold.c.'>wcstof128</a> (<strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/6214.html' title='Multiple used in 100 places.'>__nptr</a>,
+<a id='L408' name='L408'></a> 408                 <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> **<strong class='reserved'>__restrict</strong> <a href='../Y/4312.html' title='Multiple used in 89 places.'>__endptr</a>) <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a>;
+<a id='L409' name='L409'></a> 409 <em class='sharp'>#endif</em>
+<a id='L410' name='L410'></a> 410 
+<a id='L411' name='L411'></a> 411 <em class='sharp'>#if</em> <a href='../S/206.html#L37' title='Defined at 37 in bits/floatn-common.h.'>__HAVE_FLOAT32X</a> &amp;&amp; <strong class='reserved'>defined</strong> <a href='../D/22845.html' title='Multiple defined in 3 places.'>__USE_GNU</a>
+<a id='L412' name='L412'></a> 412 <strong class='reserved'>extern</strong> <a href='../S/206.html#L268' title='Defined at 268 in bits/floatn-common.h.'>_Float32x</a> <a href='../S/6806.html#L34' title='Defined at 34 in stdlib/strtod.c.'>wcstof32x</a> (<strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/6214.html' title='Multiple used in 100 places.'>__nptr</a>,
+<a id='L413' name='L413'></a> 413                 <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> **<strong class='reserved'>__restrict</strong> <a href='../Y/4312.html' title='Multiple used in 89 places.'>__endptr</a>) <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a>;
+<a id='L414' name='L414'></a> 414 <em class='sharp'>#endif</em>
+<a id='L415' name='L415'></a> 415 
+<a id='L416' name='L416'></a> 416 <em class='sharp'>#if</em> <a href='../D/21655.html' title='Multiple defined in 6 places.'>__HAVE_FLOAT64X</a> &amp;&amp; <strong class='reserved'>defined</strong> <a href='../D/22845.html' title='Multiple defined in 3 places.'>__USE_GNU</a>
+<a id='L417' name='L417'></a> 417 <strong class='reserved'>extern</strong> <a href='../D/18528.html' title='Multiple defined in 2 places.'>_Float64x</a> <a href='../D/39060.html' title='Multiple defined in 3 places.'>wcstof64x</a> (<strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/6214.html' title='Multiple used in 100 places.'>__nptr</a>,
+<a id='L418' name='L418'></a> 418                 <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> **<strong class='reserved'>__restrict</strong> <a href='../Y/4312.html' title='Multiple used in 89 places.'>__endptr</a>) <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a>;
+<a id='L419' name='L419'></a> 419 <em class='sharp'>#endif</em>
+<a id='L420' name='L420'></a> 420 
+<a id='L421' name='L421'></a> 421 <em class='sharp'>#if</em> <a href='../S/206.html#L38' title='Defined at 38 in bits/floatn-common.h.'>__HAVE_FLOAT128X</a> &amp;&amp; <strong class='reserved'>defined</strong> <a href='../D/22845.html' title='Multiple defined in 3 places.'>__USE_GNU</a>
+<a id='L422' name='L422'></a> 422 <strong class='reserved'>extern</strong> <a href='../Y/2482.html' title='Multiple used in 24 places.'>_Float128x</a> wcstof128x (<strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/6214.html' title='Multiple used in 100 places.'>__nptr</a>,
+<a id='L423' name='L423'></a> 423                   <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> **<strong class='reserved'>__restrict</strong> <a href='../Y/4312.html' title='Multiple used in 89 places.'>__endptr</a>) <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a>;
+<a id='L424' name='L424'></a> 424 <em class='sharp'>#endif</em>
+<a id='L425' name='L425'></a> 425 
+<a id='L426' name='L426'></a> 426 
+<a id='L427' name='L427'></a> 427 <em class='comment'>/* Convert initial portion of wide string NPTR to `long int'</em>
+<a id='L428' name='L428'></a> 428 <em class='comment'>   representation.  */</em>
+<a id='L429' name='L429'></a> 429 <strong class='reserved'>extern</strong> <strong class='reserved'>long</strong> <strong class='reserved'>int</strong> <a href='../Y/28962.html' title='Multiple used in 6 places.'>wcstol</a> (<strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/6214.html' title='Multiple used in 100 places.'>__nptr</a>,
+<a id='L430' name='L430'></a> 430             <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> **<strong class='reserved'>__restrict</strong> <a href='../Y/4312.html' title='Multiple used in 89 places.'>__endptr</a>, <strong class='reserved'>int</strong> <a href='../Y/3675.html' title='Multiple used in 49 places.'>__base</a>) <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a>;
+<a id='L431' name='L431'></a> 431 
+<a id='L432' name='L432'></a> 432 <em class='comment'>/* Convert initial portion of wide string NPTR to `unsigned long int'</em>
+<a id='L433' name='L433'></a> 433 <em class='comment'>   representation.  */</em>
+<a id='L434' name='L434'></a> 434 <strong class='reserved'>extern</strong> <strong class='reserved'>unsigned</strong> <strong class='reserved'>long</strong> <strong class='reserved'>int</strong> <a href='../Y/28968.html' title='Multiple used in 6 places.'>wcstoul</a> (<strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/6214.html' title='Multiple used in 100 places.'>__nptr</a>,
+<a id='L435' name='L435'></a> 435                   <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> **<strong class='reserved'>__restrict</strong> <a href='../Y/4312.html' title='Multiple used in 89 places.'>__endptr</a>, <strong class='reserved'>int</strong> <a href='../Y/3675.html' title='Multiple used in 49 places.'>__base</a>)
+<a id='L436' name='L436'></a> 436      <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a>;
+<a id='L437' name='L437'></a> 437 
+<a id='L438' name='L438'></a> 438 <em class='sharp'>#ifdef</em> <a href='../D/22849.html' title='Multiple defined in 7 places.'>__USE_ISOC99</a>
+<a id='L439' name='L439'></a> 439 <em class='comment'>/* Convert initial portion of wide string NPTR to `long long int'</em>
+<a id='L440' name='L440'></a> 440 <em class='comment'>   representation.  */</em>
+<a id='L441' name='L441'></a> 441 <strong class='reserved'>__extension__</strong>
+<a id='L442' name='L442'></a> 442 <strong class='reserved'>extern</strong> <strong class='reserved'>long</strong> <strong class='reserved'>long</strong> <strong class='reserved'>int</strong> <a href='../D/39065.html' title='Multiple defined in 2 places.'>wcstoll</a> (<strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/6214.html' title='Multiple used in 100 places.'>__nptr</a>,
+<a id='L443' name='L443'></a> 443                   <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> **<strong class='reserved'>__restrict</strong> <a href='../Y/4312.html' title='Multiple used in 89 places.'>__endptr</a>, <strong class='reserved'>int</strong> <a href='../Y/3675.html' title='Multiple used in 49 places.'>__base</a>)
+<a id='L444' name='L444'></a> 444      <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a>;
+<a id='L445' name='L445'></a> 445 
+<a id='L446' name='L446'></a> 446 <em class='comment'>/* Convert initial portion of wide string NPTR to `unsigned long long int'</em>
+<a id='L447' name='L447'></a> 447 <em class='comment'>   representation.  */</em>
+<a id='L448' name='L448'></a> 448 <strong class='reserved'>__extension__</strong>
+<a id='L449' name='L449'></a> 449 <strong class='reserved'>extern</strong> <strong class='reserved'>unsigned</strong> <strong class='reserved'>long</strong> <strong class='reserved'>long</strong> <strong class='reserved'>int</strong> <a href='../D/39069.html' title='Multiple defined in 2 places.'>wcstoull</a> (<strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/6214.html' title='Multiple used in 100 places.'>__nptr</a>,
+<a id='L450' name='L450'></a> 450                     <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> **<strong class='reserved'>__restrict</strong> <a href='../Y/4312.html' title='Multiple used in 89 places.'>__endptr</a>,
+<a id='L451' name='L451'></a> 451                     <strong class='reserved'>int</strong> <a href='../Y/3675.html' title='Multiple used in 49 places.'>__base</a>) <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a>;
+<a id='L452' name='L452'></a> 452 <em class='sharp'>#endif</em> <em class='comment'>/* ISO C99.  */</em>
+<a id='L453' name='L453'></a> 453 
+<a id='L454' name='L454'></a> 454 <em class='sharp'>#ifdef</em> <a href='../D/22845.html' title='Multiple defined in 3 places.'>__USE_GNU</a>
+<a id='L455' name='L455'></a> 455 <em class='comment'>/* Convert initial portion of wide string NPTR to `long long int'</em>
+<a id='L456' name='L456'></a> 456 <em class='comment'>   representation.  */</em>
+<a id='L457' name='L457'></a> 457 <strong class='reserved'>__extension__</strong>
+<a id='L458' name='L458'></a> 458 <strong class='reserved'>extern</strong> <strong class='reserved'>long</strong> <strong class='reserved'>long</strong> <strong class='reserved'>int</strong> <a href='../D/39068.html' title='Multiple defined in 2 places.'>wcstoq</a> (<strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/6214.html' title='Multiple used in 100 places.'>__nptr</a>,
+<a id='L459' name='L459'></a> 459                  <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> **<strong class='reserved'>__restrict</strong> <a href='../Y/4312.html' title='Multiple used in 89 places.'>__endptr</a>, <strong class='reserved'>int</strong> <a href='../Y/3675.html' title='Multiple used in 49 places.'>__base</a>)
+<a id='L460' name='L460'></a> 460      <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a>;
+<a id='L461' name='L461'></a> 461 
+<a id='L462' name='L462'></a> 462 <em class='comment'>/* Convert initial portion of wide string NPTR to `unsigned long long int'</em>
+<a id='L463' name='L463'></a> 463 <em class='comment'>   representation.  */</em>
+<a id='L464' name='L464'></a> 464 <strong class='reserved'>__extension__</strong>
+<a id='L465' name='L465'></a> 465 <strong class='reserved'>extern</strong> <strong class='reserved'>unsigned</strong> <strong class='reserved'>long</strong> <strong class='reserved'>long</strong> <strong class='reserved'>int</strong> <a href='../D/39071.html' title='Multiple defined in 2 places.'>wcstouq</a> (<strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/6214.html' title='Multiple used in 100 places.'>__nptr</a>,
+<a id='L466' name='L466'></a> 466                        <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> **<strong class='reserved'>__restrict</strong> <a href='../Y/4312.html' title='Multiple used in 89 places.'>__endptr</a>,
+<a id='L467' name='L467'></a> 467                        <strong class='reserved'>int</strong> <a href='../Y/3675.html' title='Multiple used in 49 places.'>__base</a>) <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a>;
+<a id='L468' name='L468'></a> 468 <em class='sharp'>#endif</em> <em class='comment'>/* Use GNU.  */</em>
+<a id='L469' name='L469'></a> 469 
+<a id='L470' name='L470'></a> 470 <em class='sharp'>#ifdef</em> <a href='../D/22845.html' title='Multiple defined in 3 places.'>__USE_GNU</a>
+<a id='L471' name='L471'></a> 471 <em class='comment'>/* Parallel versions of the functions above which take the locale to</em>
+<a id='L472' name='L472'></a> 472 <em class='comment'>   use as an additional parameter.  These are GNU extensions inspired</em>
+<a id='L473' name='L473'></a> 473 <em class='comment'>   by the POSIX.1-2008 extended locale API.  */</em>
+<a id='L474' name='L474'></a> 474 <strong class='reserved'>extern</strong> <strong class='reserved'>long</strong> <strong class='reserved'>int</strong> <a href='../Y/28963.html' title='Multiple used in 3 places.'>wcstol_l</a> (<strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/6214.html' title='Multiple used in 100 places.'>__nptr</a>,
+<a id='L475' name='L475'></a> 475               <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> **<strong class='reserved'>__restrict</strong> <a href='../Y/4312.html' title='Multiple used in 89 places.'>__endptr</a>, <strong class='reserved'>int</strong> <a href='../Y/3675.html' title='Multiple used in 49 places.'>__base</a>,
+<a id='L476' name='L476'></a> 476               <a href='../S/2191.html#L24' title='Defined at 24 in locale/bits/types/locale_t.h.'>locale_t</a> <a href='../Y/5494.html' title='Multiple used in 50 places.'>__loc</a>) <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a>;
+<a id='L477' name='L477'></a> 477 
+<a id='L478' name='L478'></a> 478 <strong class='reserved'>extern</strong> <strong class='reserved'>unsigned</strong> <strong class='reserved'>long</strong> <strong class='reserved'>int</strong> <a href='../Y/28969.html' title='Multiple used in 3 places.'>wcstoul_l</a> (<strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/6214.html' title='Multiple used in 100 places.'>__nptr</a>,
+<a id='L479' name='L479'></a> 479                     <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> **<strong class='reserved'>__restrict</strong> <a href='../Y/4312.html' title='Multiple used in 89 places.'>__endptr</a>,
+<a id='L480' name='L480'></a> 480                     <strong class='reserved'>int</strong> <a href='../Y/3675.html' title='Multiple used in 49 places.'>__base</a>, <a href='../S/2191.html#L24' title='Defined at 24 in locale/bits/types/locale_t.h.'>locale_t</a> <a href='../Y/5494.html' title='Multiple used in 50 places.'>__loc</a>) <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a>;
+<a id='L481' name='L481'></a> 481 
+<a id='L482' name='L482'></a> 482 <strong class='reserved'>__extension__</strong>
+<a id='L483' name='L483'></a> 483 <strong class='reserved'>extern</strong> <strong class='reserved'>long</strong> <strong class='reserved'>long</strong> <strong class='reserved'>int</strong> <a href='../D/39066.html' title='Multiple defined in 2 places.'>wcstoll_l</a> (<strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/6214.html' title='Multiple used in 100 places.'>__nptr</a>,
+<a id='L484' name='L484'></a> 484                 <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> **<strong class='reserved'>__restrict</strong> <a href='../Y/4312.html' title='Multiple used in 89 places.'>__endptr</a>,
+<a id='L485' name='L485'></a> 485                 <strong class='reserved'>int</strong> <a href='../Y/3675.html' title='Multiple used in 49 places.'>__base</a>, <a href='../S/2191.html#L24' title='Defined at 24 in locale/bits/types/locale_t.h.'>locale_t</a> <a href='../Y/5494.html' title='Multiple used in 50 places.'>__loc</a>) <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a>;
+<a id='L486' name='L486'></a> 486 
+<a id='L487' name='L487'></a> 487 <strong class='reserved'>__extension__</strong>
+<a id='L488' name='L488'></a> 488 <strong class='reserved'>extern</strong> <strong class='reserved'>unsigned</strong> <strong class='reserved'>long</strong> <strong class='reserved'>long</strong> <strong class='reserved'>int</strong> <a href='../D/39070.html' title='Multiple defined in 2 places.'>wcstoull_l</a> (<strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/6214.html' title='Multiple used in 100 places.'>__nptr</a>,
+<a id='L489' name='L489'></a> 489                       <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> **<strong class='reserved'>__restrict</strong> <a href='../Y/4312.html' title='Multiple used in 89 places.'>__endptr</a>,
+<a id='L490' name='L490'></a> 490                       <strong class='reserved'>int</strong> <a href='../Y/3675.html' title='Multiple used in 49 places.'>__base</a>, <a href='../S/2191.html#L24' title='Defined at 24 in locale/bits/types/locale_t.h.'>locale_t</a> <a href='../Y/5494.html' title='Multiple used in 50 places.'>__loc</a>)
+<a id='L491' name='L491'></a> 491      <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a>;
+<a id='L492' name='L492'></a> 492 
+<a id='L493' name='L493'></a> 493 <strong class='reserved'>extern</strong> <strong class='reserved'>double</strong> <a href='../Y/28954.html' title='Multiple used in 7 places.'>wcstod_l</a> (<strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/6214.html' title='Multiple used in 100 places.'>__nptr</a>,
+<a id='L494' name='L494'></a> 494             <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> **<strong class='reserved'>__restrict</strong> <a href='../Y/4312.html' title='Multiple used in 89 places.'>__endptr</a>, <a href='../S/2191.html#L24' title='Defined at 24 in locale/bits/types/locale_t.h.'>locale_t</a> <a href='../Y/5494.html' title='Multiple used in 50 places.'>__loc</a>)
+<a id='L495' name='L495'></a> 495      <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a>;
+<a id='L496' name='L496'></a> 496 
+<a id='L497' name='L497'></a> 497 <strong class='reserved'>extern</strong> <strong class='reserved'>float</strong> <a href='../Y/28960.html' title='Multiple used in 4 places.'>wcstof_l</a> (<strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/6214.html' title='Multiple used in 100 places.'>__nptr</a>,
+<a id='L498' name='L498'></a> 498                <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> **<strong class='reserved'>__restrict</strong> <a href='../Y/4312.html' title='Multiple used in 89 places.'>__endptr</a>, <a href='../S/2191.html#L24' title='Defined at 24 in locale/bits/types/locale_t.h.'>locale_t</a> <a href='../Y/5494.html' title='Multiple used in 50 places.'>__loc</a>)
+<a id='L499' name='L499'></a> 499      <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a>;
+<a id='L500' name='L500'></a> 500 
+<a id='L501' name='L501'></a> 501 <strong class='reserved'>extern</strong> <strong class='reserved'>long</strong> <strong class='reserved'>double</strong> <a href='../D/39064.html' title='Multiple defined in 2 places.'>wcstold_l</a> (<strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/6214.html' title='Multiple used in 100 places.'>__nptr</a>,
+<a id='L502' name='L502'></a> 502                   <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> **<strong class='reserved'>__restrict</strong> <a href='../Y/4312.html' title='Multiple used in 89 places.'>__endptr</a>,
+<a id='L503' name='L503'></a> 503                   <a href='../S/2191.html#L24' title='Defined at 24 in locale/bits/types/locale_t.h.'>locale_t</a> <a href='../Y/5494.html' title='Multiple used in 50 places.'>__loc</a>) <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a>;
+<a id='L504' name='L504'></a> 504 
+<a id='L505' name='L505'></a> 505 <em class='sharp'># if</em> <a href='../S/206.html#L34' title='Defined at 34 in bits/floatn-common.h.'>__HAVE_FLOAT16</a>
+<a id='L506' name='L506'></a> 506 <strong class='reserved'>extern</strong> <a href='../S/206.html#L199' title='Defined at 199 in bits/floatn-common.h.'>_Float16</a> wcstof16_l (<strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/6214.html' title='Multiple used in 100 places.'>__nptr</a>,
+<a id='L507' name='L507'></a> 507                 <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> **<strong class='reserved'>__restrict</strong> <a href='../Y/4312.html' title='Multiple used in 89 places.'>__endptr</a>,
+<a id='L508' name='L508'></a> 508                 <a href='../S/2191.html#L24' title='Defined at 24 in locale/bits/types/locale_t.h.'>locale_t</a> <a href='../Y/5494.html' title='Multiple used in 50 places.'>__loc</a>) <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a>;
+<a id='L509' name='L509'></a> 509 <em class='sharp'># endif</em>
+<a id='L510' name='L510'></a> 510 
+<a id='L511' name='L511'></a> 511 <em class='sharp'># if</em> <a href='../S/206.html#L35' title='Defined at 35 in bits/floatn-common.h.'>__HAVE_FLOAT32</a>
+<a id='L512' name='L512'></a> 512 <strong class='reserved'>extern</strong> <a href='../S/206.html#L214' title='Defined at 214 in bits/floatn-common.h.'>_Float32</a> <a href='../D/39055.html' title='Multiple defined in 2 places.'>wcstof32_l</a> (<strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/6214.html' title='Multiple used in 100 places.'>__nptr</a>,
+<a id='L513' name='L513'></a> 513                 <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> **<strong class='reserved'>__restrict</strong> <a href='../Y/4312.html' title='Multiple used in 89 places.'>__endptr</a>,
+<a id='L514' name='L514'></a> 514                 <a href='../S/2191.html#L24' title='Defined at 24 in locale/bits/types/locale_t.h.'>locale_t</a> <a href='../Y/5494.html' title='Multiple used in 50 places.'>__loc</a>) <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a>;
+<a id='L515' name='L515'></a> 515 <em class='sharp'># endif</em>
+<a id='L516' name='L516'></a> 516 
+<a id='L517' name='L517'></a> 517 <em class='sharp'># if</em> <a href='../S/206.html#L36' title='Defined at 36 in bits/floatn-common.h.'>__HAVE_FLOAT64</a>
+<a id='L518' name='L518'></a> 518 <strong class='reserved'>extern</strong> <a href='../D/18527.html' title='Multiple defined in 2 places.'>_Float64</a> <a href='../S/6835.html#L30' title='Defined at 30 in stdlib/strtod_l.c.'>wcstof64_l</a> (<strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/6214.html' title='Multiple used in 100 places.'>__nptr</a>,
+<a id='L519' name='L519'></a> 519                 <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> **<strong class='reserved'>__restrict</strong> <a href='../Y/4312.html' title='Multiple used in 89 places.'>__endptr</a>,
+<a id='L520' name='L520'></a> 520                 <a href='../S/2191.html#L24' title='Defined at 24 in locale/bits/types/locale_t.h.'>locale_t</a> <a href='../Y/5494.html' title='Multiple used in 50 places.'>__loc</a>) <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a>;
+<a id='L521' name='L521'></a> 521 <em class='sharp'># endif</em>
+<a id='L522' name='L522'></a> 522 
+<a id='L523' name='L523'></a> 523 <em class='sharp'># if</em> <a href='../D/21648.html' title='Multiple defined in 11 places.'>__HAVE_FLOAT128</a>
+<a id='L524' name='L524'></a> 524 <strong class='reserved'>extern</strong> <a href='../D/18523.html' title='Multiple defined in 13 places.'>_Float128</a> <a href='../D/39053.html' title='Multiple defined in 4 places.'>wcstof128_l</a> (<strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/6214.html' title='Multiple used in 100 places.'>__nptr</a>,
+<a id='L525' name='L525'></a> 525                   <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> **<strong class='reserved'>__restrict</strong> <a href='../Y/4312.html' title='Multiple used in 89 places.'>__endptr</a>,
+<a id='L526' name='L526'></a> 526                   <a href='../S/2191.html#L24' title='Defined at 24 in locale/bits/types/locale_t.h.'>locale_t</a> <a href='../Y/5494.html' title='Multiple used in 50 places.'>__loc</a>) <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a>;
+<a id='L527' name='L527'></a> 527 <em class='sharp'># endif</em>
+<a id='L528' name='L528'></a> 528 
+<a id='L529' name='L529'></a> 529 <em class='sharp'># if</em> <a href='../S/206.html#L37' title='Defined at 37 in bits/floatn-common.h.'>__HAVE_FLOAT32X</a>
+<a id='L530' name='L530'></a> 530 <strong class='reserved'>extern</strong> <a href='../S/206.html#L268' title='Defined at 268 in bits/floatn-common.h.'>_Float32x</a> <a href='../S/6835.html#L34' title='Defined at 34 in stdlib/strtod_l.c.'>wcstof32x_l</a> (<strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/6214.html' title='Multiple used in 100 places.'>__nptr</a>,
+<a id='L531' name='L531'></a> 531                   <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> **<strong class='reserved'>__restrict</strong> <a href='../Y/4312.html' title='Multiple used in 89 places.'>__endptr</a>,
+<a id='L532' name='L532'></a> 532                   <a href='../S/2191.html#L24' title='Defined at 24 in locale/bits/types/locale_t.h.'>locale_t</a> <a href='../Y/5494.html' title='Multiple used in 50 places.'>__loc</a>) <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a>;
+<a id='L533' name='L533'></a> 533 <em class='sharp'># endif</em>
+<a id='L534' name='L534'></a> 534 
+<a id='L535' name='L535'></a> 535 <em class='sharp'># if</em> <a href='../D/21655.html' title='Multiple defined in 6 places.'>__HAVE_FLOAT64X</a>
+<a id='L536' name='L536'></a> 536 <strong class='reserved'>extern</strong> <a href='../D/18528.html' title='Multiple defined in 2 places.'>_Float64x</a> <a href='../D/39061.html' title='Multiple defined in 6 places.'>wcstof64x_l</a> (<strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/6214.html' title='Multiple used in 100 places.'>__nptr</a>,
+<a id='L537' name='L537'></a> 537                   <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> **<strong class='reserved'>__restrict</strong> <a href='../Y/4312.html' title='Multiple used in 89 places.'>__endptr</a>,
+<a id='L538' name='L538'></a> 538                   <a href='../S/2191.html#L24' title='Defined at 24 in locale/bits/types/locale_t.h.'>locale_t</a> <a href='../Y/5494.html' title='Multiple used in 50 places.'>__loc</a>) <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a>;
+<a id='L539' name='L539'></a> 539 <em class='sharp'># endif</em>
+<a id='L540' name='L540'></a> 540 
+<a id='L541' name='L541'></a> 541 <em class='sharp'># if</em> <a href='../S/206.html#L38' title='Defined at 38 in bits/floatn-common.h.'>__HAVE_FLOAT128X</a>
+<a id='L542' name='L542'></a> 542 <strong class='reserved'>extern</strong> <a href='../Y/2482.html' title='Multiple used in 24 places.'>_Float128x</a> wcstof128x_l (<strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/6214.html' title='Multiple used in 100 places.'>__nptr</a>,
+<a id='L543' name='L543'></a> 543                 <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> **<strong class='reserved'>__restrict</strong> <a href='../Y/4312.html' title='Multiple used in 89 places.'>__endptr</a>,
+<a id='L544' name='L544'></a> 544                 <a href='../S/2191.html#L24' title='Defined at 24 in locale/bits/types/locale_t.h.'>locale_t</a> <a href='../Y/5494.html' title='Multiple used in 50 places.'>__loc</a>) <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a>;
+<a id='L545' name='L545'></a> 545 <em class='sharp'># endif</em>
+<a id='L546' name='L546'></a> 546 <em class='sharp'>#endif</em>  <em class='comment'>/* use GNU */</em>
+<a id='L547' name='L547'></a> 547 
+<a id='L548' name='L548'></a> 548 
+<a id='L549' name='L549'></a> 549 <em class='sharp'>#ifdef</em> <a href='../D/22866.html' title='Multiple defined in 3 places.'>__USE_XOPEN2K8</a>
+<a id='L550' name='L550'></a> 550 <em class='comment'>/* Copy SRC to DEST, returning the address of the terminating L'\0' in</em>
+<a id='L551' name='L551'></a> 551 <em class='comment'>   DEST.  */</em>
+<a id='L552' name='L552'></a> 552 <strong class='reserved'>extern</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<a href='../Y/28929.html' title='Multiple used in 16 places.'>wcpcpy</a> (<a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/4196.html' title='Multiple used in 147 places.'>__dest</a>,
+<a id='L553' name='L553'></a> 553             <strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/7540.html' title='Multiple used in 136 places.'>__src</a>) <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a>;
+<a id='L554' name='L554'></a> 554 
+<a id='L555' name='L555'></a> 555 <em class='comment'>/* Copy no more than N characters of SRC to DEST, returning the address of</em>
+<a id='L556' name='L556'></a> 556 <em class='comment'>   the last character written into DEST.  */</em>
+<a id='L557' name='L557'></a> 557 <strong class='reserved'>extern</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<a href='../Y/28930.html' title='Multiple used in 21 places.'>wcpncpy</a> (<a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/4196.html' title='Multiple used in 147 places.'>__dest</a>,
+<a id='L558' name='L558'></a> 558              <strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/7540.html' title='Multiple used in 136 places.'>__src</a>, <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/6016.html' title='Multiple used in 299 places.'>__n</a>)
+<a id='L559' name='L559'></a> 559      <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a>;
+<a id='L560' name='L560'></a> 560 <em class='sharp'>#endif</em>
+<a id='L561' name='L561'></a> 561 
+<a id='L562' name='L562'></a> 562 
+<a id='L563' name='L563'></a> 563 <em class='comment'>/* Wide character I/O functions.  */</em>
+<a id='L564' name='L564'></a> 564 
+<a id='L565' name='L565'></a> 565 <em class='sharp'>#if</em> <strong class='reserved'>defined</strong> <a href='../D/22866.html' title='Multiple defined in 3 places.'>__USE_XOPEN2K8</a> || <a href='../S/17866.html#L186' title='Defined at 186 in include/features.h.'>__GLIBC_USE</a> (<a href='../Y/1042.html' title='Multiple used in 6 places.'>LIB_EXT2</a>)
+<a id='L566' name='L566'></a> 566 <em class='sharp'># ifndef</em> <a href='../D/23301.html' title='Multiple defined in 4 places.'>__attr_dealloc_fclose</a>
+<a id='L567' name='L567'></a> 567 <em class='sharp'>#   if</em> <strong class='reserved'>defined</strong> <a href='../Y/4833.html' title='Multiple used in 10 places.'>__has_builtin</a>
+<a id='L568' name='L568'></a> 568 <em class='sharp'>#     if</em> <a href='../Y/4833.html' title='Multiple used in 10 places.'>__has_builtin</a> (<a href='../Y/3767.html' title='Multiple used in 2 places.'>__builtin_fclose</a>)
+<a id='L569' name='L569'></a> 569 <em class='comment'>/* If the attribute macro hasn't been defined yet (by &lt;stdio.h&gt;) and</em>
+<a id='L570' name='L570'></a> 570 <em class='comment'>   fclose is a built-in, use it.  */</em>
+<a id='L571' name='L571'></a> 571 <em class='sharp'>#      define</em> <a href='../R/13677.html' title='Multiple referred from 14 places.'>__attr_dealloc_fclose</a> <a href='../D/23300.html' title='Multiple defined in 2 places.'>__attr_dealloc</a> (<a href='../Y/3767.html' title='Multiple used in 2 places.'>__builtin_fclose</a>, 1)
+<a id='L572' name='L572'></a> 572 <em class='sharp'>#     endif</em>
+<a id='L573' name='L573'></a> 573 <em class='sharp'>#   endif</em>
+<a id='L574' name='L574'></a> 574 <em class='sharp'># endif</em>
+<a id='L575' name='L575'></a> 575 <em class='sharp'># ifndef</em> <a href='../D/23301.html' title='Multiple defined in 4 places.'>__attr_dealloc_fclose</a>
+<a id='L576' name='L576'></a> 576 <em class='sharp'>#  define</em> <a href='../R/13677.html' title='Multiple referred from 14 places.'>__attr_dealloc_fclose</a> <em class='comment'>/* empty */</em>
+<a id='L577' name='L577'></a> 577 <em class='sharp'># endif</em>
+<a id='L578' name='L578'></a> 578 
+<a id='L579' name='L579'></a> 579 <em class='comment'>/* Like OPEN_MEMSTREAM, but the stream is wide oriented and produces</em>
+<a id='L580' name='L580'></a> 580 <em class='comment'>   a wide character string.  */</em>
+<a id='L581' name='L581'></a> 581 <strong class='reserved'>extern</strong> <a href='../S/5472.html#L5' title='Defined at 5 in libio/bits/types/__FILE.h.'>__FILE</a> *<a href='../S/5600.html#L65' title='Defined at 65 in libio/wmemstream.c.'>open_wmemstream</a> (<a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> **<a href='../Y/3708.html' title='Multiple used in 3 places.'>__bufloc</a>, <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> *<a href='../Y/7483.html' title='Multiple used in 3 places.'>__sizeloc</a>) <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a>
+<a id='L582' name='L582'></a> 582   <a href='../D/23312.html' title='Multiple defined in 2 places.'>__attribute_malloc__</a> <a href='../D/23301.html' title='Multiple defined in 4 places.'>__attr_dealloc_fclose</a>;
+<a id='L583' name='L583'></a> 583 <em class='sharp'>#endif</em>
+<a id='L584' name='L584'></a> 584 
+<a id='L585' name='L585'></a> 585 <em class='sharp'>#if</em> <strong class='reserved'>defined</strong> <a href='../D/22848.html' title='Multiple defined in 6 places.'>__USE_ISOC95</a> || <strong class='reserved'>defined</strong> <a href='../D/22862.html' title='Multiple defined in 2 places.'>__USE_UNIX98</a>
+<a id='L586' name='L586'></a> 586 
+<a id='L587' name='L587'></a> 587 <em class='comment'>/* Select orientation for stream.  */</em>
+<a id='L588' name='L588'></a> 588 <strong class='reserved'>extern</strong> <strong class='reserved'>int</strong> <a href='../S/5603.html#L32' title='Defined at 32 in libio/fwide.c.'>fwide</a> (<a href='../S/5472.html#L5' title='Defined at 5 in libio/bits/types/__FILE.h.'>__FILE</a> *<a href='../Y/4552.html' title='Multiple used in 72 places.'>__fp</a>, <strong class='reserved'>int</strong> <a href='../Y/5925.html' title='Multiple used in 41 places.'>__mode</a>) <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a>;
+<a id='L589' name='L589'></a> 589 
+<a id='L590' name='L590'></a> 590 
+<a id='L591' name='L591'></a> 591 <em class='comment'>/* Write formatted output to STREAM.</em>
+<a id='L592' name='L592'></a> 592 <em class='comment'></em>
+<a id='L593' name='L593'></a> 593 <em class='comment'>   This function is a possible cancellation point and therefore not</em>
+<a id='L594' name='L594'></a> 594 <em class='comment'>   marked with __THROW.  */</em>
+<a id='L595' name='L595'></a> 595 <strong class='reserved'>extern</strong> <strong class='reserved'>int</strong> <a href='../D/30984.html' title='Multiple defined in 3 places.'>fwprintf</a> (<a href='../S/5472.html#L5' title='Defined at 5 in libio/bits/types/__FILE.h.'>__FILE</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/7737.html' title='Multiple used in 188 places.'>__stream</a>,
+<a id='L596' name='L596'></a> 596              <strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/4548.html' title='Multiple used in 123 places.'>__format</a>, ...)
+<a id='L597' name='L597'></a> 597      <em class='comment'>/* __attribute__ ((__format__ (__wprintf__, 2, 3))) */</em>;
+<a id='L598' name='L598'></a> 598 <em class='comment'>/* Write formatted output to stdout.</em>
+<a id='L599' name='L599'></a> 599 <em class='comment'></em>
+<a id='L600' name='L600'></a> 600 <em class='comment'>   This function is a possible cancellation point and therefore not</em>
+<a id='L601' name='L601'></a> 601 <em class='comment'>   marked with __THROW.  */</em>
+<a id='L602' name='L602'></a> 602 <strong class='reserved'>extern</strong> <strong class='reserved'>int</strong> <a href='../D/39138.html' title='Multiple defined in 3 places.'>wprintf</a> (<strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/4548.html' title='Multiple used in 123 places.'>__format</a>, ...)
+<a id='L603' name='L603'></a> 603      <em class='comment'>/* __attribute__ ((__format__ (__wprintf__, 1, 2))) */</em>;
+<a id='L604' name='L604'></a> 604 <em class='comment'>/* Write formatted output of at most N characters to S.  */</em>
+<a id='L605' name='L605'></a> 605 <strong class='reserved'>extern</strong> <strong class='reserved'>int</strong> <a href='../D/37374.html' title='Multiple defined in 2 places.'>swprintf</a> (<a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/7305.html' title='Multiple used in 322 places.'>__s</a>, <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/6016.html' title='Multiple used in 299 places.'>__n</a>,
+<a id='L606' name='L606'></a> 606              <strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/4548.html' title='Multiple used in 123 places.'>__format</a>, ...)
+<a id='L607' name='L607'></a> 607      <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a> <em class='comment'>/* __attribute__ ((__format__ (__wprintf__, 3, 4))) */</em>;
+<a id='L608' name='L608'></a> 608 
+<a id='L609' name='L609'></a> 609 <em class='comment'>/* Write formatted output to S from argument list ARG.</em>
+<a id='L610' name='L610'></a> 610 <em class='comment'></em>
+<a id='L611' name='L611'></a> 611 <em class='comment'>   This function is a possible cancellation point and therefore not</em>
+<a id='L612' name='L612'></a> 612 <em class='comment'>   marked with __THROW.  */</em>
+<a id='L613' name='L613'></a> 613 <strong class='reserved'>extern</strong> <strong class='reserved'>int</strong> <a href='../D/38971.html' title='Multiple defined in 2 places.'>vfwprintf</a> (<a href='../S/5472.html#L5' title='Defined at 5 in libio/bits/types/__FILE.h.'>__FILE</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/7305.html' title='Multiple used in 322 places.'>__s</a>,
+<a id='L614' name='L614'></a> 614               <strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/4548.html' title='Multiple used in 123 places.'>__format</a>,
+<a id='L615' name='L615'></a> 615               <a href='../S/3851.html#L27' title='Defined at 27 in misc/err.h.'>__gnuc_va_list</a> <a href='../Y/3536.html' title='Multiple used in 99 places.'>__arg</a>)
+<a id='L616' name='L616'></a> 616      <em class='comment'>/* __attribute__ ((__format__ (__wprintf__, 2, 0))) */</em>;
+<a id='L617' name='L617'></a> 617 <em class='comment'>/* Write formatted output to stdout from argument list ARG.</em>
+<a id='L618' name='L618'></a> 618 <em class='comment'></em>
+<a id='L619' name='L619'></a> 619 <em class='comment'>   This function is a possible cancellation point and therefore not</em>
+<a id='L620' name='L620'></a> 620 <em class='comment'>   marked with __THROW.  */</em>
+<a id='L621' name='L621'></a> 621 <strong class='reserved'>extern</strong> <strong class='reserved'>int</strong> <a href='../D/39007.html' title='Multiple defined in 2 places.'>vwprintf</a> (<strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/4548.html' title='Multiple used in 123 places.'>__format</a>,
+<a id='L622' name='L622'></a> 622              <a href='../S/3851.html#L27' title='Defined at 27 in misc/err.h.'>__gnuc_va_list</a> <a href='../Y/3536.html' title='Multiple used in 99 places.'>__arg</a>)
+<a id='L623' name='L623'></a> 623      <em class='comment'>/* __attribute__ ((__format__ (__wprintf__, 1, 0))) */</em>;
+<a id='L624' name='L624'></a> 624 <em class='comment'>/* Write formatted output of at most N character to S from argument</em>
+<a id='L625' name='L625'></a> 625 <em class='comment'>   list ARG.  */</em>
+<a id='L626' name='L626'></a> 626 <strong class='reserved'>extern</strong> <strong class='reserved'>int</strong> <a href='../S/8747.html#L6' title='Defined at 6 in sysdeps/ieee754/ldbl-opt/nldbl-vswprintf.c.'>vswprintf</a> (<a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/7305.html' title='Multiple used in 322 places.'>__s</a>, <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/6016.html' title='Multiple used in 299 places.'>__n</a>,
+<a id='L627' name='L627'></a> 627               <strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/4548.html' title='Multiple used in 123 places.'>__format</a>,
+<a id='L628' name='L628'></a> 628               <a href='../S/3851.html#L27' title='Defined at 27 in misc/err.h.'>__gnuc_va_list</a> <a href='../Y/3536.html' title='Multiple used in 99 places.'>__arg</a>)
+<a id='L629' name='L629'></a> 629      <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a> <em class='comment'>/* __attribute__ ((__format__ (__wprintf__, 3, 0))) */</em>;
+<a id='L630' name='L630'></a> 630 
+<a id='L631' name='L631'></a> 631 
+<a id='L632' name='L632'></a> 632 <em class='comment'>/* Read formatted input from STREAM.</em>
+<a id='L633' name='L633'></a> 633 <em class='comment'></em>
+<a id='L634' name='L634'></a> 634 <em class='comment'>   This function is a possible cancellation point and therefore not</em>
+<a id='L635' name='L635'></a> 635 <em class='comment'>   marked with __THROW.  */</em>
+<a id='L636' name='L636'></a> 636 <strong class='reserved'>extern</strong> <strong class='reserved'>int</strong> <a href='../D/30987.html' title='Multiple defined in 2 places.'>fwscanf</a> (<a href='../S/5472.html#L5' title='Defined at 5 in libio/bits/types/__FILE.h.'>__FILE</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/7737.html' title='Multiple used in 188 places.'>__stream</a>,
+<a id='L637' name='L637'></a> 637             <strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/4548.html' title='Multiple used in 123 places.'>__format</a>, ...)
+<a id='L638' name='L638'></a> 638      <em class='comment'>/* __attribute__ ((__format__ (__wscanf__, 2, 3))) */</em>;
+<a id='L639' name='L639'></a> 639 <em class='comment'>/* Read formatted input from stdin.</em>
+<a id='L640' name='L640'></a> 640 <em class='comment'></em>
+<a id='L641' name='L641'></a> 641 <em class='comment'>   This function is a possible cancellation point and therefore not</em>
+<a id='L642' name='L642'></a> 642 <em class='comment'>   marked with __THROW.  */</em>
+<a id='L643' name='L643'></a> 643 <strong class='reserved'>extern</strong> <strong class='reserved'>int</strong> <a href='../D/39192.html' title='Multiple defined in 2 places.'>wscanf</a> (<strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/4548.html' title='Multiple used in 123 places.'>__format</a>, ...)
+<a id='L644' name='L644'></a> 644      <em class='comment'>/* __attribute__ ((__format__ (__wscanf__, 1, 2))) */</em>;
+<a id='L645' name='L645'></a> 645 <em class='comment'>/* Read formatted input from S.  */</em>
+<a id='L646' name='L646'></a> 646 <strong class='reserved'>extern</strong> <strong class='reserved'>int</strong> <a href='../D/37375.html' title='Multiple defined in 2 places.'>swscanf</a> (<strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/7305.html' title='Multiple used in 322 places.'>__s</a>,
+<a id='L647' name='L647'></a> 647             <strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/4548.html' title='Multiple used in 123 places.'>__format</a>, ...)
+<a id='L648' name='L648'></a> 648      <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a> <em class='comment'>/* __attribute__ ((__format__ (__wscanf__, 2, 3))) */</em>;
+<a id='L649' name='L649'></a> 649 
+<a id='L650' name='L650'></a> 650 <em class='comment'>/* For historical reasons, the C99-compliant versions of the scanf</em>
+<a id='L651' name='L651'></a> 651 <em class='comment'>   functions are at alternative names.  When __LDBL_COMPAT or</em>
+<a id='L652' name='L652'></a> 652 <em class='comment'>   __LDOUBLE_REDIRECTS_TO_FLOAT128_ABI are in effect, this is handled in</em>
+<a id='L653' name='L653'></a> 653 <em class='comment'>   bits/wchar-ldbl.h.  */</em>
+<a id='L654' name='L654'></a> 654 <em class='sharp'>#if</em> !<a href='../S/17866.html#L186' title='Defined at 186 in include/features.h.'>__GLIBC_USE</a> (<a href='../Y/273.html' title='Multiple used in 10 places.'>DEPRECATED_SCANF</a>) &amp;&amp; !<strong class='reserved'>defined</strong> <a href='../S/3878.html#L594' title='Defined at 594 in misc/sys/cdefs.h.'>__LDBL_COMPAT</a> \
+<a id='L655' name='L655'></a> 655      &amp;&amp; <a href='../D/21769.html' title='Multiple defined in 8 places.'>__LDOUBLE_REDIRECTS_TO_FLOAT128_ABI</a> == 0
+<a id='L656' name='L656'></a> 656 <em class='sharp'>#  ifdef</em> <a href='../D/22592.html' title='Multiple defined in 3 places.'>__REDIRECT</a>
+<a id='L657' name='L657'></a> 657 <strong class='reserved'>extern</strong> <strong class='reserved'>int</strong> <a href='../D/22592.html' title='Multiple defined in 3 places.'>__REDIRECT</a> (<a href='../D/30987.html' title='Multiple defined in 2 places.'>fwscanf</a>, (<a href='../S/5472.html#L5' title='Defined at 5 in libio/bits/types/__FILE.h.'>__FILE</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/7737.html' title='Multiple used in 188 places.'>__stream</a>,
+<a id='L658' name='L658'></a> 658                  <strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/4548.html' title='Multiple used in 123 places.'>__format</a>, ...),
+<a id='L659' name='L659'></a> 659                <a href='../D/24453.html' title='Multiple defined in 2 places.'>__isoc99_fwscanf</a>)
+<a id='L660' name='L660'></a> 660      <em class='comment'>/* __attribute__ ((__format__ (__wscanf__, 2, 3))) */</em>;
+<a id='L661' name='L661'></a> 661 <strong class='reserved'>extern</strong> <strong class='reserved'>int</strong> <a href='../D/22592.html' title='Multiple defined in 3 places.'>__REDIRECT</a> (<a href='../D/39192.html' title='Multiple defined in 2 places.'>wscanf</a>, (<strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/4548.html' title='Multiple used in 123 places.'>__format</a>, ...),
+<a id='L662' name='L662'></a> 662                <a href='../D/24463.html' title='Multiple defined in 2 places.'>__isoc99_wscanf</a>)
+<a id='L663' name='L663'></a> 663      <em class='comment'>/* __attribute__ ((__format__ (__wscanf__, 1, 2))) */</em>;
+<a id='L664' name='L664'></a> 664 <strong class='reserved'>extern</strong> <strong class='reserved'>int</strong> <a href='../D/22594.html' title='Multiple defined in 12 places.'>__REDIRECT_NTH</a> (<a href='../D/37375.html' title='Multiple defined in 2 places.'>swscanf</a>, (<strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/7305.html' title='Multiple used in 322 places.'>__s</a>,
+<a id='L665' name='L665'></a> 665                      <strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/4548.html' title='Multiple used in 123 places.'>__format</a>,
+<a id='L666' name='L666'></a> 666                      ...), <a href='../D/24456.html' title='Multiple defined in 2 places.'>__isoc99_swscanf</a>)
+<a id='L667' name='L667'></a> 667      <em class='comment'>/* __attribute__ ((__format__ (__wscanf__, 2, 3))) */</em>;
+<a id='L668' name='L668'></a> 668 <em class='sharp'>#  else</em>
+<a id='L669' name='L669'></a> 669 <strong class='reserved'>extern</strong> <strong class='reserved'>int</strong> <a href='../D/24453.html' title='Multiple defined in 2 places.'>__isoc99_fwscanf</a> (<a href='../S/5472.html#L5' title='Defined at 5 in libio/bits/types/__FILE.h.'>__FILE</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/7737.html' title='Multiple used in 188 places.'>__stream</a>,
+<a id='L670' name='L670'></a> 670                  <strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/4548.html' title='Multiple used in 123 places.'>__format</a>, ...);
+<a id='L671' name='L671'></a> 671 <strong class='reserved'>extern</strong> <strong class='reserved'>int</strong> <a href='../D/24463.html' title='Multiple defined in 2 places.'>__isoc99_wscanf</a> (<strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/4548.html' title='Multiple used in 123 places.'>__format</a>, ...);
+<a id='L672' name='L672'></a> 672 <strong class='reserved'>extern</strong> <strong class='reserved'>int</strong> <a href='../D/24456.html' title='Multiple defined in 2 places.'>__isoc99_swscanf</a> (<strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/7305.html' title='Multiple used in 322 places.'>__s</a>,
+<a id='L673' name='L673'></a> 673                  <strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/4548.html' title='Multiple used in 123 places.'>__format</a>, ...)
+<a id='L674' name='L674'></a> 674      <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a>;
+<a id='L675' name='L675'></a> 675 <em class='sharp'>#   define</em> <a href='../R/19823.html' title='Multiple referred from 13 places.'>fwscanf</a> <a href='../D/24453.html' title='Multiple defined in 2 places.'>__isoc99_fwscanf</a>
+<a id='L676' name='L676'></a> 676 <em class='sharp'>#   define</em> <a href='../R/26590.html' title='Multiple referred from 10 places.'>wscanf</a> <a href='../D/24463.html' title='Multiple defined in 2 places.'>__isoc99_wscanf</a>
+<a id='L677' name='L677'></a> 677 <em class='sharp'>#   define</em> <a href='../R/25015.html' title='Multiple referred from 35 places.'>swscanf</a> <a href='../D/24456.html' title='Multiple defined in 2 places.'>__isoc99_swscanf</a>
+<a id='L678' name='L678'></a> 678 <em class='sharp'>#  endif</em>
+<a id='L679' name='L679'></a> 679 <em class='sharp'># endif</em>
+<a id='L680' name='L680'></a> 680 
+<a id='L681' name='L681'></a> 681 <em class='sharp'>#endif</em> <em class='comment'>/* Use ISO C95, C99 and Unix98. */</em>
+<a id='L682' name='L682'></a> 682 
+<a id='L683' name='L683'></a> 683 <em class='sharp'>#ifdef</em> <a href='../D/22849.html' title='Multiple defined in 7 places.'>__USE_ISOC99</a>
+<a id='L684' name='L684'></a> 684 <em class='comment'>/* Read formatted input from S into argument list ARG.</em>
+<a id='L685' name='L685'></a> 685 <em class='comment'></em>
+<a id='L686' name='L686'></a> 686 <em class='comment'>   This function is a possible cancellation point and therefore not</em>
+<a id='L687' name='L687'></a> 687 <em class='comment'>   marked with __THROW.  */</em>
+<a id='L688' name='L688'></a> 688 <strong class='reserved'>extern</strong> <strong class='reserved'>int</strong> <a href='../D/38972.html' title='Multiple defined in 2 places.'>vfwscanf</a> (<a href='../S/5472.html#L5' title='Defined at 5 in libio/bits/types/__FILE.h.'>__FILE</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/7305.html' title='Multiple used in 322 places.'>__s</a>,
+<a id='L689' name='L689'></a> 689              <strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/4548.html' title='Multiple used in 123 places.'>__format</a>,
+<a id='L690' name='L690'></a> 690              <a href='../S/3851.html#L27' title='Defined at 27 in misc/err.h.'>__gnuc_va_list</a> <a href='../Y/3536.html' title='Multiple used in 99 places.'>__arg</a>)
+<a id='L691' name='L691'></a> 691      <em class='comment'>/* __attribute__ ((__format__ (__wscanf__, 2, 0))) */</em>;
+<a id='L692' name='L692'></a> 692 <em class='comment'>/* Read formatted input from stdin into argument list ARG.</em>
+<a id='L693' name='L693'></a> 693 <em class='comment'></em>
+<a id='L694' name='L694'></a> 694 <em class='comment'>   This function is a possible cancellation point and therefore not</em>
+<a id='L695' name='L695'></a> 695 <em class='comment'>   marked with __THROW.  */</em>
+<a id='L696' name='L696'></a> 696 <strong class='reserved'>extern</strong> <strong class='reserved'>int</strong> <a href='../D/39008.html' title='Multiple defined in 2 places.'>vwscanf</a> (<strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/4548.html' title='Multiple used in 123 places.'>__format</a>,
+<a id='L697' name='L697'></a> 697             <a href='../S/3851.html#L27' title='Defined at 27 in misc/err.h.'>__gnuc_va_list</a> <a href='../Y/3536.html' title='Multiple used in 99 places.'>__arg</a>)
+<a id='L698' name='L698'></a> 698      <em class='comment'>/* __attribute__ ((__format__ (__wscanf__, 1, 0))) */</em>;
+<a id='L699' name='L699'></a> 699 <em class='comment'>/* Read formatted input from S into argument list ARG.  */</em>
+<a id='L700' name='L700'></a> 700 <strong class='reserved'>extern</strong> <strong class='reserved'>int</strong> <a href='../D/38998.html' title='Multiple defined in 2 places.'>vswscanf</a> (<strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/7305.html' title='Multiple used in 322 places.'>__s</a>,
+<a id='L701' name='L701'></a> 701              <strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/4548.html' title='Multiple used in 123 places.'>__format</a>,
+<a id='L702' name='L702'></a> 702              <a href='../S/3851.html#L27' title='Defined at 27 in misc/err.h.'>__gnuc_va_list</a> <a href='../Y/3536.html' title='Multiple used in 99 places.'>__arg</a>)
+<a id='L703' name='L703'></a> 703      <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a> <em class='comment'>/* __attribute__ ((__format__ (__wscanf__, 2, 0))) */</em>;
+<a id='L704' name='L704'></a> 704 
+<a id='L705' name='L705'></a> 705 <em class='comment'>/* Same redirection as above for the v*wscanf family.  */</em>
+<a id='L706' name='L706'></a> 706 <em class='sharp'># if</em> !<a href='../S/17866.html#L186' title='Defined at 186 in include/features.h.'>__GLIBC_USE</a> (<a href='../Y/273.html' title='Multiple used in 10 places.'>DEPRECATED_SCANF</a>) \
+<a id='L707' name='L707'></a> 707      &amp;&amp; (!<strong class='reserved'>defined</strong> <a href='../S/3878.html#L594' title='Defined at 594 in misc/sys/cdefs.h.'>__LDBL_COMPAT</a> || !<strong class='reserved'>defined</strong> <a href='../D/22592.html' title='Multiple defined in 3 places.'>__REDIRECT</a>) \
+<a id='L708' name='L708'></a> 708      &amp;&amp; (<strong class='reserved'>defined</strong> <a href='../Y/3300.html' title='Multiple used in 9 places.'>__STRICT_ANSI__</a> || <strong class='reserved'>defined</strong> <a href='../D/22865.html' title='Multiple defined in 3 places.'>__USE_XOPEN2K</a>) \
+<a id='L709' name='L709'></a> 709      &amp;&amp; <a href='../D/21769.html' title='Multiple defined in 8 places.'>__LDOUBLE_REDIRECTS_TO_FLOAT128_ABI</a> == 0
+<a id='L710' name='L710'></a> 710 <em class='sharp'>#  ifdef</em> <a href='../D/22592.html' title='Multiple defined in 3 places.'>__REDIRECT</a>
+<a id='L711' name='L711'></a> 711 <strong class='reserved'>extern</strong> <strong class='reserved'>int</strong> <a href='../D/22592.html' title='Multiple defined in 3 places.'>__REDIRECT</a> (<a href='../D/38972.html' title='Multiple defined in 2 places.'>vfwscanf</a>, (<a href='../S/5472.html#L5' title='Defined at 5 in libio/bits/types/__FILE.h.'>__FILE</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/7305.html' title='Multiple used in 322 places.'>__s</a>,
+<a id='L712' name='L712'></a> 712                   <strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/4548.html' title='Multiple used in 123 places.'>__format</a>,
+<a id='L713' name='L713'></a> 713                   <a href='../S/3851.html#L27' title='Defined at 27 in misc/err.h.'>__gnuc_va_list</a> <a href='../Y/3536.html' title='Multiple used in 99 places.'>__arg</a>), <a href='../D/24458.html' title='Multiple defined in 2 places.'>__isoc99_vfwscanf</a>)
+<a id='L714' name='L714'></a> 714      <em class='comment'>/* __attribute__ ((__format__ (__wscanf__, 2, 0))) */</em>;
+<a id='L715' name='L715'></a> 715 <strong class='reserved'>extern</strong> <strong class='reserved'>int</strong> <a href='../D/22592.html' title='Multiple defined in 3 places.'>__REDIRECT</a> (<a href='../D/39008.html' title='Multiple defined in 2 places.'>vwscanf</a>, (<strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/4548.html' title='Multiple used in 123 places.'>__format</a>,
+<a id='L716' name='L716'></a> 716                  <a href='../S/3851.html#L27' title='Defined at 27 in misc/err.h.'>__gnuc_va_list</a> <a href='../Y/3536.html' title='Multiple used in 99 places.'>__arg</a>), <a href='../D/24462.html' title='Multiple defined in 2 places.'>__isoc99_vwscanf</a>)
+<a id='L717' name='L717'></a> 717      <em class='comment'>/* __attribute__ ((__format__ (__wscanf__, 1, 0))) */</em>;
+<a id='L718' name='L718'></a> 718 <strong class='reserved'>extern</strong> <strong class='reserved'>int</strong> <a href='../D/22594.html' title='Multiple defined in 12 places.'>__REDIRECT_NTH</a> (<a href='../D/38998.html' title='Multiple defined in 2 places.'>vswscanf</a>, (<strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/7305.html' title='Multiple used in 322 places.'>__s</a>,
+<a id='L719' name='L719'></a> 719                       <strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/4548.html' title='Multiple used in 123 places.'>__format</a>,
+<a id='L720' name='L720'></a> 720                       <a href='../S/3851.html#L27' title='Defined at 27 in misc/err.h.'>__gnuc_va_list</a> <a href='../Y/3536.html' title='Multiple used in 99 places.'>__arg</a>), <a href='../D/24461.html' title='Multiple defined in 2 places.'>__isoc99_vswscanf</a>)
+<a id='L721' name='L721'></a> 721      <em class='comment'>/* __attribute__ ((__format__ (__wscanf__, 2, 0))) */</em>;
+<a id='L722' name='L722'></a> 722 <em class='sharp'>#  else</em>
+<a id='L723' name='L723'></a> 723 <strong class='reserved'>extern</strong> <strong class='reserved'>int</strong> <a href='../D/24458.html' title='Multiple defined in 2 places.'>__isoc99_vfwscanf</a> (<a href='../S/5472.html#L5' title='Defined at 5 in libio/bits/types/__FILE.h.'>__FILE</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/7305.html' title='Multiple used in 322 places.'>__s</a>,
+<a id='L724' name='L724'></a> 724                   <strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/4548.html' title='Multiple used in 123 places.'>__format</a>,
+<a id='L725' name='L725'></a> 725                   <a href='../S/3851.html#L27' title='Defined at 27 in misc/err.h.'>__gnuc_va_list</a> <a href='../Y/3536.html' title='Multiple used in 99 places.'>__arg</a>);
+<a id='L726' name='L726'></a> 726 <strong class='reserved'>extern</strong> <strong class='reserved'>int</strong> <a href='../D/24462.html' title='Multiple defined in 2 places.'>__isoc99_vwscanf</a> (<strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/4548.html' title='Multiple used in 123 places.'>__format</a>,
+<a id='L727' name='L727'></a> 727                  <a href='../S/3851.html#L27' title='Defined at 27 in misc/err.h.'>__gnuc_va_list</a> <a href='../Y/3536.html' title='Multiple used in 99 places.'>__arg</a>);
+<a id='L728' name='L728'></a> 728 <strong class='reserved'>extern</strong> <strong class='reserved'>int</strong> <a href='../D/24461.html' title='Multiple defined in 2 places.'>__isoc99_vswscanf</a> (<strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/7305.html' title='Multiple used in 322 places.'>__s</a>,
+<a id='L729' name='L729'></a> 729                   <strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/4548.html' title='Multiple used in 123 places.'>__format</a>,
+<a id='L730' name='L730'></a> 730                   <a href='../S/3851.html#L27' title='Defined at 27 in misc/err.h.'>__gnuc_va_list</a> <a href='../Y/3536.html' title='Multiple used in 99 places.'>__arg</a>) <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a>;
+<a id='L731' name='L731'></a> 731 <em class='sharp'>#   define</em> <a href='../R/26383.html' title='Multiple referred from 9 places.'>vfwscanf</a> <a href='../D/24458.html' title='Multiple defined in 2 places.'>__isoc99_vfwscanf</a>
+<a id='L732' name='L732'></a> 732 <em class='sharp'>#   define</em> <a href='../R/26411.html' title='Multiple referred from 9 places.'>vwscanf</a> <a href='../D/24462.html' title='Multiple defined in 2 places.'>__isoc99_vwscanf</a>
+<a id='L733' name='L733'></a> 733 <em class='sharp'>#   define</em> <a href='../R/26401.html' title='Multiple referred from 9 places.'>vswscanf</a> <a href='../D/24461.html' title='Multiple defined in 2 places.'>__isoc99_vswscanf</a>
+<a id='L734' name='L734'></a> 734 <em class='sharp'>#  endif</em>
+<a id='L735' name='L735'></a> 735 <em class='sharp'># endif</em>
+<a id='L736' name='L736'></a> 736 
+<a id='L737' name='L737'></a> 737 <em class='sharp'>#endif</em> <em class='comment'>/* Use ISO C99. */</em>
+<a id='L738' name='L738'></a> 738 
+<a id='L739' name='L739'></a> 739 
+<a id='L740' name='L740'></a> 740 <em class='comment'>/* Read a character from STREAM.</em>
+<a id='L741' name='L741'></a> 741 <em class='comment'></em>
+<a id='L742' name='L742'></a> 742 <em class='comment'>   These functions are possible cancellation points and therefore not</em>
+<a id='L743' name='L743'></a> 743 <em class='comment'>   marked with __THROW.  */</em>
+<a id='L744' name='L744'></a> 744 <strong class='reserved'>extern</strong> <a href='../D/39101.html' title='Multiple defined in 2 places.'>wint_t</a> <a href='../Y/14523.html' title='Multiple used in 20 places.'>fgetwc</a> (<a href='../S/5472.html#L5' title='Defined at 5 in libio/bits/types/__FILE.h.'>__FILE</a> *<a href='../Y/7737.html' title='Multiple used in 188 places.'>__stream</a>);
+<a id='L745' name='L745'></a> 745 <strong class='reserved'>extern</strong> <a href='../D/39101.html' title='Multiple defined in 2 places.'>wint_t</a> <a href='../S/5535.html#L44' title='Defined at 44 in libio/getwc.c.'>getwc</a> (<a href='../S/5472.html#L5' title='Defined at 5 in libio/bits/types/__FILE.h.'>__FILE</a> *<a href='../Y/7737.html' title='Multiple used in 188 places.'>__stream</a>);
+<a id='L746' name='L746'></a> 746 
+<a id='L747' name='L747'></a> 747 <em class='comment'>/* Read a character from stdin.</em>
+<a id='L748' name='L748'></a> 748 <em class='comment'></em>
+<a id='L749' name='L749'></a> 749 <em class='comment'>   This function is a possible cancellation point and therefore not</em>
+<a id='L750' name='L750'></a> 750 <em class='comment'>   marked with __THROW.  */</em>
+<a id='L751' name='L751'></a> 751 <strong class='reserved'>extern</strong> <a href='../D/39101.html' title='Multiple defined in 2 places.'>wint_t</a> <a href='../D/31304.html' title='Multiple defined in 2 places.'>getwchar</a> (<strong class='reserved'>void</strong>);
+<a id='L752' name='L752'></a> 752 
+<a id='L753' name='L753'></a> 753 
+<a id='L754' name='L754'></a> 754 <em class='comment'>/* Write a character to STREAM.</em>
+<a id='L755' name='L755'></a> 755 <em class='comment'></em>
+<a id='L756' name='L756'></a> 756 <em class='comment'>   These functions are possible cancellation points and therefore not</em>
+<a id='L757' name='L757'></a> 757 <em class='comment'>   marked with __THROW.  */</em>
+<a id='L758' name='L758'></a> 758 <strong class='reserved'>extern</strong> <a href='../D/39101.html' title='Multiple defined in 2 places.'>wint_t</a> <a href='../S/5493.html#L31' title='Defined at 31 in libio/fputwc.c.'>fputwc</a> (<a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> <a href='../Y/8475.html' title='Multiple used in 58 places.'>__wc</a>, <a href='../S/5472.html#L5' title='Defined at 5 in libio/bits/types/__FILE.h.'>__FILE</a> *<a href='../Y/7737.html' title='Multiple used in 188 places.'>__stream</a>);
+<a id='L759' name='L759'></a> 759 <strong class='reserved'>extern</strong> <a href='../D/39101.html' title='Multiple defined in 2 places.'>wint_t</a> <a href='../S/5498.html#L22' title='Defined at 22 in libio/putwc.c.'>putwc</a> (<a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> <a href='../Y/8475.html' title='Multiple used in 58 places.'>__wc</a>, <a href='../S/5472.html#L5' title='Defined at 5 in libio/bits/types/__FILE.h.'>__FILE</a> *<a href='../Y/7737.html' title='Multiple used in 188 places.'>__stream</a>);
+<a id='L760' name='L760'></a> 760 
+<a id='L761' name='L761'></a> 761 <em class='comment'>/* Write a character to stdout.</em>
+<a id='L762' name='L762'></a> 762 <em class='comment'></em>
+<a id='L763' name='L763'></a> 763 <em class='comment'>   This function is a possible cancellation point and therefore not</em>
+<a id='L764' name='L764'></a> 764 <em class='comment'>   marked with __THROW.  */</em>
+<a id='L765' name='L765'></a> 765 <strong class='reserved'>extern</strong> <a href='../D/39101.html' title='Multiple defined in 2 places.'>wint_t</a> <a href='../D/35223.html' title='Multiple defined in 2 places.'>putwchar</a> (<a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> <a href='../Y/8475.html' title='Multiple used in 58 places.'>__wc</a>);
+<a id='L766' name='L766'></a> 766 
+<a id='L767' name='L767'></a> 767 
+<a id='L768' name='L768'></a> 768 <em class='comment'>/* Get a newline-terminated wide character string of finite length</em>
+<a id='L769' name='L769'></a> 769 <em class='comment'>   from STREAM.</em>
+<a id='L770' name='L770'></a> 770 <em class='comment'></em>
+<a id='L771' name='L771'></a> 771 <em class='comment'>   This function is a possible cancellation point and therefore not</em>
+<a id='L772' name='L772'></a> 772 <em class='comment'>   marked with __THROW.  */</em>
+<a id='L773' name='L773'></a> 773 <strong class='reserved'>extern</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<a href='../S/5482.html#L31' title='Defined at 31 in libio/iofgetws.c.'>fgetws</a> (<a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/8658.html' title='Multiple used in 4 places.'>__ws</a>, <strong class='reserved'>int</strong> <a href='../Y/6016.html' title='Multiple used in 299 places.'>__n</a>,
+<a id='L774' name='L774'></a> 774             <a href='../S/5472.html#L5' title='Defined at 5 in libio/bits/types/__FILE.h.'>__FILE</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/7737.html' title='Multiple used in 188 places.'>__stream</a>);
+<a id='L775' name='L775'></a> 775 
+<a id='L776' name='L776'></a> 776 <em class='comment'>/* Write a string to STREAM.</em>
+<a id='L777' name='L777'></a> 777 <em class='comment'></em>
+<a id='L778' name='L778'></a> 778 <em class='comment'>   This function is a possible cancellation point and therefore not</em>
+<a id='L779' name='L779'></a> 779 <em class='comment'>   marked with __THROW.  */</em>
+<a id='L780' name='L780'></a> 780 <strong class='reserved'>extern</strong> <strong class='reserved'>int</strong> <a href='../S/5560.html#L31' title='Defined at 31 in libio/iofputws.c.'>fputws</a> (<strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/8658.html' title='Multiple used in 4 places.'>__ws</a>,
+<a id='L781' name='L781'></a> 781            <a href='../S/5472.html#L5' title='Defined at 5 in libio/bits/types/__FILE.h.'>__FILE</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/7737.html' title='Multiple used in 188 places.'>__stream</a>);
+<a id='L782' name='L782'></a> 782 
+<a id='L783' name='L783'></a> 783 
+<a id='L784' name='L784'></a> 784 <em class='comment'>/* Push a character back onto the input buffer of STREAM.</em>
+<a id='L785' name='L785'></a> 785 <em class='comment'></em>
+<a id='L786' name='L786'></a> 786 <em class='comment'>   This function is a possible cancellation point and therefore not</em>
+<a id='L787' name='L787'></a> 787 <em class='comment'>   marked with __THROW.  */</em>
+<a id='L788' name='L788'></a> 788 <strong class='reserved'>extern</strong> <a href='../D/39101.html' title='Multiple defined in 2 places.'>wint_t</a> <a href='../S/5633.html#L31' title='Defined at 31 in libio/ioungetwc.c.'>ungetwc</a> (<a href='../D/39101.html' title='Multiple defined in 2 places.'>wint_t</a> <a href='../Y/8475.html' title='Multiple used in 58 places.'>__wc</a>, <a href='../S/5472.html#L5' title='Defined at 5 in libio/bits/types/__FILE.h.'>__FILE</a> *<a href='../Y/7737.html' title='Multiple used in 188 places.'>__stream</a>);
+<a id='L789' name='L789'></a> 789 
+<a id='L790' name='L790'></a> 790 
+<a id='L791' name='L791'></a> 791 <em class='sharp'>#ifdef</em> <a href='../D/22845.html' title='Multiple defined in 3 places.'>__USE_GNU</a>
+<a id='L792' name='L792'></a> 792 <em class='comment'>/* These are defined to be equivalent to the `char' functions defined</em>
+<a id='L793' name='L793'></a> 793 <em class='comment'>   in POSIX.1:1996.</em>
+<a id='L794' name='L794'></a> 794 <em class='comment'></em>
+<a id='L795' name='L795'></a> 795 <em class='comment'>   These functions are not part of POSIX and therefore no official</em>
+<a id='L796' name='L796'></a> 796 <em class='comment'>   cancellation point.  But due to similarity with an POSIX interface</em>
+<a id='L797' name='L797'></a> 797 <em class='comment'>   or due to the implementation they are cancellation points and</em>
+<a id='L798' name='L798'></a> 798 <em class='comment'>   therefore not marked with __THROW.  */</em>
+<a id='L799' name='L799'></a> 799 <strong class='reserved'>extern</strong> <a href='../D/39101.html' title='Multiple defined in 2 places.'>wint_t</a> <a href='../S/5609.html#L30' title='Defined at 30 in libio/getwc_u.c.'>getwc_unlocked</a> (<a href='../S/5472.html#L5' title='Defined at 5 in libio/bits/types/__FILE.h.'>__FILE</a> *<a href='../Y/7737.html' title='Multiple used in 188 places.'>__stream</a>);
+<a id='L800' name='L800'></a> 800 <strong class='reserved'>extern</strong> <a href='../D/39101.html' title='Multiple defined in 2 places.'>wint_t</a> <a href='../D/31305.html' title='Multiple defined in 2 places.'>getwchar_unlocked</a> (<strong class='reserved'>void</strong>);
+<a id='L801' name='L801'></a> 801 
+<a id='L802' name='L802'></a> 802 <em class='comment'>/* This is the wide character version of a GNU extension.</em>
+<a id='L803' name='L803'></a> 803 <em class='comment'></em>
+<a id='L804' name='L804'></a> 804 <em class='comment'>   This function is not part of POSIX and therefore no official</em>
+<a id='L805' name='L805'></a> 805 <em class='comment'>   cancellation point.  But due to similarity with an POSIX interface</em>
+<a id='L806' name='L806'></a> 806 <em class='comment'>   or due to the implementation it is a cancellation point and</em>
+<a id='L807' name='L807'></a> 807 <em class='comment'>   therefore not marked with __THROW.  */</em>
+<a id='L808' name='L808'></a> 808 <strong class='reserved'>extern</strong> <a href='../D/39101.html' title='Multiple defined in 2 places.'>wint_t</a> <a href='../Y/14524.html' title='Multiple used in 2 places.'>fgetwc_unlocked</a> (<a href='../S/5472.html#L5' title='Defined at 5 in libio/bits/types/__FILE.h.'>__FILE</a> *<a href='../Y/7737.html' title='Multiple used in 188 places.'>__stream</a>);
+<a id='L809' name='L809'></a> 809 
+<a id='L810' name='L810'></a> 810 <em class='comment'>/* Faster version when locking is not necessary.</em>
+<a id='L811' name='L811'></a> 811 <em class='comment'></em>
+<a id='L812' name='L812'></a> 812 <em class='comment'>   This function is not part of POSIX and therefore no official</em>
+<a id='L813' name='L813'></a> 813 <em class='comment'>   cancellation point.  But due to similarity with an POSIX interface</em>
+<a id='L814' name='L814'></a> 814 <em class='comment'>   or due to the implementation it is a cancellation point and</em>
+<a id='L815' name='L815'></a> 815 <em class='comment'>   therefore not marked with __THROW.  */</em>
+<a id='L816' name='L816'></a> 816 <strong class='reserved'>extern</strong> <a href='../D/39101.html' title='Multiple defined in 2 places.'>wint_t</a> <a href='../D/30776.html' title='Multiple defined in 2 places.'>fputwc_unlocked</a> (<a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> <a href='../Y/8475.html' title='Multiple used in 58 places.'>__wc</a>, <a href='../S/5472.html#L5' title='Defined at 5 in libio/bits/types/__FILE.h.'>__FILE</a> *<a href='../Y/7737.html' title='Multiple used in 188 places.'>__stream</a>);
+<a id='L817' name='L817'></a> 817 
+<a id='L818' name='L818'></a> 818 <em class='comment'>/* These are defined to be equivalent to the `char' functions defined</em>
+<a id='L819' name='L819'></a> 819 <em class='comment'>   in POSIX.1:1996.</em>
+<a id='L820' name='L820'></a> 820 <em class='comment'></em>
+<a id='L821' name='L821'></a> 821 <em class='comment'>   These functions are not part of POSIX and therefore no official</em>
+<a id='L822' name='L822'></a> 822 <em class='comment'>   cancellation point.  But due to similarity with an POSIX interface</em>
+<a id='L823' name='L823'></a> 823 <em class='comment'>   or due to the implementation they are cancellation points and</em>
+<a id='L824' name='L824'></a> 824 <em class='comment'>   therefore not marked with __THROW.  */</em>
+<a id='L825' name='L825'></a> 825 <strong class='reserved'>extern</strong> <a href='../D/39101.html' title='Multiple defined in 2 places.'>wint_t</a> <a href='../S/5593.html#L22' title='Defined at 22 in libio/putwc_u.c.'>putwc_unlocked</a> (<a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> <a href='../Y/8475.html' title='Multiple used in 58 places.'>__wc</a>, <a href='../S/5472.html#L5' title='Defined at 5 in libio/bits/types/__FILE.h.'>__FILE</a> *<a href='../Y/7737.html' title='Multiple used in 188 places.'>__stream</a>);
+<a id='L826' name='L826'></a> 826 <strong class='reserved'>extern</strong> <a href='../D/39101.html' title='Multiple defined in 2 places.'>wint_t</a> <a href='../S/5546.html#L22' title='Defined at 22 in libio/putwchar_u.c.'>putwchar_unlocked</a> (<a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> <a href='../Y/8475.html' title='Multiple used in 58 places.'>__wc</a>);
+<a id='L827' name='L827'></a> 827 
+<a id='L828' name='L828'></a> 828 
+<a id='L829' name='L829'></a> 829 <em class='comment'>/* This function does the same as `fgetws' but does not lock the stream.</em>
+<a id='L830' name='L830'></a> 830 <em class='comment'></em>
+<a id='L831' name='L831'></a> 831 <em class='comment'>   This function is not part of POSIX and therefore no official</em>
+<a id='L832' name='L832'></a> 832 <em class='comment'>   cancellation point.  But due to similarity with an POSIX interface</em>
+<a id='L833' name='L833'></a> 833 <em class='comment'>   or due to the implementation it is a cancellation point and</em>
+<a id='L834' name='L834'></a> 834 <em class='comment'>   therefore not marked with __THROW.  */</em>
+<a id='L835' name='L835'></a> 835 <strong class='reserved'>extern</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<a href='../S/5465.html#L31' title='Defined at 31 in libio/iofgetws_u.c.'>fgetws_unlocked</a> (<a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/8658.html' title='Multiple used in 4 places.'>__ws</a>, <strong class='reserved'>int</strong> <a href='../Y/6016.html' title='Multiple used in 299 places.'>__n</a>,
+<a id='L836' name='L836'></a> 836                  <a href='../S/5472.html#L5' title='Defined at 5 in libio/bits/types/__FILE.h.'>__FILE</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/7737.html' title='Multiple used in 188 places.'>__stream</a>);
+<a id='L837' name='L837'></a> 837 
+<a id='L838' name='L838'></a> 838 <em class='comment'>/* This function does the same as `fputws' but does not lock the stream.</em>
+<a id='L839' name='L839'></a> 839 <em class='comment'></em>
+<a id='L840' name='L840'></a> 840 <em class='comment'>   This function is not part of POSIX and therefore no official</em>
+<a id='L841' name='L841'></a> 841 <em class='comment'>   cancellation point.  But due to similarity with an POSIX interface</em>
+<a id='L842' name='L842'></a> 842 <em class='comment'>   or due to the implementation it is a cancellation point and</em>
+<a id='L843' name='L843'></a> 843 <em class='comment'>   therefore not marked with __THROW.  */</em>
+<a id='L844' name='L844'></a> 844 <strong class='reserved'>extern</strong> <strong class='reserved'>int</strong> <a href='../S/5623.html#L32' title='Defined at 32 in libio/iofputws_u.c.'>fputws_unlocked</a> (<strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/8658.html' title='Multiple used in 4 places.'>__ws</a>,
+<a id='L845' name='L845'></a> 845                 <a href='../S/5472.html#L5' title='Defined at 5 in libio/bits/types/__FILE.h.'>__FILE</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/7737.html' title='Multiple used in 188 places.'>__stream</a>);
+<a id='L846' name='L846'></a> 846 <em class='sharp'>#endif</em>
+<a id='L847' name='L847'></a> 847 
+<a id='L848' name='L848'></a> 848 
+<a id='L849' name='L849'></a> 849 <em class='comment'>/* Format TP into S according to FORMAT.</em>
+<a id='L850' name='L850'></a> 850 <em class='comment'>   Write no more than MAXSIZE wide characters and return the number</em>
+<a id='L851' name='L851'></a> 851 <em class='comment'>   of wide characters written, or 0 if it would exceed MAXSIZE.  */</em>
+<a id='L852' name='L852'></a> 852 <strong class='reserved'>extern</strong> <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../D/39045.html' title='Multiple defined in 2 places.'>wcsftime</a> (<a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/7305.html' title='Multiple used in 322 places.'>__s</a>, <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/5631.html' title='Multiple used in 9 places.'>__maxsize</a>,
+<a id='L853' name='L853'></a> 853             <strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/4548.html' title='Multiple used in 123 places.'>__format</a>,
+<a id='L854' name='L854'></a> 854             <strong class='reserved'>const</strong> <strong class='reserved'>struct</strong> <a href='../S/3988.html#L7' title='Defined at 7 in time/bits/types/struct_tm.h.'>tm</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/8209.html' title='Multiple used in 35 places.'>__tp</a>) <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a>;
+<a id='L855' name='L855'></a> 855 
+<a id='L856' name='L856'></a> 856 <em class='sharp'># ifdef</em> <a href='../D/22845.html' title='Multiple defined in 3 places.'>__USE_GNU</a>
+<a id='L857' name='L857'></a> 857 <em class='comment'>/* Similar to `wcsftime' but takes the information from</em>
+<a id='L858' name='L858'></a> 858 <em class='comment'>   the provided locale and not the global locale.  */</em>
+<a id='L859' name='L859'></a> 859 <strong class='reserved'>extern</strong> <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/28943.html' title='Multiple used in 4 places.'>wcsftime_l</a> (<a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/7305.html' title='Multiple used in 322 places.'>__s</a>, <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/5631.html' title='Multiple used in 9 places.'>__maxsize</a>,
+<a id='L860' name='L860'></a> 860               <strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/4548.html' title='Multiple used in 123 places.'>__format</a>,
+<a id='L861' name='L861'></a> 861               <strong class='reserved'>const</strong> <strong class='reserved'>struct</strong> <a href='../S/3988.html#L7' title='Defined at 7 in time/bits/types/struct_tm.h.'>tm</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/8209.html' title='Multiple used in 35 places.'>__tp</a>,
+<a id='L862' name='L862'></a> 862               <a href='../S/2191.html#L24' title='Defined at 24 in locale/bits/types/locale_t.h.'>locale_t</a> <a href='../Y/5494.html' title='Multiple used in 50 places.'>__loc</a>) <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a>;
+<a id='L863' name='L863'></a> 863 <em class='sharp'># endif</em>
+<a id='L864' name='L864'></a> 864 
+<a id='L865' name='L865'></a> 865 <em class='comment'>/* Define some macros helping to catch buffer overflows.  */</em>
+<a id='L866' name='L866'></a> 866 <em class='sharp'>#if</em> <a href='../D/22844.html' title='Multiple defined in 5 places.'>__USE_FORTIFY_LEVEL</a> &gt; 0 &amp;&amp; <strong class='reserved'>defined</strong> <a href='../S/3878.html#L461' title='Defined at 461 in misc/sys/cdefs.h.'>__fortify_function</a>
+<a id='L867' name='L867'></a> 867 <em class='sharp'># include</em> &lt;<a href='../I/1822.html'>bits/wchar2.h</a>&gt;
+<a id='L868' name='L868'></a> 868 <em class='sharp'>#endif</em>
+<a id='L869' name='L869'></a> 869 
+<a id='L870' name='L870'></a> 870 <em class='sharp'>#include</em> &lt;<a href='../I/120.html'>bits/floatn.h</a>&gt;
+<a id='L871' name='L871'></a> 871 <em class='sharp'>#if</em> <strong class='reserved'>defined</strong> <a href='../S/3878.html#L594' title='Defined at 594 in misc/sys/cdefs.h.'>__LDBL_COMPAT</a> || <a href='../D/21769.html' title='Multiple defined in 8 places.'>__LDOUBLE_REDIRECTS_TO_FLOAT128_ABI</a> == 1
+<a id='L872' name='L872'></a> 872 <em class='sharp'># include</em> &lt;<a href='../I/1821.html'>bits/wchar-ldbl.h</a>&gt;
+<a id='L873' name='L873'></a> 873 <em class='sharp'>#endif</em>
+<a id='L874' name='L874'></a> 874 
+<a id='L875' name='L875'></a> 875 <a href='../D/21523.html' title='Multiple defined in 2 places.'>__END_DECLS</a>
+<a id='L876' name='L876'></a> 876 
+<a id='L877' name='L877'></a> 877 <em class='sharp'>#endif</em> <em class='comment'>/* wchar.h  */</em>
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L87'>[^]</a><a href='#L330'>[v]</a><a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

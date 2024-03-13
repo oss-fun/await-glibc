@@ -1,0 +1,200 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>sysdeps/powerpc/powerpc64/__longjmp-common.S</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18977.html'>sysdeps</a>/<a href='../files/19149.html'>powerpc</a>/<a href='../files/19172.html'>powerpc64</a>/__longjmp-common.S</h2>
+<em class='comment'>/* [&lt;][&gt;][^][v][top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* longjmp for PowerPC64.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   Copyright (C) 1995-2022 Free Software Foundation, Inc.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'></em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'></em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'></em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   License along with the GNU C Library; if not, see</em>
+<a id='L17' name='L17'></a>  17 <em class='comment'>   &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L18' name='L18'></a>  18 
+<a id='L19' name='L19'></a>  19 <em class='sharp'>#include</em> &lt;<a href='../I/5967.html'>sysdep.h</a>&gt;
+<a id='L20' name='L20'></a>  20 <em class='sharp'>#include</em> &lt;<a href='18035.html'>stap-probe.h</a>&gt;
+<a id='L21' name='L21'></a>  21 <em class='sharp'>#define</em> <a href='../R/9964.html' title='Multiple referred from 11 places.'>_ASM</a>
+<a id='L22' name='L22'></a>  22 <em class='sharp'>#define</em> <a href='../R/11976.html' title='Multiple referred from 20 places.'>_SETJMP_H</a>
+<a id='L23' name='L23'></a>  23 <em class='sharp'>#ifdef</em> <a href='../D/21892.html' title='Multiple defined in 6 places.'>__NO_VMX__</a>
+<a id='L24' name='L24'></a>  24 <em class='sharp'># include</em> &lt;<a href='7758.html'>novmxsetjmp.h</a>&gt;
+<a id='L25' name='L25'></a>  25 <em class='sharp'>#else</em>
+<a id='L26' name='L26'></a>  26 <em class='sharp'># include</em> &lt;<a href='../I/5904.html'>jmpbuf-offsets.h</a>&gt;
+<a id='L27' name='L27'></a>  27 <em class='sharp'>#endif</em>
+<a id='L28' name='L28'></a>  28 
+<a id='L29' name='L29'></a>  29 <em class='sharp'>#ifndef</em> <a href='../D/21892.html' title='Multiple defined in 6 places.'>__NO_VMX__</a>
+<a id='L30' name='L30'></a>  30     .section    ".toc","aw"
+<a id='L31' name='L31'></a>  31 .LC__dl_hwcap:
+<a id='L32' name='L32'></a>  32 <em class='sharp'># ifdef</em> <a href='../D/13935.html' title='Multiple defined in 2 places.'>SHARED</a>
+<a id='L33' name='L33'></a>  33 <em class='sharp'>#  if</em> <a href='../D/6753.html' title='Multiple defined in 3 places.'>IS_IN</a> (<a href='../Y/24331.html' title='Multiple used in 113 places.'>rtld</a>)
+<a id='L34' name='L34'></a>  34     <em class='comment'>/* Inside ld.so we use the local alias to avoid runtime GOT</em>
+<a id='L35' name='L35'></a>  35 <em class='comment'>       relocations.  */</em>
+<a id='L36' name='L36'></a>  36     .tc _rtld_local_ro[TC],_rtld_local_ro
+<a id='L37' name='L37'></a>  37 <em class='sharp'>#  else</em>
+<a id='L38' name='L38'></a>  38     .tc _rtld_global_ro[TC],_rtld_global_ro
+<a id='L39' name='L39'></a>  39 <em class='sharp'>#  endif</em>
+<a id='L40' name='L40'></a>  40 <em class='sharp'># else</em>
+<a id='L41' name='L41'></a>  41     .tc _dl_hwcap[TC],_dl_hwcap
+<a id='L42' name='L42'></a>  42 <em class='sharp'># endif</em>
+<a id='L43' name='L43'></a>  43     .section ".text"
+<a id='L44' name='L44'></a>  44 <em class='sharp'>#endif</em>
+<a id='L45' name='L45'></a>  45 
+<a id='L46' name='L46'></a>  46     .machine    "altivec"
+<a id='L47' name='L47'></a>  47 <a href='../D/3651.html' title='Multiple defined in 54 places.'>ENTRY</a> (<a href='../R/14883.html' title='Multiple referred from 10 places.'>__longjmp</a>)
+<a id='L48' name='L48'></a>  48     CALL_MCOUNT 2
+<a id='L49' name='L49'></a>  49 <em class='sharp'>#ifndef</em> <a href='../D/21892.html' title='Multiple defined in 6 places.'>__NO_VMX__</a>
+<a id='L50' name='L50'></a>  50     ld    r5,.LC__dl_hwcap@toc(r2)
+<a id='L51' name='L51'></a>  51 <em class='sharp'># ifdef</em> <a href='../D/13935.html' title='Multiple defined in 2 places.'>SHARED</a>
+<a id='L52' name='L52'></a>  52     <em class='comment'>/* Load _rtld-global._dl_hwcap.  */</em>
+<a id='L53' name='L53'></a>  53     ld    r5,RTLD_GLOBAL_RO_DL_HWCAP_OFFSET(r5)
+<a id='L54' name='L54'></a>  54 <em class='sharp'># else</em>
+<a id='L55' name='L55'></a>  55     ld    r5,0(r5) <em class='comment'>/* Load extern _dl_hwcap.  */</em>
+<a id='L56' name='L56'></a>  56 <em class='sharp'># endif</em>
+<a id='L57' name='L57'></a>  57     andis.  r5,r5,(PPC_FEATURE_HAS_ALTIVEC &gt;&gt; 16)
+<a id='L58' name='L58'></a>  58     beq L(no_vmx)
+<a id='L59' name='L59'></a>  59     la  r5,((JB_VRS)*8)(3)
+<a id='L60' name='L60'></a>  60     andi.   r6,r5,0xf
+<a id='L61' name='L61'></a>  61     lwz r0,((JB_VRSAVE)*8)(3)   <em class='comment'>/* 32-bit VRSAVE.  */</em>
+<a id='L62' name='L62'></a>  62     mtspr   VRSAVE,r0
+<a id='L63' name='L63'></a>  63     beq+    L(aligned_restore_vmx)
+<a id='L64' name='L64'></a>  64     addi    r6,r5,16
+<a id='L65' name='L65'></a>  65     lvsl    v0,0,r5
+<a id='L66' name='L66'></a>  66     lvx v1,0,r5
+<a id='L67' name='L67'></a>  67     addi    r5,r5,32
+<a id='L68' name='L68'></a>  68     lvx v21,0,r6
+<a id='L69' name='L69'></a>  69     vperm   v20,v1,v21,v0
+<a id='L70' name='L70'></a>  70 <em class='sharp'># define</em> load_misaligned_vmx_lo_loaded(loadvr,lovr,shiftvr,loadgpr,addgpr) \
+<a id='L71' name='L71'></a>  71     addi    addgpr,addgpr,32; \
+<a id='L72' name='L72'></a>  72     lvx lovr,0,loadgpr; \
+<a id='L73' name='L73'></a>  73     vperm   loadvr,loadvr,lovr,shiftvr;
+<a id='L74' name='L74'></a>  74     load_misaligned_vmx_lo_loaded(v21,v22,v0,r5,r6)
+<a id='L75' name='L75'></a>  75     load_misaligned_vmx_lo_loaded(v22,v23,v0,r6,r5)
+<a id='L76' name='L76'></a>  76     load_misaligned_vmx_lo_loaded(v23,v24,v0,r5,r6)
+<a id='L77' name='L77'></a>  77     load_misaligned_vmx_lo_loaded(v24,v25,v0,r6,r5)
+<a id='L78' name='L78'></a>  78     load_misaligned_vmx_lo_loaded(v25,v26,v0,r5,r6)
+<a id='L79' name='L79'></a>  79     load_misaligned_vmx_lo_loaded(v26,v27,v0,r6,r5)
+<a id='L80' name='L80'></a>  80     load_misaligned_vmx_lo_loaded(v27,v28,v0,r5,r6)
+<a id='L81' name='L81'></a>  81     load_misaligned_vmx_lo_loaded(v28,v29,v0,r6,r5)
+<a id='L82' name='L82'></a>  82     load_misaligned_vmx_lo_loaded(v29,v30,v0,r5,r6)
+<a id='L83' name='L83'></a>  83     load_misaligned_vmx_lo_loaded(v30,v31,v0,r6,r5)
+<a id='L84' name='L84'></a>  84     lvx v1,0,r5
+<a id='L85' name='L85'></a>  85     vperm   v31,v31,v1,v0
+<a id='L86' name='L86'></a>  86     b       L(no_vmx)
+<a id='L87' name='L87'></a>  87 L(aligned_restore_vmx):
+<a id='L88' name='L88'></a>  88     addi    r6,r5,16
+<a id='L89' name='L89'></a>  89     lvx v20,0,r5
+<a id='L90' name='L90'></a>  90     addi    r5,r5,32
+<a id='L91' name='L91'></a>  91     lvx v21,0,r6
+<a id='L92' name='L92'></a>  92     addi    r6,r6,32
+<a id='L93' name='L93'></a>  93     lvx v22,0,r5
+<a id='L94' name='L94'></a>  94     addi    r5,r5,32
+<a id='L95' name='L95'></a>  95     lvx v23,0,r6
+<a id='L96' name='L96'></a>  96     addi    r6,r6,32
+<a id='L97' name='L97'></a>  97     lvx v24,0,r5
+<a id='L98' name='L98'></a>  98     addi    r5,r5,32
+<a id='L99' name='L99'></a>  99     lvx v25,0,r6
+<a id='L100' name='L100'></a> 100     addi    r6,r6,32
+<a id='L101' name='L101'></a> 101     lvx v26,0,r5
+<a id='L102' name='L102'></a> 102     addi    r5,r5,32
+<a id='L103' name='L103'></a> 103     lvx v27,0,r6
+<a id='L104' name='L104'></a> 104     addi    r6,r6,32
+<a id='L105' name='L105'></a> 105     lvx v28,0,r5
+<a id='L106' name='L106'></a> 106     addi    r5,r5,32
+<a id='L107' name='L107'></a> 107     lvx v29,0,r6
+<a id='L108' name='L108'></a> 108     addi    r6,r6,32
+<a id='L109' name='L109'></a> 109     lvx v30,0,r5
+<a id='L110' name='L110'></a> 110     lvx v31,0,r6
+<a id='L111' name='L111'></a> 111 L(no_vmx):
+<a id='L112' name='L112'></a> 112 <em class='sharp'>#endif</em>
+<a id='L113' name='L113'></a> 113 <em class='sharp'>#if</em> <strong class='reserved'>defined</strong> <a href='../D/10558.html' title='Multiple defined in 44 places.'>PTR_DEMANGLE</a> || <strong class='reserved'>defined</strong> <a href='../D/1226.html' title='Multiple defined in 11 places.'>CHECK_SP</a>
+<a id='L114' name='L114'></a> 114     ld r22,(JB_GPR1*8)(r3)
+<a id='L115' name='L115'></a> 115 <em class='sharp'>#else</em>
+<a id='L116' name='L116'></a> 116     ld r1,(JB_GPR1*8)(r3)
+<a id='L117' name='L117'></a> 117 <em class='sharp'>#endif</em>
+<a id='L118' name='L118'></a> 118 <em class='sharp'>#ifdef</em> <a href='../D/10558.html' title='Multiple defined in 44 places.'>PTR_DEMANGLE</a>
+<a id='L119' name='L119'></a> 119 <em class='sharp'># ifdef</em> <a href='../D/1226.html' title='Multiple defined in 11 places.'>CHECK_SP</a>
+<a id='L120' name='L120'></a> 120     PTR_DEMANGLE3 (r22, r22, r25)
+<a id='L121' name='L121'></a> 121 <em class='sharp'># else</em>
+<a id='L122' name='L122'></a> 122     PTR_DEMANGLE3 (r1, r22, r25)
+<a id='L123' name='L123'></a> 123 <em class='sharp'># endif</em>
+<a id='L124' name='L124'></a> 124 <em class='sharp'>#endif</em>
+<a id='L125' name='L125'></a> 125 <em class='sharp'>#ifdef</em> <a href='../D/1226.html' title='Multiple defined in 11 places.'>CHECK_SP</a>
+<a id='L126' name='L126'></a> 126     CHECK_SP (r22)
+<a id='L127' name='L127'></a> 127     mr r1,r22
+<a id='L128' name='L128'></a> 128 <em class='sharp'>#endif</em>
+<a id='L129' name='L129'></a> 129     ld r2,(JB_GPR2*8)(r3)
+<a id='L130' name='L130'></a> 130     ld r0,(JB_LR*8)(r3)
+<a id='L131' name='L131'></a> 131     ld r14,((JB_GPRS+0)*8)(r3)
+<a id='L132' name='L132'></a> 132     lfd fp14,((JB_FPRS+0)*8)(r3)
+<a id='L133' name='L133'></a> 133     ld r15,((JB_GPRS+1)*8)(r3)
+<a id='L134' name='L134'></a> 134     lfd fp15,((JB_FPRS+1)*8)(r3)
+<a id='L135' name='L135'></a> 135     ld r16,((JB_GPRS+2)*8)(r3)
+<a id='L136' name='L136'></a> 136     lfd fp16,((JB_FPRS+2)*8)(r3)
+<a id='L137' name='L137'></a> 137     ld r17,((JB_GPRS+3)*8)(r3)
+<a id='L138' name='L138'></a> 138     lfd fp17,((JB_FPRS+3)*8)(r3)
+<a id='L139' name='L139'></a> 139     ld r18,((JB_GPRS+4)*8)(r3)
+<a id='L140' name='L140'></a> 140     lfd fp18,((JB_FPRS+4)*8)(r3)
+<a id='L141' name='L141'></a> 141     ld r19,((JB_GPRS+5)*8)(r3)
+<a id='L142' name='L142'></a> 142     lfd fp19,((JB_FPRS+5)*8)(r3)
+<a id='L143' name='L143'></a> 143     ld r20,((JB_GPRS+6)*8)(r3)
+<a id='L144' name='L144'></a> 144     lfd fp20,((JB_FPRS+6)*8)(r3)
+<a id='L145' name='L145'></a> 145 <em class='sharp'>#ifdef</em> <a href='../D/10558.html' title='Multiple defined in 44 places.'>PTR_DEMANGLE</a>
+<a id='L146' name='L146'></a> 146     PTR_DEMANGLE2 (r0, r25)
+<a id='L147' name='L147'></a> 147 <em class='sharp'>#endif</em>
+<a id='L148' name='L148'></a> 148      <em class='comment'>/* longjmp/longjmp_target probe expects longjmp first argument (8@3),</em>
+<a id='L149' name='L149'></a> 149 <em class='comment'>    second argument (-4@4), and target address (8@0), respectively.  */</em>
+<a id='L150' name='L150'></a> 150     LIBC_PROBE (longjmp, 3, 8@3, -4@4, 8@0)
+<a id='L151' name='L151'></a> 151     mtlr r0
+<a id='L152' name='L152'></a> 152     std r2,FRAME_TOC_SAVE(r1)   <em class='comment'>/* Restore the TOC save area.  */</em>
+<a id='L153' name='L153'></a> 153     ld r21,((JB_GPRS+7)*8)(r3)
+<a id='L154' name='L154'></a> 154     lfd fp21,((JB_FPRS+7)*8)(r3)
+<a id='L155' name='L155'></a> 155     ld r22,((JB_GPRS+8)*8)(r3)
+<a id='L156' name='L156'></a> 156     lfd fp22,((JB_FPRS+8)*8)(r3)
+<a id='L157' name='L157'></a> 157     lwz r5,((JB_CR*8)+4)(r3)    <em class='comment'>/* 32-bit CR.  */</em>
+<a id='L158' name='L158'></a> 158     ld r23,((JB_GPRS+9)*8)(r3)
+<a id='L159' name='L159'></a> 159     lfd fp23,((JB_FPRS+9)*8)(r3)
+<a id='L160' name='L160'></a> 160     ld r24,((JB_GPRS+10)*8)(r3)
+<a id='L161' name='L161'></a> 161     lfd fp24,((JB_FPRS+10)*8)(r3)
+<a id='L162' name='L162'></a> 162     ld r25,((JB_GPRS+11)*8)(r3)
+<a id='L163' name='L163'></a> 163     lfd fp25,((JB_FPRS+11)*8)(r3)
+<a id='L164' name='L164'></a> 164     mtcrf 0xFF,r5
+<a id='L165' name='L165'></a> 165     ld r26,((JB_GPRS+12)*8)(r3)
+<a id='L166' name='L166'></a> 166     lfd fp26,((JB_FPRS+12)*8)(r3)
+<a id='L167' name='L167'></a> 167     ld r27,((JB_GPRS+13)*8)(r3)
+<a id='L168' name='L168'></a> 168     lfd fp27,((JB_FPRS+13)*8)(r3)
+<a id='L169' name='L169'></a> 169     ld r28,((JB_GPRS+14)*8)(r3)
+<a id='L170' name='L170'></a> 170     lfd fp28,((JB_FPRS+14)*8)(r3)
+<a id='L171' name='L171'></a> 171     ld r29,((JB_GPRS+15)*8)(r3)
+<a id='L172' name='L172'></a> 172     lfd fp29,((JB_FPRS+15)*8)(r3)
+<a id='L173' name='L173'></a> 173     ld r30,((JB_GPRS+16)*8)(r3)
+<a id='L174' name='L174'></a> 174     lfd fp30,((JB_FPRS+16)*8)(r3)
+<a id='L175' name='L175'></a> 175     ld r31,((JB_GPRS+17)*8)(r3)
+<a id='L176' name='L176'></a> 176     lfd fp31,((JB_FPRS+17)*8)(r3)
+<a id='L177' name='L177'></a> 177     LIBC_PROBE (longjmp_target, 3, 8@3, -4@4, 8@0)
+<a id='L178' name='L178'></a> 178     mr r3,r4
+<a id='L179' name='L179'></a> 179     blr
+<a id='L180' name='L180'></a> 180 END (__longjmp)
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;][^][v]<a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

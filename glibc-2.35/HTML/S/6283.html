@@ -1,0 +1,116 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>resolv/tst-resolv-res_init-multi.c</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18942.html'>resolv</a>/tst-resolv-res_init-multi.c</h2>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L36'>[^]</a><a href='#L65'>[v]</a>[top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<h2 class='header'>DEFINITIONS</h2>
+This source file includes following definitions.
+<ol>
+<li><a href='#L36' title='Defined at 36.'>thread_func</a></li>
+<li><a href='#L65' title='Defined at 65.'>do_test</a></li>
+</ol>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* Multi-threaded test for resolver initialization.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   Copyright (C) 2017-2022 Free Software Foundation, Inc.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'></em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'></em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'></em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   License along with the GNU C Library; if not, see</em>
+<a id='L17' name='L17'></a>  17 <em class='comment'>   &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L18' name='L18'></a>  18 
+<a id='L19' name='L19'></a>  19 <em class='sharp'>#include</em> &lt;<a href='../I/143.html'>netdb.h</a>&gt;
+<a id='L20' name='L20'></a>  20 <em class='sharp'>#include</em> &lt;<a href='../I/1927.html'>resolv.h</a>&gt;
+<a id='L21' name='L21'></a>  21 <em class='sharp'>#include</em> &lt;<a href='../I/1780.html'>stdlib.h</a>&gt;
+<a id='L22' name='L22'></a>  22 <em class='sharp'>#include</em> &lt;<a href='5739.html'>support/check.h</a>&gt;
+<a id='L23' name='L23'></a>  23 <em class='sharp'>#include</em> &lt;<a href='5742.html'>support/support.h</a>&gt;
+<a id='L24' name='L24'></a>  24 <em class='sharp'>#include</em> &lt;<a href='5859.html'>support/xthread.h</a>&gt;
+<a id='L25' name='L25'></a>  25 
+<a id='L26' name='L26'></a>  26 <em class='comment'>/* Whether name lookups succeed does not really matter.  We use this</em>
+<a id='L27' name='L27'></a>  27 <em class='comment'>   to trigger initialization of the resolver.  */</em>
+<a id='L28' name='L28'></a>  28 <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../Y/27020.html' title='Multiple used in 9 places.'>test_hostname</a> = "www.gnu.org";
+<a id='L29' name='L29'></a>  29 
+<a id='L30' name='L30'></a>  30 <em class='comment'>/* The different initialization methods.  */</em>
+<a id='L31' name='L31'></a>  31 <strong class='reserved'>enum</strong> <a href='../R/25489.html' title='Multiple referred from 13 places.'>test_type</a> <em class='brace'>{</em> <a href='../R/20568.html' title='Multiple referred from 115 places.'>init</a>, <a href='../R/17628.html' title='Multiple referred from 3 places.'>byname</a>, <a href='../R/19826.html' title='Multiple referred from 10 places.'>gai</a> <em class='brace'>}</em>;
+<a id='L32' name='L32'></a>  32 <strong class='reserved'>enum</strong> <em class='brace'>{</em> <a href='../R/26084.html' title='Multiple referred from 3 places.'>type_count</a> = 3 <em class='brace'>}</em>;
+<a id='L33' name='L33'></a>  33 
+<a id='L34' name='L34'></a>  34 <em class='comment'>/* Thread function.  Perform a few resolver options.  */</em>
+<a id='L35' name='L35'></a>  35 <strong class='reserved'>static</strong> <strong class='reserved'>void</strong> *
+<a id='L36' name='L36'></a>  36 <a href='../R/25573.html' title='Multiple referred from 15 places.'>thread_func</a> (<strong class='reserved'>void</strong> *<a href='../S/16196.html#L39' title='Defined at 39 in sysdeps/pthread/tst-memstream.c.'>closure</a>)
+<a id='L37' name='L37'></a>  37 <em class='brace'>{</em>
+<a id='L38' name='L38'></a>  38   <strong class='reserved'>enum</strong> <a href='../D/37922.html' title='Multiple defined in 2 places.'>test_type</a> *<a href='../Y/23124.html' title='Multiple used in 14 places.'>ptype</a> = <a href='../S/16196.html#L39' title='Defined at 39 in sysdeps/pthread/tst-memstream.c.'>closure</a>;
+<a id='L39' name='L39'></a>  39   <em class='comment'>/* Perform a few calls to the requested operation.  */</em>
+<a id='L40' name='L40'></a>  40   <a href='../S/5739.html#L50' title='Defined at 50 in support/check.h.'>TEST_VERIFY</a> (*<a href='../Y/23124.html' title='Multiple used in 14 places.'>ptype</a> &gt;= 0);
+<a id='L41' name='L41'></a>  41   <a href='../S/5739.html#L50' title='Defined at 50 in support/check.h.'>TEST_VERIFY</a> (*<a href='../Y/23124.html' title='Multiple used in 14 places.'>ptype</a> &lt; (<strong class='reserved'>int</strong>) <a href='../S/6283.html#L32' title='Defined at 32 in resolv/tst-resolv-res_init-multi.c.'>type_count</a>);
+<a id='L42' name='L42'></a>  42   <strong class='reserved'>for</strong> (<strong class='reserved'>int</strong> <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> = 0; <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> &lt; 3; ++<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>)
+<a id='L43' name='L43'></a>  43     <strong class='reserved'>switch</strong> (*<a href='../Y/23124.html' title='Multiple used in 14 places.'>ptype</a>)
+<a id='L44' name='L44'></a>  44       <em class='brace'>{</em>
+<a id='L45' name='L45'></a>  45       <strong class='reserved'>case</strong> <a href='../D/32009.html' title='Multiple defined in 27 places.'>init</a>:
+<a id='L46' name='L46'></a>  46     <a href='../D/35964.html' title='Multiple defined in 3 places.'>res_init</a> ();
+<a id='L47' name='L47'></a>  47     <strong class='reserved'>break</strong>;
+<a id='L48' name='L48'></a>  48       <strong class='reserved'>case</strong> <a href='../D/28352.html' title='Multiple defined in 2 places.'>byname</a>:
+<a id='L49' name='L49'></a>  49     <a href='../S/6286.html#L19' title='Defined at 19 in resolv/tst-leaks2.c.'>gethostbyname</a> (<a href='../Y/27020.html' title='Multiple used in 9 places.'>test_hostname</a>);
+<a id='L50' name='L50'></a>  50     <strong class='reserved'>break</strong>;
+<a id='L51' name='L51'></a>  51       <strong class='reserved'>case</strong> <a href='../D/30990.html' title='Multiple defined in 2 places.'>gai</a>:
+<a id='L52' name='L52'></a>  52     <em class='brace'>{</em>
+<a id='L53' name='L53'></a>  53       <strong class='reserved'>struct</strong> <a href='../S/6338.html#L565' title='Defined at 565 in resolv/netdb.h.'>addrinfo</a> <a href='../Y/16121.html' title='Multiple used in 153 places.'>hints</a> = <em class='brace'>{</em> 0, <em class='brace'>}</em>;
+<a id='L54' name='L54'></a>  54       <strong class='reserved'>struct</strong> <a href='../S/6338.html#L565' title='Defined at 565 in resolv/netdb.h.'>addrinfo</a> *<a href='../Y/10047.html' title='Multiple used in 237 places.'>ai</a> = <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>;
+<a id='L55' name='L55'></a>  55       <strong class='reserved'>if</strong> (<a href='../D/31173.html' title='Multiple defined in 2 places.'>getaddrinfo</a> (<a href='../Y/27020.html' title='Multiple used in 9 places.'>test_hostname</a>, "80", &amp;<a href='../Y/16121.html' title='Multiple used in 153 places.'>hints</a>, &amp;<a href='../Y/10047.html' title='Multiple used in 237 places.'>ai</a>) == 0)
+<a id='L56' name='L56'></a>  56         <a href='../Y/15000.html' title='Multiple used in 47 places.'>freeaddrinfo</a> (<a href='../Y/10047.html' title='Multiple used in 237 places.'>ai</a>);
+<a id='L57' name='L57'></a>  57     <em class='brace'>}</em>
+<a id='L58' name='L58'></a>  58     <strong class='reserved'>break</strong>;
+<a id='L59' name='L59'></a>  59       <em class='brace'>}</em>
+<a id='L60' name='L60'></a>  60   <a href='../D/30785.html' title='Multiple defined in 5 places.'>free</a> (<a href='../Y/23124.html' title='Multiple used in 14 places.'>ptype</a>);
+<a id='L61' name='L61'></a>  61   <strong class='reserved'>return</strong> <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>;
+<a id='L62' name='L62'></a>  62 <em class='brace'>}</em>
+<a id='L63' name='L63'></a>  63 
+<a id='L64' name='L64'></a>  64 <strong class='reserved'>static</strong> <strong class='reserved'>int</strong>
+<a id='L65' name='L65'></a>  65 <a href='../R/18782.html' title='Multiple referred from 1850 places.'>do_test</a> (<strong class='reserved'>void</strong>)
+<a id='L66' name='L66'></a>  66 <em class='brace'>{</em>
+<a id='L67' name='L67'></a>  67   <em class='comment'>/* Start a small number of threads which perform resolver</em>
+<a id='L68' name='L68'></a>  68 <em class='comment'>     operations.  */</em>
+<a id='L69' name='L69'></a>  69   <strong class='reserved'>enum</strong> <em class='brace'>{</em> <a href='../R/25567.html' title='Multiple referred from 31 places.'>thread_count</a> = 30 <em class='brace'>}</em>;
+<a id='L70' name='L70'></a>  70 
+<a id='L71' name='L71'></a>  71   <a href='../D/35174.html' title='Multiple defined in 2 places.'>pthread_t</a> <a href='../S/16234.html#L24' title='Defined at 24 in sysdeps/pthread/tst-pthread-setuid-loop.c.'>threads</a>[<a href='../D/38062.html' title='Multiple defined in 5 places.'>thread_count</a>];
+<a id='L72' name='L72'></a>  72   <strong class='reserved'>for</strong> (<strong class='reserved'>int</strong> <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> = 0; <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> &lt; <a href='../D/38062.html' title='Multiple defined in 5 places.'>thread_count</a>; ++<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>)
+<a id='L73' name='L73'></a>  73     <em class='brace'>{</em>
+<a id='L74' name='L74'></a>  74       <strong class='reserved'>enum</strong> <a href='../D/37922.html' title='Multiple defined in 2 places.'>test_type</a> *<a href='../Y/23124.html' title='Multiple used in 14 places.'>ptype</a> = <a href='../D/39545.html' title='Multiple defined in 5 places.'>xmalloc</a> (<strong class='reserved'>sizeof</strong> (*<a href='../Y/23124.html' title='Multiple used in 14 places.'>ptype</a>));
+<a id='L75' name='L75'></a>  75       *<a href='../Y/23124.html' title='Multiple used in 14 places.'>ptype</a> = <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> % <a href='../S/6283.html#L32' title='Defined at 32 in resolv/tst-resolv-res_init-multi.c.'>type_count</a>;
+<a id='L76' name='L76'></a>  76       <a href='../S/16234.html#L24' title='Defined at 24 in sysdeps/pthread/tst-pthread-setuid-loop.c.'>threads</a>[<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>] = <a href='../S/5797.html#L22' title='Defined at 22 in support/xpthread_create.c.'>xpthread_create</a> (<a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>, <a href='../D/38070.html' title='Multiple defined in 8 places.'>thread_func</a>, <a href='../Y/23124.html' title='Multiple used in 14 places.'>ptype</a>);
+<a id='L77' name='L77'></a>  77     <em class='brace'>}</em>
+<a id='L78' name='L78'></a>  78   <strong class='reserved'>for</strong> (<strong class='reserved'>int</strong> <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> = 0; <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> &lt; <a href='../S/6283.html#L32' title='Defined at 32 in resolv/tst-resolv-res_init-multi.c.'>type_count</a>; ++<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>)
+<a id='L79' name='L79'></a>  79     <em class='brace'>{</em>
+<a id='L80' name='L80'></a>  80       <strong class='reserved'>enum</strong> <a href='../D/37922.html' title='Multiple defined in 2 places.'>test_type</a> *<a href='../Y/23124.html' title='Multiple used in 14 places.'>ptype</a> = <a href='../D/39545.html' title='Multiple defined in 5 places.'>xmalloc</a> (<strong class='reserved'>sizeof</strong> (*<a href='../Y/23124.html' title='Multiple used in 14 places.'>ptype</a>));
+<a id='L81' name='L81'></a>  81       *<a href='../Y/23124.html' title='Multiple used in 14 places.'>ptype</a> = <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>;
+<a id='L82' name='L82'></a>  82       <a href='../D/38070.html' title='Multiple defined in 8 places.'>thread_func</a> (<a href='../Y/23124.html' title='Multiple used in 14 places.'>ptype</a>);
+<a id='L83' name='L83'></a>  83     <em class='brace'>}</em>
+<a id='L84' name='L84'></a>  84   <strong class='reserved'>for</strong> (<strong class='reserved'>int</strong> <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> = 0; <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> &lt; <a href='../D/38062.html' title='Multiple defined in 5 places.'>thread_count</a>; ++<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>)
+<a id='L85' name='L85'></a>  85     <a href='../S/5816.html#L22' title='Defined at 22 in support/xpthread_join.c.'>xpthread_join</a> (<a href='../S/16234.html#L24' title='Defined at 24 in sysdeps/pthread/tst-pthread-setuid-loop.c.'>threads</a>[<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>]);
+<a id='L86' name='L86'></a>  86   <strong class='reserved'>return</strong> 0;
+<a id='L87' name='L87'></a>  87 <em class='brace'>}</em>
+<a id='L88' name='L88'></a>  88 
+<a id='L89' name='L89'></a>  89 <em class='sharp'>#include</em> &lt;support/test-driver.c&gt;
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L36'>[^]</a><a href='#L65'>[v]</a><a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

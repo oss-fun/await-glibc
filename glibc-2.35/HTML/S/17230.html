@@ -1,0 +1,161 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>sysdeps/arm/armv6t2/strlen.S</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18977.html'>sysdeps</a>/<a href='../files/18999.html'>arm</a>/<a href='../files/19001.html'>armv6t2</a>/strlen.S</h2>
+<em class='comment'>/* [&lt;][&gt;][^][v][top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* Copyright (C) 2010-2022 Free Software Foundation, Inc.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'></em>
+<a id='L4' name='L4'></a>   4 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'></em>
+<a id='L9' name='L9'></a>   9 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'></em>
+<a id='L14' name='L14'></a>  14 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   License along with the GNU C Library.  If not, see</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L17' name='L17'></a>  17 
+<a id='L18' name='L18'></a>  18 <em class='comment'>/*</em>
+<a id='L19' name='L19'></a>  19 <em class='comment'>   Assumes:</em>
+<a id='L20' name='L20'></a>  20 <em class='comment'>   ARMv6T2, AArch32</em>
+<a id='L21' name='L21'></a>  21 <em class='comment'></em>
+<a id='L22' name='L22'></a>  22 <em class='comment'> */</em>
+<a id='L23' name='L23'></a>  23 
+<a id='L24' name='L24'></a>  24 <em class='sharp'>#include</em> &lt;<a href='../I/6231.html'>arm-features.h</a>&gt;
+<a id='L25' name='L25'></a>  25 <em class='sharp'>#include</em> &lt;<a href='../I/5967.html'>sysdep.h</a>&gt;
+<a id='L26' name='L26'></a>  26 
+<a id='L27' name='L27'></a>  27 <em class='sharp'>#ifdef</em> <a href='../Y/2852.html' title='Multiple used in 14 places.'>__ARMEB__</a>
+<a id='L28' name='L28'></a>  28 <em class='sharp'>#define</em> S2LO        lsl
+<a id='L29' name='L29'></a>  29 <em class='sharp'>#define</em> S2HI        lsr
+<a id='L30' name='L30'></a>  30 <em class='sharp'>#else</em>
+<a id='L31' name='L31'></a>  31 <em class='sharp'>#define</em> S2LO        lsr
+<a id='L32' name='L32'></a>  32 <em class='sharp'>#define</em> S2HI        lsl
+<a id='L33' name='L33'></a>  33 <em class='sharp'>#endif</em>
+<a id='L34' name='L34'></a>  34 
+<a id='L35' name='L35'></a>  35 <em class='comment'>/* This code is best on Thumb.  */</em>
+<a id='L36' name='L36'></a>  36     .thumb
+<a id='L37' name='L37'></a>  37 
+<a id='L38' name='L38'></a>  38 <em class='comment'>/* Parameters and result.  */</em>
+<a id='L39' name='L39'></a>  39 <em class='sharp'>#define</em> srcin       r0
+<a id='L40' name='L40'></a>  40 <em class='sharp'>#define</em> <a href='../R/23860.html' title='Multiple referred from 8875 places.'>result</a>      r0
+<a id='L41' name='L41'></a>  41 
+<a id='L42' name='L42'></a>  42 <em class='comment'>/* Internal variables.  */</em>
+<a id='L43' name='L43'></a>  43 <em class='sharp'>#define</em> <a href='../R/24622.html' title='Multiple referred from 813 places.'>src</a>     r1
+<a id='L44' name='L44'></a>  44 <em class='sharp'>#define</em> data1a      r2
+<a id='L45' name='L45'></a>  45 <em class='sharp'>#define</em> data1b      r3
+<a id='L46' name='L46'></a>  46 <em class='sharp'>#define</em> const_m1    r12
+<a id='L47' name='L47'></a>  47 <em class='sharp'>#define</em> const_0     r4
+<a id='L48' name='L48'></a>  48 <em class='sharp'>#define</em> <a href='../R/25689.html' title='Multiple referred from 12 places.'>tmp1</a>        r4      <em class='comment'>/* Overlaps const_0  */</em>
+<a id='L49' name='L49'></a>  49 <em class='sharp'>#define</em> <a href='../R/25690.html' title='Multiple referred from 37 places.'>tmp2</a>        r5
+<a id='L50' name='L50'></a>  50 
+<a id='L51' name='L51'></a>  51     .text
+<a id='L52' name='L52'></a>  52     .p2align 6
+<a id='L53' name='L53'></a>  53 <a href='../D/3651.html' title='Multiple defined in 54 places.'>ENTRY</a>(<a href='../R/24758.html' title='Multiple referred from 1288 places.'>strlen</a>)
+<a id='L54' name='L54'></a>  54     pld [srcin, #0]
+<a id='L55' name='L55'></a>  55     strd    r4, r5, [sp, #-8]!
+<a id='L56' name='L56'></a>  56     cfi_adjust_cfa_offset (8)
+<a id='L57' name='L57'></a>  57     cfi_rel_offset (r4, 0)
+<a id='L58' name='L58'></a>  58     cfi_rel_offset (r5, 4)
+<a id='L59' name='L59'></a>  59     cfi_remember_state
+<a id='L60' name='L60'></a>  60     bic src, srcin, #7
+<a id='L61' name='L61'></a>  61     mvn const_m1, #0
+<a id='L62' name='L62'></a>  62     ands    tmp1, srcin, #7     <em class='comment'>/* (8 - bytes) to alignment.  */</em>
+<a id='L63' name='L63'></a>  63     pld [src, #32]
+<a id='L64' name='L64'></a>  64     bne.w   .Lmisaligned8
+<a id='L65' name='L65'></a>  65     mov const_0, #0
+<a id='L66' name='L66'></a>  66     mov result, #-8
+<a id='L67' name='L67'></a>  67 .Lloop_aligned:
+<a id='L68' name='L68'></a>  68     <em class='comment'>/* Bytes 0-7.  */</em>
+<a id='L69' name='L69'></a>  69     ldrd    data1a, data1b, [src]
+<a id='L70' name='L70'></a>  70     pld [src, #64]
+<a id='L71' name='L71'></a>  71     add result, result, #8
+<a id='L72' name='L72'></a>  72 .Lstart_realigned:
+<a id='L73' name='L73'></a>  73     uadd8   data1a, data1a, const_m1    <em class='comment'>/* Saturating GE&lt;0:3&gt; set.  */</em>
+<a id='L74' name='L74'></a>  74     sel data1a, const_0, const_m1   <em class='comment'>/* Select based on GE&lt;0:3&gt;.  */</em>
+<a id='L75' name='L75'></a>  75     uadd8   data1b, data1b, const_m1
+<a id='L76' name='L76'></a>  76     sel data1b, data1a, const_m1    <em class='comment'>/* Only used if d1a == 0.  */</em>
+<a id='L77' name='L77'></a>  77     cbnz    data1b, .Lnull_found
+<a id='L78' name='L78'></a>  78 
+<a id='L79' name='L79'></a>  79     <em class='comment'>/* Bytes 8-15.  */</em>
+<a id='L80' name='L80'></a>  80     ldrd    data1a, data1b, [src, #8]
+<a id='L81' name='L81'></a>  81     uadd8   data1a, data1a, const_m1    <em class='comment'>/* Saturating GE&lt;0:3&gt; set.  */</em>
+<a id='L82' name='L82'></a>  82     add result, result, #8
+<a id='L83' name='L83'></a>  83     sel data1a, const_0, const_m1   <em class='comment'>/* Select based on GE&lt;0:3&gt;.  */</em>
+<a id='L84' name='L84'></a>  84     uadd8   data1b, data1b, const_m1
+<a id='L85' name='L85'></a>  85     sel data1b, data1a, const_m1    <em class='comment'>/* Only used if d1a == 0.  */</em>
+<a id='L86' name='L86'></a>  86     cbnz    data1b, .Lnull_found
+<a id='L87' name='L87'></a>  87 
+<a id='L88' name='L88'></a>  88     <em class='comment'>/* Bytes 16-23.  */</em>
+<a id='L89' name='L89'></a>  89     ldrd    data1a, data1b, [src, #16]
+<a id='L90' name='L90'></a>  90     uadd8   data1a, data1a, const_m1    <em class='comment'>/* Saturating GE&lt;0:3&gt; set.  */</em>
+<a id='L91' name='L91'></a>  91     add result, result, #8
+<a id='L92' name='L92'></a>  92     sel data1a, const_0, const_m1   <em class='comment'>/* Select based on GE&lt;0:3&gt;.  */</em>
+<a id='L93' name='L93'></a>  93     uadd8   data1b, data1b, const_m1
+<a id='L94' name='L94'></a>  94     sel data1b, data1a, const_m1    <em class='comment'>/* Only used if d1a == 0.  */</em>
+<a id='L95' name='L95'></a>  95     cbnz    data1b, .Lnull_found
+<a id='L96' name='L96'></a>  96 
+<a id='L97' name='L97'></a>  97     <em class='comment'>/* Bytes 24-31.  */</em>
+<a id='L98' name='L98'></a>  98     ldrd    data1a, data1b, [src, #24]
+<a id='L99' name='L99'></a>  99     add src, src, #32
+<a id='L100' name='L100'></a> 100     uadd8   data1a, data1a, const_m1    <em class='comment'>/* Saturating GE&lt;0:3&gt; set.  */</em>
+<a id='L101' name='L101'></a> 101     add result, result, #8
+<a id='L102' name='L102'></a> 102     sel data1a, const_0, const_m1   <em class='comment'>/* Select based on GE&lt;0:3&gt;.  */</em>
+<a id='L103' name='L103'></a> 103     uadd8   data1b, data1b, const_m1
+<a id='L104' name='L104'></a> 104     sel data1b, data1a, const_m1    <em class='comment'>/* Only used if d1a == 0.  */</em>
+<a id='L105' name='L105'></a> 105     cmp data1b, #0
+<a id='L106' name='L106'></a> 106     beq .Lloop_aligned
+<a id='L107' name='L107'></a> 107 
+<a id='L108' name='L108'></a> 108 .Lnull_found:
+<a id='L109' name='L109'></a> 109     cmp data1a, #0
+<a id='L110' name='L110'></a> 110     itt eq
+<a id='L111' name='L111'></a> 111     addeq   result, result, #4
+<a id='L112' name='L112'></a> 112     moveq   data1a, data1b
+<a id='L113' name='L113'></a> 113 <em class='sharp'>#ifndef</em> <a href='../Y/2852.html' title='Multiple used in 14 places.'>__ARMEB__</a>
+<a id='L114' name='L114'></a> 114     rev data1a, data1a
+<a id='L115' name='L115'></a> 115 <em class='sharp'>#endif</em>
+<a id='L116' name='L116'></a> 116     clz data1a, data1a
+<a id='L117' name='L117'></a> 117     ldrd    r4, r5, [sp], #8
+<a id='L118' name='L118'></a> 118     cfi_adjust_cfa_offset (-8)
+<a id='L119' name='L119'></a> 119     cfi_restore (r4)
+<a id='L120' name='L120'></a> 120     cfi_restore (r5)
+<a id='L121' name='L121'></a> 121     add result, result, data1a, lsr #3  <em class='comment'>/* Bits -&gt; Bytes.  */</em>
+<a id='L122' name='L122'></a> 122     DO_RET(lr)
+<a id='L123' name='L123'></a> 123 
+<a id='L124' name='L124'></a> 124 .Lmisaligned8:
+<a id='L125' name='L125'></a> 125     cfi_restore_state
+<a id='L126' name='L126'></a> 126     ldrd    data1a, data1b, [src]
+<a id='L127' name='L127'></a> 127     and tmp2, tmp1, #3
+<a id='L128' name='L128'></a> 128     rsb result, tmp1, #0
+<a id='L129' name='L129'></a> 129     lsl tmp2, tmp2, #3          <em class='comment'>/* Bytes -&gt; bits.  */</em>
+<a id='L130' name='L130'></a> 130     tst tmp1, #4
+<a id='L131' name='L131'></a> 131     pld [src, #64]
+<a id='L132' name='L132'></a> 132     S2HI    tmp2, const_m1, tmp2
+<a id='L133' name='L133'></a> 133     orn data1a, data1a, tmp2
+<a id='L134' name='L134'></a> 134     itt ne
+<a id='L135' name='L135'></a> 135     ornne   data1b, data1b, tmp2
+<a id='L136' name='L136'></a> 136     movne   data1a, const_m1
+<a id='L137' name='L137'></a> 137     mov const_0, #0
+<a id='L138' name='L138'></a> 138     b   .Lstart_realigned
+<a id='L139' name='L139'></a> 139 
+<a id='L140' name='L140'></a> 140 END(strlen)
+<a id='L141' name='L141'></a> 141 libc_hidden_builtin_def (strlen)
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;][^][v]<a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

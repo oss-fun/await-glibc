@@ -1,0 +1,180 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>sysdeps/ia64/memchr.S</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18977.html'>sysdeps</a>/<a href='../files/19053.html'>ia64</a>/memchr.S</h2>
+<em class='comment'>/* [&lt;][&gt;][^][v][top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* Optimized version of the standard memchr() function.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'>   Copyright (C) 2000-2022 Free Software Foundation, Inc.</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'></em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'></em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'></em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   License along with the GNU C Library; if not, see</em>
+<a id='L17' name='L17'></a>  17 <em class='comment'>   &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L18' name='L18'></a>  18 
+<a id='L19' name='L19'></a>  19 <em class='comment'>/* Return: the address of the first occurence of chr in str or NULL</em>
+<a id='L20' name='L20'></a>  20 <em class='comment'></em>
+<a id='L21' name='L21'></a>  21 <em class='comment'>   Inputs:</em>
+<a id='L22' name='L22'></a>  22 <em class='comment'>    in0:    str</em>
+<a id='L23' name='L23'></a>  23 <em class='comment'>    in1:    chr</em>
+<a id='L24' name='L24'></a>  24 <em class='comment'>    in2:    byte count</em>
+<a id='L25' name='L25'></a>  25 <em class='comment'></em>
+<a id='L26' name='L26'></a>  26 <em class='comment'>   This implementation assumes little endian mode.  For big endian mode,</em>
+<a id='L27' name='L27'></a>  27 <em class='comment'>   the instruction czx1.r should be replaced by czx1.l.</em>
+<a id='L28' name='L28'></a>  28 <em class='comment'></em>
+<a id='L29' name='L29'></a>  29 <em class='comment'>   The algorithm is fairly straightforward: search byte by byte until we</em>
+<a id='L30' name='L30'></a>  30 <em class='comment'>   we get to a word aligned address, then search word by word as much as</em>
+<a id='L31' name='L31'></a>  31 <em class='comment'>   possible; the remaining few bytes are searched one at a time.</em>
+<a id='L32' name='L32'></a>  32 <em class='comment'></em>
+<a id='L33' name='L33'></a>  33 <em class='comment'>   The word by word search is performed by xor-ing the word with a word</em>
+<a id='L34' name='L34'></a>  34 <em class='comment'>   containing chr in every byte.  If there is a hit, the result will</em>
+<a id='L35' name='L35'></a>  35 <em class='comment'>   contain a zero byte in the corresponding position.  The presence and</em>
+<a id='L36' name='L36'></a>  36 <em class='comment'>   position of that zero byte is detected with a czx instruction.</em>
+<a id='L37' name='L37'></a>  37 <em class='comment'></em>
+<a id='L38' name='L38'></a>  38 <em class='comment'>   All the loops in this function could have had the internal branch removed</em>
+<a id='L39' name='L39'></a>  39 <em class='comment'>   if br.ctop and br.cloop could be predicated :-(.  */</em>
+<a id='L40' name='L40'></a>  40 
+<a id='L41' name='L41'></a>  41 <em class='sharp'>#include</em> &lt;<a href='../I/5967.html'>sysdep.h</a>&gt;
+<a id='L42' name='L42'></a>  42 <em class='sharp'>#undef</em> <a href='../R/23863.html' title='Multiple referred from 4499 places.'>ret</a>
+<a id='L43' name='L43'></a>  43 
+<a id='L44' name='L44'></a>  44 <em class='sharp'>#define</em> saved_pr    r15
+<a id='L45' name='L45'></a>  45 <em class='sharp'>#define</em> saved_lc    r16
+<a id='L46' name='L46'></a>  46 <em class='sharp'>#define</em> chr     r17
+<a id='L47' name='L47'></a>  47 <em class='sharp'>#define</em> <a href='../R/21074.html' title='Multiple referred from 3808 places.'>len</a>     r18
+<a id='L48' name='L48'></a>  48 <em class='sharp'>#define</em> <a href='../R/21016.html' title='Multiple referred from 251 places.'>last</a>        r20
+<a id='L49' name='L49'></a>  49 <em class='sharp'>#define</em> <a href='../R/26322.html' title='Multiple referred from 1696 places.'>val</a>     r21
+<a id='L50' name='L50'></a>  50 <em class='sharp'>#define</em> <a href='../R/25688.html' title='Multiple referred from 1021 places.'>tmp</a>     r24
+<a id='L51' name='L51'></a>  51 <em class='sharp'>#define</em> chrx8       r25
+<a id='L52' name='L52'></a>  52 <em class='sharp'>#define</em> loopcnt     r30
+<a id='L53' name='L53'></a>  53 
+<a id='L54' name='L54'></a>  54 <em class='sharp'>#define</em> <a href='../R/24704.html' title='Multiple referred from 1418 places.'>str</a>     in0
+<a id='L55' name='L55'></a>  55 
+<a id='L56' name='L56'></a>  56 <a href='../D/3651.html' title='Multiple defined in 54 places.'>ENTRY</a>(<a href='../R/14970.html' title='Multiple referred from 17 places.'>__memchr</a>)
+<a id='L57' name='L57'></a>  57     .prologue
+<a id='L58' name='L58'></a>  58     alloc r2 = ar.pfs, 3, 0, 29, 32
+<a id='L59' name='L59'></a>  59 <em class='sharp'>#include</em> "<a href='12374.html'>softpipe.h</a>"
+<a id='L60' name='L60'></a>  60     .rotr   value[MEMLAT+1], addr[MEMLAT+3], aux[2], poschr[2]
+<a id='L61' name='L61'></a>  61     .rotp   p[MEMLAT+3]
+<a id='L62' name='L62'></a>  62     .save ar.lc, saved_lc
+<a id='L63' name='L63'></a>  63     mov saved_lc = ar.lc    <em class='comment'>// save the loop counter</em>
+<a id='L64' name='L64'></a>  64     .save pr, saved_pr
+<a id='L65' name='L65'></a>  65     mov saved_pr = pr       <em class='comment'>// save the predicates</em>
+<a id='L66' name='L66'></a>  66     .body
+<a id='L67' name='L67'></a>  67     mov ret0 = str
+<a id='L68' name='L68'></a>  68     add last = str, in2     <em class='comment'>// last byte</em>
+<a id='L69' name='L69'></a>  69     ;;
+<a id='L70' name='L70'></a>  70     cmp.ltu p6, p0 = last, str
+<a id='L71' name='L71'></a>  71     ;;
+<a id='L72' name='L72'></a>  72 (p6)    mov last = -1
+<a id='L73' name='L73'></a>  73     and tmp = 7, str        <em class='comment'>// tmp = str % 8</em>
+<a id='L74' name='L74'></a>  74     cmp.ne  p7, p0 = r0, r0     <em class='comment'>// clear p7</em>
+<a id='L75' name='L75'></a>  75     extr.u  chr = in1, 0, 8     <em class='comment'>// chr = (unsigned char) in1</em>
+<a id='L76' name='L76'></a>  76     mov len = in2
+<a id='L77' name='L77'></a>  77     cmp.gtu p6, p0 = 16, in2    <em class='comment'>// use a simple loop for short</em>
+<a id='L78' name='L78'></a>  78 (p6)    br.cond.spnt .srchfew ;;    <em class='comment'>// searches</em>
+<a id='L79' name='L79'></a>  79     sub loopcnt = 8, tmp    <em class='comment'>// loopcnt = 8 - tmp</em>
+<a id='L80' name='L80'></a>  80     cmp.eq  p6, p0 = tmp, r0
+<a id='L81' name='L81'></a>  81 (p6)    br.cond.sptk    .str_aligned;;
+<a id='L82' name='L82'></a>  82     sub len = len, loopcnt
+<a id='L83' name='L83'></a>  83     adds    loopcnt = -1, loopcnt;;
+<a id='L84' name='L84'></a>  84     mov ar.lc = loopcnt
+<a id='L85' name='L85'></a>  85 .l1:
+<a id='L86' name='L86'></a>  86     ld1 val = [ret0], 1
+<a id='L87' name='L87'></a>  87     ;;
+<a id='L88' name='L88'></a>  88     cmp.eq  p6, p0 = val, chr
+<a id='L89' name='L89'></a>  89 (p6)    br.cond.spnt    .foundit
+<a id='L90' name='L90'></a>  90     br.cloop.sptk   .l1 ;;
+<a id='L91' name='L91'></a>  91 .str_aligned:
+<a id='L92' name='L92'></a>  92     cmp.ne  p6, p0 = r0, r0     <em class='comment'>// clear p6</em>
+<a id='L93' name='L93'></a>  93     shr.u   loopcnt = len, 3    <em class='comment'>// loopcnt = len / 8</em>
+<a id='L94' name='L94'></a>  94     and len = 7, len ;;     <em class='comment'>// remaining len = len &amp; 7</em>
+<a id='L95' name='L95'></a>  95     adds    loopcnt = -1, loopcnt
+<a id='L96' name='L96'></a>  96     mov ar.ec = MEMLAT + 3
+<a id='L97' name='L97'></a>  97     mux1    chrx8 = chr, @brcst ;;  <em class='comment'>// get a word full of chr</em>
+<a id='L98' name='L98'></a>  98     mov ar.lc = loopcnt
+<a id='L99' name='L99'></a>  99     mov pr.rot = 1 &lt;&lt; 16 ;;
+<a id='L100' name='L100'></a> 100 .l2:
+<a id='L101' name='L101'></a> 101 (p[0])      mov addr[0] = ret0
+<a id='L102' name='L102'></a> 102 (p[0])      ld8.s   value[0] = [ret0], 8     <em class='comment'>// speculative load</em>
+<a id='L103' name='L103'></a> 103 (p[MEMLAT]) chk.s   value[MEMLAT], .recovery <em class='comment'>// check and recovery</em>
+<a id='L104' name='L104'></a> 104 (p[MEMLAT]) xor aux[0] = value[MEMLAT], chrx8
+<a id='L105' name='L105'></a> 105 (p[MEMLAT+1])   czx1.r  poschr[0] = aux[1]
+<a id='L106' name='L106'></a> 106 (p[MEMLAT+2])   cmp.ne  p7, p0 = 8, poschr[1]
+<a id='L107' name='L107'></a> 107 (p7)        br.cond.dpnt .foundit
+<a id='L108' name='L108'></a> 108         br.ctop.dptk .l2
+<a id='L109' name='L109'></a> 109 .srchfew:
+<a id='L110' name='L110'></a> 110     adds    loopcnt = -1, len
+<a id='L111' name='L111'></a> 111     cmp.eq  p6, p0 = len, r0
+<a id='L112' name='L112'></a> 112 (p6)    br.cond.spnt .notfound ;;
+<a id='L113' name='L113'></a> 113     mov ar.lc = loopcnt
+<a id='L114' name='L114'></a> 114 .l3:
+<a id='L115' name='L115'></a> 115     ld1 val = [ret0], 1
+<a id='L116' name='L116'></a> 116     ;;
+<a id='L117' name='L117'></a> 117     cmp.eq  p6, p0 = val, chr
+<a id='L118' name='L118'></a> 118 (p6)    br.cond.dpnt    .foundit
+<a id='L119' name='L119'></a> 119     br.cloop.sptk   .l3 ;;
+<a id='L120' name='L120'></a> 120 .notfound:
+<a id='L121' name='L121'></a> 121     cmp.ne  p6, p0 = r0, r0 <em class='comment'>// clear p6 (p7 was already 0 when we got here)</em>
+<a id='L122' name='L122'></a> 122     mov ret0 = r0 ;;    <em class='comment'>// return NULL</em>
+<a id='L123' name='L123'></a> 123 .foundit:
+<a id='L124' name='L124'></a> 124     .pred.rel "mutex" p6, p7
+<a id='L125' name='L125'></a> 125 (p6)    adds    ret0 = -1, ret0            <em class='comment'>// if we got here from l1 or l3</em>
+<a id='L126' name='L126'></a> 126 (p7)    add ret0 = addr[MEMLAT+2], poschr[1]   <em class='comment'>// if we got here from l2</em>
+<a id='L127' name='L127'></a> 127     mov pr = saved_pr, -1
+<a id='L128' name='L128'></a> 128     mov ar.lc = saved_lc
+<a id='L129' name='L129'></a> 129     br.ret.sptk.many b0
+<a id='L130' name='L130'></a> 130 
+<a id='L131' name='L131'></a> 131 .recovery:
+<a id='L132' name='L132'></a> 132 <em class='sharp'>#if</em> <a href='../D/7886.html' title='Multiple defined in 6 places.'>MEMLAT</a> != 6
+<a id='L133' name='L133'></a> 133 <em class='sharp'># error</em> "MEMLAT must be 6!"
+<a id='L134' name='L134'></a> 134 <em class='sharp'>#endif</em>
+<a id='L135' name='L135'></a> 135 (p[MEMLAT-6])   add ret0 = -8, ret0;;
+<a id='L136' name='L136'></a> 136 (p[MEMLAT-5])   add ret0 = -8, ret0;;
+<a id='L137' name='L137'></a> 137 (p[MEMLAT-4])   add ret0 = -8, ret0;;
+<a id='L138' name='L138'></a> 138 (p[MEMLAT-3])   add ret0 = -8, ret0;;
+<a id='L139' name='L139'></a> 139 (p[MEMLAT-2])   add ret0 = -8, ret0;;
+<a id='L140' name='L140'></a> 140 (p[MEMLAT-1])   add ret0 = -8, ret0;;
+<a id='L141' name='L141'></a> 141 (p[MEMLAT]) add ret0 = -8, ret0;;
+<a id='L142' name='L142'></a> 142 (p[MEMLAT+1])   add ret0 = -8, ret0;;
+<a id='L143' name='L143'></a> 143 (p[MEMLAT+2])   add ret0 = -8, ret0;;
+<a id='L144' name='L144'></a> 144 .l4:
+<a id='L145' name='L145'></a> 145     mov     addr[MEMLAT+2] = ret0
+<a id='L146' name='L146'></a> 146     ld8 tmp = [ret0];;      <em class='comment'>// load the first unchecked 8byte</em>
+<a id='L147' name='L147'></a> 147     xor aux[1] = tmp, chrx8;;
+<a id='L148' name='L148'></a> 148     czx1.r  poschr[1] = aux[1];;
+<a id='L149' name='L149'></a> 149     cmp.ne  p7, p0 = 8, poschr[1];;
+<a id='L150' name='L150'></a> 150 (p7)    add ret0 = addr[MEMLAT+2], poschr[1];;
+<a id='L151' name='L151'></a> 151 (p7)    cmp.geu p6, p7 = ret0, last <em class='comment'>// don't go over the last byte</em>
+<a id='L152' name='L152'></a> 152 (p6)    br.cond.spnt    .notfound;;
+<a id='L153' name='L153'></a> 153 (p7)    br.cond.spnt    .foundit;;
+<a id='L154' name='L154'></a> 154     adds    ret0 = 8, ret0      <em class='comment'>// load the next unchecked 8byte</em>
+<a id='L155' name='L155'></a> 155     br.sptk .l4;;
+<a id='L156' name='L156'></a> 156 
+<a id='L157' name='L157'></a> 157 END(__memchr)
+<a id='L158' name='L158'></a> 158 
+<a id='L159' name='L159'></a> 159 weak_alias (__memchr, memchr)
+<a id='L160' name='L160'></a> 160 libc_hidden_builtin_def (memchr)
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;][^][v]<a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

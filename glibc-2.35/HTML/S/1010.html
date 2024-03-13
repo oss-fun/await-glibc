@@ -1,0 +1,190 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>posix/test-errno.c</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18938.html'>posix</a>/test-errno.c</h2>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L91'>[^]</a>[v][top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<h2 class='header'>DEFINITIONS</h2>
+This source file includes following definitions.
+<ol>
+<li><a href='#L91' title='Defined at 91.'>do_test</a></li>
+</ol>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* Test that failing system calls do set errno to the correct value.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'></em>
+<a id='L3' name='L3'></a>   3 <em class='comment'>   Copyright (C) 2017-2022 Free Software Foundation, Inc.</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L5' name='L5'></a>   5 <em class='comment'></em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L10' name='L10'></a>  10 <em class='comment'></em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L15' name='L15'></a>  15 <em class='comment'></em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L17' name='L17'></a>  17 <em class='comment'>   License along with the GNU C Library; if not, see</em>
+<a id='L18' name='L18'></a>  18 <em class='comment'>   &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L19' name='L19'></a>  19 
+<a id='L20' name='L20'></a>  20 <em class='sharp'>#include</em> &lt;<a href='../I/116.html'>errno.h</a>&gt;
+<a id='L21' name='L21'></a>  21 <em class='sharp'>#include</em> &lt;<a href='18175.html'>limits.h</a>&gt;
+<a id='L22' name='L22'></a>  22 <em class='sharp'>#include</em> &lt;<a href='../I/1162.html'>grp.h</a>&gt;
+<a id='L23' name='L23'></a>  23 <em class='sharp'>#include</em> &lt;<a href='../I/117.html'>fcntl.h</a>&gt;
+<a id='L24' name='L24'></a>  24 <em class='sharp'>#include</em> &lt;<a href='../I/1776.html'>stdio.h</a>&gt;
+<a id='L25' name='L25'></a>  25 <em class='sharp'>#include</em> &lt;<a href='../I/1973.html'>string.h</a>&gt;
+<a id='L26' name='L26'></a>  26 <em class='sharp'>#include</em> &lt;<a href='../I/1260.html'>sys/ioctl.h</a>&gt;
+<a id='L27' name='L27'></a>  27 <em class='sharp'>#include</em> &lt;<a href='../I/165.html'>sys/socket.h</a>&gt;
+<a id='L28' name='L28'></a>  28 <em class='sharp'>#include</em> &lt;<a href='../I/167.html'>sys/stat.h</a>&gt;
+<a id='L29' name='L29'></a>  29 <em class='sharp'>#include</em> &lt;<a href='../I/176.html'>sys/time.h</a>&gt;
+<a id='L30' name='L30'></a>  30 <em class='sharp'>#include</em> &lt;<a href='../I/148.html'>sys/resource.h</a>&gt;
+<a id='L31' name='L31'></a>  31 <em class='sharp'>#include</em> &lt;<a href='../I/1786.html'>sys/types.h</a>&gt;
+<a id='L32' name='L32'></a>  32 <em class='sharp'>#include</em> &lt;<a href='../I/168.html'>sys/statfs.h</a>&gt;
+<a id='L33' name='L33'></a>  33 <em class='sharp'>#include</em> &lt;<a href='../I/140.html'>sys/mman.h</a>&gt;
+<a id='L34' name='L34'></a>  34 <em class='sharp'>#include</em> &lt;<a href='../I/2019.html'>sys/uio.h</a>&gt;
+<a id='L35' name='L35'></a>  35 <em class='sharp'>#include</em> &lt;<a href='../I/1819.html'>unistd.h</a>&gt;
+<a id='L36' name='L36'></a>  36 <em class='sharp'>#include</em> &lt;<a href='../I/125.html'>netinet/in.h</a>&gt;
+<a id='L37' name='L37'></a>  37 <em class='sharp'>#include</em> &lt;<a href='18147.html'>libc-diag.h</a>&gt;
+<a id='L38' name='L38'></a>  38 
+<a id='L39' name='L39'></a>  39 <em class='comment'>/* This is not an exhaustive test: only system calls that can be</em>
+<a id='L40' name='L40'></a>  40 <em class='comment'>   persuaded to fail with a consistent error code and no side effects</em>
+<a id='L41' name='L41'></a>  41 <em class='comment'>   are included.  Usually these are failures due to invalid arguments,</em>
+<a id='L42' name='L42'></a>  42 <em class='comment'>   with errno code EBADF or EINVAL.  The order of argument checks is</em>
+<a id='L43' name='L43'></a>  43 <em class='comment'>   unspecified, so we must take care to provide arguments that only</em>
+<a id='L44' name='L44'></a>  44 <em class='comment'>   allow _one_ failure mode.</em>
+<a id='L45' name='L45'></a>  45 <em class='comment'></em>
+<a id='L46' name='L46'></a>  46 <em class='comment'>   Note that all system calls that can fail with EFAULT are permitted</em>
+<a id='L47' name='L47'></a>  47 <em class='comment'>   to deliver a SIGSEGV signal instead, so we avoid supplying invalid</em>
+<a id='L48' name='L48'></a>  48 <em class='comment'>   pointers in general, and we do not attempt to test system calls</em>
+<a id='L49' name='L49'></a>  49 <em class='comment'>   that can only fail with EFAULT (e.g. gettimeofday, gethostname).</em>
+<a id='L50' name='L50'></a>  50 <em class='comment'></em>
+<a id='L51' name='L51'></a>  51 <em class='comment'>   Also note that root-only system calls (e.g. acct, reboot) may, when</em>
+<a id='L52' name='L52'></a>  52 <em class='comment'>   the test is run as an unprivileged user, fail due to insufficient</em>
+<a id='L53' name='L53'></a>  53 <em class='comment'>   privileges before bothering to do argument checks, so those are not</em>
+<a id='L54' name='L54'></a>  54 <em class='comment'>   tested either.</em>
+<a id='L55' name='L55'></a>  55 <em class='comment'></em>
+<a id='L56' name='L56'></a>  56 <em class='comment'>   Also, system calls that take enum or a set of flags as argument is</em>
+<a id='L57' name='L57'></a>  57 <em class='comment'>   not tested if POSIX doesn't specify exact binary values for all</em>
+<a id='L58' name='L58'></a>  58 <em class='comment'>   flags, and so any value passed to flags may become valid.</em>
+<a id='L59' name='L59'></a>  59 <em class='comment'></em>
+<a id='L60' name='L60'></a>  60 <em class='comment'>   Some tests assume "/bin/sh" names a file that exists and is not a</em>
+<a id='L61' name='L61'></a>  61 <em class='comment'>   directory.  */</em>
+<a id='L62' name='L62'></a>  62 
+<a id='L63' name='L63'></a>  63 <em class='sharp'>#define</em> <a href='../R/25502.html' title='Multiple referred from 4 places.'>test_wrp_rv</a>(<a href='../Y/24364.html' title='Multiple used in 27 places.'>rtype</a>, <a href='../Y/22891.html' title='Multiple used in 4 places.'>prtype</a>, <a href='../Y/14194.html' title='Multiple used in 12 places.'>experr</a>, <a href='../D/37408.html' title='Multiple defined in 19 places.'>syscall</a>, ...)    \
+<a id='L64' name='L64'></a>  64   (<strong class='reserved'>__extension__</strong> (<em class='brace'>{</em>                     \
+<a id='L65' name='L65'></a>  65     <a href='../D/30023.html' title='Multiple defined in 13 places.'>errno</a> = 0xdead;                     \
+<a id='L66' name='L66'></a>  66     <a href='../Y/24364.html' title='Multiple used in 27 places.'>rtype</a> <a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a> = <a href='../D/37408.html' title='Multiple defined in 19 places.'>syscall</a> (<a href='../Y/3326.html' title='Multiple used in 135 places.'>__VA_ARGS__</a>);              \
+<a id='L67' name='L67'></a>  67     <strong class='reserved'>int</strong> <a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a> = <a href='../D/30023.html' title='Multiple defined in 13 places.'>errno</a>;                        \
+<a id='L68' name='L68'></a>  68     <strong class='reserved'>int</strong> <a href='../D/30351.html' title='Multiple defined in 2 places.'>fail</a>;                           \
+<a id='L69' name='L69'></a>  69     <strong class='reserved'>if</strong> (<a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a> == (<a href='../Y/24364.html' title='Multiple used in 27 places.'>rtype</a>) -1 &amp;&amp; <a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a> == <a href='../Y/14194.html' title='Multiple used in 12 places.'>experr</a>)         \
+<a id='L70' name='L70'></a>  70       <a href='../D/30351.html' title='Multiple defined in 2 places.'>fail</a> = 0;                         \
+<a id='L71' name='L71'></a>  71     <strong class='reserved'>else</strong>                            \
+<a id='L72' name='L72'></a>  72       <em class='brace'>{</em>                             \
+<a id='L73' name='L73'></a>  73         <a href='../D/30351.html' title='Multiple defined in 2 places.'>fail</a> = 1;                       \
+<a id='L74' name='L74'></a>  74         <strong class='reserved'>if</strong> (<a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a> != (<a href='../Y/24364.html' title='Multiple used in 27 places.'>rtype</a>) -1)                  \
+<a id='L75' name='L75'></a>  75           <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("FAIL: " #<a href='../D/37408.html' title='Multiple defined in 19 places.'>syscall</a> ": didn't fail as expected" \
+<a id='L76' name='L76'></a>  76                " (return "<a href='../Y/22891.html' title='Multiple used in 4 places.'>prtype</a>")\n", <a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a>);            \
+<a id='L77' name='L77'></a>  77         <strong class='reserved'>else</strong> <strong class='reserved'>if</strong> (<a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a> == 0xdead)                 \
+<a id='L78' name='L78'></a>  78           <a href='../Y/23144.html' title='Multiple used in 3983 places.'>puts</a>("FAIL: " #<a href='../D/37408.html' title='Multiple defined in 19 places.'>syscall</a> ": didn't update errno\n");    \
+<a id='L79' name='L79'></a>  79         <strong class='reserved'>else</strong> <strong class='reserved'>if</strong> (<a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a> != <a href='../Y/14194.html' title='Multiple used in 12 places.'>experr</a>)                 \
+<a id='L80' name='L80'></a>  80           <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("FAIL: " #<a href='../D/37408.html' title='Multiple defined in 19 places.'>syscall</a>             \
+<a id='L81' name='L81'></a>  81                ": errno is: %d (%s) expected: %d (%s)\n",   \
+<a id='L82' name='L82'></a>  82                <a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a>, <a href='../S/1932.html#L22' title='Defined at 22 in string/strerror.c.'>strerror</a> (<a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a>), <a href='../Y/14194.html' title='Multiple used in 12 places.'>experr</a>, <a href='../S/1932.html#L22' title='Defined at 22 in string/strerror.c.'>strerror</a> (<a href='../Y/14194.html' title='Multiple used in 12 places.'>experr</a>)); \
+<a id='L83' name='L83'></a>  83       <em class='brace'>}</em>                             \
+<a id='L84' name='L84'></a>  84     <a href='../D/30351.html' title='Multiple defined in 2 places.'>fail</a>;                           \
+<a id='L85' name='L85'></a>  85   <em class='brace'>}</em>))
+<a id='L86' name='L86'></a>  86 
+<a id='L87' name='L87'></a>  87 <em class='sharp'>#define</em> <a href='../R/25500.html' title='Multiple referred from 62 places.'>test_wrp</a>(<a href='../Y/14194.html' title='Multiple used in 12 places.'>experr</a>, <a href='../D/37408.html' title='Multiple defined in 19 places.'>syscall</a>, ...)              \
+<a id='L88' name='L88'></a>  88   <a href='../D/37935.html' title='Multiple defined in 2 places.'>test_wrp_rv</a>(<strong class='reserved'>int</strong>, "%d", <a href='../Y/14194.html' title='Multiple used in 12 places.'>experr</a>, <a href='../D/37408.html' title='Multiple defined in 19 places.'>syscall</a>, <a href='../Y/3326.html' title='Multiple used in 135 places.'>__VA_ARGS__</a>)
+<a id='L89' name='L89'></a>  89 
+<a id='L90' name='L90'></a>  90 <strong class='reserved'>static</strong> <strong class='reserved'>int</strong>
+<a id='L91' name='L91'></a>  91 <a href='../R/18782.html' title='Multiple referred from 1850 places.'>do_test</a> (<strong class='reserved'>void</strong>)
+<a id='L92' name='L92'></a>  92 <em class='brace'>{</em>
+<a id='L93' name='L93'></a>  93   <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/22170.html' title='Multiple used in 151 places.'>pagesize</a> = <a href='../S/1082.html#L56' title='Defined at 56 in posix/glob.c.'>sysconf</a> (<a href='../D/20206.html' title='Multiple defined in 4 places.'>_SC_PAGESIZE</a>);
+<a id='L94' name='L94'></a>  94   <strong class='reserved'>struct</strong> <a href='../D/37021.html' title='Multiple defined in 11 places.'>statfs</a> <a href='../Y/25201.html' title='Multiple used in 43 places.'>sfs</a>;
+<a id='L95' name='L95'></a>  95   <strong class='reserved'>struct</strong> <a href='../D/36846.html' title='Multiple defined in 3 places.'>sockaddr</a> <a href='../Y/24533.html' title='Multiple used in 431 places.'>sa</a>;
+<a id='L96' name='L96'></a>  96   <a href='../D/36864.html' title='Multiple defined in 5 places.'>socklen_t</a> <a href='../S/18634.html#L52' title='Defined at 52 in nptl/tst-cancel7.c.'>sl</a>;
+<a id='L97' name='L97'></a>  97   <strong class='reserved'>char</strong> <a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>[1];
+<a id='L98' name='L98'></a>  98   <strong class='reserved'>struct</strong> <a href='../S/3776.html#L26' title='Defined at 26 in misc/bits/types/struct_iovec.h.'>iovec</a> <a href='../Y/17065.html' title='Multiple used in 264 places.'>iov</a>[1] = <em class='brace'>{</em> <em class='brace'>{</em> <a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>, 1 <em class='brace'>}</em> <em class='brace'>}</em>;
+<a id='L99' name='L99'></a>  99   <strong class='reserved'>struct</strong> <a href='../S/1485.html#L245' title='Defined at 245 in inet/netinet/in.h.'>sockaddr_in</a> <a href='../S/3342.html#L730' title='Defined at 730 in math/tgmath.h.'>sin</a>;
+<a id='L100' name='L100'></a> 100   <a href='../S/3342.html#L730' title='Defined at 730 in math/tgmath.h.'>sin</a>.<a href='../Y/25529.html' title='Multiple used in 75 places.'>sin_family</a> = <a href='../D/130.html' title='Multiple defined in 3 places.'>AF_INET</a>;
+<a id='L101' name='L101'></a> 101   <a href='../S/3342.html#L730' title='Defined at 730 in math/tgmath.h.'>sin</a>.<a href='../Y/25534.html' title='Multiple used in 81 places.'>sin_port</a> = <a href='../D/31575.html' title='Multiple defined in 7 places.'>htons</a> (1026);
+<a id='L102' name='L102'></a> 102   <a href='../S/3342.html#L730' title='Defined at 730 in math/tgmath.h.'>sin</a>.<a href='../Y/25526.html' title='Multiple used in 112 places.'>sin_addr</a>.<a href='../Y/24490.html' title='Multiple used in 85 places.'>s_addr</a> = <a href='../D/31573.html' title='Multiple defined in 8 places.'>htonl</a> (<a href='../D/6046.html' title='Multiple defined in 2 places.'>INADDR_LOOPBACK</a>);
+<a id='L103' name='L103'></a> 103   <strong class='reserved'>struct</strong> <a href='../D/33719.html' title='Multiple defined in 3 places.'>msghdr</a> <a href='../S/2176.html#L54' title='Defined at 54 in hurd/intr-msg.c.'>msg</a>;
+<a id='L104' name='L104'></a> 104   <a href='../D/33462.html' title='Multiple defined in 30 places.'>memset</a>(&amp;<a href='../S/2176.html#L54' title='Defined at 54 in hurd/intr-msg.c.'>msg</a>, 0, <strong class='reserved'>sizeof</strong> <a href='../S/2176.html#L54' title='Defined at 54 in hurd/intr-msg.c.'>msg</a>);
+<a id='L105' name='L105'></a> 105   <a href='../S/2176.html#L54' title='Defined at 54 in hurd/intr-msg.c.'>msg</a>.<a href='../Y/19914.html' title='Multiple used in 39 places.'>msg_iov</a> = <a href='../Y/17065.html' title='Multiple used in 264 places.'>iov</a>;
+<a id='L106' name='L106'></a> 106   <a href='../S/2176.html#L54' title='Defined at 54 in hurd/intr-msg.c.'>msg</a>.<a href='../Y/19915.html' title='Multiple used in 34 places.'>msg_iovlen</a> = 1;
+<a id='L107' name='L107'></a> 107 
+<a id='L108' name='L108'></a> 108   <strong class='reserved'>int</strong> <a href='../Y/14351.html' title='Multiple used in 349 places.'>fails</a> = 0;
+<a id='L109' name='L109'></a> 109   <a href='../Y/14351.html' title='Multiple used in 349 places.'>fails</a> |= <a href='../D/37933.html' title='Multiple defined in 2 places.'>test_wrp</a> (<a href='../D/2928.html' title='Multiple defined in 2 places.'>EBADF</a>, <a href='../D/27446.html' title='Multiple defined in 2 places.'>accept</a>, -1, &amp;<a href='../Y/24533.html' title='Multiple used in 431 places.'>sa</a>, &amp;<a href='../S/18634.html#L52' title='Defined at 52 in nptl/tst-cancel7.c.'>sl</a>);
+<a id='L110' name='L110'></a> 110   <a href='../Y/14351.html' title='Multiple used in 349 places.'>fails</a> |= <a href='../D/37933.html' title='Multiple defined in 2 places.'>test_wrp</a> (<a href='../D/3156.html' title='Multiple defined in 3 places.'>EINVAL</a>, <a href='../S/2945.html#L61' title='Defined at 61 in elf/tst-tls20.c.'>access</a>, "/", -1);
+<a id='L111' name='L111'></a> 111   <a href='../Y/14351.html' title='Multiple used in 349 places.'>fails</a> |= <a href='../D/37933.html' title='Multiple defined in 2 places.'>test_wrp</a> (<a href='../D/2928.html' title='Multiple defined in 2 places.'>EBADF</a>, <a href='../Y/10850.html' title='Multiple used in 70 places.'>bind</a>, -1, (<strong class='reserved'>struct</strong> <a href='../D/36846.html' title='Multiple defined in 3 places.'>sockaddr</a> *)&amp;<a href='../S/3342.html#L730' title='Defined at 730 in math/tgmath.h.'>sin</a>, <strong class='reserved'>sizeof</strong> <a href='../S/3342.html#L730' title='Defined at 730 in math/tgmath.h.'>sin</a>);
+<a id='L112' name='L112'></a> 112   <a href='../Y/14351.html' title='Multiple used in 349 places.'>fails</a> |= <a href='../D/37933.html' title='Multiple defined in 2 places.'>test_wrp</a> (<a href='../D/3631.html' title='Multiple defined in 2 places.'>ENOTDIR</a>, <a href='../Y/11497.html' title='Multiple used in 45 places.'>chdir</a>, "/bin/sh");
+<a id='L113' name='L113'></a> 113   <a href='../Y/14351.html' title='Multiple used in 349 places.'>fails</a> |= <a href='../D/37933.html' title='Multiple defined in 2 places.'>test_wrp</a> (<a href='../D/2928.html' title='Multiple defined in 2 places.'>EBADF</a>, <a href='../S/284.html#L449' title='Defined at 449 in intl/loadmsgcat.c.'>close</a>, -1);
+<a id='L114' name='L114'></a> 114   <a href='../Y/14351.html' title='Multiple used in 349 places.'>fails</a> |= <a href='../D/37933.html' title='Multiple defined in 2 places.'>test_wrp</a> (<a href='../D/2928.html' title='Multiple defined in 2 places.'>EBADF</a>, <a href='../Y/11930.html' title='Multiple used in 17 places.'>connect</a>, -1, (<strong class='reserved'>struct</strong> <a href='../D/36846.html' title='Multiple defined in 3 places.'>sockaddr</a> *)&amp;<a href='../S/3342.html#L730' title='Defined at 730 in math/tgmath.h.'>sin</a>, <strong class='reserved'>sizeof</strong> <a href='../S/3342.html#L730' title='Defined at 730 in math/tgmath.h.'>sin</a>);
+<a id='L115' name='L115'></a> 115   <a href='../Y/14351.html' title='Multiple used in 349 places.'>fails</a> |= <a href='../D/37933.html' title='Multiple defined in 2 places.'>test_wrp</a> (<a href='../D/2928.html' title='Multiple defined in 2 places.'>EBADF</a>, <a href='../Y/13399.html' title='Multiple used in 50 places.'>dup</a>, -1);
+<a id='L116' name='L116'></a> 116   <a href='../Y/14351.html' title='Multiple used in 349 places.'>fails</a> |= <a href='../D/37933.html' title='Multiple defined in 2 places.'>test_wrp</a> (<a href='../D/2928.html' title='Multiple defined in 2 places.'>EBADF</a>, <a href='../Y/13400.html' title='Multiple used in 29 places.'>dup2</a>, -1, -1);
+<a id='L117' name='L117'></a> 117   <a href='../Y/14351.html' title='Multiple used in 349 places.'>fails</a> |= <a href='../D/37933.html' title='Multiple defined in 2 places.'>test_wrp</a> (<a href='../D/2928.html' title='Multiple defined in 2 places.'>EBADF</a>, <a href='../Y/14387.html' title='Multiple used in 11 places.'>fchdir</a>, -1);
+<a id='L118' name='L118'></a> 118   <a href='../Y/14351.html' title='Multiple used in 349 places.'>fails</a> |= <a href='../D/37933.html' title='Multiple defined in 2 places.'>test_wrp</a> (<a href='../D/2928.html' title='Multiple defined in 2 places.'>EBADF</a>, <a href='../Y/14389.html' title='Multiple used in 17 places.'>fchmod</a>, -1, 0);
+<a id='L119' name='L119'></a> 119   <a href='../Y/14351.html' title='Multiple used in 349 places.'>fails</a> |= <a href='../D/37933.html' title='Multiple defined in 2 places.'>test_wrp</a> (<a href='../D/2928.html' title='Multiple defined in 2 places.'>EBADF</a>, <a href='../D/30373.html' title='Multiple defined in 5 places.'>fcntl</a>, -1, 0);
+<a id='L120' name='L120'></a> 120   <a href='../Y/14351.html' title='Multiple used in 349 places.'>fails</a> |= <a href='../D/37933.html' title='Multiple defined in 2 places.'>test_wrp</a> (<a href='../D/2928.html' title='Multiple defined in 2 places.'>EBADF</a>, <a href='../D/30887.html' title='Multiple defined in 3 places.'>fstatfs</a>, -1, &amp;<a href='../Y/25201.html' title='Multiple used in 43 places.'>sfs</a>);
+<a id='L121' name='L121'></a> 121   <a href='../Y/14351.html' title='Multiple used in 349 places.'>fails</a> |= <a href='../D/37933.html' title='Multiple defined in 2 places.'>test_wrp</a> (<a href='../D/2928.html' title='Multiple defined in 2 places.'>EBADF</a>, <a href='../D/30892.html' title='Multiple defined in 3 places.'>fsync</a>, -1);
+<a id='L122' name='L122'></a> 122   <a href='../Y/14351.html' title='Multiple used in 349 places.'>fails</a> |= <a href='../D/37933.html' title='Multiple defined in 2 places.'>test_wrp</a> (<a href='../D/2928.html' title='Multiple defined in 2 places.'>EBADF</a>, <a href='../S/1192.html#L1055' title='Defined at 1055 in posix/unistd.h.'>ftruncate</a>, -1, 0);
+<a id='L123' name='L123'></a> 123 
+<a id='L124' name='L124'></a> 124 <em class='sharp'>#if</em> <a href='../D/21626.html' title='Multiple defined in 2 places.'>__GNUC_PREREQ</a> (7, 0)
+<a id='L125' name='L125'></a> 125   <a href='../S/18147.html#L36' title='Defined at 36 in include/libc-diag.h.'>DIAG_PUSH_NEEDS_COMMENT</a>;
+<a id='L126' name='L126'></a> 126   <em class='comment'>/* Avoid warnings about the second (size) argument being negative.  */</em>
+<a id='L127' name='L127'></a> 127   <a href='../S/18147.html#L56' title='Defined at 56 in include/libc-diag.h.'>DIAG_IGNORE_NEEDS_COMMENT</a> (10.1, "-Wstringop-overflow");
+<a id='L128' name='L128'></a> 128 <em class='sharp'>#endif</em>
+<a id='L129' name='L129'></a> 129   <a href='../Y/14351.html' title='Multiple used in 349 places.'>fails</a> |= <a href='../D/37933.html' title='Multiple defined in 2 places.'>test_wrp</a> (<a href='../D/3156.html' title='Multiple defined in 3 places.'>EINVAL</a>, <a href='../Y/15505.html' title='Multiple used in 12 places.'>getgroups</a>, -1, 0);
+<a id='L130' name='L130'></a> 130 <em class='sharp'>#if</em> <a href='../D/21626.html' title='Multiple defined in 2 places.'>__GNUC_PREREQ</a> (7, 0)
+<a id='L131' name='L131'></a> 131   <a href='../S/18147.html#L39' title='Defined at 39 in include/libc-diag.h.'>DIAG_POP_NEEDS_COMMENT</a>;
+<a id='L132' name='L132'></a> 132 <em class='sharp'>#endif</em>
+<a id='L133' name='L133'></a> 133   <a href='../Y/14351.html' title='Multiple used in 349 places.'>fails</a> |= <a href='../D/37933.html' title='Multiple defined in 2 places.'>test_wrp</a> (<a href='../D/2928.html' title='Multiple defined in 2 places.'>EBADF</a>, <a href='../S/18358.html#L24' title='Defined at 24 in socket/getpeername.c.'>getpeername</a>, -1, &amp;<a href='../Y/24533.html' title='Multiple used in 431 places.'>sa</a>, &amp;<a href='../S/18634.html#L52' title='Defined at 52 in nptl/tst-cancel7.c.'>sl</a>);
+<a id='L134' name='L134'></a> 134   <a href='../Y/14351.html' title='Multiple used in 349 places.'>fails</a> |= <a href='../D/37933.html' title='Multiple defined in 2 places.'>test_wrp</a> (<a href='../D/2928.html' title='Multiple defined in 2 places.'>EBADF</a>, <a href='../Y/15586.html' title='Multiple used in 14 places.'>getsockname</a>, -1, &amp;<a href='../Y/24533.html' title='Multiple used in 431 places.'>sa</a>, &amp;<a href='../S/18634.html#L52' title='Defined at 52 in nptl/tst-cancel7.c.'>sl</a>);
+<a id='L135' name='L135'></a> 135   <a href='../Y/14351.html' title='Multiple used in 349 places.'>fails</a> |= <a href='../D/37933.html' title='Multiple defined in 2 places.'>test_wrp</a> (<a href='../D/2928.html' title='Multiple defined in 2 places.'>EBADF</a>, <a href='../D/31257.html' title='Multiple defined in 3 places.'>getsockopt</a>, -1, 0, 0, <a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>, &amp;<a href='../S/18634.html#L52' title='Defined at 52 in nptl/tst-cancel7.c.'>sl</a>);
+<a id='L136' name='L136'></a> 136   <a href='../Y/14351.html' title='Multiple used in 349 places.'>fails</a> |= <a href='../D/37933.html' title='Multiple defined in 2 places.'>test_wrp</a> (<a href='../D/2928.html' title='Multiple defined in 2 places.'>EBADF</a>, <a href='../D/32225.html' title='Multiple defined in 2 places.'>ioctl</a>, -1, <a href='../S/13874.html#L235' title='Defined at 235 in sysdeps/mach/hurd/bits/ioctls.h.'>TIOCNOTTY</a>);
+<a id='L137' name='L137'></a> 137   <a href='../Y/14351.html' title='Multiple used in 349 places.'>fails</a> |= <a href='../D/37933.html' title='Multiple defined in 2 places.'>test_wrp</a> (<a href='../D/2928.html' title='Multiple defined in 2 places.'>EBADF</a>, <a href='../S/10971.html#L27' title='Defined at 27 in sysdeps/unix/sysv/linux/listen.c.'>listen</a>, -1, 1);
+<a id='L138' name='L138'></a> 138   <a href='../Y/14351.html' title='Multiple used in 349 places.'>fails</a> |= <a href='../D/37933.html' title='Multiple defined in 2 places.'>test_wrp</a> (<a href='../D/2928.html' title='Multiple defined in 2 places.'>EBADF</a>, <a href='../S/1192.html#L346' title='Defined at 346 in posix/unistd.h.'>lseek</a>, -1, 0, 0);
+<a id='L139' name='L139'></a> 139   <a href='../Y/14351.html' title='Multiple used in 349 places.'>fails</a> |= <a href='../D/37933.html' title='Multiple defined in 2 places.'>test_wrp</a> (<a href='../D/3156.html' title='Multiple defined in 3 places.'>EINVAL</a>, <a href='../Y/18830.html' title='Multiple used in 5 places.'>madvise</a>, (<strong class='reserved'>void</strong> *) -1, -1, 0);
+<a id='L140' name='L140'></a> 140   <a href='../Y/14351.html' title='Multiple used in 349 places.'>fails</a> |= <a href='../D/37935.html' title='Multiple defined in 2 places.'>test_wrp_rv</a> (<strong class='reserved'>void</strong> *, "%p", <a href='../D/2928.html' title='Multiple defined in 2 places.'>EBADF</a>,
+<a id='L141' name='L141'></a> 141                         <a href='../D/33546.html' title='Multiple defined in 3 places.'>mmap</a>, 0, <a href='../Y/22170.html' title='Multiple used in 151 places.'>pagesize</a>, <a href='../D/10287.html' title='Multiple defined in 2 places.'>PROT_READ</a>, <a href='../D/7640.html' title='Multiple defined in 2 places.'>MAP_PRIVATE</a>, -1, 0);
+<a id='L142' name='L142'></a> 142   <a href='../Y/14351.html' title='Multiple used in 349 places.'>fails</a> |= <a href='../D/37933.html' title='Multiple defined in 2 places.'>test_wrp</a> (<a href='../D/3156.html' title='Multiple defined in 3 places.'>EINVAL</a>, <a href='../Y/19777.html' title='Multiple used in 17 places.'>mprotect</a>, (<strong class='reserved'>void</strong> *) -1, <a href='../Y/22170.html' title='Multiple used in 151 places.'>pagesize</a>, -1);
+<a id='L143' name='L143'></a> 143   <a href='../Y/14351.html' title='Multiple used in 349 places.'>fails</a> |= <a href='../D/37933.html' title='Multiple defined in 2 places.'>test_wrp</a> (<a href='../D/3156.html' title='Multiple defined in 3 places.'>EINVAL</a>, <a href='../D/33733.html' title='Multiple defined in 4 places.'>msync</a>, (<strong class='reserved'>void</strong> *) -1, <a href='../Y/22170.html' title='Multiple used in 151 places.'>pagesize</a>, -1);
+<a id='L144' name='L144'></a> 144   <a href='../Y/14351.html' title='Multiple used in 349 places.'>fails</a> |= <a href='../D/37933.html' title='Multiple defined in 2 places.'>test_wrp</a> (<a href='../D/3156.html' title='Multiple defined in 3 places.'>EINVAL</a>, <a href='../D/33762.html' title='Multiple defined in 2 places.'>munmap</a>, (<strong class='reserved'>void</strong> *) -1, 0);
+<a id='L145' name='L145'></a> 145   <a href='../Y/14351.html' title='Multiple used in 349 places.'>fails</a> |= <a href='../D/37933.html' title='Multiple defined in 2 places.'>test_wrp</a> (<a href='../D/3160.html' title='Multiple defined in 2 places.'>EISDIR</a>, <a href='../D/34523.html' title='Multiple defined in 2 places.'>open</a>, "/bin", <a href='../D/3160.html' title='Multiple defined in 2 places.'>EISDIR</a>, <a href='../D/9642.html' title='Multiple defined in 3 places.'>O_WRONLY</a>);
+<a id='L146' name='L146'></a> 146   <a href='../Y/14351.html' title='Multiple used in 349 places.'>fails</a> |= <a href='../D/37933.html' title='Multiple defined in 2 places.'>test_wrp</a> (<a href='../D/2928.html' title='Multiple defined in 2 places.'>EBADF</a>, <a href='../S/284.html#L450' title='Defined at 450 in intl/loadmsgcat.c.'>read</a>, -1, <a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>, 1);
+<a id='L147' name='L147'></a> 147   <a href='../Y/14351.html' title='Multiple used in 349 places.'>fails</a> |= <a href='../D/37933.html' title='Multiple defined in 2 places.'>test_wrp</a> (<a href='../D/3156.html' title='Multiple defined in 3 places.'>EINVAL</a>, <a href='../S/3752.html#L145' title='Defined at 145 in timezone/zic.c.'>readlink</a>, "/", <a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>, <strong class='reserved'>sizeof</strong> <a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>);
+<a id='L148' name='L148'></a> 148   <a href='../Y/14351.html' title='Multiple used in 349 places.'>fails</a> |= <a href='../D/37933.html' title='Multiple defined in 2 places.'>test_wrp</a> (<a href='../D/2928.html' title='Multiple defined in 2 places.'>EBADF</a>, <a href='../Y/23567.html' title='Multiple used in 9 places.'>readv</a>, -1, <a href='../Y/17065.html' title='Multiple used in 264 places.'>iov</a>, 1);
+<a id='L149' name='L149'></a> 149   <a href='../Y/14351.html' title='Multiple used in 349 places.'>fails</a> |= <a href='../D/37933.html' title='Multiple defined in 2 places.'>test_wrp</a> (<a href='../D/2928.html' title='Multiple defined in 2 places.'>EBADF</a>, <a href='../Y/23626.html' title='Multiple used in 31 places.'>recv</a>, -1, <a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>, 1, 0);
+<a id='L150' name='L150'></a> 150   <a href='../Y/14351.html' title='Multiple used in 349 places.'>fails</a> |= <a href='../D/37933.html' title='Multiple defined in 2 places.'>test_wrp</a> (<a href='../D/2928.html' title='Multiple defined in 2 places.'>EBADF</a>, <a href='../Y/23631.html' title='Multiple used in 22 places.'>recvfrom</a>, -1, <a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>, 1, 0, &amp;<a href='../Y/24533.html' title='Multiple used in 431 places.'>sa</a>, &amp;<a href='../S/18634.html#L52' title='Defined at 52 in nptl/tst-cancel7.c.'>sl</a>);
+<a id='L151' name='L151'></a> 151   <a href='../Y/14351.html' title='Multiple used in 349 places.'>fails</a> |= <a href='../D/37933.html' title='Multiple defined in 2 places.'>test_wrp</a> (<a href='../D/2928.html' title='Multiple defined in 2 places.'>EBADF</a>, <a href='../S/18344.html#L224' title='Defined at 224 in socket/sys/socket.h.'>recvmsg</a>, -1, &amp;<a href='../S/2176.html#L54' title='Defined at 54 in hurd/intr-msg.c.'>msg</a>, 0);
+<a id='L152' name='L152'></a> 152   <a href='../Y/14351.html' title='Multiple used in 349 places.'>fails</a> |= <a href='../D/37933.html' title='Multiple defined in 2 places.'>test_wrp</a> (<a href='../D/3156.html' title='Multiple defined in 3 places.'>EINVAL</a>, <a href='../S/3877.html#L115' title='Defined at 115 in misc/sys/select.h.'>select</a>, -1, 0, 0, 0, 0);
+<a id='L153' name='L153'></a> 153   <a href='../Y/14351.html' title='Multiple used in 349 places.'>fails</a> |= <a href='../D/37933.html' title='Multiple defined in 2 places.'>test_wrp</a> (<a href='../D/2928.html' title='Multiple defined in 2 places.'>EBADF</a>, <a href='../Y/24979.html' title='Multiple used in 26 places.'>send</a>, -1, <a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>, 1, 0);
+<a id='L154' name='L154'></a> 154   <a href='../Y/14351.html' title='Multiple used in 349 places.'>fails</a> |= <a href='../D/37933.html' title='Multiple defined in 2 places.'>test_wrp</a> (<a href='../D/2928.html' title='Multiple defined in 2 places.'>EBADF</a>, <a href='../Y/24986.html' title='Multiple used in 15 places.'>sendmsg</a>, -1, &amp;<a href='../S/2176.html#L54' title='Defined at 54 in hurd/intr-msg.c.'>msg</a>, 0);
+<a id='L155' name='L155'></a> 155   <a href='../Y/14351.html' title='Multiple used in 349 places.'>fails</a> |= <a href='../D/37933.html' title='Multiple defined in 2 places.'>test_wrp</a> (<a href='../D/2928.html' title='Multiple defined in 2 places.'>EBADF</a>, <a href='../Y/24991.html' title='Multiple used in 21 places.'>sendto</a>, -1, <a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>, 1, 0, &amp;<a href='../Y/24533.html' title='Multiple used in 431 places.'>sa</a>, <a href='../S/18634.html#L52' title='Defined at 52 in nptl/tst-cancel7.c.'>sl</a>);
+<a id='L156' name='L156'></a> 156   <a href='../Y/14351.html' title='Multiple used in 349 places.'>fails</a> |= <a href='../D/37933.html' title='Multiple defined in 2 places.'>test_wrp</a> (<a href='../D/2928.html' title='Multiple defined in 2 places.'>EBADF</a>, <a href='../S/18344.html#L288' title='Defined at 288 in socket/sys/socket.h.'>setsockopt</a>, -1, 0, 0, <a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>, <strong class='reserved'>sizeof</strong> (*<a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>));
+<a id='L157' name='L157'></a> 157   <a href='../Y/14351.html' title='Multiple used in 349 places.'>fails</a> |= <a href='../D/37933.html' title='Multiple defined in 2 places.'>test_wrp</a> (<a href='../D/2928.html' title='Multiple defined in 2 places.'>EBADF</a>, <a href='../D/36680.html' title='Multiple defined in 2 places.'>shutdown</a>, -1, <a href='../D/14117.html' title='Multiple defined in 3 places.'>SHUT_RD</a>);
+<a id='L158' name='L158'></a> 158   <a href='../Y/14351.html' title='Multiple used in 349 places.'>fails</a> |= <a href='../D/37933.html' title='Multiple defined in 2 places.'>test_wrp</a> (<a href='../D/2928.html' title='Multiple defined in 2 places.'>EBADF</a>, <a href='../Y/29153.html' title='Multiple used in 258 places.'>write</a>, -1, "Hello", <strong class='reserved'>sizeof</strong> ("Hello") );
+<a id='L159' name='L159'></a> 159   <a href='../Y/14351.html' title='Multiple used in 349 places.'>fails</a> |= <a href='../D/37933.html' title='Multiple defined in 2 places.'>test_wrp</a> (<a href='../D/2928.html' title='Multiple defined in 2 places.'>EBADF</a>, <a href='../Y/29180.html' title='Multiple used in 19 places.'>writev</a>, -1, <a href='../Y/17065.html' title='Multiple used in 264 places.'>iov</a>, 1 );
+<a id='L160' name='L160'></a> 160 
+<a id='L161' name='L161'></a> 161   <strong class='reserved'>return</strong> <a href='../Y/14351.html' title='Multiple used in 349 places.'>fails</a>;
+<a id='L162' name='L162'></a> 162 <em class='brace'>}</em>
+<a id='L163' name='L163'></a> 163 
+<a id='L164' name='L164'></a> 164 <em class='sharp'>#include</em> "support/test-driver.c"
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;][^]<a href='#L91'>[v]</a><a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

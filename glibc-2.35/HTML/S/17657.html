@@ -1,0 +1,136 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>sysdeps/s390/stpcpy-vx.S</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18977.html'>sysdeps</a>/<a href='../files/19209.html'>s390</a>/stpcpy-vx.S</h2>
+<em class='comment'>/* [&lt;][&gt;][^][v][top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* Vector optimized 32/64 bit S/390 version of stpcpy.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   Copyright (C) 2015-2022 Free Software Foundation, Inc.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'></em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'></em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'></em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   License along with the GNU C Library; if not, see</em>
+<a id='L17' name='L17'></a>  17 <em class='comment'>   &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L18' name='L18'></a>  18 
+<a id='L19' name='L19'></a>  19 <em class='sharp'>#include</em> &lt;<a href='17525.html'>ifunc-stpcpy.h</a>&gt;
+<a id='L20' name='L20'></a>  20 
+<a id='L21' name='L21'></a>  21 <em class='sharp'>#if</em> <a href='../D/5341.html' title='Multiple defined in 2 places.'>HAVE_STPCPY_Z13</a>
+<a id='L22' name='L22'></a>  22 
+<a id='L23' name='L23'></a>  23 <em class='sharp'># include</em> "<a href='../I/5967.html'>sysdep.h</a>"
+<a id='L24' name='L24'></a>  24 <em class='sharp'># include</em> "<a href='../I/6421.html'>asm-syntax.h</a>"
+<a id='L25' name='L25'></a>  25 
+<a id='L26' name='L26'></a>  26     .text
+<a id='L27' name='L27'></a>  27 
+<a id='L28' name='L28'></a>  28 <em class='comment'>/* char * stpcpy (const char *dest, const char *src)</em>
+<a id='L29' name='L29'></a>  29 <em class='comment'>   Copy string src to dest returning a pointer to its end.</em>
+<a id='L30' name='L30'></a>  30 <em class='comment'></em>
+<a id='L31' name='L31'></a>  31 <em class='comment'>   Register usage:</em>
+<a id='L32' name='L32'></a>  32 <em class='comment'>   -r1=tmp</em>
+<a id='L33' name='L33'></a>  33 <em class='comment'>   -r2=dest and return value</em>
+<a id='L34' name='L34'></a>  34 <em class='comment'>   -r3=src</em>
+<a id='L35' name='L35'></a>  35 <em class='comment'>   -r4=tmp</em>
+<a id='L36' name='L36'></a>  36 <em class='comment'>   -r5=current_len</em>
+<a id='L37' name='L37'></a>  37 <em class='comment'>   -v16=part of src</em>
+<a id='L38' name='L38'></a>  38 <em class='comment'>   -v17=index of zero</em>
+<a id='L39' name='L39'></a>  39 <em class='comment'>   -v18=part of src</em>
+<a id='L40' name='L40'></a>  40 <em class='comment'>*/</em>
+<a id='L41' name='L41'></a>  41 <a href='../D/3651.html' title='Multiple defined in 54 places.'>ENTRY</a>(<a href='../R/8053.html' title='Multiple referred from 4 places.'>STPCPY_Z13</a>)
+<a id='L42' name='L42'></a>  42     .machine "z13"
+<a id='L43' name='L43'></a>  43     .machinemode "zarch_nohighgprs"
+<a id='L44' name='L44'></a>  44 
+<a id='L45' name='L45'></a>  45     vlbb    %v16,0(%r3),6   <em class='comment'>/* Load s until next 4k-byte boundary.  */</em>
+<a id='L46' name='L46'></a>  46     lcbb    %r1,0(%r3),6    <em class='comment'>/* Get bytes to 4k-byte boundary or 16.  */</em>
+<a id='L47' name='L47'></a>  47 
+<a id='L48' name='L48'></a>  48     vfenezb %v17,%v16,%v16  <em class='comment'>/* Find element not equal with zero search.  */</em>
+<a id='L49' name='L49'></a>  49     vlgvb   %r5,%v17,7  <em class='comment'>/* Load zero index or 16 if not found.  */</em>
+<a id='L50' name='L50'></a>  50     clrjl   %r5,%r1,.Lfound_align <em class='comment'>/* If found zero within loaded bytes,</em>
+<a id='L51' name='L51'></a>  51 <em class='comment'>                     copy bytes before and return.  */</em>
+<a id='L52' name='L52'></a>  52 
+<a id='L53' name='L53'></a>  53     <em class='comment'>/* Align s to 16 byte.  */</em>
+<a id='L54' name='L54'></a>  54     risbgn  %r4,%r3,60,128+63,0 <em class='comment'>/* %r3 = bits 60-63 of %r2 'and' 15.  */</em>
+<a id='L55' name='L55'></a>  55     lghi    %r5,15      <em class='comment'>/* current_len = 15.  */</em>
+<a id='L56' name='L56'></a>  56     slr %r5,%r4     <em class='comment'>/* Compute highest index to 16byte boundary.  */</em>
+<a id='L57' name='L57'></a>  57 
+<a id='L58' name='L58'></a>  58     vstl    %v16,%r5,0(%r2) <em class='comment'>/* Copy loaded characters - no zero.  */</em>
+<a id='L59' name='L59'></a>  59     ahi %r5,1       <em class='comment'>/* Start loop at next character.  */</em>
+<a id='L60' name='L60'></a>  60 
+<a id='L61' name='L61'></a>  61     <em class='comment'>/* Find zero in 16byte aligned loop.  */</em>
+<a id='L62' name='L62'></a>  62 .Lloop:
+<a id='L63' name='L63'></a>  63     vl  %v16,0(%r5,%r3) <em class='comment'>/* Load s.  */</em>
+<a id='L64' name='L64'></a>  64     vfenezbs %v17,%v16,%v16 <em class='comment'>/* Find element not equal with zero search.  */</em>
+<a id='L65' name='L65'></a>  65     je  .Lfound_v16_0   <em class='comment'>/* Jump away if zero was found.  */</em>
+<a id='L66' name='L66'></a>  66     vl  %v18,16(%r5,%r3) <em class='comment'>/* Load next part of s.  */</em>
+<a id='L67' name='L67'></a>  67     vst %v16,0(%r5,%r2) <em class='comment'>/* Store previous part without zero to dst.  */</em>
+<a id='L68' name='L68'></a>  68     vfenezbs %v17,%v18,%v18
+<a id='L69' name='L69'></a>  69     je  .Lfound_v18_16
+<a id='L70' name='L70'></a>  70     vl  %v16,32(%r5,%r3)
+<a id='L71' name='L71'></a>  71     vst %v18,16(%r5,%r2)
+<a id='L72' name='L72'></a>  72     vfenezbs %v17,%v16,%v16
+<a id='L73' name='L73'></a>  73     je  .Lfound_v16_32
+<a id='L74' name='L74'></a>  74     vl  %v18,48(%r5,%r3)
+<a id='L75' name='L75'></a>  75     vst %v16,32(%r5,%r2)
+<a id='L76' name='L76'></a>  76     vfenezbs %v17,%v18,%v18
+<a id='L77' name='L77'></a>  77     je  .Lfound_v18_48
+<a id='L78' name='L78'></a>  78     vst %v18,48(%r5,%r2)
+<a id='L79' name='L79'></a>  79 
+<a id='L80' name='L80'></a>  80     aghi    %r5,64
+<a id='L81' name='L81'></a>  81     j   .Lloop      <em class='comment'>/* No zero found -&gt; loop.  */</em>
+<a id='L82' name='L82'></a>  82 
+<a id='L83' name='L83'></a>  83 .Lfound_v16_32:
+<a id='L84' name='L84'></a>  84     aghi    %r5,32
+<a id='L85' name='L85'></a>  85 .Lfound_v16_0:
+<a id='L86' name='L86'></a>  86     la  %r3,0(%r5,%r2)
+<a id='L87' name='L87'></a>  87     vlgvb   %r1,%v17,7  <em class='comment'>/* Load byte index of zero.  */</em>
+<a id='L88' name='L88'></a>  88     vstl    %v16,%r1,0(%r3) <em class='comment'>/* Copy characters including zero.  */</em>
+<a id='L89' name='L89'></a>  89     la  %r2,0(%r1,%r3)  <em class='comment'>/* Return pointer to zero.  */</em>
+<a id='L90' name='L90'></a>  90     br  %r14
+<a id='L91' name='L91'></a>  91 
+<a id='L92' name='L92'></a>  92 .Lfound_v18_48:
+<a id='L93' name='L93'></a>  93     aghi    %r5,32
+<a id='L94' name='L94'></a>  94 .Lfound_v18_16:
+<a id='L95' name='L95'></a>  95     la  %r3,16(%r5,%r2)
+<a id='L96' name='L96'></a>  96     vlgvb   %r1,%v17,7  <em class='comment'>/* Load byte index of zero.  */</em>
+<a id='L97' name='L97'></a>  97     vstl    %v18,%r1,0(%r3) <em class='comment'>/* Copy characters including zero.  */</em>
+<a id='L98' name='L98'></a>  98     la  %r2,0(%r1,%r3)  <em class='comment'>/* Return pointer to zero.  */</em>
+<a id='L99' name='L99'></a>  99     br  %r14
+<a id='L100' name='L100'></a> 100 
+<a id='L101' name='L101'></a> 101 .Lfound_align:
+<a id='L102' name='L102'></a> 102     vstl    %v16,%r5,0(%r2) <em class='comment'>/* Copy characters including zero.  */</em>
+<a id='L103' name='L103'></a> 103     la  %r2,0(%r5,%r2)  <em class='comment'>/* Return pointer to zero.  */</em>
+<a id='L104' name='L104'></a> 104     br  %r14
+<a id='L105' name='L105'></a> 105 END(STPCPY_Z13)
+<a id='L106' name='L106'></a> 106 
+<a id='L107' name='L107'></a> 107 <em class='sharp'># if</em> ! <a href='../D/5339.html' title='Multiple defined in 2 places.'>HAVE_STPCPY_IFUNC</a>
+<a id='L108' name='L108'></a> 108 strong_alias (STPCPY_Z13, __stpcpy)
+<a id='L109' name='L109'></a> 109 weak_alias (__stpcpy, stpcpy)
+<a id='L110' name='L110'></a> 110 <em class='sharp'># endif</em>
+<a id='L111' name='L111'></a> 111 
+<a id='L112' name='L112'></a> 112 <em class='sharp'># if</em> ! <a href='../D/5338.html' title='Multiple defined in 2 places.'>HAVE_STPCPY_C</a> &amp;&amp; <strong class='reserved'>defined</strong> <a href='../D/13935.html' title='Multiple defined in 2 places.'>SHARED</a> &amp;&amp; <a href='../D/6753.html' title='Multiple defined in 3 places.'>IS_IN</a> (<a href='../D/32623.html' title='Multiple defined in 2 places.'>libc</a>)
+<a id='L113' name='L113'></a> 113 strong_alias (STPCPY_Z13, __GI_stpcpy)
+<a id='L114' name='L114'></a> 114 strong_alias (STPCPY_Z13, __GI___stpcpy)
+<a id='L115' name='L115'></a> 115 <em class='sharp'># endif</em>
+<a id='L116' name='L116'></a> 116 <em class='sharp'>#endif</em>
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;][^][v]<a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

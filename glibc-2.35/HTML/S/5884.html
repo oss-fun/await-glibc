@@ -1,0 +1,197 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>support/test-driver.c</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18976.html'>support</a>/test-driver.c</h2>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L107'>[^]</a>[v][top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<h2 class='header'>DEFINITIONS</h2>
+This source file includes following definitions.
+<ol>
+<li><a href='#L107' title='Defined at 107.'>main</a></li>
+</ol>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* Main function for test programs.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   Copyright (C) 2016-2022 Free Software Foundation, Inc.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'></em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'></em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'></em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   License along with the GNU C Library; if not, see</em>
+<a id='L17' name='L17'></a>  17 <em class='comment'>   &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L18' name='L18'></a>  18 
+<a id='L19' name='L19'></a>  19 <em class='comment'>/* This file should be included from test cases.  It will define a</em>
+<a id='L20' name='L20'></a>  20 <em class='comment'>   main function which provides the test wrapper.</em>
+<a id='L21' name='L21'></a>  21 <em class='comment'></em>
+<a id='L22' name='L22'></a>  22 <em class='comment'>   It assumes that the test case defines a function</em>
+<a id='L23' name='L23'></a>  23 <em class='comment'></em>
+<a id='L24' name='L24'></a>  24 <em class='comment'>     int do_test (void);</em>
+<a id='L25' name='L25'></a>  25 <em class='comment'></em>
+<a id='L26' name='L26'></a>  26 <em class='comment'>   and arranges for that function being called under the test wrapper.</em>
+<a id='L27' name='L27'></a>  27 <em class='comment'>   The do_test function should return 0 to indicate a passing test, 1</em>
+<a id='L28' name='L28'></a>  28 <em class='comment'>   to indicate a failing test, or 77 to indicate an unsupported test.</em>
+<a id='L29' name='L29'></a>  29 <em class='comment'>   Other result values could be used to indicate a failing test, but</em>
+<a id='L30' name='L30'></a>  30 <em class='comment'>   the result of the expression is passed to exit and exit only</em>
+<a id='L31' name='L31'></a>  31 <em class='comment'>   returns the lower 8 bits of its input.  A non-zero return with some</em>
+<a id='L32' name='L32'></a>  32 <em class='comment'>   values could cause a test to incorrectly be considered passing when</em>
+<a id='L33' name='L33'></a>  33 <em class='comment'>   it really failed.  For this reason, the function should always</em>
+<a id='L34' name='L34'></a>  34 <em class='comment'>   return 0 (EXIT_SUCCESS), 1 (EXIT_FAILURE), or 77</em>
+<a id='L35' name='L35'></a>  35 <em class='comment'>   (EXIT_UNSUPPORTED).</em>
+<a id='L36' name='L36'></a>  36 <em class='comment'></em>
+<a id='L37' name='L37'></a>  37 <em class='comment'>   The test function may print out diagnostic or warning messages as well</em>
+<a id='L38' name='L38'></a>  38 <em class='comment'>   as messages about failures.  These messages should be printed to stdout</em>
+<a id='L39' name='L39'></a>  39 <em class='comment'>   and not stderr so that the output is properly ordered with respect to</em>
+<a id='L40' name='L40'></a>  40 <em class='comment'>   the rest of the glibc testsuite run output.</em>
+<a id='L41' name='L41'></a>  41 <em class='comment'></em>
+<a id='L42' name='L42'></a>  42 <em class='comment'>   Several preprocessors macros can be defined before including this</em>
+<a id='L43' name='L43'></a>  43 <em class='comment'>   file.</em>
+<a id='L44' name='L44'></a>  44 <em class='comment'></em>
+<a id='L45' name='L45'></a>  45 <em class='comment'>   The name of the do_test function can be changed with the</em>
+<a id='L46' name='L46'></a>  46 <em class='comment'>   TEST_FUNCTION macro.  It must expand to the desired function name.</em>
+<a id='L47' name='L47'></a>  47 <em class='comment'></em>
+<a id='L48' name='L48'></a>  48 <em class='comment'>   If the test case needs access to command line parameters, it must</em>
+<a id='L49' name='L49'></a>  49 <em class='comment'>   define the TEST_FUNCTION_ARGV macro with the name of the test</em>
+<a id='L50' name='L50'></a>  50 <em class='comment'>   function.  It must have the following type:</em>
+<a id='L51' name='L51'></a>  51 <em class='comment'></em>
+<a id='L52' name='L52'></a>  52 <em class='comment'>     int TEST_FUNCTION_ARGV (int argc, char **argv);</em>
+<a id='L53' name='L53'></a>  53 <em class='comment'></em>
+<a id='L54' name='L54'></a>  54 <em class='comment'>   This overrides the do_test default function and is incompatible</em>
+<a id='L55' name='L55'></a>  55 <em class='comment'>   with the TEST_FUNCTION macro.</em>
+<a id='L56' name='L56'></a>  56 <em class='comment'></em>
+<a id='L57' name='L57'></a>  57 <em class='comment'>   If PREPARE is defined, it must expand to the name of a function of</em>
+<a id='L58' name='L58'></a>  58 <em class='comment'>   the type</em>
+<a id='L59' name='L59'></a>  59 <em class='comment'></em>
+<a id='L60' name='L60'></a>  60 <em class='comment'>     void PREPARE (int argc, char **);</em>
+<a id='L61' name='L61'></a>  61 <em class='comment'></em>
+<a id='L62' name='L62'></a>  62 <em class='comment'>   This function will be called early, after parsing the command line,</em>
+<a id='L63' name='L63'></a>  63 <em class='comment'>   but before running the test, in the parent process which acts as</em>
+<a id='L64' name='L64'></a>  64 <em class='comment'>   the test supervisor.</em>
+<a id='L65' name='L65'></a>  65 <em class='comment'></em>
+<a id='L66' name='L66'></a>  66 <em class='comment'>   If CLEANUP_HANDLER is defined, it must expand to the name of a</em>
+<a id='L67' name='L67'></a>  67 <em class='comment'>   function of the type</em>
+<a id='L68' name='L68'></a>  68 <em class='comment'></em>
+<a id='L69' name='L69'></a>  69 <em class='comment'>     void CLEANUP_HANDLER (void);</em>
+<a id='L70' name='L70'></a>  70 <em class='comment'></em>
+<a id='L71' name='L71'></a>  71 <em class='comment'>   This function will be called from the timeout (SIGALRM) signal</em>
+<a id='L72' name='L72'></a>  72 <em class='comment'>   handler.</em>
+<a id='L73' name='L73'></a>  73 <em class='comment'></em>
+<a id='L74' name='L74'></a>  74 <em class='comment'>   If EXPECTED_SIGNAL is defined, it must expanded to a constant which</em>
+<a id='L75' name='L75'></a>  75 <em class='comment'>   denotes the expected signal number.</em>
+<a id='L76' name='L76'></a>  76 <em class='comment'></em>
+<a id='L77' name='L77'></a>  77 <em class='comment'>   If EXPECTED_STATUS is defined, it must expand to the expected exit</em>
+<a id='L78' name='L78'></a>  78 <em class='comment'>   status.</em>
+<a id='L79' name='L79'></a>  79 <em class='comment'></em>
+<a id='L80' name='L80'></a>  80 <em class='comment'>   If TIMEOUT is defined, it must be positive constant.  It overrides</em>
+<a id='L81' name='L81'></a>  81 <em class='comment'>   the default test timeout and is measured in seconds.</em>
+<a id='L82' name='L82'></a>  82 <em class='comment'></em>
+<a id='L83' name='L83'></a>  83 <em class='comment'>   If TEST_NO_MALLOPT is defined, the test wrapper will not call</em>
+<a id='L84' name='L84'></a>  84 <em class='comment'>   mallopt.</em>
+<a id='L85' name='L85'></a>  85 <em class='comment'></em>
+<a id='L86' name='L86'></a>  86 <em class='comment'>   Custom command line handling can be implemented by defining the</em>
+<a id='L87' name='L87'></a>  87 <em class='comment'>   CMDLINE_OPTION macro (after including the &lt;getopt.h&gt; header; this</em>
+<a id='L88' name='L88'></a>  88 <em class='comment'>   requires _GNU_SOURCE to be defined).  This macro must expand to a</em>
+<a id='L89' name='L89'></a>  89 <em class='comment'>   to a comma-separated list of braced initializers for struct option</em>
+<a id='L90' name='L90'></a>  90 <em class='comment'>   from &lt;getopt.h&gt;, with a trailing comma.  CMDLINE_PROCESS can be</em>
+<a id='L91' name='L91'></a>  91 <em class='comment'>   defined as the name of a function which is called to process these</em>
+<a id='L92' name='L92'></a>  92 <em class='comment'>   options.  The function is passed the option character/number and</em>
+<a id='L93' name='L93'></a>  93 <em class='comment'>   has this type:</em>
+<a id='L94' name='L94'></a>  94 <em class='comment'></em>
+<a id='L95' name='L95'></a>  95 <em class='comment'>     void CMDLINE_PROCESS (int);</em>
+<a id='L96' name='L96'></a>  96 <em class='comment'></em>
+<a id='L97' name='L97'></a>  97 <em class='comment'>   If the program also to process custom default short command line</em>
+<a id='L98' name='L98'></a>  98 <em class='comment'>   argument (similar to getopt) it must define CMDLINE_OPTSTRING</em>
+<a id='L99' name='L99'></a>  99 <em class='comment'>   with the expected options (for instance "vb").</em>
+<a id='L100' name='L100'></a> 100 <em class='comment'>*/</em>
+<a id='L101' name='L101'></a> 101 
+<a id='L102' name='L102'></a> 102 <em class='sharp'>#include</em> &lt;<a href='5902.html'>support/test-driver.h</a>&gt;
+<a id='L103' name='L103'></a> 103 
+<a id='L104' name='L104'></a> 104 <em class='sharp'>#include</em> &lt;<a href='../I/1973.html'>string.h</a>&gt;
+<a id='L105' name='L105'></a> 105 
+<a id='L106' name='L106'></a> 106 <strong class='reserved'>int</strong>
+<a id='L107' name='L107'></a> 107 <a href='../R/21622.html' title='Multiple referred from 22 places.'>main</a> (<strong class='reserved'>int</strong> <a href='../Y/10354.html' title='Multiple used in 866 places.'>argc</a>, <strong class='reserved'>char</strong> **<a href='../Y/10408.html' title='Multiple used in 1144 places.'>argv</a>)
+<a id='L108' name='L108'></a> 108 <em class='brace'>{</em>
+<a id='L109' name='L109'></a> 109   <strong class='reserved'>struct</strong> <a href='../S/5902.html#L26' title='Defined at 26 in support/test-driver.h.'>test_config</a> <a href='../S/5902.html#L26' title='Defined at 26 in support/test-driver.h.'>test_config</a>;
+<a id='L110' name='L110'></a> 110   <a href='../D/33462.html' title='Multiple defined in 30 places.'>memset</a> (&amp;<a href='../S/5902.html#L26' title='Defined at 26 in support/test-driver.h.'>test_config</a>, 0, <strong class='reserved'>sizeof</strong> (<a href='../S/5902.html#L26' title='Defined at 26 in support/test-driver.h.'>test_config</a>));
+<a id='L111' name='L111'></a> 111 
+<a id='L112' name='L112'></a> 112 <em class='sharp'>#ifdef</em> <a href='../D/10133.html' title='Multiple defined in 103 places.'>PREPARE</a>
+<a id='L113' name='L113'></a> 113   <a href='../S/5902.html#L26' title='Defined at 26 in support/test-driver.h.'>test_config</a>.<a href='../Y/22715.html' title='Multiple used in 4 places.'>prepare_function</a> = (<a href='../D/10133.html' title='Multiple defined in 103 places.'>PREPARE</a>);
+<a id='L114' name='L114'></a> 114 <em class='sharp'>#endif</em>
+<a id='L115' name='L115'></a> 115 
+<a id='L116' name='L116'></a> 116 <em class='sharp'>#if</em> <strong class='reserved'>defined</strong> (<a href='../D/15777.html' title='Multiple defined in 677 places.'>TEST_FUNCTION</a>) &amp;&amp; <strong class='reserved'>defined</strong> (TEST_FUNCTON_ARGV)
+<a id='L117' name='L117'></a> 117 <em class='sharp'># error</em> TEST_FUNCTION and TEST_FUNCTION_ARGV cannot be defined at the same time
+<a id='L118' name='L118'></a> 118 <em class='sharp'>#endif</em>
+<a id='L119' name='L119'></a> 119 <em class='sharp'>#ifdef</em> <a href='../S/5917.html#L21' title='Defined at 21 in support/test-run-command.c.'>RUN_COMMAND_MODE</a>
+<a id='L120' name='L120'></a> 120   <a href='../S/5902.html#L26' title='Defined at 26 in support/test-driver.h.'>test_config</a>.<a href='../Y/24394.html' title='Multiple used in 3 places.'>run_command_mode</a> = 1;
+<a id='L121' name='L121'></a> 121 <em class='sharp'>#elif</em> <strong class='reserved'>defined</strong> (<a href='../D/15777.html' title='Multiple defined in 677 places.'>TEST_FUNCTION</a>)
+<a id='L122' name='L122'></a> 122   <a href='../S/5902.html#L26' title='Defined at 26 in support/test-driver.h.'>test_config</a>.<a href='../D/37705.html' title='Multiple defined in 2 places.'>test_function</a> = <a href='../D/15777.html' title='Multiple defined in 677 places.'>TEST_FUNCTION</a>;
+<a id='L123' name='L123'></a> 123 <em class='sharp'>#elif</em> <strong class='reserved'>defined</strong> (<a href='../D/15778.html' title='Multiple defined in 22 places.'>TEST_FUNCTION_ARGV</a>)
+<a id='L124' name='L124'></a> 124   <a href='../S/5902.html#L26' title='Defined at 26 in support/test-driver.h.'>test_config</a>.<a href='../Y/27018.html' title='Multiple used in 4 places.'>test_function_argv</a> = <a href='../D/15778.html' title='Multiple defined in 22 places.'>TEST_FUNCTION_ARGV</a>;
+<a id='L125' name='L125'></a> 125 <em class='sharp'>#else</em>
+<a id='L126' name='L126'></a> 126   <a href='../S/5902.html#L26' title='Defined at 26 in support/test-driver.h.'>test_config</a>.<a href='../D/37705.html' title='Multiple defined in 2 places.'>test_function</a> = <a href='../D/29701.html' title='Multiple defined in 1421 places.'>do_test</a>;
+<a id='L127' name='L127'></a> 127 <em class='sharp'>#endif</em>
+<a id='L128' name='L128'></a> 128 
+<a id='L129' name='L129'></a> 129 <em class='sharp'>#ifdef</em> <a href='../D/1287.html' title='Multiple defined in 10 places.'>CLEANUP_HANDLER</a>
+<a id='L130' name='L130'></a> 130   <a href='../S/5902.html#L26' title='Defined at 26 in support/test-driver.h.'>test_config</a>.<a href='../Y/11647.html' title='Multiple used in 6 places.'>cleanup_function</a> = <a href='../D/1287.html' title='Multiple defined in 10 places.'>CLEANUP_HANDLER</a>;
+<a id='L131' name='L131'></a> 131 <em class='sharp'>#endif</em>
+<a id='L132' name='L132'></a> 132 
+<a id='L133' name='L133'></a> 133 <em class='sharp'>#ifdef</em> <a href='../D/3890.html' title='Multiple defined in 9 places.'>EXPECTED_SIGNAL</a>
+<a id='L134' name='L134'></a> 134   <a href='../S/5902.html#L26' title='Defined at 26 in support/test-driver.h.'>test_config</a>.<a href='../Y/14180.html' title='Multiple used in 9 places.'>expected_signal</a> = (<a href='../D/3890.html' title='Multiple defined in 9 places.'>EXPECTED_SIGNAL</a>);
+<a id='L135' name='L135'></a> 135 <em class='sharp'>#endif</em>
+<a id='L136' name='L136'></a> 136 
+<a id='L137' name='L137'></a> 137 <em class='sharp'>#ifdef</em> <a href='../D/3891.html' title='Multiple defined in 6 places.'>EXPECTED_STATUS</a>
+<a id='L138' name='L138'></a> 138   <a href='../S/5902.html#L26' title='Defined at 26 in support/test-driver.h.'>test_config</a>.<a href='../Y/14184.html' title='Multiple used in 7 places.'>expected_status</a> = (<a href='../D/3891.html' title='Multiple defined in 6 places.'>EXPECTED_STATUS</a>);
+<a id='L139' name='L139'></a> 139 <em class='sharp'>#endif</em>
+<a id='L140' name='L140'></a> 140 
+<a id='L141' name='L141'></a> 141 <em class='sharp'>#ifdef</em> <a href='../S/2823.html#L55' title='Defined at 55 in elf/tst-dlopenfail-2.c.'>TEST_NO_MALLOPT</a>
+<a id='L142' name='L142'></a> 142   <a href='../S/5902.html#L26' title='Defined at 26 in support/test-driver.h.'>test_config</a>.<a href='../Y/20983.html' title='Multiple used in 3 places.'>no_mallopt</a> = 1;
+<a id='L143' name='L143'></a> 143 <em class='sharp'>#endif</em>
+<a id='L144' name='L144'></a> 144 
+<a id='L145' name='L145'></a> 145 <em class='sharp'>#ifdef</em> <a href='../S/5568.html#L35' title='Defined at 35 in libio/tst-vtables-interposed.c.'>TEST_NO_SETVBUF</a>
+<a id='L146' name='L146'></a> 146   <a href='../S/5902.html#L26' title='Defined at 26 in support/test-driver.h.'>test_config</a>.<a href='../Y/20994.html' title='Multiple used in 3 places.'>no_setvbuf</a> = 1;
+<a id='L147' name='L147'></a> 147 <em class='sharp'>#endif</em>
+<a id='L148' name='L148'></a> 148 
+<a id='L149' name='L149'></a> 149 <em class='sharp'>#ifdef</em> <a href='../D/15936.html' title='Multiple defined in 62 places.'>TIMEOUT</a>
+<a id='L150' name='L150'></a> 150   <a href='../S/5902.html#L26' title='Defined at 26 in support/test-driver.h.'>test_config</a>.<a href='../Y/27314.html' title='Multiple used in 406 places.'>timeout</a> = <a href='../D/15936.html' title='Multiple defined in 62 places.'>TIMEOUT</a>;
+<a id='L151' name='L151'></a> 151 <em class='sharp'>#endif</em>
+<a id='L152' name='L152'></a> 152 
+<a id='L153' name='L153'></a> 153 <em class='sharp'>#ifdef</em> <a href='../D/1383.html' title='Multiple defined in 25 places.'>CMDLINE_OPTIONS</a>
+<a id='L154' name='L154'></a> 154   <strong class='reserved'>struct</strong> <a href='../S/905.html#L50' title='Defined at 50 in posix/bits/getopt_ext.h.'>option</a> <a href='../Y/21787.html' title='Multiple used in 216 places.'>options</a>[] =
+<a id='L155' name='L155'></a> 155     <em class='brace'>{</em>
+<a id='L156' name='L156'></a> 156       <a href='../D/1383.html' title='Multiple defined in 25 places.'>CMDLINE_OPTIONS</a>
+<a id='L157' name='L157'></a> 157       <a href='../S/5902.html#L60' title='Defined at 60 in support/test-driver.h.'>TEST_DEFAULT_OPTIONS</a>
+<a id='L158' name='L158'></a> 158     <em class='brace'>}</em>;
+<a id='L159' name='L159'></a> 159   <a href='../S/5902.html#L26' title='Defined at 26 in support/test-driver.h.'>test_config</a>.<a href='../Y/21787.html' title='Multiple used in 216 places.'>options</a> = &amp;<a href='../Y/21787.html' title='Multiple used in 216 places.'>options</a>;
+<a id='L160' name='L160'></a> 160 <em class='sharp'>#endif</em>
+<a id='L161' name='L161'></a> 161 <em class='sharp'>#ifdef</em> <a href='../D/1384.html' title='Multiple defined in 13 places.'>CMDLINE_PROCESS</a>
+<a id='L162' name='L162'></a> 162   <a href='../S/5902.html#L26' title='Defined at 26 in support/test-driver.h.'>test_config</a>.<a href='../Y/11754.html' title='Multiple used in 4 places.'>cmdline_function</a> = <a href='../D/1384.html' title='Multiple defined in 13 places.'>CMDLINE_PROCESS</a>;
+<a id='L163' name='L163'></a> 163 <em class='sharp'>#endif</em>
+<a id='L164' name='L164'></a> 164 <em class='sharp'>#ifdef</em> <a href='../Y/205.html' title='Multiple used in 2 places.'>CMDLINE_OPTSTRING</a>
+<a id='L165' name='L165'></a> 165   <a href='../S/5902.html#L26' title='Defined at 26 in support/test-driver.h.'>test_config</a>.<a href='../Y/21795.html' title='Multiple used in 29 places.'>optstring</a> = "+" <a href='../Y/205.html' title='Multiple used in 2 places.'>CMDLINE_OPTSTRING</a>;
+<a id='L166' name='L166'></a> 166 <em class='sharp'>#else</em>
+<a id='L167' name='L167'></a> 167   <a href='../S/5902.html#L26' title='Defined at 26 in support/test-driver.h.'>test_config</a>.<a href='../Y/21795.html' title='Multiple used in 29 places.'>optstring</a> = "+";
+<a id='L168' name='L168'></a> 168 <em class='sharp'>#endif</em>
+<a id='L169' name='L169'></a> 169 
+<a id='L170' name='L170'></a> 170   <strong class='reserved'>return</strong> <a href='../S/5846.html#L270' title='Defined at 270 in support/support_test_main.c.'>support_test_main</a> (<a href='../Y/10354.html' title='Multiple used in 866 places.'>argc</a>, <a href='../Y/10408.html' title='Multiple used in 1144 places.'>argv</a>, &amp;<a href='../S/5902.html#L26' title='Defined at 26 in support/test-driver.h.'>test_config</a>);
+<a id='L171' name='L171'></a> 171 <em class='brace'>}</em>
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;][^]<a href='#L107'>[v]</a><a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

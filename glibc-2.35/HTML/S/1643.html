@@ -1,0 +1,485 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>nscd/nscd-client.h</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18933.html'>nscd</a>/nscd-client.h</h2>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L241'>[^]</a><a href='#L388'>[v]</a>[top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<h2 class='header'><a href='../J/4044.html' title='Multiple included from 12 places.'>INCLUDED FROM</a></h2>
+<hr />
+<h2 class='header'>DEFINITIONS</h2>
+This source file includes following definitions.
+<ol>
+<li><a href='#L241' title='Defined at 241.'>datahead_init_common</a></li>
+<li><a href='#L259' title='Defined at 259.'>datahead_init_pos</a></li>
+<li><a href='#L271' title='Defined at 271.'>datahead_init_neg</a></li>
+<li><a href='#L370' title='Defined at 370.'>__nscd_acquire_maplock</a></li>
+<li><a href='#L388' title='Defined at 388.'>__nscd_open_socket</a></li>
+</ol>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* Copyright (c) 1998-2022 Free Software Foundation, Inc.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'></em>
+<a id='L4' name='L4'></a>   4 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'></em>
+<a id='L9' name='L9'></a>   9 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'></em>
+<a id='L14' name='L14'></a>  14 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   License along with the GNU C Library; if not, see</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L17' name='L17'></a>  17 
+<a id='L18' name='L18'></a>  18 <em class='comment'>/* This file defines everything that client code should need to</em>
+<a id='L19' name='L19'></a>  19 <em class='comment'>   know to talk to the nscd daemon.  */</em>
+<a id='L20' name='L20'></a>  20 
+<a id='L21' name='L21'></a>  21 <em class='sharp'>#ifndef</em> <a href='../S/1643.html#L22' title='Defined at 22 in nscd/nscd-client.h.'>_NSCD_CLIENT_H</a>
+<a id='L22' name='L22'></a>  22 <em class='sharp'>#define</em> <a href='../S/1643.html#L21' title='Referred from 21 in nscd/nscd-client.h.'>_NSCD_CLIENT_H</a>  1
+<a id='L23' name='L23'></a>  23 
+<a id='L24' name='L24'></a>  24 <em class='sharp'>#include</em> &lt;stdbool.h&gt;
+<a id='L25' name='L25'></a>  25 <em class='sharp'>#include</em> &lt;<a href='../I/1969.html'>stdint.h</a>&gt;
+<a id='L26' name='L26'></a>  26 <em class='sharp'>#include</em> &lt;<a href='../I/1973.html'>string.h</a>&gt;
+<a id='L27' name='L27'></a>  27 <em class='sharp'>#include</em> &lt;<a href='../I/176.html'>time.h</a>&gt;
+<a id='L28' name='L28'></a>  28 <em class='sharp'>#include</em> &lt;<a href='../I/1786.html'>sys/types.h</a>&gt;
+<a id='L29' name='L29'></a>  29 <em class='sharp'>#include</em> &lt;<a href='17870.html'>atomic.h</a>&gt;
+<a id='L30' name='L30'></a>  30 <em class='sharp'>#include</em> &lt;<a href='../I/6119.html'>nscd-types.h</a>&gt;
+<a id='L31' name='L31'></a>  31 <em class='sharp'>#include</em> &lt;<a href='../I/2019.html'>sys/uio.h</a>&gt;
+<a id='L32' name='L32'></a>  32 
+<a id='L33' name='L33'></a>  33 
+<a id='L34' name='L34'></a>  34 <em class='comment'>/* Version number of the daemon interface */</em>
+<a id='L35' name='L35'></a>  35 <em class='sharp'>#define</em> <a href='../R/5581.html' title='Multiple referred from 26 places.'>NSCD_VERSION</a> 2
+<a id='L36' name='L36'></a>  36 
+<a id='L37' name='L37'></a>  37 <em class='comment'>/* Path of the file where the PID of the running system is stored.  */</em>
+<a id='L38' name='L38'></a>  38 <em class='sharp'>#define</em> <a href='../R/11503.html' title='Multiple referred from 4 places.'>_PATH_NSCDPID</a>    "/var/run/nscd/nscd.pid"
+<a id='L39' name='L39'></a>  39 
+<a id='L40' name='L40'></a>  40 <em class='comment'>/* Path for the Unix domain socket.  */</em>
+<a id='L41' name='L41'></a>  41 <em class='sharp'>#define</em> <a href='../R/11504.html' title='Multiple referred from 8 places.'>_PATH_NSCDSOCKET</a> "/var/run/nscd/socket"
+<a id='L42' name='L42'></a>  42 
+<a id='L43' name='L43'></a>  43 <em class='comment'>/* Path for the configuration file.  */</em>
+<a id='L44' name='L44'></a>  44 <em class='sharp'>#define</em> <a href='../S/1630.html#L77' title='Referred from 77 in nscd/nscd.c.'>_PATH_NSCDCONF</a>   "/etc/nscd.conf"
+<a id='L45' name='L45'></a>  45 
+<a id='L46' name='L46'></a>  46 <em class='comment'>/* Maximum allowed length for the key.  */</em>
+<a id='L47' name='L47'></a>  47 <em class='sharp'>#define</em> <a href='../R/4695.html' title='Multiple referred from 3 places.'>MAXKEYLEN</a> 1024
+<a id='L48' name='L48'></a>  48 
+<a id='L49' name='L49'></a>  49 
+<a id='L50' name='L50'></a>  50 <em class='comment'>/* Available services.  */</em>
+<a id='L51' name='L51'></a>  51 <strong class='reserved'>typedef</strong> <strong class='reserved'>enum</strong>
+<a id='L52' name='L52'></a>  52 <em class='brace'>{</em>
+<a id='L53' name='L53'></a>  53   <a href='../R/3047.html' title='Multiple referred from 14 places.'>GETPWBYNAME</a>,
+<a id='L54' name='L54'></a>  54   <a href='../R/3048.html' title='Multiple referred from 11 places.'>GETPWBYUID</a>,
+<a id='L55' name='L55'></a>  55   <a href='../R/3037.html' title='Multiple referred from 13 places.'>GETGRBYNAME</a>,
+<a id='L56' name='L56'></a>  56   <a href='../R/3036.html' title='Multiple referred from 11 places.'>GETGRBYGID</a>,
+<a id='L57' name='L57'></a>  57   <a href='../R/3040.html' title='Multiple referred from 15 places.'>GETHOSTBYNAME</a>,
+<a id='L58' name='L58'></a>  58   <a href='../R/3041.html' title='Multiple referred from 11 places.'>GETHOSTBYNAMEv6</a>,
+<a id='L59' name='L59'></a>  59   <a href='../R/3038.html' title='Multiple referred from 22 places.'>GETHOSTBYADDR</a>,
+<a id='L60' name='L60'></a>  60   <a href='../R/3039.html' title='Multiple referred from 13 places.'>GETHOSTBYADDRv6</a>,
+<a id='L61' name='L61'></a>  61   <a href='../R/7673.html' title='Multiple referred from 5 places.'>SHUTDOWN</a>,     <em class='comment'>/* Shut the server down.  */</em>
+<a id='L62' name='L62'></a>  62   <a href='../R/3053.html' title='Multiple referred from 6 places.'>GETSTAT</a>,      <em class='comment'>/* Get the server statistic.  */</em>
+<a id='L63' name='L63'></a>  63   <a href='../R/3864.html' title='Multiple referred from 6 places.'>INVALIDATE</a>,           <em class='comment'>/* Invalidate one special cache.  */</em>
+<a id='L64' name='L64'></a>  64   <a href='../R/3031.html' title='Multiple referred from 5 places.'>GETFDPW</a>,
+<a id='L65' name='L65'></a>  65   <a href='../R/3028.html' title='Multiple referred from 6 places.'>GETFDGR</a>,
+<a id='L66' name='L66'></a>  66   <a href='../R/3029.html' title='Multiple referred from 7 places.'>GETFDHST</a>,
+<a id='L67' name='L67'></a>  67   <a href='../R/3025.html' title='Multiple referred from 9 places.'>GETAI</a>,
+<a id='L68' name='L68'></a>  68   <a href='../R/3717.html' title='Multiple referred from 10 places.'>INITGROUPS</a>,
+<a id='L69' name='L69'></a>  69   <a href='../R/3049.html' title='Multiple referred from 9 places.'>GETSERVBYNAME</a>,
+<a id='L70' name='L70'></a>  70   <a href='../R/3050.html' title='Multiple referred from 9 places.'>GETSERVBYPORT</a>,
+<a id='L71' name='L71'></a>  71   <a href='../R/3032.html' title='Multiple referred from 5 places.'>GETFDSERV</a>,
+<a id='L72' name='L72'></a>  72   <a href='../R/3044.html' title='Multiple referred from 11 places.'>GETNETGRENT</a>,
+<a id='L73' name='L73'></a>  73   <a href='../R/3752.html' title='Multiple referred from 9 places.'>INNETGR</a>,
+<a id='L74' name='L74'></a>  74   <a href='../R/3030.html' title='Multiple referred from 6 places.'>GETFDNETGR</a>,
+<a id='L75' name='L75'></a>  75   <a href='../R/4177.html' title='Multiple referred from 8 places.'>LASTREQ</a>
+<a id='L76' name='L76'></a>  76 <em class='brace'>}</em> <a href='../R/23765.html' title='Multiple referred from 25 places.'>request_type</a>;
+<a id='L77' name='L77'></a>  77 
+<a id='L78' name='L78'></a>  78 
+<a id='L79' name='L79'></a>  79 <em class='comment'>/* Header common to all requests */</em>
+<a id='L80' name='L80'></a>  80 <strong class='reserved'>typedef</strong> <strong class='reserved'>struct</strong>
+<a id='L81' name='L81'></a>  81 <em class='brace'>{</em>
+<a id='L82' name='L82'></a>  82   <a href='../S/137.html#L26' title='Defined at 26 in bits/stdint-intn.h.'>int32_t</a> <a href='../Y/28665.html' title='Multiple used in 388 places.'>version</a>;  <em class='comment'>/* Version number of the daemon interface.  */</em>
+<a id='L83' name='L83'></a>  83   <a href='../S/1643.html#L76' title='Defined at 76 in nscd/nscd-client.h.'>request_type</a> <a href='../D/38608.html' title='Multiple defined in 6 places.'>type</a>;    <em class='comment'>/* Service requested.  */</em>
+<a id='L84' name='L84'></a>  84   <a href='../S/137.html#L26' title='Defined at 26 in bits/stdint-intn.h.'>int32_t</a> <a href='../Y/17485.html' title='Multiple used in 186 places.'>key_len</a>;  <em class='comment'>/* Key length.  */</em>
+<a id='L85' name='L85'></a>  85 <em class='brace'>}</em> <a href='../R/23764.html' title='Multiple referred from 68 places.'>request_header</a>;
+<a id='L86' name='L86'></a>  86 
+<a id='L87' name='L87'></a>  87 
+<a id='L88' name='L88'></a>  88 <em class='comment'>/* Structure sent in reply to password query.  Note that this struct is</em>
+<a id='L89' name='L89'></a>  89 <em class='comment'>   sent also if the service is disabled or there is no record found.  */</em>
+<a id='L90' name='L90'></a>  90 <strong class='reserved'>typedef</strong> <strong class='reserved'>struct</strong>
+<a id='L91' name='L91'></a>  91 <em class='brace'>{</em>
+<a id='L92' name='L92'></a>  92   <a href='../S/137.html#L26' title='Defined at 26 in bits/stdint-intn.h.'>int32_t</a> <a href='../Y/28665.html' title='Multiple used in 388 places.'>version</a>;
+<a id='L93' name='L93'></a>  93   <a href='../S/137.html#L26' title='Defined at 26 in bits/stdint-intn.h.'>int32_t</a> <a href='../S/1663.html#L43' title='Defined at 43 in nscd/initgrcache.c.'>found</a>;
+<a id='L94' name='L94'></a>  94   <a href='../D/34271.html' title='Multiple defined in 2 places.'>nscd_ssize_t</a> <a href='../Y/23158.html' title='Multiple used in 11 places.'>pw_name_len</a>;
+<a id='L95' name='L95'></a>  95   <a href='../D/34271.html' title='Multiple defined in 2 places.'>nscd_ssize_t</a> <a href='../Y/23160.html' title='Multiple used in 10 places.'>pw_passwd_len</a>;
+<a id='L96' name='L96'></a>  96   <a href='../D/38677.html' title='Multiple defined in 6 places.'>uid_t</a> <a href='../Y/23164.html' title='Multiple used in 74 places.'>pw_uid</a>;
+<a id='L97' name='L97'></a>  97   <a href='../D/31308.html' title='Multiple defined in 10 places.'>gid_t</a> <a href='../Y/23155.html' title='Multiple used in 33 places.'>pw_gid</a>;
+<a id='L98' name='L98'></a>  98   <a href='../D/34271.html' title='Multiple defined in 2 places.'>nscd_ssize_t</a> <a href='../Y/23154.html' title='Multiple used in 10 places.'>pw_gecos_len</a>;
+<a id='L99' name='L99'></a>  99   <a href='../D/34271.html' title='Multiple defined in 2 places.'>nscd_ssize_t</a> <a href='../Y/23152.html' title='Multiple used in 10 places.'>pw_dir_len</a>;
+<a id='L100' name='L100'></a> 100   <a href='../D/34271.html' title='Multiple defined in 2 places.'>nscd_ssize_t</a> <a href='../Y/23163.html' title='Multiple used in 10 places.'>pw_shell_len</a>;
+<a id='L101' name='L101'></a> 101 <em class='brace'>}</em> <a href='../R/23344.html' title='Multiple referred from 6 places.'>pw_response_header</a>;
+<a id='L102' name='L102'></a> 102 
+<a id='L103' name='L103'></a> 103 
+<a id='L104' name='L104'></a> 104 <em class='comment'>/* Structure sent in reply to group query.  Note that this struct is</em>
+<a id='L105' name='L105'></a> 105 <em class='comment'>   sent also if the service is disabled or there is no record found.  */</em>
+<a id='L106' name='L106'></a> 106 <strong class='reserved'>typedef</strong> <strong class='reserved'>struct</strong>
+<a id='L107' name='L107'></a> 107 <em class='brace'>{</em>
+<a id='L108' name='L108'></a> 108   <a href='../S/137.html#L26' title='Defined at 26 in bits/stdint-intn.h.'>int32_t</a> <a href='../Y/28665.html' title='Multiple used in 388 places.'>version</a>;
+<a id='L109' name='L109'></a> 109   <a href='../S/137.html#L26' title='Defined at 26 in bits/stdint-intn.h.'>int32_t</a> <a href='../S/1663.html#L43' title='Defined at 43 in nscd/initgrcache.c.'>found</a>;
+<a id='L110' name='L110'></a> 110   <a href='../D/34271.html' title='Multiple defined in 2 places.'>nscd_ssize_t</a> <a href='../Y/15782.html' title='Multiple used in 19 places.'>gr_name_len</a>;
+<a id='L111' name='L111'></a> 111   <a href='../D/34271.html' title='Multiple defined in 2 places.'>nscd_ssize_t</a> <a href='../Y/15784.html' title='Multiple used in 15 places.'>gr_passwd_len</a>;
+<a id='L112' name='L112'></a> 112   <a href='../D/31308.html' title='Multiple defined in 10 places.'>gid_t</a> <a href='../Y/15771.html' title='Multiple used in 65 places.'>gr_gid</a>;
+<a id='L113' name='L113'></a> 113   <a href='../D/34271.html' title='Multiple defined in 2 places.'>nscd_ssize_t</a> <a href='../Y/15775.html' title='Multiple used in 27 places.'>gr_mem_cnt</a>;
+<a id='L114' name='L114'></a> 114 <em class='brace'>}</em> <a href='../R/20207.html' title='Multiple referred from 6 places.'>gr_response_header</a>;
+<a id='L115' name='L115'></a> 115 
+<a id='L116' name='L116'></a> 116 
+<a id='L117' name='L117'></a> 117 <em class='comment'>/* Structure sent in reply to host query.  Note that this struct is</em>
+<a id='L118' name='L118'></a> 118 <em class='comment'>   sent also if the service is disabled or there is no record found.  */</em>
+<a id='L119' name='L119'></a> 119 <strong class='reserved'>typedef</strong> <strong class='reserved'>struct</strong>
+<a id='L120' name='L120'></a> 120 <em class='brace'>{</em>
+<a id='L121' name='L121'></a> 121   <a href='../S/137.html#L26' title='Defined at 26 in bits/stdint-intn.h.'>int32_t</a> <a href='../Y/28665.html' title='Multiple used in 388 places.'>version</a>;
+<a id='L122' name='L122'></a> 122   <a href='../S/137.html#L26' title='Defined at 26 in bits/stdint-intn.h.'>int32_t</a> <a href='../S/1663.html#L43' title='Defined at 43 in nscd/initgrcache.c.'>found</a>;
+<a id='L123' name='L123'></a> 123   <a href='../D/34271.html' title='Multiple defined in 2 places.'>nscd_ssize_t</a> <a href='../Y/15891.html' title='Multiple used in 17 places.'>h_name_len</a>;
+<a id='L124' name='L124'></a> 124   <a href='../D/34271.html' title='Multiple defined in 2 places.'>nscd_ssize_t</a> <a href='../Y/15880.html' title='Multiple used in 28 places.'>h_aliases_cnt</a>;
+<a id='L125' name='L125'></a> 125   <a href='../S/137.html#L26' title='Defined at 26 in bits/stdint-intn.h.'>int32_t</a> <a href='../Y/15877.html' title='Multiple used in 40 places.'>h_addrtype</a>;
+<a id='L126' name='L126'></a> 126   <a href='../S/137.html#L26' title='Defined at 26 in bits/stdint-intn.h.'>int32_t</a> <a href='../Y/15889.html' title='Multiple used in 52 places.'>h_length</a>;
+<a id='L127' name='L127'></a> 127   <a href='../D/34271.html' title='Multiple defined in 2 places.'>nscd_ssize_t</a> <a href='../Y/15875.html' title='Multiple used in 31 places.'>h_addr_list_cnt</a>;
+<a id='L128' name='L128'></a> 128   <a href='../S/137.html#L26' title='Defined at 26 in bits/stdint-intn.h.'>int32_t</a> <a href='../D/30024.html' title='Multiple defined in 4 places.'>error</a>;
+<a id='L129' name='L129'></a> 129 <em class='brace'>}</em> <a href='../R/20362.html' title='Multiple referred from 8 places.'>hst_response_header</a>;
+<a id='L130' name='L130'></a> 130 
+<a id='L131' name='L131'></a> 131 
+<a id='L132' name='L132'></a> 132 <em class='comment'>/* Structure sent in reply to addrinfo query.  Note that this struct is</em>
+<a id='L133' name='L133'></a> 133 <em class='comment'>   sent also if the service is disabled or there is no record found.  */</em>
+<a id='L134' name='L134'></a> 134 <strong class='reserved'>typedef</strong> <strong class='reserved'>struct</strong>
+<a id='L135' name='L135'></a> 135 <em class='brace'>{</em>
+<a id='L136' name='L136'></a> 136   <a href='../S/137.html#L26' title='Defined at 26 in bits/stdint-intn.h.'>int32_t</a> <a href='../Y/28665.html' title='Multiple used in 388 places.'>version</a>;
+<a id='L137' name='L137'></a> 137   <a href='../S/137.html#L26' title='Defined at 26 in bits/stdint-intn.h.'>int32_t</a> <a href='../S/1663.html#L43' title='Defined at 43 in nscd/initgrcache.c.'>found</a>;
+<a id='L138' name='L138'></a> 138   <a href='../D/34271.html' title='Multiple defined in 2 places.'>nscd_ssize_t</a> <a href='../D/33816.html' title='Multiple defined in 2 places.'>naddrs</a>;
+<a id='L139' name='L139'></a> 139   <a href='../D/34271.html' title='Multiple defined in 2 places.'>nscd_ssize_t</a> <a href='../Y/9989.html' title='Multiple used in 15 places.'>addrslen</a>;
+<a id='L140' name='L140'></a> 140   <a href='../D/34271.html' title='Multiple defined in 2 places.'>nscd_ssize_t</a> <a href='../Y/11303.html' title='Multiple used in 14 places.'>canonlen</a>;
+<a id='L141' name='L141'></a> 141   <a href='../S/137.html#L26' title='Defined at 26 in bits/stdint-intn.h.'>int32_t</a> <a href='../D/30024.html' title='Multiple defined in 4 places.'>error</a>;
+<a id='L142' name='L142'></a> 142 <em class='brace'>}</em> <a href='../R/17128.html' title='Multiple referred from 5 places.'>ai_response_header</a>;
+<a id='L143' name='L143'></a> 143 
+<a id='L144' name='L144'></a> 144 <em class='comment'>/* Structure filled in by __nscd_getai.  */</em>
+<a id='L145' name='L145'></a> 145 <strong class='reserved'>struct</strong> <a href='../R/22494.html' title='Multiple referred from 6 places.'>nscd_ai_result</a>
+<a id='L146' name='L146'></a> 146 <em class='brace'>{</em>
+<a id='L147' name='L147'></a> 147   <strong class='reserved'>int</strong> <a href='../D/33816.html' title='Multiple defined in 2 places.'>naddrs</a>;
+<a id='L148' name='L148'></a> 148   <strong class='reserved'>char</strong> *<a href='../Y/11293.html' title='Multiple used in 67 places.'>canon</a>;
+<a id='L149' name='L149'></a> 149   <a href='../S/223.html#L24' title='Defined at 24 in bits/stdint-uintn.h.'>uint8_t</a> *<a href='../Y/14364.html' title='Multiple used in 215 places.'>family</a>;
+<a id='L150' name='L150'></a> 150   <strong class='reserved'>char</strong> *<a href='../Y/9985.html' title='Multiple used in 47 places.'>addrs</a>;
+<a id='L151' name='L151'></a> 151 <em class='brace'>}</em>;
+<a id='L152' name='L152'></a> 152 
+<a id='L153' name='L153'></a> 153 <em class='comment'>/* Structure sent in reply to initgroups query.  Note that this struct is</em>
+<a id='L154' name='L154'></a> 154 <em class='comment'>   sent also if the service is disabled or there is no record found.  */</em>
+<a id='L155' name='L155'></a> 155 <strong class='reserved'>typedef</strong> <strong class='reserved'>struct</strong>
+<a id='L156' name='L156'></a> 156 <em class='brace'>{</em>
+<a id='L157' name='L157'></a> 157   <a href='../S/137.html#L26' title='Defined at 26 in bits/stdint-intn.h.'>int32_t</a> <a href='../Y/28665.html' title='Multiple used in 388 places.'>version</a>;
+<a id='L158' name='L158'></a> 158   <a href='../S/137.html#L26' title='Defined at 26 in bits/stdint-intn.h.'>int32_t</a> <a href='../S/1663.html#L43' title='Defined at 43 in nscd/initgrcache.c.'>found</a>;
+<a id='L159' name='L159'></a> 159   <a href='../D/34271.html' title='Multiple defined in 2 places.'>nscd_ssize_t</a> <a href='../S/1663.html#L45' title='Defined at 45 in nscd/initgrcache.c.'>ngrps</a>;
+<a id='L160' name='L160'></a> 160 <em class='brace'>}</em> <a href='../R/20623.html' title='Multiple referred from 5 places.'>initgr_response_header</a>;
+<a id='L161' name='L161'></a> 161 
+<a id='L162' name='L162'></a> 162 
+<a id='L163' name='L163'></a> 163 <em class='comment'>/* Structure sent in reply to services query.  Note that this struct is</em>
+<a id='L164' name='L164'></a> 164 <em class='comment'>   sent also if the service is disabled or there is no record found.  */</em>
+<a id='L165' name='L165'></a> 165 <strong class='reserved'>typedef</strong> <strong class='reserved'>struct</strong>
+<a id='L166' name='L166'></a> 166 <em class='brace'>{</em>
+<a id='L167' name='L167'></a> 167   <a href='../S/137.html#L26' title='Defined at 26 in bits/stdint-intn.h.'>int32_t</a> <a href='../Y/28665.html' title='Multiple used in 388 places.'>version</a>;
+<a id='L168' name='L168'></a> 168   <a href='../S/137.html#L26' title='Defined at 26 in bits/stdint-intn.h.'>int32_t</a> <a href='../S/1663.html#L43' title='Defined at 43 in nscd/initgrcache.c.'>found</a>;
+<a id='L169' name='L169'></a> 169   <a href='../D/34271.html' title='Multiple defined in 2 places.'>nscd_ssize_t</a> <a href='../Y/24518.html' title='Multiple used in 15 places.'>s_name_len</a>;
+<a id='L170' name='L170'></a> 170   <a href='../D/34271.html' title='Multiple defined in 2 places.'>nscd_ssize_t</a> <a href='../Y/24524.html' title='Multiple used in 15 places.'>s_proto_len</a>;
+<a id='L171' name='L171'></a> 171   <a href='../D/34271.html' title='Multiple defined in 2 places.'>nscd_ssize_t</a> <a href='../Y/24492.html' title='Multiple used in 33 places.'>s_aliases_cnt</a>;
+<a id='L172' name='L172'></a> 172   <a href='../S/137.html#L26' title='Defined at 26 in bits/stdint-intn.h.'>int32_t</a> <a href='../Y/24522.html' title='Multiple used in 15 places.'>s_port</a>;
+<a id='L173' name='L173'></a> 173 <em class='brace'>}</em> <a href='../R/24200.html' title='Multiple referred from 6 places.'>serv_response_header</a>;
+<a id='L174' name='L174'></a> 174 
+<a id='L175' name='L175'></a> 175 
+<a id='L176' name='L176'></a> 176 <em class='comment'>/* Structure send in reply to netgroup query.  Note that this struct is</em>
+<a id='L177' name='L177'></a> 177 <em class='comment'>   sent also if the service is disabled or there is no record found.  */</em>
+<a id='L178' name='L178'></a> 178 <strong class='reserved'>typedef</strong> <strong class='reserved'>struct</strong>
+<a id='L179' name='L179'></a> 179 <em class='brace'>{</em>
+<a id='L180' name='L180'></a> 180   <a href='../S/137.html#L26' title='Defined at 26 in bits/stdint-intn.h.'>int32_t</a> <a href='../Y/28665.html' title='Multiple used in 388 places.'>version</a>;
+<a id='L181' name='L181'></a> 181   <a href='../S/137.html#L26' title='Defined at 26 in bits/stdint-intn.h.'>int32_t</a> <a href='../S/1663.html#L43' title='Defined at 43 in nscd/initgrcache.c.'>found</a>;
+<a id='L182' name='L182'></a> 182   <a href='../D/34271.html' title='Multiple defined in 2 places.'>nscd_ssize_t</a> <a href='../Y/21168.html' title='Multiple used in 20 places.'>nresults</a>;
+<a id='L183' name='L183'></a> 183   <a href='../D/34271.html' title='Multiple defined in 2 places.'>nscd_ssize_t</a> <a href='../Y/23938.html' title='Multiple used in 24 places.'>result_len</a>;
+<a id='L184' name='L184'></a> 184 <em class='brace'>}</em> <a href='../R/22170.html' title='Multiple referred from 6 places.'>netgroup_response_header</a>;
+<a id='L185' name='L185'></a> 185 
+<a id='L186' name='L186'></a> 186 <strong class='reserved'>typedef</strong> <strong class='reserved'>struct</strong>
+<a id='L187' name='L187'></a> 187 <em class='brace'>{</em>
+<a id='L188' name='L188'></a> 188   <a href='../S/137.html#L26' title='Defined at 26 in bits/stdint-intn.h.'>int32_t</a> <a href='../Y/28665.html' title='Multiple used in 388 places.'>version</a>;
+<a id='L189' name='L189'></a> 189   <a href='../S/137.html#L26' title='Defined at 26 in bits/stdint-intn.h.'>int32_t</a> <a href='../S/1663.html#L43' title='Defined at 43 in nscd/initgrcache.c.'>found</a>;
+<a id='L190' name='L190'></a> 190   <a href='../S/137.html#L26' title='Defined at 26 in bits/stdint-intn.h.'>int32_t</a> <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a>;
+<a id='L191' name='L191'></a> 191 <em class='brace'>}</em> <a href='../R/20639.html' title='Multiple referred from 6 places.'>innetgroup_response_header</a>;
+<a id='L192' name='L192'></a> 192 
+<a id='L193' name='L193'></a> 193 
+<a id='L194' name='L194'></a> 194 <em class='comment'>/* Type for offsets in data part of database.  */</em>
+<a id='L195' name='L195'></a> 195 <strong class='reserved'>typedef</strong> <a href='../S/223.html#L26' title='Defined at 26 in bits/stdint-uintn.h.'>uint32_t</a> <a href='../R/23676.html' title='Multiple referred from 47 places.'>ref_t</a>;
+<a id='L196' name='L196'></a> 196 <em class='comment'>/* Value for invalid/no reference.  */</em>
+<a id='L197' name='L197'></a> 197 <em class='sharp'>#define</em> <a href='../R/2083.html' title='Multiple referred from 10 places.'>ENDREF</a>  <a href='../S/6759.html#L129' title='Defined at 129 in stdlib/stdint.h.'>UINT32_MAX</a>
+<a id='L198' name='L198'></a> 198 
+<a id='L199' name='L199'></a> 199 <em class='comment'>/* Timestamp type.  */</em>
+<a id='L200' name='L200'></a> 200 <strong class='reserved'>typedef</strong> <a href='../S/223.html#L27' title='Defined at 27 in bits/stdint-uintn.h.'>uint64_t</a> <a href='../R/22513.html' title='Multiple referred from 3 places.'>nscd_time_t</a>;
+<a id='L201' name='L201'></a> 201 
+<a id='L202' name='L202'></a> 202 <em class='comment'>/* Maximum timestamp.  */</em>
+<a id='L203' name='L203'></a> 203 <em class='sharp'>#define</em> <a href='../R/4761.html' title='Multiple referred from 8 places.'>MAX_TIMEOUT_VALUE</a> \
+<a id='L204' name='L204'></a> 204   (<strong class='reserved'>sizeof</strong> (<a href='../D/38112.html' title='Multiple defined in 6 places.'>time_t</a>) == <strong class='reserved'>sizeof</strong> (<strong class='reserved'>long</strong> <strong class='reserved'>int</strong>) ? <a href='../D/7390.html' title='Multiple defined in 4 places.'>LONG_MAX</a> : <a href='../S/18175.html#L81' title='Defined at 81 in include/limits.h.'>INT_MAX</a>)
+<a id='L205' name='L205'></a> 205 
+<a id='L206' name='L206'></a> 206 <em class='comment'>/* Alignment requirement of the beginning of the data region.  */</em>
+<a id='L207' name='L207'></a> 207 <em class='sharp'>#define</em> <a href='../R/116.html' title='Multiple referred from 23 places.'>ALIGN</a> 16
+<a id='L208' name='L208'></a> 208 
+<a id='L209' name='L209'></a> 209 
+<a id='L210' name='L210'></a> 210 <em class='comment'>/* Head of record in data part of database.  */</em>
+<a id='L211' name='L211'></a> 211 <strong class='reserved'>struct</strong> <a href='../R/18443.html' title='Multiple referred from 95 places.'>datahead</a>
+<a id='L212' name='L212'></a> 212 <em class='brace'>{</em>
+<a id='L213' name='L213'></a> 213   <a href='../D/34271.html' title='Multiple defined in 2 places.'>nscd_ssize_t</a> <a href='../Y/10165.html' title='Multiple used in 34 places.'>allocsize</a>;   <em class='comment'>/* Allocated Bytes.  */</em>
+<a id='L214' name='L214'></a> 214   <a href='../D/34271.html' title='Multiple defined in 2 places.'>nscd_ssize_t</a> <a href='../Y/23625.html' title='Multiple used in 36 places.'>recsize</a>;     <em class='comment'>/* Size of the record.  */</em>
+<a id='L215' name='L215'></a> 215   <a href='../S/1643.html#L200' title='Defined at 200 in nscd/nscd-client.h.'>nscd_time_t</a> <a href='../Y/27314.html' title='Multiple used in 406 places.'>timeout</a>;      <em class='comment'>/* Time when this entry becomes invalid.  */</em>
+<a id='L216' name='L216'></a> 216   <a href='../S/223.html#L24' title='Defined at 24 in bits/stdint-uintn.h.'>uint8_t</a> <a href='../Y/21112.html' title='Multiple used in 37 places.'>notfound</a>;     <em class='comment'>/* Nonzero if data has not been found.  */</em>
+<a id='L217' name='L217'></a> 217   <a href='../S/223.html#L24' title='Defined at 24 in bits/stdint-uintn.h.'>uint8_t</a> <a href='../Y/21166.html' title='Multiple used in 32 places.'>nreloads</a>;     <em class='comment'>/* Reloads without use.  */</em>
+<a id='L218' name='L218'></a> 218   <a href='../S/223.html#L24' title='Defined at 24 in bits/stdint-uintn.h.'>uint8_t</a> <a href='../Y/28391.html' title='Multiple used in 37 places.'>usable</a>;       <em class='comment'>/* False if the entry must be ignored.  */</em>
+<a id='L219' name='L219'></a> 219   <a href='../S/223.html#L24' title='Defined at 24 in bits/stdint-uintn.h.'>uint8_t</a> <a href='../S/2757.html#L20' title='Defined at 20 in elf/tst-tlsalign-vars.c.'>unused</a>;       <em class='comment'>/* Unused.  */</em>
+<a id='L220' name='L220'></a> 220   <a href='../S/223.html#L26' title='Defined at 26 in bits/stdint-uintn.h.'>uint32_t</a> <a href='../Y/27941.html' title='Multiple used in 67 places.'>ttl</a>;         <em class='comment'>/* TTL value used.  */</em>
+<a id='L221' name='L221'></a> 221 
+<a id='L222' name='L222'></a> 222   <em class='comment'>/* We need to have the following element aligned for the response</em>
+<a id='L223' name='L223'></a> 223 <em class='comment'>     header data types and their use in the 'struct dataset' types</em>
+<a id='L224' name='L224'></a> 224 <em class='comment'>     defined in the XXXcache.c files.  */</em>
+<a id='L225' name='L225'></a> 225   <strong class='reserved'>union</strong>
+<a id='L226' name='L226'></a> 226   <em class='brace'>{</em>
+<a id='L227' name='L227'></a> 227     <a href='../S/1643.html#L101' title='Defined at 101 in nscd/nscd-client.h.'>pw_response_header</a> <a href='../Y/23186.html' title='Multiple used in 5 places.'>pwdata</a>;
+<a id='L228' name='L228'></a> 228     <a href='../S/1643.html#L114' title='Defined at 114 in nscd/nscd-client.h.'>gr_response_header</a> <a href='../Y/15792.html' title='Multiple used in 4 places.'>grdata</a>;
+<a id='L229' name='L229'></a> 229     <a href='../S/1643.html#L129' title='Defined at 129 in nscd/nscd-client.h.'>hst_response_header</a> <a href='../Y/16227.html' title='Multiple used in 4 places.'>hstdata</a>;
+<a id='L230' name='L230'></a> 230     <a href='../S/1643.html#L142' title='Defined at 142 in nscd/nscd-client.h.'>ai_response_header</a> <a href='../Y/10060.html' title='Multiple used in 4 places.'>aidata</a>;
+<a id='L231' name='L231'></a> 231     <a href='../S/1643.html#L160' title='Defined at 160 in nscd/nscd-client.h.'>initgr_response_header</a> <a href='../Y/16836.html' title='Multiple used in 4 places.'>initgrdata</a>;
+<a id='L232' name='L232'></a> 232     <a href='../S/1643.html#L173' title='Defined at 173 in nscd/nscd-client.h.'>serv_response_header</a> <a href='../Y/25032.html' title='Multiple used in 4 places.'>servdata</a>;
+<a id='L233' name='L233'></a> 233     <a href='../S/1643.html#L184' title='Defined at 184 in nscd/nscd-client.h.'>netgroup_response_header</a> <a href='../Y/20419.html' title='Multiple used in 4 places.'>netgroupdata</a>;
+<a id='L234' name='L234'></a> 234     <a href='../S/1643.html#L191' title='Defined at 191 in nscd/nscd-client.h.'>innetgroup_response_header</a> <a href='../Y/16888.html' title='Multiple used in 4 places.'>innetgroupdata</a>;
+<a id='L235' name='L235'></a> 235     <a href='../D/34271.html' title='Multiple defined in 2 places.'>nscd_ssize_t</a> <a href='../Y/10110.html' title='Multiple used in 401 places.'>align1</a>;
+<a id='L236' name='L236'></a> 236     <a href='../S/1643.html#L200' title='Defined at 200 in nscd/nscd-client.h.'>nscd_time_t</a> <a href='../Y/10111.html' title='Multiple used in 427 places.'>align2</a>;
+<a id='L237' name='L237'></a> 237   <em class='brace'>}</em> <a href='../D/29309.html' title='Multiple defined in 3 places.'>data</a>[0];
+<a id='L238' name='L238'></a> 238 <em class='brace'>}</em>;
+<a id='L239' name='L239'></a> 239 
+<a id='L240' name='L240'></a> 240 <strong class='reserved'>static</strong> <strong class='reserved'>inline</strong> <a href='../D/38112.html' title='Multiple defined in 6 places.'>time_t</a>
+<a id='L241' name='L241'></a> 241 <a href='../R/18444.html' title='Multiple referred from 2 places.'>datahead_init_common</a> (<strong class='reserved'>struct</strong> <a href='../S/1643.html#L211' title='Defined at 211 in nscd/nscd-client.h.'>datahead</a> *<a href='../S/1663.html#L66' title='Defined at 66 in nscd/initgrcache.c.'>head</a>, <a href='../D/34271.html' title='Multiple defined in 2 places.'>nscd_ssize_t</a> <a href='../Y/10165.html' title='Multiple used in 34 places.'>allocsize</a>,
+<a id='L242' name='L242'></a> 242               <a href='../D/34271.html' title='Multiple defined in 2 places.'>nscd_ssize_t</a> <a href='../Y/23625.html' title='Multiple used in 36 places.'>recsize</a>, <a href='../S/223.html#L26' title='Defined at 26 in bits/stdint-uintn.h.'>uint32_t</a> <a href='../Y/27941.html' title='Multiple used in 67 places.'>ttl</a>)
+<a id='L243' name='L243'></a> 243 <em class='brace'>{</em>
+<a id='L244' name='L244'></a> 244   <em class='comment'>/* Initialize so that we don't write out junk in uninitialized data to the</em>
+<a id='L245' name='L245'></a> 245 <em class='comment'>     cache.  */</em>
+<a id='L246' name='L246'></a> 246   <a href='../D/33462.html' title='Multiple defined in 30 places.'>memset</a> (<a href='../S/1663.html#L66' title='Defined at 66 in nscd/initgrcache.c.'>head</a>, 0, <strong class='reserved'>sizeof</strong> (*<a href='../S/1663.html#L66' title='Defined at 66 in nscd/initgrcache.c.'>head</a>));
+<a id='L247' name='L247'></a> 247 
+<a id='L248' name='L248'></a> 248   <a href='../S/1663.html#L66' title='Defined at 66 in nscd/initgrcache.c.'>head</a>-&gt;<a href='../Y/10165.html' title='Multiple used in 34 places.'>allocsize</a> = <a href='../Y/10165.html' title='Multiple used in 34 places.'>allocsize</a>;
+<a id='L249' name='L249'></a> 249   <a href='../S/1663.html#L66' title='Defined at 66 in nscd/initgrcache.c.'>head</a>-&gt;<a href='../Y/23625.html' title='Multiple used in 36 places.'>recsize</a> = <a href='../Y/23625.html' title='Multiple used in 36 places.'>recsize</a>;
+<a id='L250' name='L250'></a> 250   <a href='../S/1663.html#L66' title='Defined at 66 in nscd/initgrcache.c.'>head</a>-&gt;<a href='../Y/28391.html' title='Multiple used in 37 places.'>usable</a> = <a href='../D/38483.html' title='Multiple defined in 5 places.'>true</a>;
+<a id='L251' name='L251'></a> 251 
+<a id='L252' name='L252'></a> 252   <a href='../S/1663.html#L66' title='Defined at 66 in nscd/initgrcache.c.'>head</a>-&gt;<a href='../Y/27941.html' title='Multiple used in 67 places.'>ttl</a> = <a href='../Y/27941.html' title='Multiple used in 67 places.'>ttl</a>;
+<a id='L253' name='L253'></a> 253 
+<a id='L254' name='L254'></a> 254   <em class='comment'>/* Compute and return the timeout time.  */</em>
+<a id='L255' name='L255'></a> 255   <strong class='reserved'>return</strong> <a href='../S/1663.html#L66' title='Defined at 66 in nscd/initgrcache.c.'>head</a>-&gt;<a href='../Y/27314.html' title='Multiple used in 406 places.'>timeout</a> = <a href='../D/38101.html' title='Multiple defined in 5 places.'>time</a> (<a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>) + <a href='../Y/27941.html' title='Multiple used in 67 places.'>ttl</a>;
+<a id='L256' name='L256'></a> 256 <em class='brace'>}</em>
+<a id='L257' name='L257'></a> 257 
+<a id='L258' name='L258'></a> 258 <strong class='reserved'>static</strong> <strong class='reserved'>inline</strong> <a href='../D/38112.html' title='Multiple defined in 6 places.'>time_t</a>
+<a id='L259' name='L259'></a> 259 <a href='../R/18446.html' title='Multiple referred from 8 places.'>datahead_init_pos</a> (<strong class='reserved'>struct</strong> <a href='../S/1643.html#L211' title='Defined at 211 in nscd/nscd-client.h.'>datahead</a> *<a href='../S/1663.html#L66' title='Defined at 66 in nscd/initgrcache.c.'>head</a>, <a href='../D/34271.html' title='Multiple defined in 2 places.'>nscd_ssize_t</a> <a href='../Y/10165.html' title='Multiple used in 34 places.'>allocsize</a>,
+<a id='L260' name='L260'></a> 260            <a href='../D/34271.html' title='Multiple defined in 2 places.'>nscd_ssize_t</a> <a href='../Y/23625.html' title='Multiple used in 36 places.'>recsize</a>, <a href='../S/223.html#L24' title='Defined at 24 in bits/stdint-uintn.h.'>uint8_t</a> <a href='../Y/21166.html' title='Multiple used in 32 places.'>nreloads</a>, <a href='../S/223.html#L26' title='Defined at 26 in bits/stdint-uintn.h.'>uint32_t</a> <a href='../Y/27941.html' title='Multiple used in 67 places.'>ttl</a>)
+<a id='L261' name='L261'></a> 261 <em class='brace'>{</em>
+<a id='L262' name='L262'></a> 262   <a href='../D/38112.html' title='Multiple defined in 6 places.'>time_t</a> <a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a> = <a href='../S/1643.html#L241' title='Defined at 241 in nscd/nscd-client.h.'>datahead_init_common</a> (<a href='../S/1663.html#L66' title='Defined at 66 in nscd/initgrcache.c.'>head</a>, <a href='../Y/10165.html' title='Multiple used in 34 places.'>allocsize</a>, <a href='../Y/23625.html' title='Multiple used in 36 places.'>recsize</a>, <a href='../Y/27941.html' title='Multiple used in 67 places.'>ttl</a>);
+<a id='L263' name='L263'></a> 263 
+<a id='L264' name='L264'></a> 264   <a href='../S/1663.html#L66' title='Defined at 66 in nscd/initgrcache.c.'>head</a>-&gt;<a href='../Y/21112.html' title='Multiple used in 37 places.'>notfound</a> = <a href='../D/30360.html' title='Multiple defined in 5 places.'>false</a>;
+<a id='L265' name='L265'></a> 265   <a href='../S/1663.html#L66' title='Defined at 66 in nscd/initgrcache.c.'>head</a>-&gt;<a href='../Y/21166.html' title='Multiple used in 32 places.'>nreloads</a> = <a href='../Y/21166.html' title='Multiple used in 32 places.'>nreloads</a>;
+<a id='L266' name='L266'></a> 266 
+<a id='L267' name='L267'></a> 267   <strong class='reserved'>return</strong> <a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a>;
+<a id='L268' name='L268'></a> 268 <em class='brace'>}</em>
+<a id='L269' name='L269'></a> 269 
+<a id='L270' name='L270'></a> 270 <strong class='reserved'>static</strong> <strong class='reserved'>inline</strong> <a href='../D/38112.html' title='Multiple defined in 6 places.'>time_t</a>
+<a id='L271' name='L271'></a> 271 <a href='../R/18445.html' title='Multiple referred from 7 places.'>datahead_init_neg</a> (<strong class='reserved'>struct</strong> <a href='../S/1643.html#L211' title='Defined at 211 in nscd/nscd-client.h.'>datahead</a> *<a href='../S/1663.html#L66' title='Defined at 66 in nscd/initgrcache.c.'>head</a>, <a href='../D/34271.html' title='Multiple defined in 2 places.'>nscd_ssize_t</a> <a href='../Y/10165.html' title='Multiple used in 34 places.'>allocsize</a>,
+<a id='L272' name='L272'></a> 272            <a href='../D/34271.html' title='Multiple defined in 2 places.'>nscd_ssize_t</a> <a href='../Y/23625.html' title='Multiple used in 36 places.'>recsize</a>, <a href='../S/223.html#L26' title='Defined at 26 in bits/stdint-uintn.h.'>uint32_t</a> <a href='../Y/27941.html' title='Multiple used in 67 places.'>ttl</a>)
+<a id='L273' name='L273'></a> 273 <em class='brace'>{</em>
+<a id='L274' name='L274'></a> 274   <a href='../D/38112.html' title='Multiple defined in 6 places.'>time_t</a> <a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a> = <a href='../S/1643.html#L241' title='Defined at 241 in nscd/nscd-client.h.'>datahead_init_common</a> (<a href='../S/1663.html#L66' title='Defined at 66 in nscd/initgrcache.c.'>head</a>, <a href='../Y/10165.html' title='Multiple used in 34 places.'>allocsize</a>, <a href='../Y/23625.html' title='Multiple used in 36 places.'>recsize</a>, <a href='../Y/27941.html' title='Multiple used in 67 places.'>ttl</a>);
+<a id='L275' name='L275'></a> 275 
+<a id='L276' name='L276'></a> 276   <em class='comment'>/* We don't need to touch nreloads here since it is set to our desired value</em>
+<a id='L277' name='L277'></a> 277 <em class='comment'>     (0) when we clear the structure.  */</em>
+<a id='L278' name='L278'></a> 278   <a href='../S/1663.html#L66' title='Defined at 66 in nscd/initgrcache.c.'>head</a>-&gt;<a href='../Y/21112.html' title='Multiple used in 37 places.'>notfound</a> = <a href='../D/38483.html' title='Multiple defined in 5 places.'>true</a>;
+<a id='L279' name='L279'></a> 279 
+<a id='L280' name='L280'></a> 280   <strong class='reserved'>return</strong> <a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a>;
+<a id='L281' name='L281'></a> 281 <em class='brace'>}</em>
+<a id='L282' name='L282'></a> 282 
+<a id='L283' name='L283'></a> 283 <em class='comment'>/* Structure for one hash table entry.  */</em>
+<a id='L284' name='L284'></a> 284 <strong class='reserved'>struct</strong> <a href='../R/20274.html' title='Multiple referred from 78 places.'>hashentry</a>
+<a id='L285' name='L285'></a> 285 <em class='brace'>{</em>
+<a id='L286' name='L286'></a> 286   <a href='../S/1643.html#L76' title='Defined at 76 in nscd/nscd-client.h.'>request_type</a> <a href='../D/38608.html' title='Multiple defined in 6 places.'>type</a>:8;      <em class='comment'>/* Which type of dataset.  */</em>
+<a id='L287' name='L287'></a> 287   <a href='../S/3749.html#L624' title='Defined at 624 in timezone/private.h.'>bool</a> <a href='../D/30553.html' title='Multiple defined in 2 places.'>first</a>;           <em class='comment'>/* True if this was the original key.  */</em>
+<a id='L288' name='L288'></a> 288   <a href='../D/34271.html' title='Multiple defined in 2 places.'>nscd_ssize_t</a> <a href='../D/32598.html' title='Multiple defined in 10 places.'>len</a>;     <em class='comment'>/* Length of key.  */</em>
+<a id='L289' name='L289'></a> 289   <a href='../S/1643.html#L195' title='Defined at 195 in nscd/nscd-client.h.'>ref_t</a> <a href='../D/32455.html' title='Multiple defined in 4 places.'>key</a>;            <em class='comment'>/* Pointer to key.  */</em>
+<a id='L290' name='L290'></a> 290   <a href='../S/137.html#L26' title='Defined at 26 in bits/stdint-intn.h.'>int32_t</a> <a href='../Y/22051.html' title='Multiple used in 77 places.'>owner</a>;        <em class='comment'>/* If secure table, this is the owner.  */</em>
+<a id='L291' name='L291'></a> 291   <a href='../S/1643.html#L195' title='Defined at 195 in nscd/nscd-client.h.'>ref_t</a> <a href='../Y/20703.html' title='Multiple used in 1000 places.'>next</a>;           <em class='comment'>/* Next entry in this hash bucket list.  */</em>
+<a id='L292' name='L292'></a> 292   <a href='../S/1643.html#L195' title='Defined at 195 in nscd/nscd-client.h.'>ref_t</a> <a href='../Y/22139.html' title='Multiple used in 46 places.'>packet</a>;         <em class='comment'>/* Records for the result.  */</em>
+<a id='L293' name='L293'></a> 293   <strong class='reserved'>union</strong>
+<a id='L294' name='L294'></a> 294   <em class='brace'>{</em>
+<a id='L295' name='L295'></a> 295     <strong class='reserved'>struct</strong> <a href='../S/1643.html#L284' title='Defined at 284 in nscd/nscd-client.h.'>hashentry</a> *<a href='../Y/12633.html' title='Multiple used in 4 places.'>dellist</a>;  <em class='comment'>/* Next record to be deleted.  This can be a</em>
+<a id='L296' name='L296'></a> 296 <em class='comment'>                   pointer since only nscd uses this field.  */</em>
+<a id='L297' name='L297'></a> 297     <a href='../S/1643.html#L195' title='Defined at 195 in nscd/nscd-client.h.'>ref_t</a> *<a href='../Y/22754.html' title='Multiple used in 61 places.'>prevp</a>;       <em class='comment'>/* Pointer to field containing forward</em>
+<a id='L298' name='L298'></a> 298 <em class='comment'>                   reference.  */</em>
+<a id='L299' name='L299'></a> 299   <em class='brace'>}</em>;
+<a id='L300' name='L300'></a> 300 <em class='brace'>}</em>;
+<a id='L301' name='L301'></a> 301 
+<a id='L302' name='L302'></a> 302 
+<a id='L303' name='L303'></a> 303 <em class='comment'>/* Current persistent database version.  */</em>
+<a id='L304' name='L304'></a> 304 <em class='sharp'>#define</em> <a href='../R/1255.html' title='Multiple referred from 3 places.'>DB_VERSION</a>  2
+<a id='L305' name='L305'></a> 305 
+<a id='L306' name='L306'></a> 306 <em class='comment'>/* Maximum time allowed between updates of the timestamp.  */</em>
+<a id='L307' name='L307'></a> 307 <em class='sharp'>#define</em> <a href='../R/4633.html' title='Multiple referred from 4 places.'>MAPPING_TIMEOUT</a> (5 * 60)
+<a id='L308' name='L308'></a> 308 
+<a id='L309' name='L309'></a> 309 
+<a id='L310' name='L310'></a> 310 <em class='comment'>/* Used indices for the EXTRA_DATA element of 'database_pers_head'.</em>
+<a id='L311' name='L311'></a> 311 <em class='comment'>   Each database has its own indices.  */</em>
+<a id='L312' name='L312'></a> 312 <em class='sharp'>#define</em> <a href='../R/5578.html' title='Multiple referred from 3 places.'>NSCD_HST_IDX_CONF_TIMESTAMP</a> 0
+<a id='L313' name='L313'></a> 313 
+<a id='L314' name='L314'></a> 314 
+<a id='L315' name='L315'></a> 315 <em class='comment'>/* Header of persistent database file.  */</em>
+<a id='L316' name='L316'></a> 316 <strong class='reserved'>struct</strong> <a href='../R/18440.html' title='Multiple referred from 17 places.'>database_pers_head</a>
+<a id='L317' name='L317'></a> 317 <em class='brace'>{</em>
+<a id='L318' name='L318'></a> 318   <a href='../S/137.html#L26' title='Defined at 26 in bits/stdint-intn.h.'>int32_t</a> <a href='../Y/28665.html' title='Multiple used in 388 places.'>version</a>;
+<a id='L319' name='L319'></a> 319   <a href='../S/137.html#L26' title='Defined at 26 in bits/stdint-intn.h.'>int32_t</a> <a href='../Y/16049.html' title='Multiple used in 7 places.'>header_size</a>;
+<a id='L320' name='L320'></a> 320   <strong class='reserved'>volatile</strong> <a href='../S/137.html#L26' title='Defined at 26 in bits/stdint-intn.h.'>int32_t</a> <a href='../Y/15368.html' title='Multiple used in 67 places.'>gc_cycle</a>;
+<a id='L321' name='L321'></a> 321   <strong class='reserved'>volatile</strong> <a href='../S/137.html#L26' title='Defined at 26 in bits/stdint-intn.h.'>int32_t</a> <a href='../Y/21210.html' title='Multiple used in 10 places.'>nscd_certainly_running</a>;
+<a id='L322' name='L322'></a> 322   <strong class='reserved'>volatile</strong> <a href='../S/1643.html#L200' title='Defined at 200 in nscd/nscd-client.h.'>nscd_time_t</a> <a href='../S/12142.html#L28' title='Defined at 28 in sysdeps/generic/netinet/ip.h.'>timestamp</a>;
+<a id='L323' name='L323'></a> 323   <em class='comment'>/* Room for extensions.  */</em>
+<a id='L324' name='L324'></a> 324   <strong class='reserved'>volatile</strong> <a href='../S/223.html#L26' title='Defined at 26 in bits/stdint-uintn.h.'>uint32_t</a> <a href='../Y/14254.html' title='Multiple used in 4 places.'>extra_data</a>[4];
+<a id='L325' name='L325'></a> 325 
+<a id='L326' name='L326'></a> 326   <a href='../D/34271.html' title='Multiple defined in 2 places.'>nscd_ssize_t</a> <a href='../D/33580.html' title='Multiple defined in 2 places.'>module</a>;
+<a id='L327' name='L327'></a> 327   <a href='../D/34271.html' title='Multiple defined in 2 places.'>nscd_ssize_t</a> <a href='../Y/12473.html' title='Multiple used in 26 places.'>data_size</a>;
+<a id='L328' name='L328'></a> 328 
+<a id='L329' name='L329'></a> 329   <a href='../D/34271.html' title='Multiple defined in 2 places.'>nscd_ssize_t</a> <a href='../Y/14630.html' title='Multiple used in 43 places.'>first_free</a>;  <em class='comment'>/* Offset of first free byte in data area.  */</em>
+<a id='L330' name='L330'></a> 330 
+<a id='L331' name='L331'></a> 331   <a href='../D/34271.html' title='Multiple defined in 2 places.'>nscd_ssize_t</a> <a href='../Y/20395.html' title='Multiple used in 58 places.'>nentries</a>;
+<a id='L332' name='L332'></a> 332   <a href='../D/34271.html' title='Multiple defined in 2 places.'>nscd_ssize_t</a> <a href='../Y/19091.html' title='Multiple used in 8 places.'>maxnentries</a>;
+<a id='L333' name='L333'></a> 333   <a href='../D/34271.html' title='Multiple defined in 2 places.'>nscd_ssize_t</a> <a href='../Y/19093.html' title='Multiple used in 8 places.'>maxnsearched</a>;
+<a id='L334' name='L334'></a> 334 
+<a id='L335' name='L335'></a> 335   <a href='../S/223.html#L27' title='Defined at 27 in bits/stdint-uintn.h.'>uint64_t</a> <a href='../Y/22559.html' title='Multiple used in 7 places.'>poshit</a>;
+<a id='L336' name='L336'></a> 336   <a href='../S/223.html#L27' title='Defined at 27 in bits/stdint-uintn.h.'>uint64_t</a> <a href='../Y/20383.html' title='Multiple used in 7 places.'>neghit</a>;
+<a id='L337' name='L337'></a> 337   <a href='../S/223.html#L27' title='Defined at 27 in bits/stdint-uintn.h.'>uint64_t</a> <a href='../Y/22588.html' title='Multiple used in 7 places.'>posmiss</a>;
+<a id='L338' name='L338'></a> 338   <a href='../S/223.html#L27' title='Defined at 27 in bits/stdint-uintn.h.'>uint64_t</a> <a href='../Y/20386.html' title='Multiple used in 7 places.'>negmiss</a>;
+<a id='L339' name='L339'></a> 339 
+<a id='L340' name='L340'></a> 340   <a href='../S/223.html#L27' title='Defined at 27 in bits/stdint-uintn.h.'>uint64_t</a> <a href='../Y/23511.html' title='Multiple used in 6 places.'>rdlockdelayed</a>;
+<a id='L341' name='L341'></a> 341   <a href='../S/223.html#L27' title='Defined at 27 in bits/stdint-uintn.h.'>uint64_t</a> <a href='../Y/29184.html' title='Multiple used in 6 places.'>wrlockdelayed</a>;
+<a id='L342' name='L342'></a> 342 
+<a id='L343' name='L343'></a> 343   <a href='../S/223.html#L27' title='Defined at 27 in bits/stdint-uintn.h.'>uint64_t</a> <a href='../Y/9946.html' title='Multiple used in 6 places.'>addfailed</a>;
+<a id='L344' name='L344'></a> 344 
+<a id='L345' name='L345'></a> 345   <a href='../S/1643.html#L195' title='Defined at 195 in nscd/nscd-client.h.'>ref_t</a> <a href='../Y/10467.html' title='Multiple used in 1011 places.'>array</a>[0];
+<a id='L346' name='L346'></a> 346 <em class='brace'>}</em>;
+<a id='L347' name='L347'></a> 347 
+<a id='L348' name='L348'></a> 348 
+<a id='L349' name='L349'></a> 349 <em class='comment'>/* Mapped database record.  */</em>
+<a id='L350' name='L350'></a> 350 <strong class='reserved'>struct</strong> <a href='../R/21689.html' title='Multiple referred from 27 places.'>mapped_database</a>
+<a id='L351' name='L351'></a> 351 <em class='brace'>{</em>
+<a id='L352' name='L352'></a> 352   <strong class='reserved'>const</strong> <strong class='reserved'>struct</strong> <a href='../S/1643.html#L316' title='Defined at 316 in nscd/nscd-client.h.'>database_pers_head</a> *<a href='../S/1663.html#L66' title='Defined at 66 in nscd/initgrcache.c.'>head</a>;
+<a id='L353' name='L353'></a> 353   <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../D/29309.html' title='Multiple defined in 3 places.'>data</a>;
+<a id='L354' name='L354'></a> 354   <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/18953.html' title='Multiple used in 23 places.'>mapsize</a>;
+<a id='L355' name='L355'></a> 355   <strong class='reserved'>int</strong> <a href='../S/18705.html#L29' title='Defined at 29 in nptl/tst-thread_local1.cc.'>counter</a>;      <em class='comment'>/* &gt; 0 indicates it is usable.  */</em>
+<a id='L356' name='L356'></a> 356   <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/12492.html' title='Multiple used in 22 places.'>datasize</a>;
+<a id='L357' name='L357'></a> 357 <em class='brace'>}</em>;
+<a id='L358' name='L358'></a> 358 <em class='sharp'>#define</em> <a href='../R/5451.html' title='Multiple referred from 35 places.'>NO_MAPPING</a> ((<strong class='reserved'>struct</strong> <a href='../S/1643.html#L350' title='Defined at 350 in nscd/nscd-client.h.'>mapped_database</a> *) -1l)
+<a id='L359' name='L359'></a> 359 
+<a id='L360' name='L360'></a> 360 <strong class='reserved'>struct</strong> <a href='../R/21478.html' title='Multiple referred from 4 places.'>locked_map_ptr</a>
+<a id='L361' name='L361'></a> 361 <em class='brace'>{</em>
+<a id='L362' name='L362'></a> 362   <strong class='reserved'>int</strong> <a href='../S/1874.html#L71' title='Defined at 71 in malloc/tst-interpose-aux.c.'>lock</a>;
+<a id='L363' name='L363'></a> 363   <strong class='reserved'>struct</strong> <a href='../S/1643.html#L350' title='Defined at 350 in nscd/nscd-client.h.'>mapped_database</a> *<a href='../Y/18944.html' title='Multiple used in 161 places.'>mapped</a>;
+<a id='L364' name='L364'></a> 364 <em class='brace'>}</em>;
+<a id='L365' name='L365'></a> 365 <em class='sharp'>#define</em> <a href='../R/21267.html' title='Multiple referred from 2 places.'>libc_locked_map_ptr</a>(<a href='../Y/11622.html' title='Multiple used in 96 places.'>class</a>, <a href='../D/33817.html' title='Multiple defined in 21 places.'>name</a>) <a href='../Y/11622.html' title='Multiple used in 96 places.'>class</a> <strong class='reserved'>struct</strong> <a href='../S/1643.html#L360' title='Defined at 360 in nscd/nscd-client.h.'>locked_map_ptr</a> <a href='../D/33817.html' title='Multiple defined in 21 places.'>name</a>
+<a id='L366' name='L366'></a> 366 
+<a id='L367' name='L367'></a> 367 <em class='comment'>/* Try acquiring lock for mapptr, returns true if it succeeds, false</em>
+<a id='L368' name='L368'></a> 368 <em class='comment'>   if not.  */</em>
+<a id='L369' name='L369'></a> 369 <strong class='reserved'>static</strong> <strong class='reserved'>inline</strong> <a href='../S/3749.html#L624' title='Defined at 624 in timezone/private.h.'>bool</a>
+<a id='L370' name='L370'></a> 370 <a href='../R/15234.html' title='Multiple referred from 2 places.'>__nscd_acquire_maplock</a> (<strong class='reserved'>volatile</strong> <strong class='reserved'>struct</strong> <a href='../S/1643.html#L360' title='Defined at 360 in nscd/nscd-client.h.'>locked_map_ptr</a> *<a href='../Y/18950.html' title='Multiple used in 9 places.'>mapptr</a>)
+<a id='L371' name='L371'></a> 371 <em class='brace'>{</em>
+<a id='L372' name='L372'></a> 372   <strong class='reserved'>int</strong> <a href='../D/28982.html' title='Multiple defined in 8 places.'>cnt</a> = 0;
+<a id='L373' name='L373'></a> 373   <strong class='reserved'>while</strong> (<a href='../D/23349.html' title='Multiple defined in 3 places.'>__builtin_expect</a> (<a href='../D/27897.html' title='Multiple defined in 18 places.'>atomic_compare_and_exchange_val_acq</a> (&amp;<a href='../Y/18950.html' title='Multiple used in 9 places.'>mapptr</a>-&gt;<a href='../S/1874.html#L71' title='Defined at 71 in malloc/tst-interpose-aux.c.'>lock</a>,
+<a id='L374' name='L374'></a> 374                                 1, 0) != 0, 0))
+<a id='L375' name='L375'></a> 375     <em class='brace'>{</em>
+<a id='L376' name='L376'></a> 376       <em class='comment'>// XXX Best number of rounds?</em>
+<a id='L377' name='L377'></a> 377       <strong class='reserved'>if</strong> (<a href='../D/24205.html' title='Multiple defined in 2 places.'>__glibc_unlikely</a> (++<a href='../D/28982.html' title='Multiple defined in 8 places.'>cnt</a> &gt; 5))
+<a id='L378' name='L378'></a> 378     <strong class='reserved'>return</strong> <a href='../D/30360.html' title='Multiple defined in 5 places.'>false</a>;
+<a id='L379' name='L379'></a> 379 
+<a id='L380' name='L380'></a> 380       <a href='../D/27937.html' title='Multiple defined in 3 places.'>atomic_spin_nop</a> ();
+<a id='L381' name='L381'></a> 381     <em class='brace'>}</em>
+<a id='L382' name='L382'></a> 382 
+<a id='L383' name='L383'></a> 383   <strong class='reserved'>return</strong> <a href='../D/38483.html' title='Multiple defined in 5 places.'>true</a>;
+<a id='L384' name='L384'></a> 384 <em class='brace'>}</em>
+<a id='L385' name='L385'></a> 385 
+<a id='L386' name='L386'></a> 386 
+<a id='L387' name='L387'></a> 387 <em class='comment'>/* Open socket connection to nscd server.  */</em>
+<a id='L388' name='L388'></a> 388 <strong class='reserved'>extern</strong> <strong class='reserved'>int</strong> <a href='../R/15249.html' title='Multiple referred from 8 places.'>__nscd_open_socket</a> (<strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../D/32455.html' title='Multiple defined in 4 places.'>key</a>, <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/17508.html' title='Multiple used in 90 places.'>keylen</a>,
+<a id='L389' name='L389'></a> 389                    <a href='../S/1643.html#L76' title='Defined at 76 in nscd/nscd-client.h.'>request_type</a> <a href='../D/38608.html' title='Multiple defined in 6 places.'>type</a>, <strong class='reserved'>void</strong> *<a href='../D/36041.html' title='Multiple defined in 16 places.'>response</a>,
+<a id='L390' name='L390'></a> 390                    <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/23919.html' title='Multiple used in 4 places.'>responselen</a>) <a href='../D/27947.html' title='Multiple defined in 7 places.'>attribute_hidden</a>;
+<a id='L391' name='L391'></a> 391 
+<a id='L392' name='L392'></a> 392 <em class='comment'>/* Try to get a file descriptor for the shared meory segment</em>
+<a id='L393' name='L393'></a> 393 <em class='comment'>   containing the database.  */</em>
+<a id='L394' name='L394'></a> 394 <strong class='reserved'>extern</strong> <strong class='reserved'>struct</strong> <a href='../S/1643.html#L350' title='Defined at 350 in nscd/nscd-client.h.'>mapped_database</a> *<a href='../S/1658.html#L257' title='Defined at 257 in nscd/nscd_helper.c.'>__nscd_get_mapping</a> (<a href='../S/1643.html#L76' title='Defined at 76 in nscd/nscd-client.h.'>request_type</a> <a href='../D/38608.html' title='Multiple defined in 6 places.'>type</a>,
+<a id='L395' name='L395'></a> 395                            <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../D/32455.html' title='Multiple defined in 4 places.'>key</a>,
+<a id='L396' name='L396'></a> 396                            <strong class='reserved'>struct</strong> <a href='../S/1643.html#L350' title='Defined at 350 in nscd/nscd-client.h.'>mapped_database</a> **<a href='../Y/18946.html' title='Multiple used in 4 places.'>mappedp</a>) <a href='../D/27947.html' title='Multiple defined in 7 places.'>attribute_hidden</a>;
+<a id='L397' name='L397'></a> 397 
+<a id='L398' name='L398'></a> 398 <em class='comment'>/* Get reference of mapping.  */</em>
+<a id='L399' name='L399'></a> 399 <strong class='reserved'>extern</strong> <strong class='reserved'>struct</strong> <a href='../S/1643.html#L350' title='Defined at 350 in nscd/nscd-client.h.'>mapped_database</a> *<a href='../S/1658.html#L400' title='Defined at 400 in nscd/nscd_helper.c.'>__nscd_get_map_ref</a> (<a href='../S/1643.html#L76' title='Defined at 76 in nscd/nscd-client.h.'>request_type</a> <a href='../D/38608.html' title='Multiple defined in 6 places.'>type</a>,
+<a id='L400' name='L400'></a> 400                            <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../D/33817.html' title='Multiple defined in 21 places.'>name</a>,
+<a id='L401' name='L401'></a> 401                            <strong class='reserved'>volatile</strong> <strong class='reserved'>struct</strong> <a href='../S/1643.html#L360' title='Defined at 360 in nscd/nscd-client.h.'>locked_map_ptr</a> *<a href='../Y/18950.html' title='Multiple used in 9 places.'>mapptr</a>,
+<a id='L402' name='L402'></a> 402                            <strong class='reserved'>int</strong> *<a href='../Y/15369.html' title='Multiple used in 3 places.'>gc_cyclep</a>)
+<a id='L403' name='L403'></a> 403   <a href='../D/27947.html' title='Multiple defined in 7 places.'>attribute_hidden</a>;
+<a id='L404' name='L404'></a> 404 
+<a id='L405' name='L405'></a> 405 <em class='comment'>/* Unmap database.  */</em>
+<a id='L406' name='L406'></a> 406 <strong class='reserved'>extern</strong> <strong class='reserved'>void</strong> <a href='../S/1658.html#L246' title='Defined at 246 in nscd/nscd_helper.c.'>__nscd_unmap</a> (<strong class='reserved'>struct</strong> <a href='../S/1643.html#L350' title='Defined at 350 in nscd/nscd-client.h.'>mapped_database</a> *<a href='../Y/18944.html' title='Multiple used in 161 places.'>mapped</a>)
+<a id='L407' name='L407'></a> 407   <a href='../D/27947.html' title='Multiple defined in 7 places.'>attribute_hidden</a>;
+<a id='L408' name='L408'></a> 408 
+<a id='L409' name='L409'></a> 409 <em class='comment'>/* Drop reference of mapping.  */</em>
+<a id='L410' name='L410'></a> 410 <strong class='reserved'>static</strong> <strong class='reserved'>int</strong>
+<a id='L411' name='L411'></a> 411 <strong class='reserved'>__attribute__</strong> ((<a href='../S/2757.html#L20' title='Defined at 20 in elf/tst-tlsalign-vars.c.'>unused</a>))
+<a id='L412' name='L412'></a> 412 <a href='../Y/6229.html' title='Multiple used in 9 places.'>__nscd_drop_map_ref</a> (<strong class='reserved'>struct</strong> <a href='../S/1643.html#L350' title='Defined at 350 in nscd/nscd-client.h.'>mapped_database</a> *<a href='../D/33311.html' title='Multiple defined in 2 places.'>map</a>, <strong class='reserved'>int</strong> *<a href='../Y/15368.html' title='Multiple used in 67 places.'>gc_cycle</a>)
+<a id='L413' name='L413'></a> 413 <em class='brace'>{</em>
+<a id='L414' name='L414'></a> 414   <strong class='reserved'>if</strong> (<a href='../D/33311.html' title='Multiple defined in 2 places.'>map</a> != <a href='../S/1643.html#L358' title='Defined at 358 in nscd/nscd-client.h.'>NO_MAPPING</a>)
+<a id='L415' name='L415'></a> 415     <em class='brace'>{</em>
+<a id='L416' name='L416'></a> 416       <strong class='reserved'>int</strong> <a href='../Y/21126.html' title='Multiple used in 3 places.'>now_cycle</a> = <a href='../D/33311.html' title='Multiple defined in 2 places.'>map</a>-&gt;<a href='../S/1663.html#L66' title='Defined at 66 in nscd/initgrcache.c.'>head</a>-&gt;<a href='../Y/15368.html' title='Multiple used in 67 places.'>gc_cycle</a>;
+<a id='L417' name='L417'></a> 417       <strong class='reserved'>if</strong> (<a href='../D/24205.html' title='Multiple defined in 2 places.'>__glibc_unlikely</a> (<a href='../Y/21126.html' title='Multiple used in 3 places.'>now_cycle</a> != *<a href='../Y/15368.html' title='Multiple used in 67 places.'>gc_cycle</a>))
+<a id='L418' name='L418'></a> 418     <em class='brace'>{</em>
+<a id='L419' name='L419'></a> 419       <em class='comment'>/* We might have read inconsistent data.  */</em>
+<a id='L420' name='L420'></a> 420       *<a href='../Y/15368.html' title='Multiple used in 67 places.'>gc_cycle</a> = <a href='../Y/21126.html' title='Multiple used in 3 places.'>now_cycle</a>;
+<a id='L421' name='L421'></a> 421       <strong class='reserved'>return</strong> -1;
+<a id='L422' name='L422'></a> 422     <em class='brace'>}</em>
+<a id='L423' name='L423'></a> 423 
+<a id='L424' name='L424'></a> 424       <strong class='reserved'>if</strong> (<a href='../D/27905.html' title='Multiple defined in 3 places.'>atomic_decrement_val</a> (&amp;<a href='../D/33311.html' title='Multiple defined in 2 places.'>map</a>-&gt;<a href='../S/18705.html#L29' title='Defined at 29 in nptl/tst-thread_local1.cc.'>counter</a>) == 0)
+<a id='L425' name='L425'></a> 425     <a href='../S/1658.html#L246' title='Defined at 246 in nscd/nscd_helper.c.'>__nscd_unmap</a> (<a href='../D/33311.html' title='Multiple defined in 2 places.'>map</a>);
+<a id='L426' name='L426'></a> 426     <em class='brace'>}</em>
+<a id='L427' name='L427'></a> 427 
+<a id='L428' name='L428'></a> 428   <strong class='reserved'>return</strong> 0;
+<a id='L429' name='L429'></a> 429 <em class='brace'>}</em>
+<a id='L430' name='L430'></a> 430 
+<a id='L431' name='L431'></a> 431 
+<a id='L432' name='L432'></a> 432 <em class='comment'>/* Search the mapped database.  */</em>
+<a id='L433' name='L433'></a> 433 <strong class='reserved'>extern</strong> <strong class='reserved'>struct</strong> <a href='../S/1643.html#L211' title='Defined at 211 in nscd/nscd-client.h.'>datahead</a> *<a href='../S/1658.html#L450' title='Defined at 450 in nscd/nscd_helper.c.'>__nscd_cache_search</a> (<a href='../S/1643.html#L76' title='Defined at 76 in nscd/nscd-client.h.'>request_type</a> <a href='../D/38608.html' title='Multiple defined in 6 places.'>type</a>,
+<a id='L434' name='L434'></a> 434                          <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../D/32455.html' title='Multiple defined in 4 places.'>key</a>,
+<a id='L435' name='L435'></a> 435                          <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/17508.html' title='Multiple used in 90 places.'>keylen</a>,
+<a id='L436' name='L436'></a> 436                          <strong class='reserved'>const</strong> <strong class='reserved'>struct</strong> <a href='../S/1643.html#L350' title='Defined at 350 in nscd/nscd-client.h.'>mapped_database</a> *<a href='../Y/18944.html' title='Multiple used in 161 places.'>mapped</a>,
+<a id='L437' name='L437'></a> 437                          <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/12482.html' title='Multiple used in 50 places.'>datalen</a>)
+<a id='L438' name='L438'></a> 438   <a href='../D/27947.html' title='Multiple defined in 7 places.'>attribute_hidden</a>;
+<a id='L439' name='L439'></a> 439 
+<a id='L440' name='L440'></a> 440 <em class='comment'>/* Wrappers around read, readv and write that only read/write less than LEN</em>
+<a id='L441' name='L441'></a> 441 <em class='comment'>   bytes on error or EOF.  */</em>
+<a id='L442' name='L442'></a> 442 <strong class='reserved'>extern</strong> <a href='../D/36972.html' title='Multiple defined in 5 places.'>ssize_t</a> <a href='../S/1658.html#L85' title='Defined at 85 in nscd/nscd_helper.c.'>__readall</a> (<strong class='reserved'>int</strong> <a href='../S/1663.html#L52' title='Defined at 52 in nscd/initgrcache.c.'>fd</a>, <strong class='reserved'>void</strong> *<a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>, <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../D/32598.html' title='Multiple defined in 10 places.'>len</a>)
+<a id='L443' name='L443'></a> 443   <a href='../D/27947.html' title='Multiple defined in 7 places.'>attribute_hidden</a>;
+<a id='L444' name='L444'></a> 444 <strong class='reserved'>extern</strong> <a href='../D/36972.html' title='Multiple defined in 5 places.'>ssize_t</a> <a href='../S/1658.html#L111' title='Defined at 111 in nscd/nscd_helper.c.'>__readvall</a> (<strong class='reserved'>int</strong> <a href='../S/1663.html#L52' title='Defined at 52 in nscd/initgrcache.c.'>fd</a>, <strong class='reserved'>const</strong> <strong class='reserved'>struct</strong> <a href='../S/3776.html#L26' title='Defined at 26 in misc/bits/types/struct_iovec.h.'>iovec</a> *<a href='../Y/17065.html' title='Multiple used in 264 places.'>iov</a>, <strong class='reserved'>int</strong> <a href='../Y/17071.html' title='Multiple used in 14 places.'>iovcnt</a>)
+<a id='L445' name='L445'></a> 445   <a href='../D/27947.html' title='Multiple defined in 7 places.'>attribute_hidden</a>;
+<a id='L446' name='L446'></a> 446 <strong class='reserved'>extern</strong> <a href='../D/36972.html' title='Multiple defined in 5 places.'>ssize_t</a> <a href='../S/1660.html#L266' title='Defined at 266 in nscd/connections.c.'>writeall</a> (<strong class='reserved'>int</strong> <a href='../S/1663.html#L52' title='Defined at 52 in nscd/initgrcache.c.'>fd</a>, <strong class='reserved'>const</strong> <strong class='reserved'>void</strong> *<a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>, <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../D/32598.html' title='Multiple defined in 10 places.'>len</a>)
+<a id='L447' name='L447'></a> 447   <a href='../D/27947.html' title='Multiple defined in 7 places.'>attribute_hidden</a>;
+<a id='L448' name='L448'></a> 448 
+<a id='L449' name='L449'></a> 449 <em class='comment'>/* Get netlink timestamp counter from mapped area or zero.  */</em>
+<a id='L450' name='L450'></a> 450 <strong class='reserved'>extern</strong> <a href='../S/223.html#L26' title='Defined at 26 in bits/stdint-uintn.h.'>uint32_t</a> <a href='../S/1655.html#L96' title='Defined at 96 in nscd/nscd_gethst_r.c.'>__nscd_get_nl_timestamp</a> (<strong class='reserved'>void</strong>)
+<a id='L451' name='L451'></a> 451   <a href='../D/27947.html' title='Multiple defined in 7 places.'>attribute_hidden</a>;
+<a id='L452' name='L452'></a> 452 
+<a id='L453' name='L453'></a> 453 <em class='sharp'>#endif</em> <em class='comment'>/* nscd.h */</em>
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L241'>[^]</a><a href='#L388'>[v]</a><a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

@@ -1,0 +1,138 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>stdlib/tst-swapcontext1.c</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18969.html'>stdlib</a>/tst-swapcontext1.c</h2>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L34'>[^]</a><a href='#L74'>[v]</a>[top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<h2 class='header'>DEFINITIONS</h2>
+This source file includes following definitions.
+<ol>
+<li><a href='#L34' title='Defined at 34.'>func4</a></li>
+<li><a href='#L44' title='Defined at 44.'>func3</a></li>
+<li><a href='#L53' title='Defined at 53.'>func1</a></li>
+<li><a href='#L64' title='Defined at 64.'>func2</a></li>
+<li><a href='#L74' title='Defined at 74.'>do_test</a></li>
+</ol>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* Check multiple makecontext calls.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   Copyright (C) 2018-2022 Free Software Foundation, Inc.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'></em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'></em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'></em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   License along with the GNU C Library; if not, see</em>
+<a id='L17' name='L17'></a>  17 <em class='comment'>   &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L18' name='L18'></a>  18 
+<a id='L19' name='L19'></a>  19 <em class='sharp'>#include</em> &lt;<a href='../I/1776.html'>stdio.h</a>&gt;
+<a id='L20' name='L20'></a>  20 <em class='sharp'>#include</em> &lt;<a href='../I/1780.html'>stdlib.h</a>&gt;
+<a id='L21' name='L21'></a>  21 <em class='sharp'>#include</em> &lt;<a href='../I/2036.html'>ucontext.h</a>&gt;
+<a id='L22' name='L22'></a>  22 
+<a id='L23' name='L23'></a>  23 <strong class='reserved'>static</strong> <a href='../D/38643.html' title='Multiple defined in 50 places.'>ucontext_t</a> <a href='../Y/28212.html' title='Multiple used in 6 places.'>uctx_main</a>, <a href='../Y/28210.html' title='Multiple used in 9 places.'>uctx_func1</a>, <a href='../Y/28211.html' title='Multiple used in 8 places.'>uctx_func2</a>;
+<a id='L24' name='L24'></a>  24 <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../Y/26237.html' title='Multiple used in 33 places.'>str1</a> = "\e[31mswapcontext(&amp;uctx_func1, &amp;uctx_main)\e[0m";
+<a id='L25' name='L25'></a>  25 <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../Y/26238.html' title='Multiple used in 41 places.'>str2</a> = "\e[34mswapcontext(&amp;uctx_func2, &amp;uctx_main)\e[0m";
+<a id='L26' name='L26'></a>  26 <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../S/6289.html#L149' title='Defined at 149 in resolv/ns_ttl.c.'>fmt1</a> = "\e[31m";
+<a id='L27' name='L27'></a>  27 <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../Y/14733.html' title='Multiple used in 5 places.'>fmt2</a> = "\e[34m";
+<a id='L28' name='L28'></a>  28 
+<a id='L29' name='L29'></a>  29 <em class='sharp'>#define</em> <a href='../R/20249.html' title='Multiple referred from 5 places.'>handle_error</a>(<a href='../S/2176.html#L54' title='Defined at 54 in hurd/intr-msg.c.'>msg</a>) \
+<a id='L30' name='L30'></a>  30   <strong class='reserved'>do</strong> <em class='brace'>{</em> <a href='../S/6137.html#L47' title='Defined at 47 in stdio-common/perror.c.'>perror</a>(<a href='../S/2176.html#L54' title='Defined at 54 in hurd/intr-msg.c.'>msg</a>); <a href='../S/6681.html#L141' title='Defined at 141 in stdlib/exit.c.'>exit</a>(<a href='../D/3872.html' title='Multiple defined in 4 places.'>EXIT_FAILURE</a>); <em class='brace'>}</em> <strong class='reserved'>while</strong> (0)
+<a id='L31' name='L31'></a>  31 
+<a id='L32' name='L32'></a>  32 <strong class='reserved'>__attribute__</strong>((<a href='../Y/21025.html' title='Multiple used in 150 places.'>noinline</a>, <a href='../Y/21007.html' title='Multiple used in 89 places.'>noclone</a>))
+<a id='L33' name='L33'></a>  33 <strong class='reserved'>static</strong> <strong class='reserved'>void</strong>
+<a id='L34' name='L34'></a>  34 <a href='../S/6710.html#L47' title='Referred from 47 in stdlib/tst-swapcontext1.c.'>func4</a>(<a href='../D/38643.html' title='Multiple defined in 50 places.'>ucontext_t</a> *<a href='../Y/28360.html' title='Multiple used in 4 places.'>uocp</a>, <a href='../D/38643.html' title='Multiple defined in 50 places.'>ucontext_t</a> *<a href='../Y/28197.html' title='Multiple used in 180 places.'>ucp</a>, <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../D/37053.html' title='Multiple defined in 6 places.'>str</a>, <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../S/6618.html#L121' title='Defined at 121 in stdlib/gen-tst-strtod-round.c.'>fmt</a>)
+<a id='L35' name='L35'></a>  35 <em class='brace'>{</em>
+<a id='L36' name='L36'></a>  36   <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a>("      %sfunc4: %s\e[0m\n", <a href='../S/6618.html#L121' title='Defined at 121 in stdlib/gen-tst-strtod-round.c.'>fmt</a>, <a href='../D/37053.html' title='Multiple defined in 6 places.'>str</a>);
+<a id='L37' name='L37'></a>  37   <strong class='reserved'>if</strong> (<a href='../D/37368.html' title='Multiple defined in 3 places.'>swapcontext</a>(<a href='../Y/28360.html' title='Multiple used in 4 places.'>uocp</a>, <a href='../Y/28197.html' title='Multiple used in 180 places.'>ucp</a>) == -1)
+<a id='L38' name='L38'></a>  38     <a href='../S/6710.html#L29' title='Defined at 29 in stdlib/tst-swapcontext1.c.'>handle_error</a>("swapcontext");
+<a id='L39' name='L39'></a>  39   <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a>("      %sfunc4: returning\e[0m\n", <a href='../S/6618.html#L121' title='Defined at 121 in stdlib/gen-tst-strtod-round.c.'>fmt</a>);
+<a id='L40' name='L40'></a>  40 <em class='brace'>}</em>
+<a id='L41' name='L41'></a>  41 
+<a id='L42' name='L42'></a>  42 <strong class='reserved'>__attribute__</strong>((<a href='../Y/21025.html' title='Multiple used in 150 places.'>noinline</a>, <a href='../Y/21007.html' title='Multiple used in 89 places.'>noclone</a>))
+<a id='L43' name='L43'></a>  43 <strong class='reserved'>static</strong> <strong class='reserved'>void</strong>
+<a id='L44' name='L44'></a>  44 <a href='../R/19796.html' title='Multiple referred from 2 places.'>func3</a>(<a href='../D/38643.html' title='Multiple defined in 50 places.'>ucontext_t</a> *<a href='../Y/28360.html' title='Multiple used in 4 places.'>uocp</a>, <a href='../D/38643.html' title='Multiple defined in 50 places.'>ucontext_t</a> *<a href='../Y/28197.html' title='Multiple used in 180 places.'>ucp</a>, <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../D/37053.html' title='Multiple defined in 6 places.'>str</a>, <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../S/6618.html#L121' title='Defined at 121 in stdlib/gen-tst-strtod-round.c.'>fmt</a>)
+<a id='L45' name='L45'></a>  45 <em class='brace'>{</em>
+<a id='L46' name='L46'></a>  46   <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a>("    %sfunc3: func4(uocp, ucp, str)\e[0m\n", <a href='../S/6618.html#L121' title='Defined at 121 in stdlib/gen-tst-strtod-round.c.'>fmt</a>);
+<a id='L47' name='L47'></a>  47   <a href='../S/6710.html#L34' title='Defined at 34 in stdlib/tst-swapcontext1.c.'>func4</a>(<a href='../Y/28360.html' title='Multiple used in 4 places.'>uocp</a>, <a href='../Y/28197.html' title='Multiple used in 180 places.'>ucp</a>, <a href='../D/37053.html' title='Multiple defined in 6 places.'>str</a>, <a href='../S/6618.html#L121' title='Defined at 121 in stdlib/gen-tst-strtod-round.c.'>fmt</a>);
+<a id='L48' name='L48'></a>  48   <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a>("    %sfunc3: returning\e[0m\n", <a href='../S/6618.html#L121' title='Defined at 121 in stdlib/gen-tst-strtod-round.c.'>fmt</a>);
+<a id='L49' name='L49'></a>  49 <em class='brace'>}</em>
+<a id='L50' name='L50'></a>  50 
+<a id='L51' name='L51'></a>  51 <strong class='reserved'>__attribute__</strong>((<a href='../Y/21025.html' title='Multiple used in 150 places.'>noinline</a>, <a href='../Y/21007.html' title='Multiple used in 89 places.'>noclone</a>))
+<a id='L52' name='L52'></a>  52 <strong class='reserved'>static</strong> <strong class='reserved'>void</strong>
+<a id='L53' name='L53'></a>  53 <a href='../S/6710.html#L85' title='Referred from 85 in stdlib/tst-swapcontext1.c.'>func1</a>(<strong class='reserved'>void</strong>)
+<a id='L54' name='L54'></a>  54 <em class='brace'>{</em>
+<a id='L55' name='L55'></a>  55   <strong class='reserved'>while</strong> ( 1 )
+<a id='L56' name='L56'></a>  56     <em class='brace'>{</em>
+<a id='L57' name='L57'></a>  57       <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a>("  \e[31mfunc1: func3(&amp;uctx_func1, &amp;uctx_main, str1)\e[0m\n");
+<a id='L58' name='L58'></a>  58       <a href='../S/6710.html#L44' title='Defined at 44 in stdlib/tst-swapcontext1.c.'>func3</a>( &amp;<a href='../Y/28210.html' title='Multiple used in 9 places.'>uctx_func1</a>, &amp;<a href='../Y/28212.html' title='Multiple used in 6 places.'>uctx_main</a>, <a href='../Y/26237.html' title='Multiple used in 33 places.'>str1</a>, <a href='../S/6289.html#L149' title='Defined at 149 in resolv/ns_ttl.c.'>fmt1</a>);
+<a id='L59' name='L59'></a>  59     <em class='brace'>}</em>
+<a id='L60' name='L60'></a>  60 <em class='brace'>}</em>
+<a id='L61' name='L61'></a>  61 
+<a id='L62' name='L62'></a>  62 <strong class='reserved'>__attribute__</strong>((<a href='../Y/21025.html' title='Multiple used in 150 places.'>noinline</a>, <a href='../Y/21007.html' title='Multiple used in 89 places.'>noclone</a>))
+<a id='L63' name='L63'></a>  63 <strong class='reserved'>static</strong> <strong class='reserved'>void</strong>
+<a id='L64' name='L64'></a>  64 <a href='../S/6710.html#L92' title='Referred from 92 in stdlib/tst-swapcontext1.c.'>func2</a>(<strong class='reserved'>void</strong>)
+<a id='L65' name='L65'></a>  65 <em class='brace'>{</em>
+<a id='L66' name='L66'></a>  66   <strong class='reserved'>while</strong> ( 1 )
+<a id='L67' name='L67'></a>  67     <em class='brace'>{</em>
+<a id='L68' name='L68'></a>  68       <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a>("  \e[34mfunc2: func3(&amp;uctx_func2, &amp;uctx_main, str2)\e[0m\n");
+<a id='L69' name='L69'></a>  69       <a href='../S/6710.html#L44' title='Defined at 44 in stdlib/tst-swapcontext1.c.'>func3</a>(&amp;<a href='../Y/28211.html' title='Multiple used in 8 places.'>uctx_func2</a>, &amp;<a href='../Y/28212.html' title='Multiple used in 6 places.'>uctx_main</a>, <a href='../Y/26238.html' title='Multiple used in 41 places.'>str2</a>, <a href='../Y/14733.html' title='Multiple used in 5 places.'>fmt2</a>);
+<a id='L70' name='L70'></a>  70     <em class='brace'>}</em>
+<a id='L71' name='L71'></a>  71 <em class='brace'>}</em>
+<a id='L72' name='L72'></a>  72 
+<a id='L73' name='L73'></a>  73 <strong class='reserved'>static</strong> <strong class='reserved'>int</strong>
+<a id='L74' name='L74'></a>  74 <a href='../R/18782.html' title='Multiple referred from 1850 places.'>do_test</a> (<strong class='reserved'>void</strong>)
+<a id='L75' name='L75'></a>  75 <em class='brace'>{</em>
+<a id='L76' name='L76'></a>  76   <strong class='reserved'>char</strong> <a href='../Y/15262.html' title='Multiple used in 3 places.'>func1_stack</a>[16384];
+<a id='L77' name='L77'></a>  77   <strong class='reserved'>char</strong> <a href='../Y/15263.html' title='Multiple used in 3 places.'>func2_stack</a>[16384];
+<a id='L78' name='L78'></a>  78   <strong class='reserved'>int</strong> <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>;
+<a id='L79' name='L79'></a>  79 
+<a id='L80' name='L80'></a>  80   <strong class='reserved'>if</strong> (<a href='../S/6646.html#L22' title='Defined at 22 in stdlib/getcontext.c.'>getcontext</a>(&amp;<a href='../Y/28210.html' title='Multiple used in 9 places.'>uctx_func1</a>) == -1)
+<a id='L81' name='L81'></a>  81     <a href='../S/6710.html#L29' title='Defined at 29 in stdlib/tst-swapcontext1.c.'>handle_error</a>("getcontext");
+<a id='L82' name='L82'></a>  82   <a href='../Y/28210.html' title='Multiple used in 9 places.'>uctx_func1</a>.<a href='../S/10529.html#L103' title='Defined at 103 in sysdeps/unix/sysv/linux/ia64/sys/ucontext.h.'>uc_stack</a>.<a href='../Y/25912.html' title='Multiple used in 78 places.'>ss_sp</a> = <a href='../Y/15262.html' title='Multiple used in 3 places.'>func1_stack</a>;
+<a id='L83' name='L83'></a>  83   <a href='../Y/28210.html' title='Multiple used in 9 places.'>uctx_func1</a>.<a href='../S/10529.html#L103' title='Defined at 103 in sysdeps/unix/sysv/linux/ia64/sys/ucontext.h.'>uc_stack</a>.<a href='../Y/25911.html' title='Multiple used in 72 places.'>ss_size</a> = <strong class='reserved'>sizeof</strong> (<a href='../Y/15262.html' title='Multiple used in 3 places.'>func1_stack</a>);
+<a id='L84' name='L84'></a>  84   <a href='../Y/28210.html' title='Multiple used in 9 places.'>uctx_func1</a>.<a href='../S/10529.html#L104' title='Defined at 104 in sysdeps/unix/sysv/linux/ia64/sys/ucontext.h.'>uc_link</a> = &amp;<a href='../Y/28212.html' title='Multiple used in 6 places.'>uctx_main</a>;
+<a id='L85' name='L85'></a>  85   <a href='../S/6853.html#L22' title='Defined at 22 in stdlib/makecontext.c.'>makecontext</a>(&amp;<a href='../Y/28210.html' title='Multiple used in 9 places.'>uctx_func1</a>, <a href='../S/6710.html#L53' title='Defined at 53 in stdlib/tst-swapcontext1.c.'>func1</a>, 0);
+<a id='L86' name='L86'></a>  86 
+<a id='L87' name='L87'></a>  87   <strong class='reserved'>if</strong> (<a href='../S/6646.html#L22' title='Defined at 22 in stdlib/getcontext.c.'>getcontext</a>(&amp;<a href='../Y/28211.html' title='Multiple used in 8 places.'>uctx_func2</a>) == -1)
+<a id='L88' name='L88'></a>  88     <a href='../S/6710.html#L29' title='Defined at 29 in stdlib/tst-swapcontext1.c.'>handle_error</a>("getcontext");
+<a id='L89' name='L89'></a>  89   <a href='../Y/28211.html' title='Multiple used in 8 places.'>uctx_func2</a>.<a href='../S/10529.html#L103' title='Defined at 103 in sysdeps/unix/sysv/linux/ia64/sys/ucontext.h.'>uc_stack</a>.<a href='../Y/25912.html' title='Multiple used in 78 places.'>ss_sp</a> = <a href='../Y/15263.html' title='Multiple used in 3 places.'>func2_stack</a>;
+<a id='L90' name='L90'></a>  90   <a href='../Y/28211.html' title='Multiple used in 8 places.'>uctx_func2</a>.<a href='../S/10529.html#L103' title='Defined at 103 in sysdeps/unix/sysv/linux/ia64/sys/ucontext.h.'>uc_stack</a>.<a href='../Y/25911.html' title='Multiple used in 72 places.'>ss_size</a> = <strong class='reserved'>sizeof</strong> (<a href='../Y/15263.html' title='Multiple used in 3 places.'>func2_stack</a>);
+<a id='L91' name='L91'></a>  91   <a href='../Y/28211.html' title='Multiple used in 8 places.'>uctx_func2</a>.<a href='../S/10529.html#L104' title='Defined at 104 in sysdeps/unix/sysv/linux/ia64/sys/ucontext.h.'>uc_link</a> = &amp;<a href='../Y/28210.html' title='Multiple used in 9 places.'>uctx_func1</a>;
+<a id='L92' name='L92'></a>  92   <a href='../S/6853.html#L22' title='Defined at 22 in stdlib/makecontext.c.'>makecontext</a>(&amp;<a href='../Y/28211.html' title='Multiple used in 8 places.'>uctx_func2</a>, <a href='../S/6710.html#L64' title='Defined at 64 in stdlib/tst-swapcontext1.c.'>func2</a>, 0);
+<a id='L93' name='L93'></a>  93 
+<a id='L94' name='L94'></a>  94   <strong class='reserved'>for</strong> ( <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> = 0; <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> &lt; 4; <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>++ )
+<a id='L95' name='L95'></a>  95     <em class='brace'>{</em>
+<a id='L96' name='L96'></a>  96       <strong class='reserved'>if</strong> (<a href='../D/37368.html' title='Multiple defined in 3 places.'>swapcontext</a>(&amp;<a href='../Y/28212.html' title='Multiple used in 6 places.'>uctx_main</a>, &amp;<a href='../Y/28210.html' title='Multiple used in 9 places.'>uctx_func1</a>) == -1)
+<a id='L97' name='L97'></a>  97     <a href='../S/6710.html#L29' title='Defined at 29 in stdlib/tst-swapcontext1.c.'>handle_error</a>("swapcontext");
+<a id='L98' name='L98'></a>  98       <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a>("        \e[35mmain: swapcontext(&amp;uctx_main, &amp;uctx_func2)\n\e[0m");
+<a id='L99' name='L99'></a>  99       <strong class='reserved'>if</strong> (<a href='../D/37368.html' title='Multiple defined in 3 places.'>swapcontext</a>(&amp;<a href='../Y/28212.html' title='Multiple used in 6 places.'>uctx_main</a>, &amp;<a href='../Y/28211.html' title='Multiple used in 8 places.'>uctx_func2</a>) == -1)
+<a id='L100' name='L100'></a> 100     <a href='../S/6710.html#L29' title='Defined at 29 in stdlib/tst-swapcontext1.c.'>handle_error</a>("swapcontext");
+<a id='L101' name='L101'></a> 101       <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a>("        \e[35mmain: swapcontext(&amp;uctx_main, &amp;uctx_func1)\n\e[0m");
+<a id='L102' name='L102'></a> 102     <em class='brace'>}</em>
+<a id='L103' name='L103'></a> 103 
+<a id='L104' name='L104'></a> 104   <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a>("main: exiting\n");
+<a id='L105' name='L105'></a> 105   <a href='../S/6681.html#L141' title='Defined at 141 in stdlib/exit.c.'>exit</a>(<a href='../D/3877.html' title='Multiple defined in 4 places.'>EXIT_SUCCESS</a>);
+<a id='L106' name='L106'></a> 106 <em class='brace'>}</em>
+<a id='L107' name='L107'></a> 107 
+<a id='L108' name='L108'></a> 108 <em class='sharp'>#include</em> &lt;support/test-driver.c&gt;
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L34'>[^]</a><a href='#L74'>[v]</a><a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

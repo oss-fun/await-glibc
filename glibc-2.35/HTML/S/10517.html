@@ -1,0 +1,176 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>sysdeps/unix/sysv/linux/ia64/getcontext.S</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18977.html'>sysdeps</a>/<a href='../files/19246.html'>unix</a>/<a href='../files/19257.html'>sysv</a>/<a href='../files/19258.html'>linux</a>/<a href='../files/19288.html'>ia64</a>/getcontext.S</h2>
+<em class='comment'>/* [&lt;][&gt;][^][v][top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* Copyright (C) 2001-2022 Free Software Foundation, Inc.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'></em>
+<a id='L4' name='L4'></a>   4 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'></em>
+<a id='L9' name='L9'></a>   9 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'></em>
+<a id='L14' name='L14'></a>  14 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   License along with the GNU C Library; if not, see</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L17' name='L17'></a>  17 
+<a id='L18' name='L18'></a>  18 <em class='sharp'>#include</em> &lt;<a href='../I/5967.html'>sysdep.h</a>&gt;
+<a id='L19' name='L19'></a>  19 <em class='sharp'>#include</em> &lt;<a href='17866.html'>features.h</a>&gt;
+<a id='L20' name='L20'></a>  20 
+<a id='L21' name='L21'></a>  21 <em class='sharp'>#include</em> "<a href='../I/12472.html'>ucontext_i.h</a>"
+<a id='L22' name='L22'></a>  22 
+<a id='L23' name='L23'></a>  23 <em class='comment'>/*  __getcontext (ucontext_t *ucp)</em>
+<a id='L24' name='L24'></a>  24 <em class='comment'></em>
+<a id='L25' name='L25'></a>  25 <em class='comment'>  Saves the machine context in UCP such that when it is activated,</em>
+<a id='L26' name='L26'></a>  26 <em class='comment'>  it appears as if __getcontext() returned again.  The only difference</em>
+<a id='L27' name='L27'></a>  27 <em class='comment'>  is that on a first return, r9 contains 1 and on a subsequent</em>
+<a id='L28' name='L28'></a>  28 <em class='comment'>  return, it contains 0.</em>
+<a id='L29' name='L29'></a>  29 <em class='comment'></em>
+<a id='L30' name='L30'></a>  30 <em class='comment'>  This implementation in intended to be used for *synchronous* context</em>
+<a id='L31' name='L31'></a>  31 <em class='comment'>  switches only.  Therefore, it does not have to save anything</em>
+<a id='L32' name='L32'></a>  32 <em class='comment'>  other than the PRESERVED state.  */</em>
+<a id='L33' name='L33'></a>  33 
+<a id='L34' name='L34'></a>  34 <a href='../D/3651.html' title='Multiple defined in 54 places.'>ENTRY</a>(<a href='../R/14250.html' title='Multiple referred from 6 places.'>__getcontext</a>)
+<a id='L35' name='L35'></a>  35     .prologue
+<a id='L36' name='L36'></a>  36     .body
+<a id='L37' name='L37'></a>  37     alloc r11 = ar.pfs, 1, 0, 4, 0
+<a id='L38' name='L38'></a>  38 
+<a id='L39' name='L39'></a>  39     <em class='comment'>// sigprocmask (SIG_BLOCK, NULL, &amp;sc-&gt;sc_mask):</em>
+<a id='L40' name='L40'></a>  40 
+<a id='L41' name='L41'></a>  41     mov r3 = SC_MASK
+<a id='L42' name='L42'></a>  42     mov out0 = SIG_BLOCK
+<a id='L43' name='L43'></a>  43 
+<a id='L44' name='L44'></a>  44     flushrs                 <em class='comment'>// save dirty partition on rbs</em>
+<a id='L45' name='L45'></a>  45     mov out1 = 0
+<a id='L46' name='L46'></a>  46     add out2 = r3, in0
+<a id='L47' name='L47'></a>  47 
+<a id='L48' name='L48'></a>  48     mov out3 = 8    <em class='comment'>// sizeof kernel sigset_t</em>
+<a id='L49' name='L49'></a>  49     DO_CALL(__NR_rt_sigprocmask)
+<a id='L50' name='L50'></a>  50 
+<a id='L51' name='L51'></a>  51     mov.m rFPSR = ar.fpsr
+<a id='L52' name='L52'></a>  52     mov.m rRSC = ar.rsc
+<a id='L53' name='L53'></a>  53     add r2 = SC_GR+1*8, r32
+<a id='L54' name='L54'></a>  54     ;;
+<a id='L55' name='L55'></a>  55     mov.m rBSP = ar.bsp
+<a id='L56' name='L56'></a>  56     .prologue
+<a id='L57' name='L57'></a>  57     .save ar.unat, rUNAT
+<a id='L58' name='L58'></a>  58     mov.m rUNAT = ar.unat
+<a id='L59' name='L59'></a>  59     .body
+<a id='L60' name='L60'></a>  60     add r3 = SC_GR+4*8, r32
+<a id='L61' name='L61'></a>  61     ;;
+<a id='L62' name='L62'></a>  62 
+<a id='L63' name='L63'></a>  63 .mem.offset 0,0; st8.spill [r2] = r1, (5*8 - 1*8)
+<a id='L64' name='L64'></a>  64 .mem.offset 8,0; st8.spill [r3] = r4, 16
+<a id='L65' name='L65'></a>  65     mov rPFS = r11
+<a id='L66' name='L66'></a>  66     ;;
+<a id='L67' name='L67'></a>  67 .mem.offset 0,0; st8.spill [r2] = r5, 16
+<a id='L68' name='L68'></a>  68 .mem.offset 8,0; st8.spill [r3] = r6, 48
+<a id='L69' name='L69'></a>  69     and rTMP = ~0x3, rRSC
+<a id='L70' name='L70'></a>  70     ;;
+<a id='L71' name='L71'></a>  71 .mem.offset 0,0; st8.spill [r2] = r7, (SC_FR+2*16-(SC_GR+7*8))
+<a id='L72' name='L72'></a>  72 .mem.offset 8,0; st8.spill [r3] = sp, (SC_FR+3*16-(SC_GR+12*8))
+<a id='L73' name='L73'></a>  73     ;;
+<a id='L74' name='L74'></a>  74     mov.m ar.rsc = rTMP         <em class='comment'>// put RSE into enforced lazy mode</em>
+<a id='L75' name='L75'></a>  75     mov.m rNAT = ar.unat
+<a id='L76' name='L76'></a>  76     mov.i rLC = ar.lc
+<a id='L77' name='L77'></a>  77     ;;
+<a id='L78' name='L78'></a>  78     mov.m rRNAT = ar.rnat
+<a id='L79' name='L79'></a>  79     mov.m ar.rsc = rRSC         <em class='comment'>// restore RSE mode</em>
+<a id='L80' name='L80'></a>  80     mov rPR = pr
+<a id='L81' name='L81'></a>  81 
+<a id='L82' name='L82'></a>  82     <em class='comment'>/*</em>
+<a id='L83' name='L83'></a>  83 <em class='comment'>     * Rotate NaT bits by rPOS positions to the right:</em>
+<a id='L84' name='L84'></a>  84 <em class='comment'>     */</em>
+<a id='L85' name='L85'></a>  85     stf.spill [r2] = f2, 32
+<a id='L86' name='L86'></a>  86     stf.spill [r3] = f3, 32
+<a id='L87' name='L87'></a>  87     add rPOS = SC_GR, r32           <em class='comment'>// rPOS &lt;- &amp;sc_gr[0]</em>
+<a id='L88' name='L88'></a>  88     ;;
+<a id='L89' name='L89'></a>  89     stf.spill [r2] = f4, (16*16-4*16)
+<a id='L90' name='L90'></a>  90     stf.spill [r3] = f5, (17*16-5*16)
+<a id='L91' name='L91'></a>  91     extr.u rPOS = rPOS, 3, 6        <em class='comment'>// get NaT bit number for r0</em>
+<a id='L92' name='L92'></a>  92     ;;
+<a id='L93' name='L93'></a>  93     stf.spill [r2] = f16, 32
+<a id='L94' name='L94'></a>  94     stf.spill [r3] = f17, 32
+<a id='L95' name='L95'></a>  95     sub rCPOS = 64, rPOS
+<a id='L96' name='L96'></a>  96     ;;
+<a id='L97' name='L97'></a>  97     stf.spill [r2] = f18, 32
+<a id='L98' name='L98'></a>  98     stf.spill [r3] = f19, 32
+<a id='L99' name='L99'></a>  99     shr.u rTMP = rNAT, rPOS
+<a id='L100' name='L100'></a> 100     ;;
+<a id='L101' name='L101'></a> 101     stf.spill [r2] = f20, 32
+<a id='L102' name='L102'></a> 102     stf.spill [r3] = f21, 32
+<a id='L103' name='L103'></a> 103     shl rNAT = rNAT, rCPOS
+<a id='L104' name='L104'></a> 104     ;;
+<a id='L105' name='L105'></a> 105     stf.spill [r2] = f22, 32
+<a id='L106' name='L106'></a> 106     stf.spill [r3] = f23, 32
+<a id='L107' name='L107'></a> 107     or rNAT = rNAT, rTMP
+<a id='L108' name='L108'></a> 108     ;;
+<a id='L109' name='L109'></a> 109     stf.spill [r2] = f24, 32
+<a id='L110' name='L110'></a> 110     stf.spill [r3] = f25, 32
+<a id='L111' name='L111'></a> 111     mov r8 = 0
+<a id='L112' name='L112'></a> 112     ;;
+<a id='L113' name='L113'></a> 113     stf.spill [r2] = f26, 32
+<a id='L114' name='L114'></a> 114     stf.spill [r3] = f27, 32
+<a id='L115' name='L115'></a> 115     mov r9 = 1
+<a id='L116' name='L116'></a> 116     ;;
+<a id='L117' name='L117'></a> 117     stf.spill [r2] = f28, 32
+<a id='L118' name='L118'></a> 118     stf.spill [r3] = f29, 32
+<a id='L119' name='L119'></a> 119     mov rB0 = b0
+<a id='L120' name='L120'></a> 120     ;;
+<a id='L121' name='L121'></a> 121     stf.spill [r2] = f30, 32
+<a id='L122' name='L122'></a> 122     stf.spill [r3] = f31, 32
+<a id='L123' name='L123'></a> 123     mov rB1 = b1
+<a id='L124' name='L124'></a> 124     ;;
+<a id='L125' name='L125'></a> 125     mov ar.unat = rUNAT <em class='comment'>// we're done spilling integer regs; restore caller's UNaT</em>
+<a id='L126' name='L126'></a> 126     add r2 = SC_NAT, r32
+<a id='L127' name='L127'></a> 127     add r3 = SC_BSP, r32
+<a id='L128' name='L128'></a> 128     ;;
+<a id='L129' name='L129'></a> 129     st8 [r2] = rNAT, (SC_RNAT-SC_NAT)
+<a id='L130' name='L130'></a> 130     st8 [r3] = rBSP, (SC_UNAT-SC_BSP)
+<a id='L131' name='L131'></a> 131     mov rB2 = b2
+<a id='L132' name='L132'></a> 132     ;;
+<a id='L133' name='L133'></a> 133     st8 [r2] = rRNAT, (SC_FPSR-SC_RNAT)
+<a id='L134' name='L134'></a> 134     st8 [r3] = rUNAT, (SC_PFS-SC_UNAT)
+<a id='L135' name='L135'></a> 135     mov rB3 = b3
+<a id='L136' name='L136'></a> 136     ;;
+<a id='L137' name='L137'></a> 137     st8 [r2] = rFPSR, (SC_LC-SC_FPSR)
+<a id='L138' name='L138'></a> 138     st8 [r3] = rPFS, (SC_PR-SC_PFS)
+<a id='L139' name='L139'></a> 139     mov rB4 = b4
+<a id='L140' name='L140'></a> 140     ;;
+<a id='L141' name='L141'></a> 141     st8 [r2] = rLC, (SC_BR+0*8-SC_LC)
+<a id='L142' name='L142'></a> 142     st8 [r3] = rPR, (SC_BR+1*8-SC_PR)
+<a id='L143' name='L143'></a> 143     mov rB5 = b5
+<a id='L144' name='L144'></a> 144     ;;
+<a id='L145' name='L145'></a> 145     st8 [r2] = rB0, 16
+<a id='L146' name='L146'></a> 146     st8 [r3] = rB1, 16
+<a id='L147' name='L147'></a> 147     ;;
+<a id='L148' name='L148'></a> 148     st8 [r2] = rB2, 16
+<a id='L149' name='L149'></a> 149     st8 [r3] = rB3, 16
+<a id='L150' name='L150'></a> 150     ;;
+<a id='L151' name='L151'></a> 151     st8 [r2] = rB4
+<a id='L152' name='L152'></a> 152     st8 [r3] = rB5
+<a id='L153' name='L153'></a> 153     ret
+<a id='L154' name='L154'></a> 154 END(__getcontext)
+<a id='L155' name='L155'></a> 155 
+<a id='L156' name='L156'></a> 156 weak_alias (__getcontext, getcontext)
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;][^][v]<a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

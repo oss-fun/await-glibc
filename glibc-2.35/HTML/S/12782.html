@@ -1,0 +1,417 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>sysdeps/ia64/memset.S</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18977.html'>sysdeps</a>/<a href='../files/19053.html'>ia64</a>/memset.S</h2>
+<em class='comment'>/* [&lt;][&gt;][^][v][top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* Optimized version of the standard memset() function.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'>   Copyright (C) 2000-2022 Free Software Foundation, Inc.</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'></em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'></em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'></em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   License along with the GNU C Library; if not, see</em>
+<a id='L17' name='L17'></a>  17 <em class='comment'>   &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L18' name='L18'></a>  18 
+<a id='L19' name='L19'></a>  19 <em class='comment'>/* Return: dest</em>
+<a id='L20' name='L20'></a>  20 <em class='comment'></em>
+<a id='L21' name='L21'></a>  21 <em class='comment'>   Inputs:</em>
+<a id='L22' name='L22'></a>  22 <em class='comment'>        in0:    dest</em>
+<a id='L23' name='L23'></a>  23 <em class='comment'>        in1:    value</em>
+<a id='L24' name='L24'></a>  24 <em class='comment'>        in2:    count</em>
+<a id='L25' name='L25'></a>  25 <em class='comment'></em>
+<a id='L26' name='L26'></a>  26 <em class='comment'>   The algorithm is fairly straightforward: set byte by byte until we</em>
+<a id='L27' name='L27'></a>  27 <em class='comment'>   we get to a 16B-aligned address, then loop on 128 B chunks using an</em>
+<a id='L28' name='L28'></a>  28 <em class='comment'>   early store as prefetching, then loop on 32B chucks, then clear remaining</em>
+<a id='L29' name='L29'></a>  29 <em class='comment'>   words, finally clear remaining bytes.</em>
+<a id='L30' name='L30'></a>  30 <em class='comment'>   Since a stf.spill f0 can store 16B in one go, we use this instruction</em>
+<a id='L31' name='L31'></a>  31 <em class='comment'>   to get peak speed when value = 0.  */</em>
+<a id='L32' name='L32'></a>  32 
+<a id='L33' name='L33'></a>  33 <em class='sharp'>#include</em> &lt;<a href='../I/5967.html'>sysdep.h</a>&gt;
+<a id='L34' name='L34'></a>  34 <em class='sharp'>#undef</em> <a href='../R/23863.html' title='Multiple referred from 4499 places.'>ret</a>
+<a id='L35' name='L35'></a>  35 
+<a id='L36' name='L36'></a>  36 <em class='sharp'>#define</em> <a href='../R/18544.html' title='Multiple referred from 568 places.'>dest</a>        in0
+<a id='L37' name='L37'></a>  37 <em class='sharp'>#define</em> <a href='../R/26344.html' title='Multiple referred from 2313 places.'>value</a>       in1
+<a id='L38' name='L38'></a>  38 <em class='sharp'>#define</em> <a href='../R/18197.html' title='Multiple referred from 2689 places.'>cnt</a>     in2
+<a id='L39' name='L39'></a>  39 
+<a id='L40' name='L40'></a>  40 <em class='sharp'>#define</em> <a href='../R/25688.html' title='Multiple referred from 1021 places.'>tmp</a>     r31
+<a id='L41' name='L41'></a>  41 <em class='sharp'>#define</em> save_lc     r30
+<a id='L42' name='L42'></a>  42 <em class='sharp'>#define</em> ptr0        r29
+<a id='L43' name='L43'></a>  43 <em class='sharp'>#define</em> <a href='../R/23302.html' title='Multiple referred from 8 places.'>ptr1</a>        r28
+<a id='L44' name='L44'></a>  44 <em class='sharp'>#define</em> <a href='../R/23303.html' title='Multiple referred from 17 places.'>ptr2</a>        r27
+<a id='L45' name='L45'></a>  45 <em class='sharp'>#define</em> ptr3        r26
+<a id='L46' name='L46'></a>  46 <em class='sharp'>#define</em> ptr9        r24
+<a id='L47' name='L47'></a>  47 <em class='sharp'>#define</em> loopcnt     r23
+<a id='L48' name='L48'></a>  48 <em class='sharp'>#define</em> linecnt     r22
+<a id='L49' name='L49'></a>  49 <em class='sharp'>#define</em> bytecnt     r21
+<a id='L50' name='L50'></a>  50 
+<a id='L51' name='L51'></a>  51 <em class='sharp'>#define</em> fvalue      f6
+<a id='L52' name='L52'></a>  52 
+<a id='L53' name='L53'></a>  53 <em class='comment'>// This routine uses only scratch predicate registers (p6 - p15)</em>
+<a id='L54' name='L54'></a>  54 <em class='sharp'>#define</em> p_scr       p6          <em class='comment'>// default register for same-cycle branches</em>
+<a id='L55' name='L55'></a>  55 <em class='sharp'>#define</em> p_nz        p7
+<a id='L56' name='L56'></a>  56 <em class='sharp'>#define</em> p_zr        p8
+<a id='L57' name='L57'></a>  57 <em class='sharp'>#define</em> p_unalgn    p9
+<a id='L58' name='L58'></a>  58 <em class='sharp'>#define</em> p_y     p11
+<a id='L59' name='L59'></a>  59 <em class='sharp'>#define</em> p_n     p12
+<a id='L60' name='L60'></a>  60 <em class='sharp'>#define</em> p_yy        p13
+<a id='L61' name='L61'></a>  61 <em class='sharp'>#define</em> p_nn        p14
+<a id='L62' name='L62'></a>  62 
+<a id='L63' name='L63'></a>  63 <em class='sharp'>#define</em> movi0       mov
+<a id='L64' name='L64'></a>  64 
+<a id='L65' name='L65'></a>  65 <em class='sharp'>#define</em> MIN1        15
+<a id='L66' name='L66'></a>  66 <em class='sharp'>#define</em> MIN1P1HALF  8
+<a id='L67' name='L67'></a>  67 <em class='sharp'>#define</em> LINE_SIZE   128
+<a id='L68' name='L68'></a>  68 <em class='sharp'>#define</em> LSIZE_SH        7           <em class='comment'>// shift amount</em>
+<a id='L69' name='L69'></a>  69 <em class='sharp'>#define</em> PREF_AHEAD  8
+<a id='L70' name='L70'></a>  70 
+<a id='L71' name='L71'></a>  71 <em class='sharp'>#define</em> <a href='../R/9269.html' title='Multiple referred from 4 places.'>USE_FLP</a>
+<a id='L72' name='L72'></a>  72 <em class='sharp'>#if</em> <strong class='reserved'>defined</strong>(<a href='../Y/2092.html' title='Multiple used in 4 places.'>USE_INT</a>)
+<a id='L73' name='L73'></a>  73 <em class='sharp'>#define</em> <a href='../R/24700.html' title='Multiple referred from 9 places.'>store</a>       st8
+<a id='L74' name='L74'></a>  74 <em class='sharp'>#define</em> myval           value
+<a id='L75' name='L75'></a>  75 <em class='sharp'>#elif</em> <strong class='reserved'>defined</strong>(<a href='../D/16812.html' title='Multiple defined in 3 places.'>USE_FLP</a>)
+<a id='L76' name='L76'></a>  76 <em class='sharp'>#define</em> <a href='../R/24700.html' title='Multiple referred from 9 places.'>store</a>       stf8
+<a id='L77' name='L77'></a>  77 <em class='sharp'>#define</em> myval       fvalue
+<a id='L78' name='L78'></a>  78 <em class='sharp'>#endif</em>
+<a id='L79' name='L79'></a>  79 
+<a id='L80' name='L80'></a>  80 .align  64
+<a id='L81' name='L81'></a>  81 <a href='../D/3651.html' title='Multiple defined in 54 places.'>ENTRY</a>(<a href='../R/21824.html' title='Multiple referred from 951 places.'>memset</a>)
+<a id='L82' name='L82'></a>  82 <em class='brace'>{</em> .mmi
+<a id='L83' name='L83'></a>  83     .prologue
+<a id='L84' name='L84'></a>  84     alloc   tmp = ar.pfs, 3, 0, 0, 0
+<a id='L85' name='L85'></a>  85     lfetch.nt1 [dest]
+<a id='L86' name='L86'></a>  86     .save   ar.lc, save_lc
+<a id='L87' name='L87'></a>  87     movi0   save_lc = ar.lc
+<a id='L88' name='L88'></a>  88 <em class='brace'>}</em> <em class='brace'>{</em> .mmi
+<a id='L89' name='L89'></a>  89     .body
+<a id='L90' name='L90'></a>  90     mov ret0 = dest     <em class='comment'>// return value</em>
+<a id='L91' name='L91'></a>  91     cmp.ne  p_nz, p_zr = value, r0  <em class='comment'>// use stf.spill if value is zero</em>
+<a id='L92' name='L92'></a>  92     cmp.eq  p_scr, p0 = cnt, r0
+<a id='L93' name='L93'></a>  93 ;; <em class='brace'>}</em>
+<a id='L94' name='L94'></a>  94 <em class='brace'>{</em> .mmi
+<a id='L95' name='L95'></a>  95     and ptr2 = -(MIN1+1), dest  <em class='comment'>// aligned address</em>
+<a id='L96' name='L96'></a>  96     and tmp = MIN1, dest    <em class='comment'>// prepare to check for alignment</em>
+<a id='L97' name='L97'></a>  97     tbit.nz p_y, p_n = dest, 0  <em class='comment'>// Do we have an odd address? (M_B_U)</em>
+<a id='L98' name='L98'></a>  98 <em class='brace'>}</em> <em class='brace'>{</em> .mib
+<a id='L99' name='L99'></a>  99     mov ptr1 = dest
+<a id='L100' name='L100'></a> 100     mux1    value = value, @brcst   <em class='comment'>// create 8 identical bytes in word</em>
+<a id='L101' name='L101'></a> 101 (p_scr) br.ret.dpnt.many rp     <em class='comment'>// return immediately if count = 0</em>
+<a id='L102' name='L102'></a> 102 ;; <em class='brace'>}</em>
+<a id='L103' name='L103'></a> 103 <em class='brace'>{</em> .mib
+<a id='L104' name='L104'></a> 104     cmp.ne  p_unalgn, p0 = tmp, r0
+<a id='L105' name='L105'></a> 105 <em class='brace'>}</em> <em class='brace'>{</em> .mib                <em class='comment'>// NB: # of bytes to move is 1 higher</em>
+<a id='L106' name='L106'></a> 106     sub bytecnt = (MIN1+1), tmp <em class='comment'>//     than loopcnt</em>
+<a id='L107' name='L107'></a> 107     cmp.gt  p_scr, p0 = 16, cnt     <em class='comment'>// is it a minimalistic task?</em>
+<a id='L108' name='L108'></a> 108 (p_scr) br.cond.dptk.many .move_bytes_unaligned <em class='comment'>// go move just a few (M_B_U)</em>
+<a id='L109' name='L109'></a> 109 ;; <em class='brace'>}</em>
+<a id='L110' name='L110'></a> 110 <em class='brace'>{</em> .mmi
+<a id='L111' name='L111'></a> 111 (p_unalgn) add  ptr1 = (MIN1+1), ptr2       <em class='comment'>// after alignment</em>
+<a id='L112' name='L112'></a> 112 (p_unalgn) add  ptr2 = MIN1P1HALF, ptr2     <em class='comment'>// after alignment</em>
+<a id='L113' name='L113'></a> 113 (p_unalgn) tbit.nz.unc p_y, p_n = bytecnt, 3    <em class='comment'>// should we do a st8 ?</em>
+<a id='L114' name='L114'></a> 114 ;; <em class='brace'>}</em>
+<a id='L115' name='L115'></a> 115 <em class='brace'>{</em> .mib
+<a id='L116' name='L116'></a> 116 (p_y)   add cnt = -8, cnt
+<a id='L117' name='L117'></a> 117 (p_unalgn) tbit.nz.unc p_yy, p_nn = bytecnt, 2  <em class='comment'>// should we do a st4 ?</em>
+<a id='L118' name='L118'></a> 118 <em class='brace'>}</em> <em class='brace'>{</em> .mib
+<a id='L119' name='L119'></a> 119 (p_y)   st8 [ptr2] = value, -4
+<a id='L120' name='L120'></a> 120 (p_n)   add ptr2 = 4, ptr2
+<a id='L121' name='L121'></a> 121 ;; <em class='brace'>}</em>
+<a id='L122' name='L122'></a> 122 <em class='brace'>{</em> .mib
+<a id='L123' name='L123'></a> 123 (p_yy)  add cnt = -4, cnt
+<a id='L124' name='L124'></a> 124 (p_unalgn) tbit.nz.unc p_y, p_n = bytecnt, 1    <em class='comment'>// should we do a st2 ?</em>
+<a id='L125' name='L125'></a> 125 <em class='brace'>}</em> <em class='brace'>{</em> .mib
+<a id='L126' name='L126'></a> 126 (p_yy)  st4 [ptr2] = value, -2
+<a id='L127' name='L127'></a> 127 (p_nn)  add ptr2 = 2, ptr2
+<a id='L128' name='L128'></a> 128 ;; <em class='brace'>}</em>
+<a id='L129' name='L129'></a> 129 <em class='brace'>{</em> .mmi
+<a id='L130' name='L130'></a> 130     mov tmp = LINE_SIZE+1       <em class='comment'>// for compare</em>
+<a id='L131' name='L131'></a> 131 (p_y)   add cnt = -2, cnt
+<a id='L132' name='L132'></a> 132 (p_unalgn) tbit.nz.unc p_yy, p_nn = bytecnt, 0  <em class='comment'>// should we do a st1 ?</em>
+<a id='L133' name='L133'></a> 133 <em class='brace'>}</em> <em class='brace'>{</em> .mmi
+<a id='L134' name='L134'></a> 134     setf.sig fvalue=value           <em class='comment'>// transfer value to FLP side</em>
+<a id='L135' name='L135'></a> 135 (p_y)   st2 [ptr2] = value, -1
+<a id='L136' name='L136'></a> 136 (p_n)   add ptr2 = 1, ptr2
+<a id='L137' name='L137'></a> 137 ;; <em class='brace'>}</em>
+<a id='L138' name='L138'></a> 138 
+<a id='L139' name='L139'></a> 139 <em class='brace'>{</em> .mmi
+<a id='L140' name='L140'></a> 140 (p_yy)  st1 [ptr2] = value
+<a id='L141' name='L141'></a> 141     cmp.gt  p_scr, p0 = tmp, cnt        <em class='comment'>// is it a minimalistic task?</em>
+<a id='L142' name='L142'></a> 142 <em class='brace'>}</em> <em class='brace'>{</em> .mbb
+<a id='L143' name='L143'></a> 143 (p_yy)  add cnt = -1, cnt
+<a id='L144' name='L144'></a> 144 (p_scr) br.cond.dpnt.many .fraction_of_line <em class='comment'>// go move just a few</em>
+<a id='L145' name='L145'></a> 145 ;; <em class='brace'>}</em>
+<a id='L146' name='L146'></a> 146 
+<a id='L147' name='L147'></a> 147 <em class='brace'>{</em> .mib
+<a id='L148' name='L148'></a> 148     nop.m 0
+<a id='L149' name='L149'></a> 149     shr.u   linecnt = cnt, LSIZE_SH
+<a id='L150' name='L150'></a> 150 (p_zr)  br.cond.dptk.many .l1b          <em class='comment'>// Jump to use stf.spill</em>
+<a id='L151' name='L151'></a> 151 ;; <em class='brace'>}</em>
+<a id='L152' name='L152'></a> 152 
+<a id='L153' name='L153'></a> 153 <em class='sharp'>#ifndef</em> <a href='../S/10511.html#L38' title='Defined at 38 in sysdeps/unix/sysv/linux/ia64/sysdep.h.'>GAS_ALIGN_BREAKS_UNWIND_INFO</a>
+<a id='L154' name='L154'></a> 154     .align 32 <em class='comment'>// -------- //  L1A: store ahead into cache lines; fill later</em>
+<a id='L155' name='L155'></a> 155 <em class='sharp'>#endif</em>
+<a id='L156' name='L156'></a> 156 <em class='brace'>{</em> .mmi
+<a id='L157' name='L157'></a> 157     and tmp = -(LINE_SIZE), cnt     <em class='comment'>// compute end of range</em>
+<a id='L158' name='L158'></a> 158     mov ptr9 = ptr1         <em class='comment'>// used for prefetching</em>
+<a id='L159' name='L159'></a> 159     and cnt = (LINE_SIZE-1), cnt    <em class='comment'>// remainder</em>
+<a id='L160' name='L160'></a> 160 <em class='brace'>}</em> <em class='brace'>{</em> .mmi
+<a id='L161' name='L161'></a> 161     mov loopcnt = PREF_AHEAD-1      <em class='comment'>// default prefetch loop</em>
+<a id='L162' name='L162'></a> 162     cmp.gt  p_scr, p0 = PREF_AHEAD, linecnt <em class='comment'>// check against actual value</em>
+<a id='L163' name='L163'></a> 163 ;; <em class='brace'>}</em>
+<a id='L164' name='L164'></a> 164 <em class='brace'>{</em> .mmi
+<a id='L165' name='L165'></a> 165 (p_scr) add loopcnt = -1, linecnt       <em class='comment'>// start of stores</em>
+<a id='L166' name='L166'></a> 166     add ptr2 = 8, ptr1          <em class='comment'>// (beyond prefetch stores)</em>
+<a id='L167' name='L167'></a> 167     add ptr1 = tmp, ptr1        <em class='comment'>// first address beyond total</em>
+<a id='L168' name='L168'></a> 168 ;; <em class='brace'>}</em>                        <em class='comment'>// range</em>
+<a id='L169' name='L169'></a> 169 <em class='brace'>{</em> .mmi
+<a id='L170' name='L170'></a> 170     add tmp = -1, linecnt       <em class='comment'>// next loop count</em>
+<a id='L171' name='L171'></a> 171     movi0   ar.lc = loopcnt
+<a id='L172' name='L172'></a> 172 ;; <em class='brace'>}</em>
+<a id='L173' name='L173'></a> 173 .pref_l1a:
+<a id='L174' name='L174'></a> 174 <em class='brace'>{</em> .mib
+<a id='L175' name='L175'></a> 175     store [ptr9] = myval, 128   <em class='comment'>// Do stores one cache line apart</em>
+<a id='L176' name='L176'></a> 176     nop.i   0
+<a id='L177' name='L177'></a> 177     br.cloop.dptk.few .pref_l1a
+<a id='L178' name='L178'></a> 178 ;; <em class='brace'>}</em>
+<a id='L179' name='L179'></a> 179 <em class='brace'>{</em> .mmi
+<a id='L180' name='L180'></a> 180     add ptr0 = 16, ptr2     <em class='comment'>// Two stores in parallel</em>
+<a id='L181' name='L181'></a> 181     movi0   ar.lc = tmp
+<a id='L182' name='L182'></a> 182 ;; <em class='brace'>}</em>
+<a id='L183' name='L183'></a> 183 .l1ax:
+<a id='L184' name='L184'></a> 184  <em class='brace'>{</em> .mmi
+<a id='L185' name='L185'></a> 185     store [ptr2] = myval, 8
+<a id='L186' name='L186'></a> 186     store [ptr0] = myval, 8
+<a id='L187' name='L187'></a> 187  ;; <em class='brace'>}</em>
+<a id='L188' name='L188'></a> 188  <em class='brace'>{</em> .mmi
+<a id='L189' name='L189'></a> 189     store [ptr2] = myval, 24
+<a id='L190' name='L190'></a> 190     store [ptr0] = myval, 24
+<a id='L191' name='L191'></a> 191  ;; <em class='brace'>}</em>
+<a id='L192' name='L192'></a> 192  <em class='brace'>{</em> .mmi
+<a id='L193' name='L193'></a> 193     store [ptr2] = myval, 8
+<a id='L194' name='L194'></a> 194     store [ptr0] = myval, 8
+<a id='L195' name='L195'></a> 195  ;; <em class='brace'>}</em>
+<a id='L196' name='L196'></a> 196  <em class='brace'>{</em> .mmi
+<a id='L197' name='L197'></a> 197     store [ptr2] = myval, 24
+<a id='L198' name='L198'></a> 198     store [ptr0] = myval, 24
+<a id='L199' name='L199'></a> 199  ;; <em class='brace'>}</em>
+<a id='L200' name='L200'></a> 200  <em class='brace'>{</em> .mmi
+<a id='L201' name='L201'></a> 201     store [ptr2] = myval, 8
+<a id='L202' name='L202'></a> 202     store [ptr0] = myval, 8
+<a id='L203' name='L203'></a> 203  ;; <em class='brace'>}</em>
+<a id='L204' name='L204'></a> 204  <em class='brace'>{</em> .mmi
+<a id='L205' name='L205'></a> 205     store [ptr2] = myval, 24
+<a id='L206' name='L206'></a> 206     store [ptr0] = myval, 24
+<a id='L207' name='L207'></a> 207  ;; <em class='brace'>}</em>
+<a id='L208' name='L208'></a> 208  <em class='brace'>{</em> .mmi
+<a id='L209' name='L209'></a> 209     store [ptr2] = myval, 8
+<a id='L210' name='L210'></a> 210     store [ptr0] = myval, 32
+<a id='L211' name='L211'></a> 211     cmp.lt  p_scr, p0 = ptr9, ptr1      <em class='comment'>// do we need more prefetching?</em>
+<a id='L212' name='L212'></a> 212  ;; <em class='brace'>}</em>
+<a id='L213' name='L213'></a> 213 <em class='brace'>{</em> .mmb
+<a id='L214' name='L214'></a> 214     store [ptr2] = myval, 24
+<a id='L215' name='L215'></a> 215 (p_scr) store [ptr9] = myval, 128
+<a id='L216' name='L216'></a> 216     br.cloop.dptk.few .l1ax
+<a id='L217' name='L217'></a> 217 ;; <em class='brace'>}</em>
+<a id='L218' name='L218'></a> 218 <em class='brace'>{</em> .mbb
+<a id='L219' name='L219'></a> 219     cmp.le  p_scr, p0 = 8, cnt      <em class='comment'>// just a few bytes left ?</em>
+<a id='L220' name='L220'></a> 220 (p_scr) br.cond.dpnt.many  .fraction_of_line    <em class='comment'>// Branch no. 2</em>
+<a id='L221' name='L221'></a> 221     br.cond.dpnt.many  .move_bytes_from_alignment   <em class='comment'>// Branch no. 3</em>
+<a id='L222' name='L222'></a> 222 ;; <em class='brace'>}</em>
+<a id='L223' name='L223'></a> 223 
+<a id='L224' name='L224'></a> 224 <em class='sharp'>#ifdef</em> <a href='../S/10511.html#L38' title='Defined at 38 in sysdeps/unix/sysv/linux/ia64/sysdep.h.'>GAS_ALIGN_BREAKS_UNWIND_INFO</a>
+<a id='L225' name='L225'></a> 225     <em class='brace'>{</em> nop 0 <em class='brace'>}</em>
+<a id='L226' name='L226'></a> 226 <em class='sharp'>#else</em>
+<a id='L227' name='L227'></a> 227     .align 32
+<a id='L228' name='L228'></a> 228 <em class='sharp'>#endif</em>
+<a id='L229' name='L229'></a> 229 .l1b:   <em class='comment'>// ------------------ //  L1B: store ahead into cache lines; fill later</em>
+<a id='L230' name='L230'></a> 230 <em class='brace'>{</em> .mmi
+<a id='L231' name='L231'></a> 231     and tmp = -(LINE_SIZE), cnt     <em class='comment'>// compute end of range</em>
+<a id='L232' name='L232'></a> 232     mov ptr9 = ptr1         <em class='comment'>// used for prefetching</em>
+<a id='L233' name='L233'></a> 233     and cnt = (LINE_SIZE-1), cnt    <em class='comment'>// remainder</em>
+<a id='L234' name='L234'></a> 234 <em class='brace'>}</em> <em class='brace'>{</em> .mmi
+<a id='L235' name='L235'></a> 235     mov loopcnt = PREF_AHEAD-1      <em class='comment'>// default prefetch loop</em>
+<a id='L236' name='L236'></a> 236     cmp.gt  p_scr, p0 = PREF_AHEAD, linecnt <em class='comment'>// check against actual value</em>
+<a id='L237' name='L237'></a> 237 ;; <em class='brace'>}</em>
+<a id='L238' name='L238'></a> 238 <em class='brace'>{</em> .mmi
+<a id='L239' name='L239'></a> 239 (p_scr) add loopcnt = -1, linecnt
+<a id='L240' name='L240'></a> 240     add ptr2 = 16, ptr1 <em class='comment'>// start of stores (beyond prefetch stores)</em>
+<a id='L241' name='L241'></a> 241     add ptr1 = tmp, ptr1    <em class='comment'>// first address beyond total range</em>
+<a id='L242' name='L242'></a> 242 ;; <em class='brace'>}</em>
+<a id='L243' name='L243'></a> 243 <em class='brace'>{</em> .mmi
+<a id='L244' name='L244'></a> 244     add tmp = -1, linecnt   <em class='comment'>// next loop count</em>
+<a id='L245' name='L245'></a> 245     movi0   ar.lc = loopcnt
+<a id='L246' name='L246'></a> 246 ;; <em class='brace'>}</em>
+<a id='L247' name='L247'></a> 247 .pref_l1b:
+<a id='L248' name='L248'></a> 248 <em class='brace'>{</em> .mib
+<a id='L249' name='L249'></a> 249     stf.spill [ptr9] = f0, 128  <em class='comment'>// Do stores one cache line apart</em>
+<a id='L250' name='L250'></a> 250     nop.i   0
+<a id='L251' name='L251'></a> 251     br.cloop.dptk.few .pref_l1b
+<a id='L252' name='L252'></a> 252 ;; <em class='brace'>}</em>
+<a id='L253' name='L253'></a> 253 <em class='brace'>{</em> .mmi
+<a id='L254' name='L254'></a> 254     add ptr0 = 16, ptr2     <em class='comment'>// Two stores in parallel</em>
+<a id='L255' name='L255'></a> 255     movi0   ar.lc = tmp
+<a id='L256' name='L256'></a> 256 ;; <em class='brace'>}</em>
+<a id='L257' name='L257'></a> 257 .l1bx:
+<a id='L258' name='L258'></a> 258  <em class='brace'>{</em> .mmi
+<a id='L259' name='L259'></a> 259     stf.spill [ptr2] = f0, 32
+<a id='L260' name='L260'></a> 260     stf.spill [ptr0] = f0, 32
+<a id='L261' name='L261'></a> 261  ;; <em class='brace'>}</em>
+<a id='L262' name='L262'></a> 262  <em class='brace'>{</em> .mmi
+<a id='L263' name='L263'></a> 263     stf.spill [ptr2] = f0, 32
+<a id='L264' name='L264'></a> 264     stf.spill [ptr0] = f0, 32
+<a id='L265' name='L265'></a> 265  ;; <em class='brace'>}</em>
+<a id='L266' name='L266'></a> 266  <em class='brace'>{</em> .mmi
+<a id='L267' name='L267'></a> 267     stf.spill [ptr2] = f0, 32
+<a id='L268' name='L268'></a> 268     stf.spill [ptr0] = f0, 64
+<a id='L269' name='L269'></a> 269     cmp.lt  p_scr, p0 = ptr9, ptr1  <em class='comment'>// do we need more prefetching?</em>
+<a id='L270' name='L270'></a> 270  ;; <em class='brace'>}</em>
+<a id='L271' name='L271'></a> 271 <em class='brace'>{</em> .mmb
+<a id='L272' name='L272'></a> 272     stf.spill [ptr2] = f0, 32
+<a id='L273' name='L273'></a> 273 (p_scr) stf.spill [ptr9] = f0, 128
+<a id='L274' name='L274'></a> 274     br.cloop.dptk.few .l1bx
+<a id='L275' name='L275'></a> 275 ;; <em class='brace'>}</em>
+<a id='L276' name='L276'></a> 276 <em class='brace'>{</em> .mib
+<a id='L277' name='L277'></a> 277     cmp.gt  p_scr, p0 = 8, cnt  <em class='comment'>// just a few bytes left ?</em>
+<a id='L278' name='L278'></a> 278 (p_scr) br.cond.dpnt.many  .move_bytes_from_alignment
+<a id='L279' name='L279'></a> 279 ;; <em class='brace'>}</em>
+<a id='L280' name='L280'></a> 280 
+<a id='L281' name='L281'></a> 281 .fraction_of_line:
+<a id='L282' name='L282'></a> 282 <em class='brace'>{</em> .mib
+<a id='L283' name='L283'></a> 283     add ptr2 = 16, ptr1
+<a id='L284' name='L284'></a> 284     shr.u   loopcnt = cnt, 5    <em class='comment'>// loopcnt = cnt / 32</em>
+<a id='L285' name='L285'></a> 285 ;; <em class='brace'>}</em>
+<a id='L286' name='L286'></a> 286 <em class='brace'>{</em> .mib
+<a id='L287' name='L287'></a> 287     cmp.eq  p_scr, p0 = loopcnt, r0
+<a id='L288' name='L288'></a> 288     add loopcnt = -1, loopcnt
+<a id='L289' name='L289'></a> 289 (p_scr) br.cond.dpnt.many store_words
+<a id='L290' name='L290'></a> 290 ;; <em class='brace'>}</em>
+<a id='L291' name='L291'></a> 291 <em class='brace'>{</em> .mib
+<a id='L292' name='L292'></a> 292     and cnt = 0x1f, cnt     <em class='comment'>// compute the remaining cnt</em>
+<a id='L293' name='L293'></a> 293     movi0   ar.lc = loopcnt
+<a id='L294' name='L294'></a> 294 ;; <em class='brace'>}</em>
+<a id='L295' name='L295'></a> 295 <em class='sharp'>#ifndef</em> <a href='../S/10511.html#L38' title='Defined at 38 in sysdeps/unix/sysv/linux/ia64/sysdep.h.'>GAS_ALIGN_BREAKS_UNWIND_INFO</a>
+<a id='L296' name='L296'></a> 296     .align 32
+<a id='L297' name='L297'></a> 297 <em class='sharp'>#endif</em>
+<a id='L298' name='L298'></a> 298 .l2:    <em class='comment'>// ---------------------------- //  L2A:  store 32B in 2 cycles</em>
+<a id='L299' name='L299'></a> 299 <em class='brace'>{</em> .mmb
+<a id='L300' name='L300'></a> 300     store   [ptr1] = myval, 8
+<a id='L301' name='L301'></a> 301     store   [ptr2] = myval, 8
+<a id='L302' name='L302'></a> 302 ;; <em class='brace'>}</em> <em class='brace'>{</em> .mmb
+<a id='L303' name='L303'></a> 303     store   [ptr1] = myval, 24
+<a id='L304' name='L304'></a> 304     store   [ptr2] = myval, 24
+<a id='L305' name='L305'></a> 305     br.cloop.dptk.many .l2
+<a id='L306' name='L306'></a> 306 ;; <em class='brace'>}</em>
+<a id='L307' name='L307'></a> 307 store_words:
+<a id='L308' name='L308'></a> 308 <em class='brace'>{</em> .mib
+<a id='L309' name='L309'></a> 309     cmp.gt  p_scr, p0 = 8, cnt      <em class='comment'>// just a few bytes left ?</em>
+<a id='L310' name='L310'></a> 310 (p_scr) br.cond.dpnt.many .move_bytes_from_alignment    <em class='comment'>// Branch</em>
+<a id='L311' name='L311'></a> 311 ;; <em class='brace'>}</em>
+<a id='L312' name='L312'></a> 312 
+<a id='L313' name='L313'></a> 313 <em class='brace'>{</em> .mmi
+<a id='L314' name='L314'></a> 314     store   [ptr1] = myval, 8       <em class='comment'>// store</em>
+<a id='L315' name='L315'></a> 315     cmp.le  p_y, p_n = 16, cnt      <em class='comment'>//</em>
+<a id='L316' name='L316'></a> 316     add cnt = -8, cnt           <em class='comment'>// subtract</em>
+<a id='L317' name='L317'></a> 317 ;; <em class='brace'>}</em>
+<a id='L318' name='L318'></a> 318 <em class='brace'>{</em> .mmi
+<a id='L319' name='L319'></a> 319 (p_y)   store   [ptr1] = myval, 8       <em class='comment'>// store</em>
+<a id='L320' name='L320'></a> 320 (p_y)   cmp.le.unc p_yy, p_nn = 16, cnt     <em class='comment'>//</em>
+<a id='L321' name='L321'></a> 321 (p_y)   add cnt = -8, cnt           <em class='comment'>// subtract</em>
+<a id='L322' name='L322'></a> 322 ;; <em class='brace'>}</em>
+<a id='L323' name='L323'></a> 323 <em class='brace'>{</em> .mmi                      <em class='comment'>// store</em>
+<a id='L324' name='L324'></a> 324 (p_yy)  store   [ptr1] = myval, 8       <em class='comment'>//</em>
+<a id='L325' name='L325'></a> 325 (p_yy)  add cnt = -8, cnt           <em class='comment'>// subtract</em>
+<a id='L326' name='L326'></a> 326 ;; <em class='brace'>}</em>
+<a id='L327' name='L327'></a> 327 
+<a id='L328' name='L328'></a> 328 .move_bytes_from_alignment:
+<a id='L329' name='L329'></a> 329 <em class='brace'>{</em> .mib
+<a id='L330' name='L330'></a> 330     cmp.eq  p_scr, p0 = cnt, r0
+<a id='L331' name='L331'></a> 331     tbit.nz.unc p_y, p0 = cnt, 2    <em class='comment'>// should we terminate with a st4 ?</em>
+<a id='L332' name='L332'></a> 332 (p_scr) br.cond.dpnt.few .restore_and_exit
+<a id='L333' name='L333'></a> 333 ;; <em class='brace'>}</em>
+<a id='L334' name='L334'></a> 334 <em class='brace'>{</em> .mib
+<a id='L335' name='L335'></a> 335 (p_y)   st4 [ptr1] = value, 4
+<a id='L336' name='L336'></a> 336     tbit.nz.unc p_yy, p0 = cnt, 1   <em class='comment'>// should we terminate with a st2 ?</em>
+<a id='L337' name='L337'></a> 337 ;; <em class='brace'>}</em>
+<a id='L338' name='L338'></a> 338 <em class='brace'>{</em> .mib
+<a id='L339' name='L339'></a> 339 (p_yy)  st2 [ptr1] = value, 2
+<a id='L340' name='L340'></a> 340     tbit.nz.unc p_y, p0 = cnt, 0
+<a id='L341' name='L341'></a> 341 ;; <em class='brace'>}</em>
+<a id='L342' name='L342'></a> 342 
+<a id='L343' name='L343'></a> 343 <em class='brace'>{</em> .mib
+<a id='L344' name='L344'></a> 344 (p_y)   st1 [ptr1] = value
+<a id='L345' name='L345'></a> 345 ;; <em class='brace'>}</em>
+<a id='L346' name='L346'></a> 346 .restore_and_exit:
+<a id='L347' name='L347'></a> 347 <em class='brace'>{</em> .mib
+<a id='L348' name='L348'></a> 348     nop.m   0
+<a id='L349' name='L349'></a> 349     movi0   ar.lc = save_lc
+<a id='L350' name='L350'></a> 350     br.ret.sptk.many rp
+<a id='L351' name='L351'></a> 351 ;; <em class='brace'>}</em>
+<a id='L352' name='L352'></a> 352 
+<a id='L353' name='L353'></a> 353 .move_bytes_unaligned:
+<a id='L354' name='L354'></a> 354 <em class='brace'>{</em> .mmi
+<a id='L355' name='L355'></a> 355        .pred.rel "mutex",p_y, p_n
+<a id='L356' name='L356'></a> 356        .pred.rel "mutex",p_yy, p_nn
+<a id='L357' name='L357'></a> 357 (p_n)   cmp.le  p_yy, p_nn = 4, cnt
+<a id='L358' name='L358'></a> 358 (p_y)   cmp.le  p_yy, p_nn = 5, cnt
+<a id='L359' name='L359'></a> 359 (p_n)   add ptr2 = 2, ptr1
+<a id='L360' name='L360'></a> 360 <em class='brace'>}</em> <em class='brace'>{</em> .mmi
+<a id='L361' name='L361'></a> 361 (p_y)   add ptr2 = 3, ptr1
+<a id='L362' name='L362'></a> 362 (p_y)   st1 [ptr1] = value, 1   <em class='comment'>// fill 1 (odd-aligned) byte</em>
+<a id='L363' name='L363'></a> 363 (p_y)   add cnt = -1, cnt       <em class='comment'>// [15, 14 (or less) left]</em>
+<a id='L364' name='L364'></a> 364 ;; <em class='brace'>}</em>
+<a id='L365' name='L365'></a> 365 <em class='brace'>{</em> .mmi
+<a id='L366' name='L366'></a> 366 (p_yy)  cmp.le.unc p_y, p0 = 8, cnt
+<a id='L367' name='L367'></a> 367     add ptr3 = ptr1, cnt    <em class='comment'>// prepare last store</em>
+<a id='L368' name='L368'></a> 368     movi0   ar.lc = save_lc
+<a id='L369' name='L369'></a> 369 <em class='brace'>}</em> <em class='brace'>{</em> .mmi
+<a id='L370' name='L370'></a> 370 (p_yy)  st2 [ptr1] = value, 4   <em class='comment'>// fill 2 (aligned) bytes</em>
+<a id='L371' name='L371'></a> 371 (p_yy)  st2 [ptr2] = value, 4   <em class='comment'>// fill 2 (aligned) bytes</em>
+<a id='L372' name='L372'></a> 372 (p_yy)  add cnt = -4, cnt       <em class='comment'>// [11, 10 (o less) left]</em>
+<a id='L373' name='L373'></a> 373 ;; <em class='brace'>}</em>
+<a id='L374' name='L374'></a> 374 <em class='brace'>{</em> .mmi
+<a id='L375' name='L375'></a> 375 (p_y)   cmp.le.unc p_yy, p0 = 8, cnt
+<a id='L376' name='L376'></a> 376     add ptr3 = -1, ptr3     <em class='comment'>// last store</em>
+<a id='L377' name='L377'></a> 377     tbit.nz p_scr, p0 = cnt, 1  <em class='comment'>// will there be a st2 at the end ?</em>
+<a id='L378' name='L378'></a> 378 <em class='brace'>}</em> <em class='brace'>{</em> .mmi
+<a id='L379' name='L379'></a> 379 (p_y)   st2 [ptr1] = value, 4   <em class='comment'>// fill 2 (aligned) bytes</em>
+<a id='L380' name='L380'></a> 380 (p_y)   st2 [ptr2] = value, 4   <em class='comment'>// fill 2 (aligned) bytes</em>
+<a id='L381' name='L381'></a> 381 (p_y)   add cnt = -4, cnt       <em class='comment'>// [7, 6 (or less) left]</em>
+<a id='L382' name='L382'></a> 382 ;; <em class='brace'>}</em>
+<a id='L383' name='L383'></a> 383 <em class='brace'>{</em> .mmi
+<a id='L384' name='L384'></a> 384 (p_yy)  st2 [ptr1] = value, 4   <em class='comment'>// fill 2 (aligned) bytes</em>
+<a id='L385' name='L385'></a> 385 (p_yy)  st2 [ptr2] = value, 4   <em class='comment'>// fill 2 (aligned) bytes</em>
+<a id='L386' name='L386'></a> 386                     <em class='comment'>// [3, 2 (or less) left]</em>
+<a id='L387' name='L387'></a> 387     tbit.nz p_y, p0 = cnt, 0    <em class='comment'>// will there be a st1 at the end ?</em>
+<a id='L388' name='L388'></a> 388 <em class='brace'>}</em> <em class='brace'>{</em> .mmi
+<a id='L389' name='L389'></a> 389 (p_yy)  add cnt = -4, cnt
+<a id='L390' name='L390'></a> 390 ;; <em class='brace'>}</em>
+<a id='L391' name='L391'></a> 391 <em class='brace'>{</em> .mmb
+<a id='L392' name='L392'></a> 392 (p_scr) st2 [ptr1] = value      <em class='comment'>// fill 2 (aligned) bytes</em>
+<a id='L393' name='L393'></a> 393 (p_y)   st1 [ptr3] = value      <em class='comment'>// fill last byte (using ptr3)</em>
+<a id='L394' name='L394'></a> 394     br.ret.sptk.many rp
+<a id='L395' name='L395'></a> 395 ;; <em class='brace'>}</em>
+<a id='L396' name='L396'></a> 396 END(memset)
+<a id='L397' name='L397'></a> 397 libc_hidden_builtin_def (memset)
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;][^][v]<a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

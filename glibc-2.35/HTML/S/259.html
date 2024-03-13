@@ -1,0 +1,144 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>intl/plural-exp.h</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18899.html'>intl</a>/plural-exp.h</h2>
+<em class='comment'>/* [&lt;][&gt;][^][v][top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<h2 class='header'><a href='../J/1910.html' title='Multiple included from 5 places.'>INCLUDED FROM</a></h2>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* Expression parsing and evaluation for plural form selection.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   Copyright (C) 2000-2022 Free Software Foundation, Inc.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'>   Written by Ulrich Drepper &lt;drepper@cygnus.com&gt;, 2000.</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'></em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   This program is free software: you can redistribute it and/or modify</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   it under the terms of the GNU Lesser General Public License as published by</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   the Free Software Foundation; either version 2.1 of the License, or</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'>   (at your option) any later version.</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'></em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   This program is distributed in the hope that it will be useful,</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'>   GNU Lesser General Public License for more details.</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'></em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   You should have received a copy of the GNU Lesser General Public License</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   along with this program.  If not, see &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L17' name='L17'></a>  17 
+<a id='L18' name='L18'></a>  18 <em class='sharp'>#ifndef</em> <a href='../S/259.html#L19' title='Defined at 19 in intl/plural-exp.h.'>_PLURAL_EXP_H</a>
+<a id='L19' name='L19'></a>  19 <em class='sharp'>#define</em> <a href='../R/11547.html' title='Multiple referred from 2 places.'>_PLURAL_EXP_H</a>
+<a id='L20' name='L20'></a>  20 
+<a id='L21' name='L21'></a>  21 <em class='sharp'>#ifndef</em> <a href='../D/27947.html' title='Multiple defined in 7 places.'>attribute_hidden</a>
+<a id='L22' name='L22'></a>  22 <em class='sharp'># define</em> <a href='../R/17433.html' title='Multiple referred from 2047 places.'>attribute_hidden</a>
+<a id='L23' name='L23'></a>  23 <em class='sharp'>#endif</em>
+<a id='L24' name='L24'></a>  24 
+<a id='L25' name='L25'></a>  25 <em class='sharp'>#ifdef</em> <a href='../Y/4094.html' title='Multiple used in 163 places.'>__cplusplus</a>
+<a id='L26' name='L26'></a>  26 <strong class='reserved'>extern</strong> "C" <em class='brace'>{</em>
+<a id='L27' name='L27'></a>  27 <em class='sharp'>#endif</em>
+<a id='L28' name='L28'></a>  28 
+<a id='L29' name='L29'></a>  29 
+<a id='L30' name='L30'></a>  30 <strong class='reserved'>enum</strong> <a href='../R/19175.html' title='Multiple referred from 7 places.'>expression_operator</a>
+<a id='L31' name='L31'></a>  31 <em class='brace'>{</em>
+<a id='L32' name='L32'></a>  32   <em class='comment'>/* Without arguments:  */</em>
+<a id='L33' name='L33'></a>  33   <a href='../R/26349.html' title='Multiple referred from 543 places.'>var</a>,              <em class='comment'>/* The variable "n".  */</em>
+<a id='L34' name='L34'></a>  34   <a href='../R/22633.html' title='Multiple referred from 409 places.'>num</a>,              <em class='comment'>/* Decimal number.  */</em>
+<a id='L35' name='L35'></a>  35   <em class='comment'>/* Unary operators:  */</em>
+<a id='L36' name='L36'></a>  36   <a href='../S/277.html#L195' title='Referred from 195 in intl/plural.y.'>lnot</a>,             <em class='comment'>/* Logical NOT.  */</em>
+<a id='L37' name='L37'></a>  37   <em class='comment'>/* Binary operators:  */</em>
+<a id='L38' name='L38'></a>  38   <a href='../R/22065.html' title='Multiple referred from 2 places.'>mult</a>,             <em class='comment'>/* Multiplication.  */</em>
+<a id='L39' name='L39'></a>  39   <a href='../R/18583.html' title='Multiple referred from 5 places.'>divide</a>,           <em class='comment'>/* Division.  */</em>
+<a id='L40' name='L40'></a>  40   <a href='../R/21913.html' title='Multiple referred from 202 places.'>module</a>,           <em class='comment'>/* Modulo operation.  */</em>
+<a id='L41' name='L41'></a>  41   <a href='../R/22924.html' title='Multiple referred from 2 places.'>plus</a>,             <em class='comment'>/* Addition.  */</em>
+<a id='L42' name='L42'></a>  42   <a href='../R/21865.html' title='Multiple referred from 2 places.'>minus</a>,            <em class='comment'>/* Subtraction.  */</em>
+<a id='L43' name='L43'></a>  43   <a href='../R/21078.html' title='Multiple referred from 2 places.'>less_than</a>,            <em class='comment'>/* Comparison.  */</em>
+<a id='L44' name='L44'></a>  44   <a href='../R/20210.html' title='Multiple referred from 2 places.'>greater_than</a>,         <em class='comment'>/* Comparison.  */</em>
+<a id='L45' name='L45'></a>  45   <a href='../R/21077.html' title='Multiple referred from 2 places.'>less_or_equal</a>,        <em class='comment'>/* Comparison.  */</em>
+<a id='L46' name='L46'></a>  46   <a href='../R/20209.html' title='Multiple referred from 2 places.'>greater_or_equal</a>,     <em class='comment'>/* Comparison.  */</em>
+<a id='L47' name='L47'></a>  47   <a href='../R/19022.html' title='Multiple referred from 234 places.'>equal</a>,            <em class='comment'>/* Comparison for equality.  */</em>
+<a id='L48' name='L48'></a>  48   <a href='../R/22315.html' title='Multiple referred from 4 places.'>not_equal</a>,            <em class='comment'>/* Comparison for inequality.  */</em>
+<a id='L49' name='L49'></a>  49   <a href='../R/21007.html' title='Multiple referred from 2 places.'>land</a>,             <em class='comment'>/* Logical AND.  */</em>
+<a id='L50' name='L50'></a>  50   <a href='../R/21553.html' title='Multiple referred from 2 places.'>lor</a>,              <em class='comment'>/* Logical OR.  */</em>
+<a id='L51' name='L51'></a>  51   <em class='comment'>/* Ternary operators:  */</em>
+<a id='L52' name='L52'></a>  52   <a href='../S/277.html#L167' title='Referred from 167 in intl/plural.y.'>qmop</a>              <em class='comment'>/* Question mark operator.  */</em>
+<a id='L53' name='L53'></a>  53 <em class='brace'>}</em>;
+<a id='L54' name='L54'></a>  54 
+<a id='L55' name='L55'></a>  55 <em class='comment'>/* This is the representation of the expressions to determine the</em>
+<a id='L56' name='L56'></a>  56 <em class='comment'>   plural form.  */</em>
+<a id='L57' name='L57'></a>  57 <strong class='reserved'>struct</strong> <a href='../R/19174.html' title='Multiple referred from 40 places.'>expression</a>
+<a id='L58' name='L58'></a>  58 <em class='brace'>{</em>
+<a id='L59' name='L59'></a>  59   <strong class='reserved'>int</strong> <a href='../Y/20237.html' title='Multiple used in 65 places.'>nargs</a>;            <em class='comment'>/* Number of arguments.  */</em>
+<a id='L60' name='L60'></a>  60   <strong class='reserved'>enum</strong> <a href='../S/259.html#L30' title='Defined at 30 in intl/plural-exp.h.'>expression_operator</a> <a href='../S/18705.html#L77' title='Defined at 77 in nptl/tst-thread_local1.cc.'>operation</a>;
+<a id='L61' name='L61'></a>  61   <strong class='reserved'>union</strong>
+<a id='L62' name='L62'></a>  62   <em class='brace'>{</em>
+<a id='L63' name='L63'></a>  63     <strong class='reserved'>unsigned</strong> <strong class='reserved'>long</strong> <strong class='reserved'>int</strong> <a href='../S/259.html#L34' title='Defined at 34 in intl/plural-exp.h.'>num</a>;  <em class='comment'>/* Number value for `num'.  */</em>
+<a id='L64' name='L64'></a>  64     <strong class='reserved'>struct</strong> <a href='../S/259.html#L57' title='Defined at 57 in intl/plural-exp.h.'>expression</a> *<a href='../S/6692.html#L43' title='Defined at 43 in stdlib/tst-system.c.'>args</a>[3]; <em class='comment'>/* Up to three arguments.  */</em>
+<a id='L65' name='L65'></a>  65   <em class='brace'>}</em> <a href='../D/38896.html' title='Multiple defined in 2 places.'>val</a>;
+<a id='L66' name='L66'></a>  66 <em class='brace'>}</em>;
+<a id='L67' name='L67'></a>  67 
+<a id='L68' name='L68'></a>  68 <em class='comment'>/* This is the data structure to pass information to the parser and get</em>
+<a id='L69' name='L69'></a>  69 <em class='comment'>   the result in a thread-safe way.  */</em>
+<a id='L70' name='L70'></a>  70 <strong class='reserved'>struct</strong> <a href='../R/22831.html' title='Multiple referred from 8 places.'>parse_args</a>
+<a id='L71' name='L71'></a>  71 <em class='brace'>{</em>
+<a id='L72' name='L72'></a>  72   <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../Y/12086.html' title='Multiple used in 2816 places.'>cp</a>;
+<a id='L73' name='L73'></a>  73   <strong class='reserved'>struct</strong> <a href='../S/259.html#L57' title='Defined at 57 in intl/plural-exp.h.'>expression</a> *<a href='../D/35957.html' title='Multiple defined in 4 places.'>res</a>;
+<a id='L74' name='L74'></a>  74 <em class='brace'>}</em>;
+<a id='L75' name='L75'></a>  75 
+<a id='L76' name='L76'></a>  76 
+<a id='L77' name='L77'></a>  77 <em class='comment'>/* Names for the libintl functions are a problem.  This source code is used</em>
+<a id='L78' name='L78'></a>  78 <em class='comment'>   1. in the GNU C Library library,</em>
+<a id='L79' name='L79'></a>  79 <em class='comment'>   2. in the GNU libintl library,</em>
+<a id='L80' name='L80'></a>  80 <em class='comment'>   3. in the GNU gettext tools.</em>
+<a id='L81' name='L81'></a>  81 <em class='comment'>   The function names in each situation must be different, to allow for</em>
+<a id='L82' name='L82'></a>  82 <em class='comment'>   binary incompatible changes in 'struct expression'.  Furthermore,</em>
+<a id='L83' name='L83'></a>  83 <em class='comment'>   1. in the GNU C Library library, the names have a __ prefix,</em>
+<a id='L84' name='L84'></a>  84 <em class='comment'>   2.+3. in the GNU libintl library and in the GNU gettext tools, the names</em>
+<a id='L85' name='L85'></a>  85 <em class='comment'>         must follow ANSI C and not start with __.</em>
+<a id='L86' name='L86'></a>  86 <em class='comment'>   So we have to distinguish the three cases.  */</em>
+<a id='L87' name='L87'></a>  87 <em class='sharp'>#ifdef</em> <a href='../D/19175.html' title='Multiple defined in 5 places.'>_LIBC</a>
+<a id='L88' name='L88'></a>  88 <em class='sharp'># define</em> <a href='../R/2798.html' title='Multiple referred from 5 places.'>FREE_EXPRESSION</a> <a href='../Y/4759.html' title='Multiple used in 2 places.'>__gettext_free_exp</a>
+<a id='L89' name='L89'></a>  89 <em class='sharp'># define</em> <a href='../R/6059.html' title='Multiple referred from 3 places.'>PLURAL_PARSE</a> <a href='../S/277.html#L40' title='Defined at 40 in intl/plural.y.'>__gettextparse</a>
+<a id='L90' name='L90'></a>  90 <em class='sharp'># define</em> <a href='../R/3023.html' title='Multiple referred from 8 places.'>GERMANIC_PLURAL</a> <a href='../Y/4760.html' title='Multiple used in 2 places.'>__gettext_germanic_plural</a>
+<a id='L91' name='L91'></a>  91 <em class='sharp'># define</em> <a href='../R/2286.html' title='Multiple referred from 2 places.'>EXTRACT_PLURAL_EXPRESSION</a> __gettext_extract_plural
+<a id='L92' name='L92'></a>  92 <em class='sharp'>#elif</em> <strong class='reserved'>defined</strong> (<a href='../Y/938.html' title='Multiple used in 3 places.'>IN_LIBINTL</a>)
+<a id='L93' name='L93'></a>  93 <em class='sharp'># define</em> <a href='../R/2798.html' title='Multiple referred from 5 places.'>FREE_EXPRESSION</a> libintl_gettext_free_exp
+<a id='L94' name='L94'></a>  94 <em class='sharp'># define</em> <a href='../R/6059.html' title='Multiple referred from 3 places.'>PLURAL_PARSE</a> libintl_gettextparse
+<a id='L95' name='L95'></a>  95 <em class='sharp'># define</em> <a href='../R/3023.html' title='Multiple referred from 8 places.'>GERMANIC_PLURAL</a> libintl_gettext_germanic_plural
+<a id='L96' name='L96'></a>  96 <em class='sharp'># define</em> <a href='../R/2286.html' title='Multiple referred from 2 places.'>EXTRACT_PLURAL_EXPRESSION</a> libintl_gettext_extract_plural
+<a id='L97' name='L97'></a>  97 <em class='sharp'>#else</em>
+<a id='L98' name='L98'></a>  98 <em class='sharp'># define</em> <a href='../R/2798.html' title='Multiple referred from 5 places.'>FREE_EXPRESSION</a> free_plural_expression
+<a id='L99' name='L99'></a>  99 <em class='sharp'># define</em> <a href='../R/6059.html' title='Multiple referred from 3 places.'>PLURAL_PARSE</a> parse_plural_expression
+<a id='L100' name='L100'></a> 100 <em class='sharp'># define</em> <a href='../R/3023.html' title='Multiple referred from 8 places.'>GERMANIC_PLURAL</a> germanic_plural
+<a id='L101' name='L101'></a> 101 <em class='sharp'># define</em> <a href='../R/2286.html' title='Multiple referred from 2 places.'>EXTRACT_PLURAL_EXPRESSION</a> extract_plural_expression
+<a id='L102' name='L102'></a> 102 <em class='sharp'>#endif</em>
+<a id='L103' name='L103'></a> 103 
+<a id='L104' name='L104'></a> 104 <strong class='reserved'>extern</strong> <strong class='reserved'>void</strong> <a href='../D/4686.html' title='Multiple defined in 4 places.'>FREE_EXPRESSION</a> (<strong class='reserved'>struct</strong> <a href='../S/259.html#L57' title='Defined at 57 in intl/plural-exp.h.'>expression</a> *<a href='../S/3342.html#L755' title='Defined at 755 in math/tgmath.h.'>exp</a>) <a href='../D/27947.html' title='Multiple defined in 7 places.'>attribute_hidden</a>;
+<a id='L105' name='L105'></a> 105 <strong class='reserved'>extern</strong> <strong class='reserved'>int</strong> <a href='../D/9912.html' title='Multiple defined in 3 places.'>PLURAL_PARSE</a> (<strong class='reserved'>struct</strong> <a href='../S/259.html#L70' title='Defined at 70 in intl/plural-exp.h.'>parse_args</a> *<a href='../D/27755.html' title='Multiple defined in 3 places.'>arg</a>);
+<a id='L106' name='L106'></a> 106 <strong class='reserved'>extern</strong> <strong class='reserved'>const</strong> <strong class='reserved'>struct</strong> <a href='../S/259.html#L57' title='Defined at 57 in intl/plural-exp.h.'>expression</a> <a href='../D/4997.html' title='Multiple defined in 3 places.'>GERMANIC_PLURAL</a> <a href='../D/27947.html' title='Multiple defined in 7 places.'>attribute_hidden</a>;
+<a id='L107' name='L107'></a> 107 <strong class='reserved'>extern</strong> <strong class='reserved'>void</strong> <a href='../D/3929.html' title='Multiple defined in 4 places.'>EXTRACT_PLURAL_EXPRESSION</a> (<strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../Y/21317.html' title='Multiple used in 15 places.'>nullentry</a>,
+<a id='L108' name='L108'></a> 108                        <strong class='reserved'>const</strong> <strong class='reserved'>struct</strong> <a href='../S/259.html#L57' title='Defined at 57 in intl/plural-exp.h.'>expression</a> **<a href='../Y/22484.html' title='Multiple used in 4 places.'>pluralp</a>,
+<a id='L109' name='L109'></a> 109                        <strong class='reserved'>unsigned</strong> <strong class='reserved'>long</strong> <strong class='reserved'>int</strong> *<a href='../Y/21138.html' title='Multiple used in 4 places.'>npluralsp</a>)
+<a id='L110' name='L110'></a> 110      <a href='../D/27947.html' title='Multiple defined in 7 places.'>attribute_hidden</a>;
+<a id='L111' name='L111'></a> 111 
+<a id='L112' name='L112'></a> 112 <em class='sharp'>#if</em> !<strong class='reserved'>defined</strong> (<a href='../D/19175.html' title='Multiple defined in 5 places.'>_LIBC</a>) &amp;&amp; !<strong class='reserved'>defined</strong> (<a href='../Y/938.html' title='Multiple used in 3 places.'>IN_LIBINTL</a>) &amp;&amp; !<strong class='reserved'>defined</strong> (<a href='../Y/937.html' title='Multiple used in 33 places.'>IN_LIBGLOCALE</a>)
+<a id='L113' name='L113'></a> 113 <strong class='reserved'>extern</strong> <strong class='reserved'>unsigned</strong> <strong class='reserved'>long</strong> <strong class='reserved'>int</strong> <a href='../S/289.html#L24' title='Defined at 24 in intl/eval-plural.h.'>plural_eval</a> (<strong class='reserved'>const</strong> <strong class='reserved'>struct</strong> <a href='../S/259.html#L57' title='Defined at 57 in intl/plural-exp.h.'>expression</a> *<a href='../Y/22346.html' title='Multiple used in 15 places.'>pexp</a>,
+<a id='L114' name='L114'></a> 114                       <strong class='reserved'>unsigned</strong> <strong class='reserved'>long</strong> <strong class='reserved'>int</strong> <a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>);
+<a id='L115' name='L115'></a> 115 <em class='sharp'>#endif</em>
+<a id='L116' name='L116'></a> 116 
+<a id='L117' name='L117'></a> 117 
+<a id='L118' name='L118'></a> 118 <em class='sharp'>#ifdef</em> <a href='../Y/4094.html' title='Multiple used in 163 places.'>__cplusplus</a>
+<a id='L119' name='L119'></a> 119 <em class='brace'>}</em>
+<a id='L120' name='L120'></a> 120 <em class='sharp'>#endif</em>
+<a id='L121' name='L121'></a> 121 
+<a id='L122' name='L122'></a> 122 <em class='sharp'>#endif</em> <em class='comment'>/* _PLURAL_EXP_H */</em>
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;][^][v]<a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

@@ -1,0 +1,181 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>crypt/speeds.c</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18862.html'>crypt</a>/speeds.c</h2>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L45'>[^]</a><a href='#L79'>[v]</a>[top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<h2 class='header'>DEFINITIONS</h2>
+This source file includes following definitions.
+<ol>
+<li><a href='#L45' title='Defined at 45.'>Stop</a></li>
+<li><a href='#L72' title='Defined at 72.'>clearmem</a></li>
+<li><a href='#L79' title='Defined at 79.'>main</a></li>
+</ol>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/*</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'> * This fcrypt/crypt speed testing program</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'> * is derived from one floating around in</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'> * the net. It's distributed along with</em>
+<a id='L5' name='L5'></a>   5 <em class='comment'> * UFC-crypt but is not covered by any</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'> * licence.</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'> *</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'> * @(#)speeds.c 1.11 20 Aug 1996</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'> */</em>
+<a id='L10' name='L10'></a>  10 
+<a id='L11' name='L11'></a>  11 <em class='sharp'>#include</em> &lt;<a href='../I/1264.html'>signal.h</a>&gt;
+<a id='L12' name='L12'></a>  12 <em class='sharp'>#include</em> &lt;<a href='../I/1776.html'>stdio.h</a>&gt;
+<a id='L13' name='L13'></a>  13 
+<a id='L14' name='L14'></a>  14 <em class='sharp'>#ifndef</em> <a href='../D/14213.html' title='Multiple defined in 7 places.'>SIGVTALRM</a>
+<a id='L15' name='L15'></a>  15 <em class='comment'>/*</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'> * patch from chip@chinacat.unicom.com (Chip Rosenthal):</em>
+<a id='L17' name='L17'></a>  17 <em class='comment'> * you may enable it if your system does not include</em>
+<a id='L18' name='L18'></a>  18 <em class='comment'> * a setitimer() function. You'll have to ensure the</em>
+<a id='L19' name='L19'></a>  19 <em class='comment'> * existence an environment variable: HZ giving how many</em>
+<a id='L20' name='L20'></a>  20 <em class='comment'> * ticks goes per second.</em>
+<a id='L21' name='L21'></a>  21 <em class='comment'> * If not existing in your default environment 50, 60</em>
+<a id='L22' name='L22'></a>  22 <em class='comment'> * or even 100 may be the right value. Perhaps you should</em>
+<a id='L23' name='L23'></a>  23 <em class='comment'> * then use 'time ./ufc 10000' instead of guessing.</em>
+<a id='L24' name='L24'></a>  24 <em class='comment'> */</em>
+<a id='L25' name='L25'></a>  25 <em class='sharp'>#define</em> <a href='../R/5447.html' title='Multiple referred from 6 places.'>NO_ITIMER</a>
+<a id='L26' name='L26'></a>  26 <em class='sharp'>#endif</em>
+<a id='L27' name='L27'></a>  27 
+<a id='L28' name='L28'></a>  28 <em class='sharp'>#ifdef</em> <a href='../S/6021.html#L25' title='Defined at 25 in crypt/speeds.c.'>NO_ITIMER</a>
+<a id='L29' name='L29'></a>  29 <em class='sharp'>#include</em> &lt;<a href='../I/1786.html'>sys/types.h</a>&gt;
+<a id='L30' name='L30'></a>  30 <em class='sharp'>#include</em> &lt;<a href='../I/2016.html'>sys/times.h</a>&gt;
+<a id='L31' name='L31'></a>  31 <em class='sharp'>#else</em>
+<a id='L32' name='L32'></a>  32 <em class='sharp'>#include</em> &lt;<a href='../I/176.html'>sys/time.h</a>&gt;
+<a id='L33' name='L33'></a>  33 <em class='sharp'>#endif</em>
+<a id='L34' name='L34'></a>  34 
+<a id='L35' name='L35'></a>  35 <strong class='reserved'>static</strong> <strong class='reserved'>int</strong> <a href='../D/28982.html' title='Multiple defined in 8 places.'>cnt</a>;
+<a id='L36' name='L36'></a>  36 <em class='sharp'>#ifdef</em> <a href='../S/6021.html#L25' title='Defined at 25 in crypt/speeds.c.'>NO_ITIMER</a>
+<a id='L37' name='L37'></a>  37 <strong class='reserved'>char</strong> *<a href='../Y/16286.html' title='Multiple used in 34 places.'>hz</a>;
+<a id='L38' name='L38'></a>  38 <strong class='reserved'>struct</strong> <a href='../S/1066.html#L32' title='Defined at 32 in posix/sys/times.h.'>tms</a> <a href='../Y/27928.html' title='Multiple used in 3 places.'>tstart</a>, <a href='../Y/27083.html' title='Multiple used in 3 places.'>tfinish</a>;
+<a id='L39' name='L39'></a>  39 <em class='sharp'>#endif</em>
+<a id='L40' name='L40'></a>  40 <em class='sharp'>#define</em> <a href='../R/4075.html' title='Multiple referred from 4 places.'>ITIME</a>   10      <em class='comment'>/* Number of seconds to run test. */</em>
+<a id='L41' name='L41'></a>  41 
+<a id='L42' name='L42'></a>  42 <strong class='reserved'>char</strong> *<a href='../S/6029.html#L36' title='Defined at 36 in crypt/crypt.h.'>crypt</a>(), *<a href='../Y/14403.html' title='Multiple used in 5 places.'>fcrypt</a>();
+<a id='L43' name='L43'></a>  43 
+<a id='L44' name='L44'></a>  44 <strong class='reserved'>void</strong>
+<a id='L45' name='L45'></a>  45 <a href='../R/8437.html' title='Multiple referred from 2 places.'>Stop</a> (<strong class='reserved'>void</strong>)
+<a id='L46' name='L46'></a>  46 <em class='brace'>{</em>
+<a id='L47' name='L47'></a>  47     <strong class='reserved'>double</strong> <a href='../Y/13612.html' title='Multiple used in 30 places.'>elapsed</a>;
+<a id='L48' name='L48'></a>  48 <em class='sharp'>#ifdef</em> <a href='../S/6021.html#L25' title='Defined at 25 in crypt/speeds.c.'>NO_ITIMER</a>
+<a id='L49' name='L49'></a>  49     (<strong class='reserved'>void</strong>) <a href='../Y/27343.html' title='Multiple used in 37 places.'>times</a>(&amp;<a href='../Y/27083.html' title='Multiple used in 3 places.'>tfinish</a>);
+<a id='L50' name='L50'></a>  50     <a href='../Y/13612.html' title='Multiple used in 30 places.'>elapsed</a> = ((<a href='../Y/27083.html' title='Multiple used in 3 places.'>tfinish</a>.<a href='../Y/27473.html' title='Multiple used in 6 places.'>tms_utime</a> + <a href='../Y/27083.html' title='Multiple used in 3 places.'>tfinish</a>.<a href='../Y/27472.html' title='Multiple used in 6 places.'>tms_stime</a>) -
+<a id='L51' name='L51'></a>  51     (<a href='../Y/27928.html' title='Multiple used in 3 places.'>tstart</a>.<a href='../Y/27473.html' title='Multiple used in 6 places.'>tms_utime</a> + <a href='../Y/27928.html' title='Multiple used in 3 places.'>tstart</a>.<a href='../Y/27472.html' title='Multiple used in 6 places.'>tms_stime</a>)) / <a href='../D/27885.html' title='Multiple defined in 2 places.'>atoi</a>(<a href='../Y/16286.html' title='Multiple used in 34 places.'>hz</a>);
+<a id='L52' name='L52'></a>  52     <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a>("elapsed time = %d sec,  CPU time = %f sec\n", <a href='../S/6021.html#L40' title='Defined at 40 in crypt/speeds.c.'>ITIME</a>, <a href='../Y/13612.html' title='Multiple used in 30 places.'>elapsed</a>);
+<a id='L53' name='L53'></a>  53 <em class='sharp'>#else</em>
+<a id='L54' name='L54'></a>  54     <a href='../Y/13612.html' title='Multiple used in 30 places.'>elapsed</a> = <a href='../S/6021.html#L40' title='Defined at 40 in crypt/speeds.c.'>ITIME</a>;
+<a id='L55' name='L55'></a>  55 <em class='sharp'>#endif</em>
+<a id='L56' name='L56'></a>  56     <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("Did %f %s()s per second.\n", ((<strong class='reserved'>float</strong>) <a href='../D/28982.html' title='Multiple defined in 8 places.'>cnt</a>) / <a href='../Y/13612.html' title='Multiple used in 30 places.'>elapsed</a>,
+<a id='L57' name='L57'></a>  57 <em class='sharp'>#if</em> <strong class='reserved'>defined</strong>(<a href='../Y/478.html' title='Multiple used in 5 places.'>FCRYPT</a>)
+<a id='L58' name='L58'></a>  58         "fcrypt"
+<a id='L59' name='L59'></a>  59 <em class='sharp'>#else</em>
+<a id='L60' name='L60'></a>  60         "crypt"
+<a id='L61' name='L61'></a>  61 <em class='sharp'>#endif</em>
+<a id='L62' name='L62'></a>  62     );
+<a id='L63' name='L63'></a>  63     <a href='../S/6681.html#L141' title='Defined at 141 in stdlib/exit.c.'>exit</a> (0);
+<a id='L64' name='L64'></a>  64 <em class='brace'>}</em>
+<a id='L65' name='L65'></a>  65 
+<a id='L66' name='L66'></a>  66 <em class='comment'>/*</em>
+<a id='L67' name='L67'></a>  67 <em class='comment'> * Silly rewrite of 'bzero'. I do so</em>
+<a id='L68' name='L68'></a>  68 <em class='comment'> * because some machines don't have</em>
+<a id='L69' name='L69'></a>  69 <em class='comment'> * bzero and some don't have memset.</em>
+<a id='L70' name='L70'></a>  70 <em class='comment'> */</em>
+<a id='L71' name='L71'></a>  71 
+<a id='L72' name='L72'></a>  72 <strong class='reserved'>static</strong> <strong class='reserved'>void</strong> <a href='../S/6021.html#L130' title='Referred from 130 in crypt/speeds.c.'>clearmem</a>(<a href='../D/36987.html' title='Multiple defined in 10 places.'>start</a>, <a href='../D/28982.html' title='Multiple defined in 8 places.'>cnt</a>)
+<a id='L73' name='L73'></a>  73   <strong class='reserved'>char</strong> *<a href='../D/36987.html' title='Multiple defined in 10 places.'>start</a>;
+<a id='L74' name='L74'></a>  74   <strong class='reserved'>int</strong> <a href='../D/28982.html' title='Multiple defined in 8 places.'>cnt</a>;
+<a id='L75' name='L75'></a>  75   <em class='brace'>{</em> <strong class='reserved'>while</strong>(<a href='../D/28982.html' title='Multiple defined in 8 places.'>cnt</a>--)
+<a id='L76' name='L76'></a>  76       *<a href='../D/36987.html' title='Multiple defined in 10 places.'>start</a>++ = '\0';
+<a id='L77' name='L77'></a>  77   <em class='brace'>}</em>
+<a id='L78' name='L78'></a>  78 
+<a id='L79' name='L79'></a>  79 <a href='../R/21622.html' title='Multiple referred from 22 places.'>main</a> (<strong class='reserved'>void</strong>)
+<a id='L80' name='L80'></a>  80 <em class='brace'>{</em>
+<a id='L81' name='L81'></a>  81    <strong class='reserved'>char</strong> *<a href='../D/36247.html' title='Multiple defined in 13 places.'>s</a>;
+<a id='L82' name='L82'></a>  82 <em class='sharp'>#ifdef</em> <a href='../S/6021.html#L25' title='Defined at 25 in crypt/speeds.c.'>NO_ITIMER</a>
+<a id='L83' name='L83'></a>  83     <strong class='reserved'>extern</strong> <strong class='reserved'>char</strong> *<a href='../S/6701.html#L33' title='Defined at 33 in stdlib/getenv.c.'>getenv</a>();
+<a id='L84' name='L84'></a>  84 <em class='sharp'>#else</em>
+<a id='L85' name='L85'></a>  85     <strong class='reserved'>struct</strong> <a href='../S/4039.html#L130' title='Defined at 130 in time/sys/time.h.'>itimerval</a> <a href='../Y/17320.html' title='Multiple used in 15 places.'>itv</a>;
+<a id='L86' name='L86'></a>  86 <em class='sharp'>#endif</em>
+<a id='L87' name='L87'></a>  87 
+<a id='L88' name='L88'></a>  88 <em class='sharp'>#ifdef</em> <a href='../S/6021.html#L25' title='Defined at 25 in crypt/speeds.c.'>NO_ITIMER</a>
+<a id='L89' name='L89'></a>  89     <strong class='reserved'>if</strong> ((<a href='../Y/16286.html' title='Multiple used in 34 places.'>hz</a> = <a href='../S/6701.html#L33' title='Defined at 33 in stdlib/getenv.c.'>getenv</a>("HZ")) == <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>) <em class='brace'>{</em>
+<a id='L90' name='L90'></a>  90     <a href='../D/30767.html' title='Multiple defined in 4 places.'>fprintf</a>(<a href='../D/37038.html' title='Multiple defined in 3 places.'>stderr</a>, "HZ environment parameter undefined\n");
+<a id='L91' name='L91'></a>  91     <a href='../S/6681.html#L141' title='Defined at 141 in stdlib/exit.c.'>exit</a>(1);
+<a id='L92' name='L92'></a>  92     <em class='brace'>}</em>
+<a id='L93' name='L93'></a>  93 <em class='sharp'>#endif</em>
+<a id='L94' name='L94'></a>  94 
+<a id='L95' name='L95'></a>  95 <em class='sharp'>#ifdef</em> <a href='../Y/478.html' title='Multiple used in 5 places.'>FCRYPT</a>
+<a id='L96' name='L96'></a>  96     <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a>("\n");
+<a id='L97' name='L97'></a>  97     <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a>("Warning: this version of the speed program may run slower when\n");
+<a id='L98' name='L98'></a>  98     <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a>("benchmarking UFC-crypt than previous versions. This is because it\n");
+<a id='L99' name='L99'></a>  99     <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a>("stresses the CPU hardware cache in order to get benchmark figures\n");
+<a id='L100' name='L100'></a> 100     <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a>("that corresponds closer to the performance that can be expected in\n");
+<a id='L101' name='L101'></a> 101     <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a>("a password cracker.\n\n");
+<a id='L102' name='L102'></a> 102 <em class='sharp'>#endif</em>
+<a id='L103' name='L103'></a> 103 
+<a id='L104' name='L104'></a> 104     <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("Running %s for %d seconds of virtual time ...\n",
+<a id='L105' name='L105'></a> 105 <em class='sharp'>#ifdef</em> <a href='../Y/478.html' title='Multiple used in 5 places.'>FCRYPT</a>
+<a id='L106' name='L106'></a> 106     "UFC-crypt",
+<a id='L107' name='L107'></a> 107 <em class='sharp'>#else</em>
+<a id='L108' name='L108'></a> 108     "crypt(libc)",
+<a id='L109' name='L109'></a> 109 <em class='sharp'>#endif</em>
+<a id='L110' name='L110'></a> 110         <a href='../S/6021.html#L40' title='Defined at 40 in crypt/speeds.c.'>ITIME</a>);
+<a id='L111' name='L111'></a> 111 
+<a id='L112' name='L112'></a> 112 <em class='sharp'>#ifdef</em> <a href='../Y/478.html' title='Multiple used in 5 places.'>FCRYPT</a>
+<a id='L113' name='L113'></a> 113     init_des ();
+<a id='L114' name='L114'></a> 114 <em class='sharp'>#endif</em>
+<a id='L115' name='L115'></a> 115 
+<a id='L116' name='L116'></a> 116 <em class='sharp'>#ifdef</em> <a href='../S/6021.html#L25' title='Defined at 25 in crypt/speeds.c.'>NO_ITIMER</a>
+<a id='L117' name='L117'></a> 117     <a href='../D/36747.html' title='Multiple defined in 2 places.'>signal</a>(<a href='../S/183.html#L61' title='Defined at 61 in bits/signum-generic.h.'>SIGALRM</a>, <a href='../S/6021.html#L45' title='Defined at 45 in crypt/speeds.c.'>Stop</a>);
+<a id='L118' name='L118'></a> 118     <strong class='reserved'>switch</strong> (<a href='../Y/14793.html' title='Multiple used in 85 places.'>fork</a>()) <em class='brace'>{</em>
+<a id='L119' name='L119'></a> 119     <strong class='reserved'>case</strong> -1:
+<a id='L120' name='L120'></a> 120     <a href='../S/6137.html#L47' title='Defined at 47 in stdio-common/perror.c.'>perror</a>("fork failed");
+<a id='L121' name='L121'></a> 121     <a href='../S/6681.html#L141' title='Defined at 141 in stdlib/exit.c.'>exit</a>(1);
+<a id='L122' name='L122'></a> 122     <strong class='reserved'>case</strong> 0:
+<a id='L123' name='L123'></a> 123     <a href='../Y/25627.html' title='Multiple used in 66 places.'>sleep</a>(10);
+<a id='L124' name='L124'></a> 124     <a href='../Y/17525.html' title='Multiple used in 101 places.'>kill</a>(<a href='../Y/15545.html' title='Multiple used in 44 places.'>getppid</a>(), <a href='../S/183.html#L61' title='Defined at 61 in bits/signum-generic.h.'>SIGALRM</a>);
+<a id='L125' name='L125'></a> 125     <a href='../S/6681.html#L141' title='Defined at 141 in stdlib/exit.c.'>exit</a>(0);
+<a id='L126' name='L126'></a> 126     <strong class='reserved'>default</strong>:
+<a id='L127' name='L127'></a> 127     (<strong class='reserved'>void</strong>) <a href='../Y/27343.html' title='Multiple used in 37 places.'>times</a>(&amp;<a href='../Y/27928.html' title='Multiple used in 3 places.'>tstart</a>);
+<a id='L128' name='L128'></a> 128     <em class='brace'>}</em>
+<a id='L129' name='L129'></a> 129 <em class='sharp'>#else</em>
+<a id='L130' name='L130'></a> 130     <a href='../S/6021.html#L72' title='Defined at 72 in crypt/speeds.c.'>clearmem</a> ((<strong class='reserved'>char</strong>*)&amp;<a href='../Y/17320.html' title='Multiple used in 15 places.'>itv</a>, (<strong class='reserved'>int</strong>)<strong class='reserved'>sizeof</strong> (<a href='../Y/17320.html' title='Multiple used in 15 places.'>itv</a>));
+<a id='L131' name='L131'></a> 131     <a href='../D/36747.html' title='Multiple defined in 2 places.'>signal</a> (<a href='../D/14213.html' title='Multiple defined in 7 places.'>SIGVTALRM</a>, <a href='../S/6021.html#L45' title='Defined at 45 in crypt/speeds.c.'>Stop</a>);
+<a id='L132' name='L132'></a> 132     <a href='../Y/17320.html' title='Multiple used in 15 places.'>itv</a>.<a href='../Y/17295.html' title='Multiple used in 134 places.'>it_value</a>.<a href='../Y/27976.html' title='Multiple used in 803 places.'>tv_sec</a> = <a href='../S/6021.html#L40' title='Defined at 40 in crypt/speeds.c.'>ITIME</a>;
+<a id='L133' name='L133'></a> 133     <a href='../Y/17320.html' title='Multiple used in 15 places.'>itv</a>.<a href='../Y/17295.html' title='Multiple used in 134 places.'>it_value</a>.<a href='../Y/27978.html' title='Multiple used in 191 places.'>tv_usec</a> = 0;
+<a id='L134' name='L134'></a> 134     <a href='../S/4039.html#L181' title='Defined at 181 in time/sys/time.h.'>setitimer</a> (<a href='../D/6786.html' title='Multiple defined in 3 places.'>ITIMER_VIRTUAL</a>, &amp;<a href='../Y/17320.html' title='Multiple used in 15 places.'>itv</a>, <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>);
+<a id='L135' name='L135'></a> 135 <em class='sharp'>#endif</em>
+<a id='L136' name='L136'></a> 136 
+<a id='L137' name='L137'></a> 137 
+<a id='L138' name='L138'></a> 138     <a href='../D/36247.html' title='Multiple defined in 13 places.'>s</a> = "fredred";
+<a id='L139' name='L139'></a> 139     <strong class='reserved'>for</strong> (<a href='../D/28982.html' title='Multiple defined in 8 places.'>cnt</a> = 0;; <a href='../D/28982.html' title='Multiple defined in 8 places.'>cnt</a>++)
+<a id='L140' name='L140'></a> 140     <em class='brace'>{</em>
+<a id='L141' name='L141'></a> 141 <em class='sharp'>#ifdef</em> <a href='../Y/478.html' title='Multiple used in 5 places.'>FCRYPT</a>
+<a id='L142' name='L142'></a> 142     <a href='../D/36247.html' title='Multiple defined in 13 places.'>s</a> = <a href='../Y/14403.html' title='Multiple used in 5 places.'>fcrypt</a> (<a href='../D/36247.html' title='Multiple defined in 13 places.'>s</a>, "eek");
+<a id='L143' name='L143'></a> 143 <em class='sharp'>#else</em>
+<a id='L144' name='L144'></a> 144     <a href='../D/36247.html' title='Multiple defined in 13 places.'>s</a> = <a href='../S/6029.html#L36' title='Defined at 36 in crypt/crypt.h.'>crypt</a> (<a href='../D/36247.html' title='Multiple defined in 13 places.'>s</a>, "eek");
+<a id='L145' name='L145'></a> 145 <em class='sharp'>#endif</em>
+<a id='L146' name='L146'></a> 146     <em class='brace'>}</em>
+<a id='L147' name='L147'></a> 147 <em class='brace'>}</em>
+<a id='L148' name='L148'></a> 148 
+<a id='L149' name='L149'></a> 149 
+<a id='L150' name='L150'></a> 150 
+<a id='L151' name='L151'></a> 151 
+<a id='L152' name='L152'></a> 152 
+<a id='L153' name='L153'></a> 153 
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L45'>[^]</a><a href='#L79'>[v]</a><a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

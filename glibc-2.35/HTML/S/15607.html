@@ -1,0 +1,146 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>sysdeps/x86_64/start.S</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18977.html'>sysdeps</a>/<a href='../files/19391.html'>x86_64</a>/start.S</h2>
+<em class='comment'>/* [&lt;][&gt;][^][v][top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* Startup code compliant to the ELF x86-64 ABI.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   Copyright (C) 2001-2022 Free Software Foundation, Inc.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'></em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'></em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   In addition to the permissions in the GNU Lesser General Public</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   License, the Free Software Foundation gives you unlimited</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   permission to link the compiled version of this file with other</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'>   programs, and to distribute those programs without any restriction</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'>   coming from the use of this file. (The GNU Lesser General Public</em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   License restrictions do apply in other respects; for example, they</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   cover modification of the file, and distribution when not linked</em>
+<a id='L17' name='L17'></a>  17 <em class='comment'>   into another program.)</em>
+<a id='L18' name='L18'></a>  18 <em class='comment'></em>
+<a id='L19' name='L19'></a>  19 <em class='comment'>   Note that people who make modified versions of this file are not</em>
+<a id='L20' name='L20'></a>  20 <em class='comment'>   obligated to grant this special exception for their modified</em>
+<a id='L21' name='L21'></a>  21 <em class='comment'>   versions; it is their choice whether to do so. The GNU Lesser</em>
+<a id='L22' name='L22'></a>  22 <em class='comment'>   General Public License gives permission to release a modified</em>
+<a id='L23' name='L23'></a>  23 <em class='comment'>   version without this exception; this exception also makes it</em>
+<a id='L24' name='L24'></a>  24 <em class='comment'>   possible to release a modified version which carries forward this</em>
+<a id='L25' name='L25'></a>  25 <em class='comment'>   exception.</em>
+<a id='L26' name='L26'></a>  26 <em class='comment'></em>
+<a id='L27' name='L27'></a>  27 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L28' name='L28'></a>  28 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L29' name='L29'></a>  29 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L30' name='L30'></a>  30 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L31' name='L31'></a>  31 <em class='comment'></em>
+<a id='L32' name='L32'></a>  32 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L33' name='L33'></a>  33 <em class='comment'>   License along with the GNU C Library; if not, see</em>
+<a id='L34' name='L34'></a>  34 <em class='comment'>   &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L35' name='L35'></a>  35 
+<a id='L36' name='L36'></a>  36 <em class='comment'>/* This is the canonical entry point, usually the first thing in the text</em>
+<a id='L37' name='L37'></a>  37 <em class='comment'>   segment.  The SVR4/i386 ABI (pages 3-31, 3-32) says that when the entry</em>
+<a id='L38' name='L38'></a>  38 <em class='comment'>   point runs, most registers' values are unspecified, except for:</em>
+<a id='L39' name='L39'></a>  39 <em class='comment'></em>
+<a id='L40' name='L40'></a>  40 <em class='comment'>   %rdx     Contains a function pointer to be registered with `atexit'.</em>
+<a id='L41' name='L41'></a>  41 <em class='comment'>        This is how the dynamic linker arranges to have DT_FINI</em>
+<a id='L42' name='L42'></a>  42 <em class='comment'>        functions called for shared libraries that have been loaded</em>
+<a id='L43' name='L43'></a>  43 <em class='comment'>        before this code runs.</em>
+<a id='L44' name='L44'></a>  44 <em class='comment'></em>
+<a id='L45' name='L45'></a>  45 <em class='comment'>   %rsp     The stack contains the arguments and environment:</em>
+<a id='L46' name='L46'></a>  46 <em class='comment'>        0(%rsp)             argc</em>
+<a id='L47' name='L47'></a>  47 <em class='comment'>        LP_SIZE(%rsp)           argv[0]</em>
+<a id='L48' name='L48'></a>  48 <em class='comment'>        ...</em>
+<a id='L49' name='L49'></a>  49 <em class='comment'>        (LP_SIZE*argc)(%rsp)        NULL</em>
+<a id='L50' name='L50'></a>  50 <em class='comment'>        (LP_SIZE*(argc+1))(%rsp)    envp[0]</em>
+<a id='L51' name='L51'></a>  51 <em class='comment'>        ...</em>
+<a id='L52' name='L52'></a>  52 <em class='comment'>                        NULL</em>
+<a id='L53' name='L53'></a>  53 <em class='comment'>*/</em>
+<a id='L54' name='L54'></a>  54 
+<a id='L55' name='L55'></a>  55 <em class='sharp'>#include</em> &lt;<a href='../I/5967.html'>sysdep.h</a>&gt;
+<a id='L56' name='L56'></a>  56 
+<a id='L57' name='L57'></a>  57 <a href='../D/3651.html' title='Multiple defined in 54 places.'>ENTRY</a> (<a href='../R/16873.html' title='Multiple referred from 9 places.'>_start</a>)
+<a id='L58' name='L58'></a>  58     <em class='comment'>/* Clearing frame pointer is insufficient, use CFI.  */</em>
+<a id='L59' name='L59'></a>  59     cfi_undefined (rip)
+<a id='L60' name='L60'></a>  60     <em class='comment'>/* Clear the frame pointer.  The ABI suggests this be done, to mark</em>
+<a id='L61' name='L61'></a>  61 <em class='comment'>       the outermost frame obviously.  */</em>
+<a id='L62' name='L62'></a>  62     xorl %ebp, %ebp
+<a id='L63' name='L63'></a>  63 
+<a id='L64' name='L64'></a>  64     <em class='comment'>/* Extract the arguments as encoded on the stack and set up</em>
+<a id='L65' name='L65'></a>  65 <em class='comment'>       the arguments for __libc_start_main (int (*main) (int, char **, char **),</em>
+<a id='L66' name='L66'></a>  66 <em class='comment'>           int argc, char *argv,</em>
+<a id='L67' name='L67'></a>  67 <em class='comment'>           void (*init) (void), void (*fini) (void),</em>
+<a id='L68' name='L68'></a>  68 <em class='comment'>           void (*rtld_fini) (void), void *stack_end).</em>
+<a id='L69' name='L69'></a>  69 <em class='comment'>       The arguments are passed via registers and on the stack:</em>
+<a id='L70' name='L70'></a>  70 <em class='comment'>    main:       %rdi</em>
+<a id='L71' name='L71'></a>  71 <em class='comment'>    argc:       %rsi</em>
+<a id='L72' name='L72'></a>  72 <em class='comment'>    argv:       %rdx</em>
+<a id='L73' name='L73'></a>  73 <em class='comment'>    init:       %rcx</em>
+<a id='L74' name='L74'></a>  74 <em class='comment'>    fini:       %r8</em>
+<a id='L75' name='L75'></a>  75 <em class='comment'>    rtld_fini:  %r9</em>
+<a id='L76' name='L76'></a>  76 <em class='comment'>    stack_end:  stack.  */</em>
+<a id='L77' name='L77'></a>  77 
+<a id='L78' name='L78'></a>  78     mov %RDX_LP, %R9_LP <em class='comment'>/* Address of the shared library termination</em>
+<a id='L79' name='L79'></a>  79 <em class='comment'>                   function.  */</em>
+<a id='L80' name='L80'></a>  80 <em class='sharp'>#ifdef</em> <a href='../Y/3224.html' title='Multiple used in 72 places.'>__ILP32__</a>
+<a id='L81' name='L81'></a>  81     mov (%rsp), %esi    <em class='comment'>/* Simulate popping 4-byte argument count.  */</em>
+<a id='L82' name='L82'></a>  82     add $4, %esp
+<a id='L83' name='L83'></a>  83 <em class='sharp'>#else</em>
+<a id='L84' name='L84'></a>  84     popq %rsi       <em class='comment'>/* Pop the argument count.  */</em>
+<a id='L85' name='L85'></a>  85 <em class='sharp'>#endif</em>
+<a id='L86' name='L86'></a>  86     <em class='comment'>/* argv starts just at the current stack top.  */</em>
+<a id='L87' name='L87'></a>  87     mov %RSP_LP, %RDX_LP
+<a id='L88' name='L88'></a>  88     <em class='comment'>/* Align the stack to a 16 byte boundary to follow the ABI.  */</em>
+<a id='L89' name='L89'></a>  89     and  $~15, %RSP_LP
+<a id='L90' name='L90'></a>  90 
+<a id='L91' name='L91'></a>  91     <em class='comment'>/* Push garbage because we push 8 more bytes.  */</em>
+<a id='L92' name='L92'></a>  92     pushq %rax
+<a id='L93' name='L93'></a>  93 
+<a id='L94' name='L94'></a>  94     <em class='comment'>/* Provide the highest stack address to the user code (for stacks</em>
+<a id='L95' name='L95'></a>  95 <em class='comment'>       which grow downwards).  */</em>
+<a id='L96' name='L96'></a>  96     pushq %rsp
+<a id='L97' name='L97'></a>  97 
+<a id='L98' name='L98'></a>  98     <em class='comment'>/* These used to be the addresses of .fini and .init.  */</em>
+<a id='L99' name='L99'></a>  99     xorl %r8d, %r8d
+<a id='L100' name='L100'></a> 100     xorl %ecx, %ecx
+<a id='L101' name='L101'></a> 101 
+<a id='L102' name='L102'></a> 102 <em class='sharp'>#ifdef</em> <a href='../Y/1408.html' title='Multiple used in 370 places.'>PIC</a>
+<a id='L103' name='L103'></a> 103     mov main@GOTPCREL(%rip), %RDI_LP
+<a id='L104' name='L104'></a> 104 <em class='sharp'>#else</em>
+<a id='L105' name='L105'></a> 105     mov $main, %RDI_LP
+<a id='L106' name='L106'></a> 106 <em class='sharp'>#endif</em>
+<a id='L107' name='L107'></a> 107 
+<a id='L108' name='L108'></a> 108     <em class='comment'>/* Call the user's main function, and exit with its value.</em>
+<a id='L109' name='L109'></a> 109 <em class='comment'>       But let the libc call main.  Since __libc_start_main in</em>
+<a id='L110' name='L110'></a> 110 <em class='comment'>       libc.so is called very early, lazy binding isn't relevant</em>
+<a id='L111' name='L111'></a> 111 <em class='comment'>       here.  Use indirect branch via GOT to avoid extra branch</em>
+<a id='L112' name='L112'></a> 112 <em class='comment'>       to PLT slot.  In case of static executable, ld in binutils</em>
+<a id='L113' name='L113'></a> 113 <em class='comment'>       2.26 or above can convert indirect branch into direct</em>
+<a id='L114' name='L114'></a> 114 <em class='comment'>       branch.  */</em>
+<a id='L115' name='L115'></a> 115     call *__libc_start_main@GOTPCREL(%rip)
+<a id='L116' name='L116'></a> 116 
+<a id='L117' name='L117'></a> 117     hlt         <em class='comment'>/* Crash if somehow `exit' does return.  */</em>
+<a id='L118' name='L118'></a> 118 END (_start)
+<a id='L119' name='L119'></a> 119 
+<a id='L120' name='L120'></a> 120 <em class='comment'>/* Define a symbol for the first piece of initialized data.  */</em>
+<a id='L121' name='L121'></a> 121     .data
+<a id='L122' name='L122'></a> 122     .globl __data_start
+<a id='L123' name='L123'></a> 123 __data_start:
+<a id='L124' name='L124'></a> 124     .long 0
+<a id='L125' name='L125'></a> 125     .weak data_start
+<a id='L126' name='L126'></a> 126     data_start = __data_start
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;][^][v]<a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

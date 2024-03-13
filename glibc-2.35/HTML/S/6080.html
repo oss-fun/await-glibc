@@ -1,0 +1,355 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>stdio-common/tst-fmemopen3.c</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18967.html'>stdio-common</a>/tst-fmemopen3.c</h2>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L25'>[^]</a><a href='#L300'>[v]</a>[top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<h2 class='header'>DEFINITIONS</h2>
+This source file includes following definitions.
+<ol>
+<li><a href='#L25' title='Defined at 25.'>print_buffer</a></li>
+<li><a href='#L40' title='Defined at 40.'>do_test_write_append</a></li>
+<li><a href='#L65' title='Defined at 65.'>do_test_write_append_without_null</a></li>
+<li><a href='#L100' title='Defined at 100.'>do_test_read_append</a></li>
+<li><a href='#L147' title='Defined at 147.'>do_test_read_seek_neg</a></li>
+<li><a href='#L177' title='Defined at 177.'>do_test_read_seek_negative</a></li>
+<li><a href='#L194' title='Defined at 194.'>do_test_write_append_2</a></li>
+<li><a href='#L300' title='Defined at 300.'>do_test</a></li>
+</ol>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* fmemopen tests for append and read mode.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   Copyright (C) 2015-2022 Free Software Foundation, Inc.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'></em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'></em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'></em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   License along with the GNU C Library; if not, see</em>
+<a id='L17' name='L17'></a>  17 <em class='comment'>   &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L18' name='L18'></a>  18 
+<a id='L19' name='L19'></a>  19 <em class='sharp'>#include</em> &lt;<a href='../I/23.html'>assert.h</a>&gt;
+<a id='L20' name='L20'></a>  20 <em class='sharp'>#include</em> &lt;<a href='../I/1776.html'>stdio.h</a>&gt;
+<a id='L21' name='L21'></a>  21 <em class='sharp'>#include</em> &lt;<a href='../I/1973.html'>string.h</a>&gt;
+<a id='L22' name='L22'></a>  22 <em class='sharp'>#include</em> &lt;<a href='../I/1786.html'>sys/types.h</a>&gt;
+<a id='L23' name='L23'></a>  23 
+<a id='L24' name='L24'></a>  24 <strong class='reserved'>static</strong> <strong class='reserved'>void</strong>
+<a id='L25' name='L25'></a>  25 <a href='../R/23046.html' title='Multiple referred from 6 places.'>print_buffer</a> (<strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../D/36247.html' title='Multiple defined in 13 places.'>s</a>, <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>)
+<a id='L26' name='L26'></a>  26 <em class='brace'>{</em>
+<a id='L27' name='L27'></a>  27   <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>;
+<a id='L28' name='L28'></a>  28   <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("{");
+<a id='L29' name='L29'></a>  29   <strong class='reserved'>for</strong> (<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>=0; <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>&lt;<a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>; ++<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>)
+<a id='L30' name='L30'></a>  30     <em class='brace'>{</em>
+<a id='L31' name='L31'></a>  31       <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("0x%02X (%c)", <a href='../D/36247.html' title='Multiple defined in 13 places.'>s</a>[<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>], <a href='../D/36247.html' title='Multiple defined in 13 places.'>s</a>[<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>]);
+<a id='L32' name='L32'></a>  32       <strong class='reserved'>if</strong> (<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> != <a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>)
+<a id='L33' name='L33'></a>  33     <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> (", ");
+<a id='L34' name='L34'></a>  34     <em class='brace'>}</em>
+<a id='L35' name='L35'></a>  35 <em class='brace'>}</em>
+<a id='L36' name='L36'></a>  36 
+<a id='L37' name='L37'></a>  37 <em class='comment'>/* This test check append mode initial position (a/a+) based on POSIX defition</em>
+<a id='L38' name='L38'></a>  38 <em class='comment'>   (BZ#6544 and BZ#13151).  */</em>
+<a id='L39' name='L39'></a>  39 <strong class='reserved'>static</strong> <strong class='reserved'>int</strong>
+<a id='L40' name='L40'></a>  40 <a href='../R/18842.html' title='Multiple referred from 2 places.'>do_test_write_append</a> (<strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../Y/19494.html' title='Multiple used in 1028 places.'>mode</a>)
+<a id='L41' name='L41'></a>  41 <em class='brace'>{</em>
+<a id='L42' name='L42'></a>  42   <strong class='reserved'>char</strong> <a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>[32] = "testing buffer";
+<a id='L43' name='L43'></a>  43   <strong class='reserved'>char</strong> <a href='../S/3342.html#L755' title='Defined at 755 in math/tgmath.h.'>exp</a>[32] = "testing bufferXX";
+<a id='L44' name='L44'></a>  44 
+<a id='L45' name='L45'></a>  45   <a href='../S/5474.html#L7' title='Defined at 7 in libio/bits/types/FILE.h.'>FILE</a> *<a href='../D/30705.html' title='Multiple defined in 2 places.'>fp</a> = <a href='../Y/14729.html' title='Multiple used in 30 places.'>fmemopen</a> (<a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>, <strong class='reserved'>sizeof</strong> (<a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>), <a href='../Y/19494.html' title='Multiple used in 1028 places.'>mode</a>);
+<a id='L46' name='L46'></a>  46 
+<a id='L47' name='L47'></a>  47   <a href='../D/30459.html' title='Multiple defined in 5 places.'>fflush</a> (<a href='../D/30705.html' title='Multiple defined in 2 places.'>fp</a>);
+<a id='L48' name='L48'></a>  48   <a href='../D/30767.html' title='Multiple defined in 4 places.'>fprintf</a> (<a href='../D/30705.html' title='Multiple defined in 2 places.'>fp</a>, "X");
+<a id='L49' name='L49'></a>  49   <a href='../S/5567.html#L31' title='Defined at 31 in libio/fseek.c.'>fseek</a> (<a href='../D/30705.html' title='Multiple defined in 2 places.'>fp</a>, 0, <a href='../D/13729.html' title='Multiple defined in 3 places.'>SEEK_SET</a>);
+<a id='L50' name='L50'></a>  50   <a href='../D/30767.html' title='Multiple defined in 4 places.'>fprintf</a> (<a href='../D/30705.html' title='Multiple defined in 2 places.'>fp</a>, "X");
+<a id='L51' name='L51'></a>  51   <a href='../S/17955.html#L194' title='Defined at 194 in include/stdio.h.'>fclose</a> (<a href='../D/30705.html' title='Multiple defined in 2 places.'>fp</a>);
+<a id='L52' name='L52'></a>  52 
+<a id='L53' name='L53'></a>  53   <strong class='reserved'>if</strong> (<a href='../D/37067.html' title='Multiple defined in 17 places.'>strcmp</a> (<a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>, <a href='../S/3342.html#L755' title='Defined at 755 in math/tgmath.h.'>exp</a>) != 0)
+<a id='L54' name='L54'></a>  54     <em class='brace'>{</em>
+<a id='L55' name='L55'></a>  55       <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("%s: check failed: %s != %s\n", <a href='../Y/2965.html' title='Multiple used in 127 places.'>__FUNCTION__</a>, <a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>, <a href='../S/3342.html#L755' title='Defined at 755 in math/tgmath.h.'>exp</a>);
+<a id='L56' name='L56'></a>  56       <strong class='reserved'>return</strong> 1;
+<a id='L57' name='L57'></a>  57     <em class='brace'>}</em>
+<a id='L58' name='L58'></a>  58 
+<a id='L59' name='L59'></a>  59   <strong class='reserved'>return</strong> 0;
+<a id='L60' name='L60'></a>  60 <em class='brace'>}</em>
+<a id='L61' name='L61'></a>  61 
+<a id='L62' name='L62'></a>  62 <em class='comment'>/* This test check append mode initial position (a/a+) based on POSIX defition</em>
+<a id='L63' name='L63'></a>  63 <em class='comment'>   (BZ#6544 and BZ#13151) for buffer without null byte end.  */</em>
+<a id='L64' name='L64'></a>  64 <strong class='reserved'>static</strong> <strong class='reserved'>int</strong>
+<a id='L65' name='L65'></a>  65 <a href='../R/18844.html' title='Multiple referred from 2 places.'>do_test_write_append_without_null</a> (<strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../Y/19494.html' title='Multiple used in 1028 places.'>mode</a>)
+<a id='L66' name='L66'></a>  66 <em class='brace'>{</em>
+<a id='L67' name='L67'></a>  67   <strong class='reserved'>char</strong> <a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>[] = <em class='brace'>{</em> 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55 <em class='brace'>}</em>;
+<a id='L68' name='L68'></a>  68   <strong class='reserved'>char</strong> <a href='../S/3342.html#L755' title='Defined at 755 in math/tgmath.h.'>exp</a>[] = <em class='brace'>{</em> 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55 <em class='brace'>}</em>;
+<a id='L69' name='L69'></a>  69 
+<a id='L70' name='L70'></a>  70   <em class='comment'>/* If '\0' is not found in buffer, POSIX states that SEEK_SET should be</em>
+<a id='L71' name='L71'></a>  71 <em class='comment'>     the size argument.  */</em>
+<a id='L72' name='L72'></a>  72   <a href='../S/5474.html#L7' title='Defined at 7 in libio/bits/types/FILE.h.'>FILE</a> *<a href='../D/30705.html' title='Multiple defined in 2 places.'>fp</a> = <a href='../Y/14729.html' title='Multiple used in 30 places.'>fmemopen</a> (<a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>, <strong class='reserved'>sizeof</strong> (<a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>) - 2, "a");
+<a id='L73' name='L73'></a>  73 
+<a id='L74' name='L74'></a>  74   <a href='../D/30459.html' title='Multiple defined in 5 places.'>fflush</a> (<a href='../D/30705.html' title='Multiple defined in 2 places.'>fp</a>);
+<a id='L75' name='L75'></a>  75   <a href='../S/5618.html#L31' title='Defined at 31 in libio/fputc.c.'>fputc</a> (0x70, <a href='../D/30705.html' title='Multiple defined in 2 places.'>fp</a>);
+<a id='L76' name='L76'></a>  76   <a href='../S/5567.html#L31' title='Defined at 31 in libio/fseek.c.'>fseek</a> (<a href='../D/30705.html' title='Multiple defined in 2 places.'>fp</a>, 0, <a href='../D/13729.html' title='Multiple defined in 3 places.'>SEEK_SET</a>);
+<a id='L77' name='L77'></a>  77   <a href='../S/5618.html#L31' title='Defined at 31 in libio/fputc.c.'>fputc</a> (0x70, <a href='../D/30705.html' title='Multiple defined in 2 places.'>fp</a>);
+<a id='L78' name='L78'></a>  78   <a href='../S/5618.html#L31' title='Defined at 31 in libio/fputc.c.'>fputc</a> (0x70, <a href='../D/30705.html' title='Multiple defined in 2 places.'>fp</a>);
+<a id='L79' name='L79'></a>  79   <a href='../S/17955.html#L194' title='Defined at 194 in include/stdio.h.'>fclose</a> (<a href='../D/30705.html' title='Multiple defined in 2 places.'>fp</a>);
+<a id='L80' name='L80'></a>  80 
+<a id='L81' name='L81'></a>  81   <em class='comment'>/* POSIX also states that a write operation on the stream shall not advance</em>
+<a id='L82' name='L82'></a>  82 <em class='comment'>     the current buffer size beyond the size given in fmemopen, so the string</em>
+<a id='L83' name='L83'></a>  83 <em class='comment'>     should be same.  */</em>
+<a id='L84' name='L84'></a>  84   <strong class='reserved'>if</strong> (<a href='../D/33446.html' title='Multiple defined in 22 places.'>memcmp</a> (<a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>, <a href='../S/3342.html#L755' title='Defined at 755 in math/tgmath.h.'>exp</a>, <strong class='reserved'>sizeof</strong> (<a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>)) != 0)
+<a id='L85' name='L85'></a>  85     <em class='brace'>{</em>
+<a id='L86' name='L86'></a>  86       <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("%s: check failed: ", <a href='../Y/2965.html' title='Multiple used in 127 places.'>__FUNCTION__</a>);
+<a id='L87' name='L87'></a>  87       <a href='../S/6080.html#L25' title='Defined at 25 in stdio-common/tst-fmemopen3.c.'>print_buffer</a> (<a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>, <strong class='reserved'>sizeof</strong> (<a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>));
+<a id='L88' name='L88'></a>  88       <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("!= ");
+<a id='L89' name='L89'></a>  89       <a href='../S/6080.html#L25' title='Defined at 25 in stdio-common/tst-fmemopen3.c.'>print_buffer</a> (<a href='../S/3342.html#L755' title='Defined at 755 in math/tgmath.h.'>exp</a>, <strong class='reserved'>sizeof</strong> (<a href='../S/3342.html#L755' title='Defined at 755 in math/tgmath.h.'>exp</a>));
+<a id='L90' name='L90'></a>  90       <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("\n");
+<a id='L91' name='L91'></a>  91       <strong class='reserved'>return</strong> 1;
+<a id='L92' name='L92'></a>  92     <em class='brace'>}</em>
+<a id='L93' name='L93'></a>  93 
+<a id='L94' name='L94'></a>  94   <strong class='reserved'>return</strong> 0;
+<a id='L95' name='L95'></a>  95 <em class='brace'>}</em>
+<a id='L96' name='L96'></a>  96 
+<a id='L97' name='L97'></a>  97 <em class='comment'>/* This test check for initial position and feek value for fmemopen objects</em>
+<a id='L98' name='L98'></a>  98 <em class='comment'>   opened with append mode.  */</em>
+<a id='L99' name='L99'></a>  99 <strong class='reserved'>static</strong> <strong class='reserved'>int</strong>
+<a id='L100' name='L100'></a> 100 <a href='../S/6080.html#L309' title='Referred from 309 in stdio-common/tst-fmemopen3.c.'>do_test_read_append</a> (<strong class='reserved'>void</strong>)
+<a id='L101' name='L101'></a> 101 <em class='brace'>{</em>
+<a id='L102' name='L102'></a> 102   <strong class='reserved'>char</strong> <a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>[32] = "testing buffer";
+<a id='L103' name='L103'></a> 103   <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../D/28326.html' title='Multiple defined in 8 places.'>buflen</a> = <a href='../D/37108.html' title='Multiple defined in 42 places.'>strlen</a> (<a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>);
+<a id='L104' name='L104'></a> 104   <strong class='reserved'>long</strong> <a href='../Y/14910.html' title='Multiple used in 6 places.'>fpos</a>;
+<a id='L105' name='L105'></a> 105 
+<a id='L106' name='L106'></a> 106   <em class='comment'>/* POSIX defines for 'a+' the initial position is the first null byte.  */</em>
+<a id='L107' name='L107'></a> 107   <a href='../S/5474.html#L7' title='Defined at 7 in libio/bits/types/FILE.h.'>FILE</a> *<a href='../D/30705.html' title='Multiple defined in 2 places.'>fp</a> = <a href='../Y/14729.html' title='Multiple used in 30 places.'>fmemopen</a> (<a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>, <strong class='reserved'>sizeof</strong> (<a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>), "a+");
+<a id='L108' name='L108'></a> 108 
+<a id='L109' name='L109'></a> 109   <a href='../Y/14910.html' title='Multiple used in 6 places.'>fpos</a> = <a href='../D/30915.html' title='Multiple defined in 2 places.'>ftell</a> (<a href='../D/30705.html' title='Multiple defined in 2 places.'>fp</a>);
+<a id='L110' name='L110'></a> 110   <strong class='reserved'>if</strong> (<a href='../Y/14910.html' title='Multiple used in 6 places.'>fpos</a> != <a href='../D/28326.html' title='Multiple defined in 8 places.'>buflen</a>)
+<a id='L111' name='L111'></a> 111     <em class='brace'>{</em>
+<a id='L112' name='L112'></a> 112       <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("%s: ftell|SEEK_SET (fp) %li != strlen (%s) %zu\n",
+<a id='L113' name='L113'></a> 113           <a href='../Y/2965.html' title='Multiple used in 127 places.'>__FUNCTION__</a>, <a href='../Y/14910.html' title='Multiple used in 6 places.'>fpos</a>, <a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>, <a href='../D/28326.html' title='Multiple defined in 8 places.'>buflen</a>);
+<a id='L114' name='L114'></a> 114       <a href='../S/17955.html#L194' title='Defined at 194 in include/stdio.h.'>fclose</a> (<a href='../D/30705.html' title='Multiple defined in 2 places.'>fp</a>);
+<a id='L115' name='L115'></a> 115       <strong class='reserved'>return</strong> 1;
+<a id='L116' name='L116'></a> 116     <em class='brace'>}</em>
+<a id='L117' name='L117'></a> 117 
+<a id='L118' name='L118'></a> 118   <a href='../S/5567.html#L31' title='Defined at 31 in libio/fseek.c.'>fseek</a> (<a href='../D/30705.html' title='Multiple defined in 2 places.'>fp</a>, 0, <a href='../D/13727.html' title='Multiple defined in 3 places.'>SEEK_END</a>);
+<a id='L119' name='L119'></a> 119 
+<a id='L120' name='L120'></a> 120   <strong class='reserved'>if</strong> (<a href='../Y/14910.html' title='Multiple used in 6 places.'>fpos</a> != <a href='../D/28326.html' title='Multiple defined in 8 places.'>buflen</a>)
+<a id='L121' name='L121'></a> 121     <em class='brace'>{</em>
+<a id='L122' name='L122'></a> 122       <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("%s: ftell|SEEK_END (fp) %li != strlen (%s) %zu\n",
+<a id='L123' name='L123'></a> 123           <a href='../Y/2965.html' title='Multiple used in 127 places.'>__FUNCTION__</a>, <a href='../Y/14910.html' title='Multiple used in 6 places.'>fpos</a>, <a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>, <a href='../D/28326.html' title='Multiple defined in 8 places.'>buflen</a>);
+<a id='L124' name='L124'></a> 124       <a href='../S/17955.html#L194' title='Defined at 194 in include/stdio.h.'>fclose</a> (<a href='../D/30705.html' title='Multiple defined in 2 places.'>fp</a>);
+<a id='L125' name='L125'></a> 125       <strong class='reserved'>return</strong> 1;
+<a id='L126' name='L126'></a> 126     <em class='brace'>}</em>
+<a id='L127' name='L127'></a> 127   <a href='../S/17955.html#L194' title='Defined at 194 in include/stdio.h.'>fclose</a> (<a href='../D/30705.html' title='Multiple defined in 2 places.'>fp</a>);
+<a id='L128' name='L128'></a> 128 
+<a id='L129' name='L129'></a> 129   <em class='comment'>/* Check if attempting to read past the current size, defined as strlen (buf)</em>
+<a id='L130' name='L130'></a> 130 <em class='comment'>     yield an EOF.  */</em>
+<a id='L131' name='L131'></a> 131   <a href='../D/30705.html' title='Multiple defined in 2 places.'>fp</a> = <a href='../Y/14729.html' title='Multiple used in 30 places.'>fmemopen</a> (<a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>, <strong class='reserved'>sizeof</strong> (<a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>), "a+");
+<a id='L132' name='L132'></a> 132   <strong class='reserved'>if</strong> (<a href='../S/5467.html#L45' title='Defined at 45 in libio/getc.c.'>getc</a>(<a href='../D/30705.html' title='Multiple defined in 2 places.'>fp</a>) != <a href='../D/3680.html' title='Multiple defined in 5 places.'>EOF</a>)
+<a id='L133' name='L133'></a> 133     <em class='brace'>{</em>
+<a id='L134' name='L134'></a> 134       <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("%s: getc(fp) != EOF\n", <a href='../Y/2965.html' title='Multiple used in 127 places.'>__FUNCTION__</a>);
+<a id='L135' name='L135'></a> 135       <a href='../S/17955.html#L194' title='Defined at 194 in include/stdio.h.'>fclose</a> (<a href='../D/30705.html' title='Multiple defined in 2 places.'>fp</a>);
+<a id='L136' name='L136'></a> 136       <strong class='reserved'>return</strong> -1;
+<a id='L137' name='L137'></a> 137     <em class='brace'>}</em>
+<a id='L138' name='L138'></a> 138 
+<a id='L139' name='L139'></a> 139   <a href='../S/17955.html#L194' title='Defined at 194 in include/stdio.h.'>fclose</a> (<a href='../D/30705.html' title='Multiple defined in 2 places.'>fp</a>);
+<a id='L140' name='L140'></a> 140 
+<a id='L141' name='L141'></a> 141   <strong class='reserved'>return</strong> 0;
+<a id='L142' name='L142'></a> 142 <em class='brace'>}</em>
+<a id='L143' name='L143'></a> 143 
+<a id='L144' name='L144'></a> 144 <em class='comment'>/* This test check for fseek (SEEK_END) using negative offsets (BZ#14292).  The</em>
+<a id='L145' name='L145'></a> 145 <em class='comment'>   starting position of descriptor is different base on the opening mode.  */</em>
+<a id='L146' name='L146'></a> 146 <strong class='reserved'>static</strong> <strong class='reserved'>int</strong>
+<a id='L147' name='L147'></a> 147 <a href='../R/18823.html' title='Multiple referred from 2 places.'>do_test_read_seek_neg</a> (<strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../Y/19494.html' title='Multiple used in 1028 places.'>mode</a>, <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../Y/14144.html' title='Multiple used in 879 places.'>expected</a>)
+<a id='L148' name='L148'></a> 148 <em class='brace'>{</em>
+<a id='L149' name='L149'></a> 149   <strong class='reserved'>char</strong> <a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>[] = "abcdefghijklmnopqrstuvxz0123456789";
+<a id='L150' name='L150'></a> 150   <strong class='reserved'>char</strong> <a href='../D/38191.html' title='Multiple defined in 23 places.'>tmp</a>[10];
+<a id='L151' name='L151'></a> 151   <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/27467.html' title='Multiple used in 5 places.'>tmps</a> = <strong class='reserved'>sizeof</strong> (<a href='../Y/27467.html' title='Multiple used in 5 places.'>tmps</a>);
+<a id='L152' name='L152'></a> 152   <strong class='reserved'>long</strong> <a href='../S/13710.html#L51' title='Defined at 51 in sysdeps/aarch64/strncmp.S.'>offset</a> = -11;
+<a id='L153' name='L153'></a> 153 
+<a id='L154' name='L154'></a> 154   <a href='../S/5474.html#L7' title='Defined at 7 in libio/bits/types/FILE.h.'>FILE</a> *<a href='../D/30705.html' title='Multiple defined in 2 places.'>fp</a> = <a href='../Y/14729.html' title='Multiple used in 30 places.'>fmemopen</a> (<a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>, <strong class='reserved'>sizeof</strong> (<a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>), <a href='../Y/19494.html' title='Multiple used in 1028 places.'>mode</a>);
+<a id='L155' name='L155'></a> 155   <a href='../S/5567.html#L31' title='Defined at 31 in libio/fseek.c.'>fseek</a> (<a href='../D/30705.html' title='Multiple defined in 2 places.'>fp</a>, <a href='../S/13710.html#L51' title='Defined at 51 in sysdeps/aarch64/strncmp.S.'>offset</a>, <a href='../D/13727.html' title='Multiple defined in 3 places.'>SEEK_END</a>);
+<a id='L156' name='L156'></a> 156   <a href='../D/30783.html' title='Multiple defined in 2 places.'>fread</a> (<a href='../D/38191.html' title='Multiple defined in 23 places.'>tmp</a>, <a href='../Y/27467.html' title='Multiple used in 5 places.'>tmps</a>, 1, <a href='../D/30705.html' title='Multiple defined in 2 places.'>fp</a>);
+<a id='L157' name='L157'></a> 157 
+<a id='L158' name='L158'></a> 158   <strong class='reserved'>if</strong> (<a href='../D/33446.html' title='Multiple defined in 22 places.'>memcmp</a> (<a href='../D/38191.html' title='Multiple defined in 23 places.'>tmp</a>, <a href='../Y/14144.html' title='Multiple used in 879 places.'>expected</a>, <a href='../Y/27467.html' title='Multiple used in 5 places.'>tmps</a>) != 0)
+<a id='L159' name='L159'></a> 159     <em class='brace'>{</em>
+<a id='L160' name='L160'></a> 160       <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("%s: fmemopen(%s) - fseek (fp, %li, SEEK_END):\n",
+<a id='L161' name='L161'></a> 161           <a href='../Y/2965.html' title='Multiple used in 127 places.'>__FUNCTION__</a>, <a href='../Y/19494.html' title='Multiple used in 1028 places.'>mode</a>, <a href='../S/13710.html#L51' title='Defined at 51 in sysdeps/aarch64/strncmp.S.'>offset</a>);
+<a id='L162' name='L162'></a> 162       <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("  returned: ");
+<a id='L163' name='L163'></a> 163       <a href='../S/6080.html#L25' title='Defined at 25 in stdio-common/tst-fmemopen3.c.'>print_buffer</a> (<a href='../D/38191.html' title='Multiple defined in 23 places.'>tmp</a>, <a href='../Y/27467.html' title='Multiple used in 5 places.'>tmps</a>);
+<a id='L164' name='L164'></a> 164       <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("\n");
+<a id='L165' name='L165'></a> 165       <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("  expected: ");
+<a id='L166' name='L166'></a> 166       <a href='../S/6080.html#L25' title='Defined at 25 in stdio-common/tst-fmemopen3.c.'>print_buffer</a> (<a href='../Y/14144.html' title='Multiple used in 879 places.'>expected</a>, <a href='../Y/27467.html' title='Multiple used in 5 places.'>tmps</a>);
+<a id='L167' name='L167'></a> 167       <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("\n");
+<a id='L168' name='L168'></a> 168       <strong class='reserved'>return</strong> 1;
+<a id='L169' name='L169'></a> 169     <em class='brace'>}</em>
+<a id='L170' name='L170'></a> 170 
+<a id='L171' name='L171'></a> 171   <a href='../S/17955.html#L194' title='Defined at 194 in include/stdio.h.'>fclose</a> (<a href='../D/30705.html' title='Multiple defined in 2 places.'>fp</a>);
+<a id='L172' name='L172'></a> 172 
+<a id='L173' name='L173'></a> 173   <strong class='reserved'>return</strong> 0;
+<a id='L174' name='L174'></a> 174 <em class='brace'>}</em>
+<a id='L175' name='L175'></a> 175 
+<a id='L176' name='L176'></a> 176 <strong class='reserved'>static</strong> <strong class='reserved'>int</strong>
+<a id='L177' name='L177'></a> 177 <a href='../S/6080.html#L311' title='Referred from 311 in stdio-common/tst-fmemopen3.c.'>do_test_read_seek_negative</a> (<strong class='reserved'>void</strong>)
+<a id='L178' name='L178'></a> 178 <em class='brace'>{</em>
+<a id='L179' name='L179'></a> 179   <strong class='reserved'>int</strong> <a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a> = 0;
+<a id='L180' name='L180'></a> 180 
+<a id='L181' name='L181'></a> 181   <em class='comment'>/* 'r' and 'w' modes defines the initial position at the buffer start and</em>
+<a id='L182' name='L182'></a> 182 <em class='comment'>     seek with SEEK_END shall seek relative to its size give in fmemopen</em>
+<a id='L183' name='L183'></a> 183 <em class='comment'>     call.  The expected tmp result is 0 to 9 *without* the ending null  */</em>
+<a id='L184' name='L184'></a> 184   <a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a> += <a href='../S/6080.html#L147' title='Defined at 147 in stdio-common/tst-fmemopen3.c.'>do_test_read_seek_neg</a> ("r", "0123456789");
+<a id='L185' name='L185'></a> 185   <em class='comment'>/* 'a+' mode sets the initial position at the first null byte in buffer and</em>
+<a id='L186' name='L186'></a> 186 <em class='comment'>    SEEK_END shall seek relative to its size as well.  The expected result is</em>
+<a id='L187' name='L187'></a> 187 <em class='comment'>    z012345678, since SEEK_END plus a+ start at '\0', not size.  */</em>
+<a id='L188' name='L188'></a> 188   <a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a> += <a href='../S/6080.html#L147' title='Defined at 147 in stdio-common/tst-fmemopen3.c.'>do_test_read_seek_neg</a> ("a+", "z012345678");
+<a id='L189' name='L189'></a> 189 
+<a id='L190' name='L190'></a> 190   <strong class='reserved'>return</strong> <a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a>;
+<a id='L191' name='L191'></a> 191 <em class='brace'>}</em>
+<a id='L192' name='L192'></a> 192 
+<a id='L193' name='L193'></a> 193 <strong class='reserved'>static</strong> <strong class='reserved'>int</strong>
+<a id='L194' name='L194'></a> 194 <a href='../R/18843.html' title='Multiple referred from 2 places.'>do_test_write_append_2</a> (<strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../D/37053.html' title='Multiple defined in 6 places.'>str</a>)
+<a id='L195' name='L195'></a> 195 <em class='brace'>{</em>
+<a id='L196' name='L196'></a> 196   <strong class='reserved'>char</strong> <a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>[10];
+<a id='L197' name='L197'></a> 197   <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/26320.html' title='Multiple used in 2 places.'>strn</a> = <a href='../D/37108.html' title='Multiple defined in 42 places.'>strlen</a> (<a href='../D/37053.html' title='Multiple defined in 6 places.'>str</a>);
+<a id='L198' name='L198'></a> 198   <a href='../D/37069.html' title='Multiple defined in 19 places.'>strcpy</a> (<a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>, <a href='../D/37053.html' title='Multiple defined in 6 places.'>str</a>);
+<a id='L199' name='L199'></a> 199 
+<a id='L200' name='L200'></a> 200   <a href='../S/5474.html#L7' title='Defined at 7 in libio/bits/types/FILE.h.'>FILE</a> *<a href='../D/30705.html' title='Multiple defined in 2 places.'>fp</a> = <a href='../Y/14729.html' title='Multiple used in 30 places.'>fmemopen</a> (<a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>, <strong class='reserved'>sizeof</strong> (<a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>), "a+");
+<a id='L201' name='L201'></a> 201   <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/23316.html' title='Multiple used in 3267 places.'>r</a> = <a href='../D/30915.html' title='Multiple defined in 2 places.'>ftell</a> (<a href='../D/30705.html' title='Multiple defined in 2 places.'>fp</a>);
+<a id='L202' name='L202'></a> 202   <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/13489.html' title='Multiple used in 1393 places.'>e</a> = <a href='../D/37108.html' title='Multiple defined in 42 places.'>strlen</a> (<a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>);
+<a id='L203' name='L203'></a> 203   <strong class='reserved'>if</strong> (<a href='../Y/23316.html' title='Multiple used in 3267 places.'>r</a> != <a href='../Y/13489.html' title='Multiple used in 1393 places.'>e</a>)
+<a id='L204' name='L204'></a> 204     <em class='brace'>{</em>
+<a id='L205' name='L205'></a> 205       <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("%s: ftell returned %zu, expected %zu\n", <a href='../Y/2965.html' title='Multiple used in 127 places.'>__FUNCTION__</a>, <a href='../Y/23316.html' title='Multiple used in 3267 places.'>r</a>, <a href='../Y/13489.html' title='Multiple used in 1393 places.'>e</a>);
+<a id='L206' name='L206'></a> 206       <strong class='reserved'>return</strong> 1;
+<a id='L207' name='L207'></a> 207     <em class='brace'>}</em>
+<a id='L208' name='L208'></a> 208 
+<a id='L209' name='L209'></a> 209   <strong class='reserved'>if</strong> (<a href='../S/5567.html#L31' title='Defined at 31 in libio/fseek.c.'>fseek</a> (<a href='../D/30705.html' title='Multiple defined in 2 places.'>fp</a>, 0, <a href='../D/13729.html' title='Multiple defined in 3 places.'>SEEK_SET</a>) == -1)
+<a id='L210' name='L210'></a> 210     <em class='brace'>{</em>
+<a id='L211' name='L211'></a> 211       <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("%s: fseek returned -1\n", <a href='../Y/2965.html' title='Multiple used in 127 places.'>__FUNCTION__</a>);
+<a id='L212' name='L212'></a> 212       <strong class='reserved'>return</strong> 1;
+<a id='L213' name='L213'></a> 213     <em class='brace'>}</em>
+<a id='L214' name='L214'></a> 214 
+<a id='L215' name='L215'></a> 215   <strong class='reserved'>int</strong> <a href='../Y/15766.html' title='Multiple used in 38 places.'>gr</a>;
+<a id='L216' name='L216'></a> 216   <strong class='reserved'>for</strong> (<strong class='reserved'>int</strong> <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>=0; <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>&lt;<a href='../Y/26320.html' title='Multiple used in 2 places.'>strn</a>; ++<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>)
+<a id='L217' name='L217'></a> 217     <em class='brace'>{</em>
+<a id='L218' name='L218'></a> 218       <strong class='reserved'>if</strong> ((<a href='../Y/15766.html' title='Multiple used in 38 places.'>gr</a> = <a href='../S/5467.html#L45' title='Defined at 45 in libio/getc.c.'>getc</a> (<a href='../D/30705.html' title='Multiple defined in 2 places.'>fp</a>)) != <a href='../D/37053.html' title='Multiple defined in 6 places.'>str</a>[<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>])
+<a id='L219' name='L219'></a> 219     <em class='brace'>{</em>
+<a id='L220' name='L220'></a> 220       <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("%s: getc failed returned %d, expected %d\n", <a href='../Y/2965.html' title='Multiple used in 127 places.'>__FUNCTION__</a>,
+<a id='L221' name='L221'></a> 221           <a href='../Y/15766.html' title='Multiple used in 38 places.'>gr</a>, <a href='../D/37053.html' title='Multiple defined in 6 places.'>str</a>[<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>]);
+<a id='L222' name='L222'></a> 222       <strong class='reserved'>return</strong> 1;
+<a id='L223' name='L223'></a> 223         <em class='brace'>}</em>
+<a id='L224' name='L224'></a> 224     <em class='brace'>}</em>
+<a id='L225' name='L225'></a> 225   <strong class='reserved'>if</strong> ((<a href='../Y/15766.html' title='Multiple used in 38 places.'>gr</a> = <a href='../S/5467.html#L45' title='Defined at 45 in libio/getc.c.'>getc</a> (<a href='../D/30705.html' title='Multiple defined in 2 places.'>fp</a>)) != <a href='../D/3680.html' title='Multiple defined in 5 places.'>EOF</a>)
+<a id='L226' name='L226'></a> 226     <em class='brace'>{</em>
+<a id='L227' name='L227'></a> 227       <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("%s: getc failed returned %d, expected EOF\n", <a href='../Y/2965.html' title='Multiple used in 127 places.'>__FUNCTION__</a>,
+<a id='L228' name='L228'></a> 228           <a href='../Y/15766.html' title='Multiple used in 38 places.'>gr</a>);
+<a id='L229' name='L229'></a> 229       <strong class='reserved'>return</strong> 1;
+<a id='L230' name='L230'></a> 230     <em class='brace'>}</em>
+<a id='L231' name='L231'></a> 231 
+<a id='L232' name='L232'></a> 232   <strong class='reserved'>if</strong> (<a href='../S/5567.html#L31' title='Defined at 31 in libio/fseek.c.'>fseek</a> (<a href='../D/30705.html' title='Multiple defined in 2 places.'>fp</a>, <a href='../Y/13489.html' title='Multiple used in 1393 places.'>e</a>+1, <a href='../D/13729.html' title='Multiple defined in 3 places.'>SEEK_SET</a>) == -1)
+<a id='L233' name='L233'></a> 233     <em class='brace'>{</em>
+<a id='L234' name='L234'></a> 234       <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("%s: fseek returned -1\n", <a href='../Y/2965.html' title='Multiple used in 127 places.'>__FUNCTION__</a>);
+<a id='L235' name='L235'></a> 235       <strong class='reserved'>return</strong> 1;
+<a id='L236' name='L236'></a> 236     <em class='brace'>}</em>
+<a id='L237' name='L237'></a> 237 
+<a id='L238' name='L238'></a> 238   <strong class='reserved'>if</strong> ((<a href='../Y/23316.html' title='Multiple used in 3267 places.'>r</a> = <a href='../D/30915.html' title='Multiple defined in 2 places.'>ftell</a> (<a href='../D/30705.html' title='Multiple defined in 2 places.'>fp</a>)) != <a href='../Y/13489.html' title='Multiple used in 1393 places.'>e</a>+1)
+<a id='L239' name='L239'></a> 239     <em class='brace'>{</em>
+<a id='L240' name='L240'></a> 240       <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("%s: ftell returned %zu, expected %zu\n", <a href='../Y/2965.html' title='Multiple used in 127 places.'>__FUNCTION__</a>, <a href='../Y/23316.html' title='Multiple used in 3267 places.'>r</a>, <a href='../Y/13489.html' title='Multiple used in 1393 places.'>e</a>+1);
+<a id='L241' name='L241'></a> 241       <strong class='reserved'>return</strong> 1;
+<a id='L242' name='L242'></a> 242     <em class='brace'>}</em>
+<a id='L243' name='L243'></a> 243 
+<a id='L244' name='L244'></a> 244   <strong class='reserved'>if</strong> ((<a href='../Y/15766.html' title='Multiple used in 38 places.'>gr</a> = <a href='../S/5467.html#L45' title='Defined at 45 in libio/getc.c.'>getc</a> (<a href='../D/30705.html' title='Multiple defined in 2 places.'>fp</a>)) != <a href='../D/3680.html' title='Multiple defined in 5 places.'>EOF</a>)
+<a id='L245' name='L245'></a> 245     <em class='brace'>{</em>
+<a id='L246' name='L246'></a> 246       <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("%s: getc failed returned %i\n", <a href='../Y/2965.html' title='Multiple used in 127 places.'>__FUNCTION__</a>, <a href='../Y/15766.html' title='Multiple used in 38 places.'>gr</a>);
+<a id='L247' name='L247'></a> 247       <strong class='reserved'>return</strong> 1;
+<a id='L248' name='L248'></a> 248     <em class='brace'>}</em>
+<a id='L249' name='L249'></a> 249 
+<a id='L250' name='L250'></a> 250   <em class='comment'>/* Check if internal position is not changed with a getc returning EOF.  */</em>
+<a id='L251' name='L251'></a> 251   <strong class='reserved'>if</strong> ((<a href='../Y/23316.html' title='Multiple used in 3267 places.'>r</a> = <a href='../D/30915.html' title='Multiple defined in 2 places.'>ftell</a> (<a href='../D/30705.html' title='Multiple defined in 2 places.'>fp</a>)) != <a href='../Y/13489.html' title='Multiple used in 1393 places.'>e</a>+1)
+<a id='L252' name='L252'></a> 252     <em class='brace'>{</em>
+<a id='L253' name='L253'></a> 253       <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("%s: ftell returned %zu, expected %zu\n", <a href='../Y/2965.html' title='Multiple used in 127 places.'>__FUNCTION__</a>, <a href='../Y/23316.html' title='Multiple used in 3267 places.'>r</a>, <a href='../Y/13489.html' title='Multiple used in 1393 places.'>e</a>+1);
+<a id='L254' name='L254'></a> 254       <strong class='reserved'>return</strong> 1;
+<a id='L255' name='L255'></a> 255     <em class='brace'>}</em>
+<a id='L256' name='L256'></a> 256 
+<a id='L257' name='L257'></a> 257   <strong class='reserved'>if</strong> (<a href='../S/5567.html#L31' title='Defined at 31 in libio/fseek.c.'>fseek</a> (<a href='../D/30705.html' title='Multiple defined in 2 places.'>fp</a>, 0, <a href='../D/13725.html' title='Multiple defined in 3 places.'>SEEK_CUR</a>) == -1)
+<a id='L258' name='L258'></a> 258     <em class='brace'>{</em>
+<a id='L259' name='L259'></a> 259       <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("%s: fseek returned -1\n", <a href='../Y/2965.html' title='Multiple used in 127 places.'>__FUNCTION__</a>);
+<a id='L260' name='L260'></a> 260       <strong class='reserved'>return</strong> 1;
+<a id='L261' name='L261'></a> 261     <em class='brace'>}</em>
+<a id='L262' name='L262'></a> 262 
+<a id='L263' name='L263'></a> 263   <em class='comment'>/* This should be overwritten by fprintf + fflush.  */</em>
+<a id='L264' name='L264'></a> 264   <a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>[<a href='../Y/13489.html' title='Multiple used in 1393 places.'>e</a>+2] = 'X';
+<a id='L265' name='L265'></a> 265 
+<a id='L266' name='L266'></a> 266   <strong class='reserved'>if</strong> ((<a href='../Y/23316.html' title='Multiple used in 3267 places.'>r</a> = <a href='../D/30767.html' title='Multiple defined in 4 places.'>fprintf</a> (<a href='../D/30705.html' title='Multiple defined in 2 places.'>fp</a>, "%d", 101)) != 3)
+<a id='L267' name='L267'></a> 267     <em class='brace'>{</em>
+<a id='L268' name='L268'></a> 268       <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("%s: fprintf returned %zu, expected %d\n", <a href='../Y/2965.html' title='Multiple used in 127 places.'>__FUNCTION__</a>, <a href='../Y/23316.html' title='Multiple used in 3267 places.'>r</a>, 3);
+<a id='L269' name='L269'></a> 269       <strong class='reserved'>return</strong> 1;
+<a id='L270' name='L270'></a> 270     <em class='brace'>}</em>
+<a id='L271' name='L271'></a> 271 
+<a id='L272' name='L272'></a> 272   <a href='../D/30459.html' title='Multiple defined in 5 places.'>fflush</a> (<a href='../D/30705.html' title='Multiple defined in 2 places.'>fp</a>);
+<a id='L273' name='L273'></a> 273 
+<a id='L274' name='L274'></a> 274   <em class='comment'>/* Check if internal position is changed by 3 (strlen of '101').  */</em>
+<a id='L275' name='L275'></a> 275   <strong class='reserved'>if</strong> ((<a href='../Y/23316.html' title='Multiple used in 3267 places.'>r</a> = <a href='../D/30915.html' title='Multiple defined in 2 places.'>ftell</a> (<a href='../D/30705.html' title='Multiple defined in 2 places.'>fp</a>)) != <a href='../Y/13489.html' title='Multiple used in 1393 places.'>e</a>+3)
+<a id='L276' name='L276'></a> 276     <em class='brace'>{</em>
+<a id='L277' name='L277'></a> 277       <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("%s: ftell returned %zu, expected %zu\n", <a href='../Y/2965.html' title='Multiple used in 127 places.'>__FUNCTION__</a>, <a href='../Y/23316.html' title='Multiple used in 3267 places.'>r</a>, <a href='../Y/13489.html' title='Multiple used in 1393 places.'>e</a>+3);
+<a id='L278' name='L278'></a> 278       <strong class='reserved'>return</strong> 1;
+<a id='L279' name='L279'></a> 279     <em class='brace'>}</em>
+<a id='L280' name='L280'></a> 280 
+<a id='L281' name='L281'></a> 281   <strong class='reserved'>char</strong> <a href='../S/3342.html#L755' title='Defined at 755 in math/tgmath.h.'>exp</a>[20];
+<a id='L282' name='L282'></a> 282   <a href='../D/36942.html' title='Multiple defined in 2 places.'>sprintf</a> (<a href='../S/3342.html#L755' title='Defined at 755 in math/tgmath.h.'>exp</a>, "%s%d", <a href='../D/37053.html' title='Multiple defined in 6 places.'>str</a>,  101);
+<a id='L283' name='L283'></a> 283   <strong class='reserved'>if</strong> (<a href='../D/33446.html' title='Multiple defined in 22 places.'>memcmp</a> (<a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>, <a href='../S/3342.html#L755' title='Defined at 755 in math/tgmath.h.'>exp</a>, <a href='../D/37108.html' title='Multiple defined in 42 places.'>strlen</a> (<a href='../S/3342.html#L755' title='Defined at 755 in math/tgmath.h.'>exp</a>)) != 0)
+<a id='L284' name='L284'></a> 284     <em class='brace'>{</em>
+<a id='L285' name='L285'></a> 285       <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("%s: check failed:", <a href='../Y/2965.html' title='Multiple used in 127 places.'>__FUNCTION__</a>);
+<a id='L286' name='L286'></a> 286       <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("\nexpected: ");
+<a id='L287' name='L287'></a> 287       <a href='../S/6080.html#L25' title='Defined at 25 in stdio-common/tst-fmemopen3.c.'>print_buffer</a> (<a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>, <strong class='reserved'>sizeof</strong> (<a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>));
+<a id='L288' name='L288'></a> 288       <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("\nbuffer:   ");
+<a id='L289' name='L289'></a> 289       <a href='../S/6080.html#L25' title='Defined at 25 in stdio-common/tst-fmemopen3.c.'>print_buffer</a> (<a href='../S/3342.html#L755' title='Defined at 755 in math/tgmath.h.'>exp</a>, <strong class='reserved'>sizeof</strong> (<a href='../S/3342.html#L755' title='Defined at 755 in math/tgmath.h.'>exp</a>));
+<a id='L290' name='L290'></a> 290       <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("\n");
+<a id='L291' name='L291'></a> 291       <strong class='reserved'>return</strong> 1;
+<a id='L292' name='L292'></a> 292     <em class='brace'>}</em>
+<a id='L293' name='L293'></a> 293 
+<a id='L294' name='L294'></a> 294   <a href='../S/17955.html#L194' title='Defined at 194 in include/stdio.h.'>fclose</a>(<a href='../D/30705.html' title='Multiple defined in 2 places.'>fp</a>);
+<a id='L295' name='L295'></a> 295 
+<a id='L296' name='L296'></a> 296   <strong class='reserved'>return</strong> 0;
+<a id='L297' name='L297'></a> 297 <em class='brace'>}</em>
+<a id='L298' name='L298'></a> 298 
+<a id='L299' name='L299'></a> 299 <strong class='reserved'>static</strong> <strong class='reserved'>int</strong>
+<a id='L300' name='L300'></a> 300 <a href='../R/18782.html' title='Multiple referred from 1850 places.'>do_test</a> (<strong class='reserved'>void</strong>)
+<a id='L301' name='L301'></a> 301 <em class='brace'>{</em>
+<a id='L302' name='L302'></a> 302   <strong class='reserved'>int</strong> <a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a> = 0;
+<a id='L303' name='L303'></a> 303 
+<a id='L304' name='L304'></a> 304   <a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a> += <a href='../S/6080.html#L40' title='Defined at 40 in stdio-common/tst-fmemopen3.c.'>do_test_write_append</a> ("a");
+<a id='L305' name='L305'></a> 305   <a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a> += <a href='../S/6080.html#L65' title='Defined at 65 in stdio-common/tst-fmemopen3.c.'>do_test_write_append_without_null</a> ("a");
+<a id='L306' name='L306'></a> 306   <a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a> += <a href='../S/6080.html#L40' title='Defined at 40 in stdio-common/tst-fmemopen3.c.'>do_test_write_append</a> ("a+");
+<a id='L307' name='L307'></a> 307   <a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a> += <a href='../S/6080.html#L65' title='Defined at 65 in stdio-common/tst-fmemopen3.c.'>do_test_write_append_without_null</a> ("a+");
+<a id='L308' name='L308'></a> 308 
+<a id='L309' name='L309'></a> 309   <a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a> += <a href='../S/6080.html#L100' title='Defined at 100 in stdio-common/tst-fmemopen3.c.'>do_test_read_append</a> ();
+<a id='L310' name='L310'></a> 310 
+<a id='L311' name='L311'></a> 311   <a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a> += <a href='../S/6080.html#L177' title='Defined at 177 in stdio-common/tst-fmemopen3.c.'>do_test_read_seek_negative</a> ();
+<a id='L312' name='L312'></a> 312 
+<a id='L313' name='L313'></a> 313   <em class='comment'>/* First test plus addend will fit in the define buffer of size 10.  */</em>
+<a id='L314' name='L314'></a> 314   <a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a> += <a href='../S/6080.html#L194' title='Defined at 194 in stdio-common/tst-fmemopen3.c.'>do_test_write_append_2</a> ("test");
+<a id='L315' name='L315'></a> 315   <em class='comment'>/* The second test will also fit, but not the final '\0'.  */</em>
+<a id='L316' name='L316'></a> 316   <a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a> += <a href='../S/6080.html#L194' title='Defined at 194 in stdio-common/tst-fmemopen3.c.'>do_test_write_append_2</a> ("testing");
+<a id='L317' name='L317'></a> 317 
+<a id='L318' name='L318'></a> 318   <strong class='reserved'>return</strong> <a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a>;
+<a id='L319' name='L319'></a> 319 <em class='brace'>}</em>
+<a id='L320' name='L320'></a> 320 
+<a id='L321' name='L321'></a> 321 <em class='sharp'>#define</em> <a href='../R/8619.html' title='Multiple referred from 7 places.'>TEST_FUNCTION</a> <a href='../D/29701.html' title='Multiple defined in 1421 places.'>do_test</a> ()
+<a id='L322' name='L322'></a> 322 <em class='sharp'>#include</em> "../test-skeleton.c"
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L25'>[^]</a><a href='#L300'>[v]</a><a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

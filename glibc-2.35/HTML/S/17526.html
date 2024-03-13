@@ -1,0 +1,155 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>sysdeps/s390/atomic-machine.h</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18977.html'>sysdeps</a>/<a href='../files/19209.html'>s390</a>/atomic-machine.h</h2>
+<em class='comment'>/* [&lt;][&gt;][^][v][top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<h2 class='header'><a href='../J/5836.html' title='Multiple included from 4 places.'>INCLUDED FROM</a></h2>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* Copyright (C) 2003-2022 Free Software Foundation, Inc.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'></em>
+<a id='L4' name='L4'></a>   4 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'></em>
+<a id='L9' name='L9'></a>   9 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'></em>
+<a id='L14' name='L14'></a>  14 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   License along with the GNU C Library; if not, see</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L17' name='L17'></a>  17 
+<a id='L18' name='L18'></a>  18 <em class='comment'>/* Activate all C11 atomic builtins.</em>
+<a id='L19' name='L19'></a>  19 <em class='comment'></em>
+<a id='L20' name='L20'></a>  20 <em class='comment'>   Note:</em>
+<a id='L21' name='L21'></a>  21 <em class='comment'>   E.g. in nptl/pthread_key_delete.c if compiled with GCCs 6 and before,</em>
+<a id='L22' name='L22'></a>  22 <em class='comment'>   an extra stack-frame is generated and the old value is stored on stack</em>
+<a id='L23' name='L23'></a>  23 <em class='comment'>   before cs instruction but it never loads this value from stack.</em>
+<a id='L24' name='L24'></a>  24 <em class='comment'>   An unreleased GCC 7 omit those stack operations.</em>
+<a id='L25' name='L25'></a>  25 <em class='comment'></em>
+<a id='L26' name='L26'></a>  26 <em class='comment'>   E.g. in nptl/pthread_once.c the condition code of cs instruction is</em>
+<a id='L27' name='L27'></a>  27 <em class='comment'>   evaluated by a sequence of ipm, sra, compare and jump instructions instead</em>
+<a id='L28' name='L28'></a>  28 <em class='comment'>   of one conditional jump instruction.  This also occurs with an unreleased</em>
+<a id='L29' name='L29'></a>  29 <em class='comment'>   GCC 7.</em>
+<a id='L30' name='L30'></a>  30 <em class='comment'></em>
+<a id='L31' name='L31'></a>  31 <em class='comment'>   The atomic_fetch_abc_def C11 builtins are now using load-and-abc instructions</em>
+<a id='L32' name='L32'></a>  32 <em class='comment'>   on z196 zarch and higher cpus instead of a loop with compare-and-swap</em>
+<a id='L33' name='L33'></a>  33 <em class='comment'>   instruction.  */</em>
+<a id='L34' name='L34'></a>  34 <em class='sharp'>#define</em> <a href='../S/17870.html#L538' title='Referred from 538 in include/atomic.h.'>USE_ATOMIC_COMPILER_BUILTINS</a> 1
+<a id='L35' name='L35'></a>  35 
+<a id='L36' name='L36'></a>  36 <em class='sharp'>#ifdef</em> <a href='../Y/7310.html' title='Multiple used in 82 places.'>__s390x__</a>
+<a id='L37' name='L37'></a>  37 <em class='sharp'># define</em> <a href='../R/12699.html' title='Multiple referred from 44 places.'>__HAVE_64B_ATOMICS</a> 1
+<a id='L38' name='L38'></a>  38 <em class='sharp'>#else</em>
+<a id='L39' name='L39'></a>  39 <em class='sharp'># define</em> <a href='../R/12699.html' title='Multiple referred from 44 places.'>__HAVE_64B_ATOMICS</a> 0
+<a id='L40' name='L40'></a>  40 <em class='sharp'>#endif</em>
+<a id='L41' name='L41'></a>  41 
+<a id='L42' name='L42'></a>  42 <em class='sharp'>#define</em> <a href='../R/324.html' title='Multiple referred from 3 places.'>ATOMIC_EXCHANGE_USES_CAS</a> 1
+<a id='L43' name='L43'></a>  43 
+<a id='L44' name='L44'></a>  44 <em class='comment'>/* Implement some of the non-C11 atomic macros from include/atomic.h</em>
+<a id='L45' name='L45'></a>  45 <em class='comment'>   with help of the C11 atomic builtins.  The other non-C11 atomic macros</em>
+<a id='L46' name='L46'></a>  46 <em class='comment'>   are using the macros defined here.  */</em>
+<a id='L47' name='L47'></a>  47 
+<a id='L48' name='L48'></a>  48 <em class='comment'>/* Atomically store NEWVAL in *MEM if *MEM is equal to OLDVAL.</em>
+<a id='L49' name='L49'></a>  49 <em class='comment'>   Return the old *MEM value.  */</em>
+<a id='L50' name='L50'></a>  50 <em class='sharp'>#define</em> <a href='../R/17384.html' title='Multiple referred from 36 places.'>atomic_compare_and_exchange_val_acq</a>(<a href='../Y/19219.html' title='Multiple used in 1858 places.'>mem</a>, <a href='../Y/20696.html' title='Multiple used in 318 places.'>newval</a>, <a href='../Y/21686.html' title='Multiple used in 364 places.'>oldval</a>)    \
+<a id='L51' name='L51'></a>  51   (<em class='brace'>{</em> <a href='../D/23285.html' title='Multiple defined in 2 places.'>__atomic_check_size</a>((<a href='../Y/19219.html' title='Multiple used in 1858 places.'>mem</a>));                    \
+<a id='L52' name='L52'></a>  52     <a href='../Y/28049.html' title='Multiple used in 68 places.'>typeof</a> ((<a href='../D/26352.html' title='Multiple defined in 58 places.'>__typeof</a> (*(<a href='../Y/19219.html' title='Multiple used in 1858 places.'>mem</a>))) *(<a href='../Y/19219.html' title='Multiple used in 1858 places.'>mem</a>)) <a href='../Y/3620.html' title='Multiple used in 3 places.'>__atg1_oldval</a> = (<a href='../Y/21686.html' title='Multiple used in 364 places.'>oldval</a>);   \
+<a id='L53' name='L53'></a>  53     <a href='../Y/3645.html' title='Multiple used in 32 places.'>__atomic_compare_exchange_n</a> (<a href='../Y/19219.html' title='Multiple used in 1858 places.'>mem</a>, (<strong class='reserved'>void</strong> *) &amp;<a href='../Y/3620.html' title='Multiple used in 3 places.'>__atg1_oldval</a>,      \
+<a id='L54' name='L54'></a>  54                  <a href='../Y/20696.html' title='Multiple used in 318 places.'>newval</a>, 1, <a href='../Y/2884.html' title='Multiple used in 35 places.'>__ATOMIC_ACQUIRE</a>,       \
+<a id='L55' name='L55'></a>  55                  <a href='../Y/2886.html' title='Multiple used in 67 places.'>__ATOMIC_RELAXED</a>);         \
+<a id='L56' name='L56'></a>  56     <a href='../Y/3620.html' title='Multiple used in 3 places.'>__atg1_oldval</a>; <em class='brace'>}</em>)
+<a id='L57' name='L57'></a>  57 <em class='sharp'>#define</em> <a href='../R/17385.html' title='Multiple referred from 4 places.'>atomic_compare_and_exchange_val_rel</a>(<a href='../Y/19219.html' title='Multiple used in 1858 places.'>mem</a>, <a href='../Y/20696.html' title='Multiple used in 318 places.'>newval</a>, <a href='../Y/21686.html' title='Multiple used in 364 places.'>oldval</a>)    \
+<a id='L58' name='L58'></a>  58   (<em class='brace'>{</em> <a href='../D/23285.html' title='Multiple defined in 2 places.'>__atomic_check_size</a>((<a href='../Y/19219.html' title='Multiple used in 1858 places.'>mem</a>));                    \
+<a id='L59' name='L59'></a>  59     <a href='../Y/28049.html' title='Multiple used in 68 places.'>typeof</a> ((<a href='../D/26352.html' title='Multiple defined in 58 places.'>__typeof</a> (*(<a href='../Y/19219.html' title='Multiple used in 1858 places.'>mem</a>))) *(<a href='../Y/19219.html' title='Multiple used in 1858 places.'>mem</a>)) <a href='../Y/3619.html' title='Multiple used in 3 places.'>__atg1_2_oldval</a> = (<a href='../Y/21686.html' title='Multiple used in 364 places.'>oldval</a>); \
+<a id='L60' name='L60'></a>  60     <a href='../Y/3645.html' title='Multiple used in 32 places.'>__atomic_compare_exchange_n</a> (<a href='../Y/19219.html' title='Multiple used in 1858 places.'>mem</a>, (<strong class='reserved'>void</strong> *) &amp;<a href='../Y/3619.html' title='Multiple used in 3 places.'>__atg1_2_oldval</a>,    \
+<a id='L61' name='L61'></a>  61                  <a href='../Y/20696.html' title='Multiple used in 318 places.'>newval</a>, 1, <a href='../Y/2887.html' title='Multiple used in 25 places.'>__ATOMIC_RELEASE</a>,       \
+<a id='L62' name='L62'></a>  62                  <a href='../Y/2886.html' title='Multiple used in 67 places.'>__ATOMIC_RELAXED</a>);         \
+<a id='L63' name='L63'></a>  63     <a href='../Y/3619.html' title='Multiple used in 3 places.'>__atg1_2_oldval</a>; <em class='brace'>}</em>)
+<a id='L64' name='L64'></a>  64 
+<a id='L65' name='L65'></a>  65 <em class='comment'>/* Atomically store NEWVAL in *MEM if *MEM is equal to OLDVAL.</em>
+<a id='L66' name='L66'></a>  66 <em class='comment'>   Return zero if *MEM was changed or non-zero if no exchange happened.  */</em>
+<a id='L67' name='L67'></a>  67 <em class='sharp'>#define</em> <a href='../R/17383.html' title='Multiple referred from 52 places.'>atomic_compare_and_exchange_bool_acq</a>(<a href='../Y/19219.html' title='Multiple used in 1858 places.'>mem</a>, <a href='../Y/20696.html' title='Multiple used in 318 places.'>newval</a>, <a href='../Y/21686.html' title='Multiple used in 364 places.'>oldval</a>)   \
+<a id='L68' name='L68'></a>  68   (<em class='brace'>{</em> <a href='../D/23285.html' title='Multiple defined in 2 places.'>__atomic_check_size</a>((<a href='../Y/19219.html' title='Multiple used in 1858 places.'>mem</a>));                    \
+<a id='L69' name='L69'></a>  69     <a href='../Y/28049.html' title='Multiple used in 68 places.'>typeof</a> ((<a href='../D/26352.html' title='Multiple defined in 58 places.'>__typeof</a> (*(<a href='../Y/19219.html' title='Multiple used in 1858 places.'>mem</a>))) *(<a href='../Y/19219.html' title='Multiple used in 1858 places.'>mem</a>)) <a href='../Y/3625.html' title='Multiple used in 2 places.'>__atg2_oldval</a> = (<a href='../Y/21686.html' title='Multiple used in 364 places.'>oldval</a>);   \
+<a id='L70' name='L70'></a>  70     !<a href='../Y/3645.html' title='Multiple used in 32 places.'>__atomic_compare_exchange_n</a> (<a href='../Y/19219.html' title='Multiple used in 1858 places.'>mem</a>, (<strong class='reserved'>void</strong> *) &amp;<a href='../Y/3625.html' title='Multiple used in 2 places.'>__atg2_oldval</a>, <a href='../Y/20696.html' title='Multiple used in 318 places.'>newval</a>, \
+<a id='L71' name='L71'></a>  71                   1, <a href='../Y/2884.html' title='Multiple used in 35 places.'>__ATOMIC_ACQUIRE</a>,          \
+<a id='L72' name='L72'></a>  72                   <a href='../Y/2886.html' title='Multiple used in 67 places.'>__ATOMIC_RELAXED</a>); <em class='brace'>}</em>)
+<a id='L73' name='L73'></a>  73 <em class='sharp'>#define</em> <a href='../R/17789.html' title='Multiple referred from 12 places.'>catomic_compare_and_exchange_bool_acq</a>(<a href='../Y/19219.html' title='Multiple used in 1858 places.'>mem</a>, <a href='../Y/20696.html' title='Multiple used in 318 places.'>newval</a>, <a href='../Y/21686.html' title='Multiple used in 364 places.'>oldval</a>)  \
+<a id='L74' name='L74'></a>  74   <a href='../D/27896.html' title='Multiple defined in 14 places.'>atomic_compare_and_exchange_bool_acq</a> (<a href='../Y/19219.html' title='Multiple used in 1858 places.'>mem</a>, <a href='../Y/20696.html' title='Multiple used in 318 places.'>newval</a>, <a href='../Y/21686.html' title='Multiple used in 364 places.'>oldval</a>)
+<a id='L75' name='L75'></a>  75 
+<a id='L76' name='L76'></a>  76 <em class='comment'>/* Store NEWVALUE in *MEM and return the old value.  */</em>
+<a id='L77' name='L77'></a>  77 <em class='sharp'>#define</em> <a href='../R/17393.html' title='Multiple referred from 13 places.'>atomic_exchange_acq</a>(<a href='../Y/19219.html' title='Multiple used in 1858 places.'>mem</a>, <a href='../Y/20698.html' title='Multiple used in 17 places.'>newvalue</a>)              \
+<a id='L78' name='L78'></a>  78   (<em class='brace'>{</em> <a href='../D/23285.html' title='Multiple defined in 2 places.'>__atomic_check_size</a>((<a href='../Y/19219.html' title='Multiple used in 1858 places.'>mem</a>));                    \
+<a id='L79' name='L79'></a>  79     <a href='../Y/3646.html' title='Multiple used in 16 places.'>__atomic_exchange_n</a> (<a href='../Y/19219.html' title='Multiple used in 1858 places.'>mem</a>, <a href='../Y/20698.html' title='Multiple used in 17 places.'>newvalue</a>, <a href='../Y/2884.html' title='Multiple used in 35 places.'>__ATOMIC_ACQUIRE</a>); <em class='brace'>}</em>)
+<a id='L80' name='L80'></a>  80 <em class='sharp'>#define</em> <a href='../R/17398.html' title='Multiple referred from 24 places.'>atomic_exchange_rel</a>(<a href='../Y/19219.html' title='Multiple used in 1858 places.'>mem</a>, <a href='../Y/20698.html' title='Multiple used in 17 places.'>newvalue</a>)              \
+<a id='L81' name='L81'></a>  81   (<em class='brace'>{</em> <a href='../D/23285.html' title='Multiple defined in 2 places.'>__atomic_check_size</a>((<a href='../Y/19219.html' title='Multiple used in 1858 places.'>mem</a>));                    \
+<a id='L82' name='L82'></a>  82     <a href='../Y/3646.html' title='Multiple used in 16 places.'>__atomic_exchange_n</a> (<a href='../Y/19219.html' title='Multiple used in 1858 places.'>mem</a>, <a href='../Y/20698.html' title='Multiple used in 17 places.'>newvalue</a>, <a href='../Y/2887.html' title='Multiple used in 25 places.'>__ATOMIC_RELEASE</a>); <em class='brace'>}</em>)
+<a id='L83' name='L83'></a>  83 
+<a id='L84' name='L84'></a>  84 <em class='comment'>/* Add VALUE to *MEM and return the old value of *MEM.  */</em>
+<a id='L85' name='L85'></a>  85 <em class='comment'>/* The gcc builtin uses load-and-add instruction on z196 zarch and higher cpus</em>
+<a id='L86' name='L86'></a>  86 <em class='comment'>   instead of a loop with compare-and-swap instruction.  */</em>
+<a id='L87' name='L87'></a>  87 <em class='sharp'># define</em> <a href='../R/17396.html' title='Multiple referred from 6 places.'>atomic_exchange_and_add_acq</a>(<a href='../Y/19219.html' title='Multiple used in 1858 places.'>mem</a>, <a href='../Y/21743.html' title='Multiple used in 52 places.'>operand</a>)          \
+<a id='L88' name='L88'></a>  88   (<em class='brace'>{</em> <a href='../D/23285.html' title='Multiple defined in 2 places.'>__atomic_check_size</a>((<a href='../Y/19219.html' title='Multiple used in 1858 places.'>mem</a>));                    \
+<a id='L89' name='L89'></a>  89   <a href='../Y/3647.html' title='Multiple used in 17 places.'>__atomic_fetch_add</a> ((<a href='../Y/19219.html' title='Multiple used in 1858 places.'>mem</a>), (<a href='../Y/21743.html' title='Multiple used in 52 places.'>operand</a>), <a href='../Y/2884.html' title='Multiple used in 35 places.'>__ATOMIC_ACQUIRE</a>); <em class='brace'>}</em>)
+<a id='L90' name='L90'></a>  90 <em class='sharp'># define</em> <a href='../R/17397.html' title='Multiple referred from 3 places.'>atomic_exchange_and_add_rel</a>(<a href='../Y/19219.html' title='Multiple used in 1858 places.'>mem</a>, <a href='../Y/21743.html' title='Multiple used in 52 places.'>operand</a>)          \
+<a id='L91' name='L91'></a>  91   (<em class='brace'>{</em> <a href='../D/23285.html' title='Multiple defined in 2 places.'>__atomic_check_size</a>((<a href='../Y/19219.html' title='Multiple used in 1858 places.'>mem</a>));                    \
+<a id='L92' name='L92'></a>  92   <a href='../Y/3647.html' title='Multiple used in 17 places.'>__atomic_fetch_add</a> ((<a href='../Y/19219.html' title='Multiple used in 1858 places.'>mem</a>), (<a href='../Y/21743.html' title='Multiple used in 52 places.'>operand</a>), <a href='../Y/2887.html' title='Multiple used in 25 places.'>__ATOMIC_RELEASE</a>); <em class='brace'>}</em>)
+<a id='L93' name='L93'></a>  93 <em class='sharp'>#define</em> <a href='../R/17794.html' title='Multiple referred from 10 places.'>catomic_exchange_and_add</a>(<a href='../Y/19219.html' title='Multiple used in 1858 places.'>mem</a>, <a href='../D/38921.html' title='Multiple defined in 7 places.'>value</a>)    \
+<a id='L94' name='L94'></a>  94   <a href='../D/27908.html' title='Multiple defined in 8 places.'>atomic_exchange_and_add</a> (<a href='../Y/19219.html' title='Multiple used in 1858 places.'>mem</a>, <a href='../D/38921.html' title='Multiple defined in 7 places.'>value</a>)
+<a id='L95' name='L95'></a>  95 
+<a id='L96' name='L96'></a>  96 <em class='comment'>/* Atomically *mem |= mask and return the old value of *mem.  */</em>
+<a id='L97' name='L97'></a>  97 <em class='comment'>/* The gcc builtin uses load-and-or instruction on z196 zarch and higher cpus</em>
+<a id='L98' name='L98'></a>  98 <em class='comment'>   instead of a loop with compare-and-swap instruction.  */</em>
+<a id='L99' name='L99'></a>  99 <em class='sharp'>#define</em> <a href='../R/17422.html' title='Multiple referred from 4 places.'>atomic_or_val</a>(<a href='../Y/19219.html' title='Multiple used in 1858 places.'>mem</a>, <a href='../Y/21743.html' title='Multiple used in 52 places.'>operand</a>)                 \
+<a id='L100' name='L100'></a> 100   (<em class='brace'>{</em> <a href='../D/23285.html' title='Multiple defined in 2 places.'>__atomic_check_size</a>((<a href='../Y/19219.html' title='Multiple used in 1858 places.'>mem</a>));                    \
+<a id='L101' name='L101'></a> 101   <a href='../Y/3649.html' title='Multiple used in 4 places.'>__atomic_fetch_or</a> ((<a href='../Y/19219.html' title='Multiple used in 1858 places.'>mem</a>), (<a href='../Y/21743.html' title='Multiple used in 52 places.'>operand</a>), <a href='../Y/2884.html' title='Multiple used in 35 places.'>__ATOMIC_ACQUIRE</a>); <em class='brace'>}</em>)
+<a id='L102' name='L102'></a> 102 <em class='comment'>/* Atomically *mem |= mask.  */</em>
+<a id='L103' name='L103'></a> 103 <em class='sharp'>#define</em> <a href='../R/17421.html' title='Multiple referred from 3 places.'>atomic_or</a>(<a href='../Y/19219.html' title='Multiple used in 1858 places.'>mem</a>, <a href='../S/13710.html#L48' title='Defined at 48 in sysdeps/aarch64/strncmp.S.'>mask</a>)            \
+<a id='L104' name='L104'></a> 104   <strong class='reserved'>do</strong> <em class='brace'>{</em>                      \
+<a id='L105' name='L105'></a> 105     <a href='../D/27935.html' title='Multiple defined in 2 places.'>atomic_or_val</a> (<a href='../Y/19219.html' title='Multiple used in 1858 places.'>mem</a>, <a href='../S/13710.html#L48' title='Defined at 48 in sysdeps/aarch64/strncmp.S.'>mask</a>);          \
+<a id='L106' name='L106'></a> 106   <em class='brace'>}</em> <strong class='reserved'>while</strong> (0)
+<a id='L107' name='L107'></a> 107 <em class='sharp'>#define</em> <a href='../S/17870.html#L474' title='Referred from 474 in include/atomic.h.'>catomic_or</a>(<a href='../Y/19219.html' title='Multiple used in 1858 places.'>mem</a>, <a href='../S/13710.html#L48' title='Defined at 48 in sysdeps/aarch64/strncmp.S.'>mask</a>)           \
+<a id='L108' name='L108'></a> 108   <a href='../D/27934.html' title='Multiple defined in 3 places.'>atomic_or</a> (<a href='../Y/19219.html' title='Multiple used in 1858 places.'>mem</a>, <a href='../S/13710.html#L48' title='Defined at 48 in sysdeps/aarch64/strncmp.S.'>mask</a>)
+<a id='L109' name='L109'></a> 109 
+<a id='L110' name='L110'></a> 110 <em class='comment'>/* Atomically *mem |= 1 &lt;&lt; bit and return true if the bit was set in old value</em>
+<a id='L111' name='L111'></a> 111 <em class='comment'>   of *mem.  */</em>
+<a id='L112' name='L112'></a> 112 <em class='comment'>/* The load-and-or instruction is used on z196 zarch and higher cpus</em>
+<a id='L113' name='L113'></a> 113 <em class='comment'>   instead of a loop with compare-and-swap instruction.  */</em>
+<a id='L114' name='L114'></a> 114 <em class='sharp'>#define</em> <a href='../R/17382.html' title='Multiple referred from 7 places.'>atomic_bit_test_set</a>(<a href='../Y/19219.html' title='Multiple used in 1858 places.'>mem</a>, <a href='../Y/10863.html' title='Multiple used in 88 places.'>bit</a>)                   \
+<a id='L115' name='L115'></a> 115   (<em class='brace'>{</em> <a href='../D/26352.html' title='Multiple defined in 58 places.'>__typeof</a> (*(<a href='../Y/19219.html' title='Multiple used in 1858 places.'>mem</a>)) <a href='../Y/3603.html' title='Multiple used in 8 places.'>__atg14_old</a>;                 \
+<a id='L116' name='L116'></a> 116     <a href='../D/26352.html' title='Multiple defined in 58 places.'>__typeof</a> (<a href='../Y/19219.html' title='Multiple used in 1858 places.'>mem</a>) <a href='../Y/3602.html' title='Multiple used in 5 places.'>__atg14_memp</a> = (<a href='../Y/19219.html' title='Multiple used in 1858 places.'>mem</a>);                \
+<a id='L117' name='L117'></a> 117     <a href='../D/26352.html' title='Multiple defined in 58 places.'>__typeof</a> (*(<a href='../Y/19219.html' title='Multiple used in 1858 places.'>mem</a>)) <a href='../Y/3601.html' title='Multiple used in 6 places.'>__atg14_mask</a> = ((<a href='../D/26352.html' title='Multiple defined in 58 places.'>__typeof</a> (*(<a href='../Y/19219.html' title='Multiple used in 1858 places.'>mem</a>))) 1 &lt;&lt; (<a href='../Y/10863.html' title='Multiple used in 88 places.'>bit</a>));  \
+<a id='L118' name='L118'></a> 118     <a href='../Y/3603.html' title='Multiple used in 8 places.'>__atg14_old</a> = <a href='../D/27935.html' title='Multiple defined in 2 places.'>atomic_or_val</a> (<a href='../Y/3602.html' title='Multiple used in 5 places.'>__atg14_memp</a>, <a href='../Y/3601.html' title='Multiple used in 6 places.'>__atg14_mask</a>);       \
+<a id='L119' name='L119'></a> 119     <a href='../Y/3603.html' title='Multiple used in 8 places.'>__atg14_old</a> &amp; <a href='../Y/3601.html' title='Multiple used in 6 places.'>__atg14_mask</a>; <em class='brace'>}</em>)
+<a id='L120' name='L120'></a> 120 
+<a id='L121' name='L121'></a> 121 <em class='comment'>/* Atomically *mem &amp;= mask and return the old value of *mem.  */</em>
+<a id='L122' name='L122'></a> 122 <em class='comment'>/* The gcc builtin uses load-and-and instruction on z196 zarch and higher cpus</em>
+<a id='L123' name='L123'></a> 123 <em class='comment'>   instead of a loop with compare-and-swap instruction.  */</em>
+<a id='L124' name='L124'></a> 124 <em class='sharp'>#define</em> <a href='../R/17380.html' title='Multiple referred from 4 places.'>atomic_and_val</a>(<a href='../Y/19219.html' title='Multiple used in 1858 places.'>mem</a>, <a href='../Y/21743.html' title='Multiple used in 52 places.'>operand</a>)                    \
+<a id='L125' name='L125'></a> 125   (<em class='brace'>{</em> <a href='../D/23285.html' title='Multiple defined in 2 places.'>__atomic_check_size</a>((<a href='../Y/19219.html' title='Multiple used in 1858 places.'>mem</a>));                    \
+<a id='L126' name='L126'></a> 126   <a href='../Y/3648.html' title='Multiple used in 4 places.'>__atomic_fetch_and</a> ((<a href='../Y/19219.html' title='Multiple used in 1858 places.'>mem</a>), (<a href='../Y/21743.html' title='Multiple used in 52 places.'>operand</a>), <a href='../Y/2884.html' title='Multiple used in 35 places.'>__ATOMIC_ACQUIRE</a>); <em class='brace'>}</em>)
+<a id='L127' name='L127'></a> 127 <em class='comment'>/* Atomically *mem &amp;= mask.  */</em>
+<a id='L128' name='L128'></a> 128 <em class='sharp'>#define</em> <a href='../R/17379.html' title='Multiple referred from 5 places.'>atomic_and</a>(<a href='../Y/19219.html' title='Multiple used in 1858 places.'>mem</a>, <a href='../S/13710.html#L48' title='Defined at 48 in sysdeps/aarch64/strncmp.S.'>mask</a>)           \
+<a id='L129' name='L129'></a> 129   <strong class='reserved'>do</strong> <em class='brace'>{</em>                      \
+<a id='L130' name='L130'></a> 130     <a href='../D/27893.html' title='Multiple defined in 2 places.'>atomic_and_val</a> (<a href='../Y/19219.html' title='Multiple used in 1858 places.'>mem</a>, <a href='../S/13710.html#L48' title='Defined at 48 in sysdeps/aarch64/strncmp.S.'>mask</a>);         \
+<a id='L131' name='L131'></a> 131   <em class='brace'>}</em> <strong class='reserved'>while</strong> (0)
+<a id='L132' name='L132'></a> 132 <em class='sharp'>#define</em> <a href='../S/17870.html#L424' title='Referred from 424 in include/atomic.h.'>catomic_and</a>(<a href='../Y/19219.html' title='Multiple used in 1858 places.'>mem</a>, <a href='../S/13710.html#L48' title='Defined at 48 in sysdeps/aarch64/strncmp.S.'>mask</a>)          \
+<a id='L133' name='L133'></a> 133   <a href='../D/27892.html' title='Multiple defined in 3 places.'>atomic_and</a>(<a href='../Y/19219.html' title='Multiple used in 1858 places.'>mem</a>, <a href='../S/13710.html#L48' title='Defined at 48 in sysdeps/aarch64/strncmp.S.'>mask</a>)
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;][^][v]<a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

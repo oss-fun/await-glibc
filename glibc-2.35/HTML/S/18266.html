@@ -1,0 +1,233 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>sunrpc/xdr_stdio.c</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18974.html'>sunrpc</a>/xdr_stdio.c</h2>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L84'>[^]</a><a href='#L184'>[v]</a>[top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<h2 class='header'>DEFINITIONS</h2>
+This source file includes following definitions.
+<ol>
+<li><a href='#L84' title='Defined at 84.'>xdrstdio_create</a></li>
+<li><a href='#L100' title='Defined at 100.'>xdrstdio_destroy</a></li>
+<li><a href='#L107' title='Defined at 107.'>xdrstdio_getlong</a></li>
+<li><a href='#L118' title='Defined at 118.'>xdrstdio_putlong</a></li>
+<li><a href='#L128' title='Defined at 128.'>xdrstdio_getbytes</a></li>
+<li><a href='#L137' title='Defined at 137.'>xdrstdio_putbytes</a></li>
+<li><a href='#L146' title='Defined at 146.'>xdrstdio_getpos</a></li>
+<li><a href='#L152' title='Defined at 152.'>xdrstdio_setpos</a></li>
+<li><a href='#L158' title='Defined at 158.'>xdrstdio_inline</a></li>
+<li><a href='#L173' title='Defined at 173.'>xdrstdio_getint32</a></li>
+<li><a href='#L184' title='Defined at 184.'>xdrstdio_putint32</a></li>
+</ol>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/*</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'> * xdr_stdio.c, XDR implementation on standard i/o file.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'> *</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'> * Copyright (c) 2010, Oracle America, Inc.</em>
+<a id='L5' name='L5'></a>   5 <em class='comment'> *</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'> * Redistribution and use in source and binary forms, with or without</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'> * modification, are permitted provided that the following conditions are</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'> * met:</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'> *</em>
+<a id='L10' name='L10'></a>  10 <em class='comment'> *     * Redistributions of source code must retain the above copyright</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'> *       notice, this list of conditions and the following disclaimer.</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'> *     * Redistributions in binary form must reproduce the above</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'> *       copyright notice, this list of conditions and the following</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'> *       disclaimer in the documentation and/or other materials</em>
+<a id='L15' name='L15'></a>  15 <em class='comment'> *       provided with the distribution.</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'> *     * Neither the name of the "Oracle America, Inc." nor the names of its</em>
+<a id='L17' name='L17'></a>  17 <em class='comment'> *       contributors may be used to endorse or promote products derived</em>
+<a id='L18' name='L18'></a>  18 <em class='comment'> *       from this software without specific prior written permission.</em>
+<a id='L19' name='L19'></a>  19 <em class='comment'> *</em>
+<a id='L20' name='L20'></a>  20 <em class='comment'> *   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS</em>
+<a id='L21' name='L21'></a>  21 <em class='comment'> *   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT</em>
+<a id='L22' name='L22'></a>  22 <em class='comment'> *   LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS</em>
+<a id='L23' name='L23'></a>  23 <em class='comment'> *   FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE</em>
+<a id='L24' name='L24'></a>  24 <em class='comment'> *   COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,</em>
+<a id='L25' name='L25'></a>  25 <em class='comment'> *   INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL</em>
+<a id='L26' name='L26'></a>  26 <em class='comment'> *   DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE</em>
+<a id='L27' name='L27'></a>  27 <em class='comment'> *   GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS</em>
+<a id='L28' name='L28'></a>  28 <em class='comment'> *   INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,</em>
+<a id='L29' name='L29'></a>  29 <em class='comment'> *   WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING</em>
+<a id='L30' name='L30'></a>  30 <em class='comment'> *   NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE</em>
+<a id='L31' name='L31'></a>  31 <em class='comment'> *   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.</em>
+<a id='L32' name='L32'></a>  32 <em class='comment'> *</em>
+<a id='L33' name='L33'></a>  33 <em class='comment'> * This set of routines implements a XDR on a stdio stream.</em>
+<a id='L34' name='L34'></a>  34 <em class='comment'> * XDR_ENCODE serializes onto the stream, XDR_DECODE de-serializes</em>
+<a id='L35' name='L35'></a>  35 <em class='comment'> * from the stream.</em>
+<a id='L36' name='L36'></a>  36 <em class='comment'> */</em>
+<a id='L37' name='L37'></a>  37 
+<a id='L38' name='L38'></a>  38 <em class='sharp'>#include</em> &lt;<a href='../I/1786.html'>rpc/types.h</a>&gt;
+<a id='L39' name='L39'></a>  39 <em class='sharp'>#include</em> &lt;<a href='../I/1776.html'>stdio.h</a>&gt;
+<a id='L40' name='L40'></a>  40 <em class='sharp'>#include</em> &lt;<a href='../I/1944.html'>rpc/xdr.h</a>&gt;
+<a id='L41' name='L41'></a>  41 
+<a id='L42' name='L42'></a>  42 <em class='sharp'>#include</em> &lt;<a href='5458.html'>libio/iolibio.h</a>&gt;
+<a id='L43' name='L43'></a>  43 <em class='sharp'>#include</em> &lt;<a href='17977.html'>shlib-compat.h</a>&gt;
+<a id='L44' name='L44'></a>  44 
+<a id='L45' name='L45'></a>  45 <em class='sharp'>#define</em> <a href='../R/19405.html' title='Multiple referred from 112 places.'>fflush</a>(<a href='../D/36247.html' title='Multiple defined in 13 places.'>s</a>) <a href='../S/5655.html#L31' title='Defined at 31 in libio/iofflush.c.'>_IO_fflush</a> (<a href='../D/36247.html' title='Multiple defined in 13 places.'>s</a>)
+<a id='L46' name='L46'></a>  46 <em class='sharp'>#define</em> <a href='../R/19671.html' title='Multiple referred from 58 places.'>fread</a>(<a href='../S/2562.html#L29' title='Defined at 29 in elf/testobj2.c.'>p</a>, <a href='../D/33231.html' title='Multiple defined in 2 places.'>m</a>, <a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>, <a href='../D/36247.html' title='Multiple defined in 13 places.'>s</a>) <a href='../S/5592.html#L30' title='Defined at 30 in libio/iofread.c.'>_IO_fread</a> (<a href='../S/2562.html#L29' title='Defined at 29 in elf/testobj2.c.'>p</a>, <a href='../D/33231.html' title='Multiple defined in 2 places.'>m</a>, <a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>, <a href='../D/36247.html' title='Multiple defined in 13 places.'>s</a>)
+<a id='L47' name='L47'></a>  47 <em class='sharp'>#define</em> <a href='../R/19759.html' title='Multiple referred from 66 places.'>ftell</a>(<a href='../D/36247.html' title='Multiple defined in 13 places.'>s</a>) <a href='../S/5490.html#L33' title='Defined at 33 in libio/ioftell.c.'>_IO_ftell</a> (<a href='../D/36247.html' title='Multiple defined in 13 places.'>s</a>)
+<a id='L48' name='L48'></a>  48 <em class='sharp'>#define</em> <a href='../R/19821.html' title='Multiple referred from 48 places.'>fwrite</a>(<a href='../S/2562.html#L29' title='Defined at 29 in elf/testobj2.c.'>p</a>, <a href='../D/33231.html' title='Multiple defined in 2 places.'>m</a>, <a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>, <a href='../D/36247.html' title='Multiple defined in 13 places.'>s</a>) <a href='../S/5509.html#L30' title='Defined at 30 in libio/iofwrite.c.'>_IO_fwrite</a> (<a href='../S/2562.html#L29' title='Defined at 29 in elf/testobj2.c.'>p</a>, <a href='../D/33231.html' title='Multiple defined in 2 places.'>m</a>, <a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>, <a href='../D/36247.html' title='Multiple defined in 13 places.'>s</a>)
+<a id='L49' name='L49'></a>  49 
+<a id='L50' name='L50'></a>  50 <strong class='reserved'>static</strong> <a href='../S/18258.html#L37' title='Defined at 37 in sunrpc/rpc/types.h.'>bool_t</a> <a href='../S/18266.html#L107' title='Defined at 107 in sunrpc/xdr_stdio.c.'>xdrstdio_getlong</a> (<a href='../D/17489.html' title='Multiple defined in 2 places.'>XDR</a> *, <strong class='reserved'>long</strong> *);
+<a id='L51' name='L51'></a>  51 <strong class='reserved'>static</strong> <a href='../S/18258.html#L37' title='Defined at 37 in sunrpc/rpc/types.h.'>bool_t</a> <a href='../S/18266.html#L118' title='Defined at 118 in sunrpc/xdr_stdio.c.'>xdrstdio_putlong</a> (<a href='../D/17489.html' title='Multiple defined in 2 places.'>XDR</a> *, <strong class='reserved'>const</strong> <strong class='reserved'>long</strong> *);
+<a id='L52' name='L52'></a>  52 <strong class='reserved'>static</strong> <a href='../S/18258.html#L37' title='Defined at 37 in sunrpc/rpc/types.h.'>bool_t</a> <a href='../S/18266.html#L128' title='Defined at 128 in sunrpc/xdr_stdio.c.'>xdrstdio_getbytes</a> (<a href='../D/17489.html' title='Multiple defined in 2 places.'>XDR</a> *, <a href='../D/28435.html' title='Multiple defined in 2 places.'>caddr_t</a>, <a href='../D/38628.html' title='Multiple defined in 2 places.'>u_int</a>);
+<a id='L53' name='L53'></a>  53 <strong class='reserved'>static</strong> <a href='../S/18258.html#L37' title='Defined at 37 in sunrpc/rpc/types.h.'>bool_t</a> <a href='../S/18266.html#L137' title='Defined at 137 in sunrpc/xdr_stdio.c.'>xdrstdio_putbytes</a> (<a href='../D/17489.html' title='Multiple defined in 2 places.'>XDR</a> *, <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *, <a href='../D/38628.html' title='Multiple defined in 2 places.'>u_int</a>);
+<a id='L54' name='L54'></a>  54 <strong class='reserved'>static</strong> <a href='../D/38628.html' title='Multiple defined in 2 places.'>u_int</a> <a href='../S/18266.html#L146' title='Defined at 146 in sunrpc/xdr_stdio.c.'>xdrstdio_getpos</a> (<strong class='reserved'>const</strong> <a href='../D/17489.html' title='Multiple defined in 2 places.'>XDR</a> *);
+<a id='L55' name='L55'></a>  55 <strong class='reserved'>static</strong> <a href='../S/18258.html#L37' title='Defined at 37 in sunrpc/rpc/types.h.'>bool_t</a> <a href='../S/18266.html#L152' title='Defined at 152 in sunrpc/xdr_stdio.c.'>xdrstdio_setpos</a> (<a href='../D/17489.html' title='Multiple defined in 2 places.'>XDR</a> *, <a href='../D/38628.html' title='Multiple defined in 2 places.'>u_int</a>);
+<a id='L56' name='L56'></a>  56 <strong class='reserved'>static</strong> <a href='../S/137.html#L26' title='Defined at 26 in bits/stdint-intn.h.'>int32_t</a> *<a href='../S/18266.html#L158' title='Defined at 158 in sunrpc/xdr_stdio.c.'>xdrstdio_inline</a> (<a href='../D/17489.html' title='Multiple defined in 2 places.'>XDR</a> *, <a href='../D/38628.html' title='Multiple defined in 2 places.'>u_int</a>);
+<a id='L57' name='L57'></a>  57 <strong class='reserved'>static</strong> <strong class='reserved'>void</strong> <a href='../S/18266.html#L100' title='Defined at 100 in sunrpc/xdr_stdio.c.'>xdrstdio_destroy</a> (<a href='../D/17489.html' title='Multiple defined in 2 places.'>XDR</a> *);
+<a id='L58' name='L58'></a>  58 <strong class='reserved'>static</strong> <a href='../S/18258.html#L37' title='Defined at 37 in sunrpc/rpc/types.h.'>bool_t</a> <a href='../S/18266.html#L173' title='Defined at 173 in sunrpc/xdr_stdio.c.'>xdrstdio_getint32</a> (<a href='../D/17489.html' title='Multiple defined in 2 places.'>XDR</a> *, <a href='../S/137.html#L26' title='Defined at 26 in bits/stdint-intn.h.'>int32_t</a> *);
+<a id='L59' name='L59'></a>  59 <strong class='reserved'>static</strong> <a href='../S/18258.html#L37' title='Defined at 37 in sunrpc/rpc/types.h.'>bool_t</a> <a href='../S/18266.html#L184' title='Defined at 184 in sunrpc/xdr_stdio.c.'>xdrstdio_putint32</a> (<a href='../D/17489.html' title='Multiple defined in 2 places.'>XDR</a> *, <strong class='reserved'>const</strong> <a href='../S/137.html#L26' title='Defined at 26 in bits/stdint-intn.h.'>int32_t</a> *);
+<a id='L60' name='L60'></a>  60 
+<a id='L61' name='L61'></a>  61 <em class='comment'>/*</em>
+<a id='L62' name='L62'></a>  62 <em class='comment'> * Ops vector for stdio type XDR</em>
+<a id='L63' name='L63'></a>  63 <em class='comment'> */</em>
+<a id='L64' name='L64'></a>  64 <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <strong class='reserved'>struct</strong> <a href='../S/18256.html#L113' title='Defined at 113 in sunrpc/rpc/xdr.h.'>xdr_ops</a> <a href='../Y/29412.html' title='Multiple used in 2 places.'>xdrstdio_ops</a> =
+<a id='L65' name='L65'></a>  65 <em class='brace'>{</em>
+<a id='L66' name='L66'></a>  66   <a href='../S/18266.html#L107' title='Defined at 107 in sunrpc/xdr_stdio.c.'>xdrstdio_getlong</a>,     <em class='comment'>/* deserialize a long int */</em>
+<a id='L67' name='L67'></a>  67   <a href='../S/18266.html#L118' title='Defined at 118 in sunrpc/xdr_stdio.c.'>xdrstdio_putlong</a>,     <em class='comment'>/* serialize a long int */</em>
+<a id='L68' name='L68'></a>  68   <a href='../S/18266.html#L128' title='Defined at 128 in sunrpc/xdr_stdio.c.'>xdrstdio_getbytes</a>,        <em class='comment'>/* deserialize counted bytes */</em>
+<a id='L69' name='L69'></a>  69   <a href='../S/18266.html#L137' title='Defined at 137 in sunrpc/xdr_stdio.c.'>xdrstdio_putbytes</a>,        <em class='comment'>/* serialize counted bytes */</em>
+<a id='L70' name='L70'></a>  70   <a href='../S/18266.html#L146' title='Defined at 146 in sunrpc/xdr_stdio.c.'>xdrstdio_getpos</a>,      <em class='comment'>/* get offset in the stream */</em>
+<a id='L71' name='L71'></a>  71   <a href='../S/18266.html#L152' title='Defined at 152 in sunrpc/xdr_stdio.c.'>xdrstdio_setpos</a>,      <em class='comment'>/* set offset in the stream */</em>
+<a id='L72' name='L72'></a>  72   <a href='../S/18266.html#L158' title='Defined at 158 in sunrpc/xdr_stdio.c.'>xdrstdio_inline</a>,      <em class='comment'>/* prime stream for inline macros */</em>
+<a id='L73' name='L73'></a>  73   <a href='../S/18266.html#L100' title='Defined at 100 in sunrpc/xdr_stdio.c.'>xdrstdio_destroy</a>,     <em class='comment'>/* destroy stream */</em>
+<a id='L74' name='L74'></a>  74   <a href='../S/18266.html#L173' title='Defined at 173 in sunrpc/xdr_stdio.c.'>xdrstdio_getint32</a>,        <em class='comment'>/* deserialize a int */</em>
+<a id='L75' name='L75'></a>  75   <a href='../S/18266.html#L184' title='Defined at 184 in sunrpc/xdr_stdio.c.'>xdrstdio_putint32</a>     <em class='comment'>/* serialize a int */</em>
+<a id='L76' name='L76'></a>  76 <em class='brace'>}</em>;
+<a id='L77' name='L77'></a>  77 
+<a id='L78' name='L78'></a>  78 <em class='comment'>/*</em>
+<a id='L79' name='L79'></a>  79 <em class='comment'> * Initialize a stdio xdr stream.</em>
+<a id='L80' name='L80'></a>  80 <em class='comment'> * Sets the xdr stream handle xdrs for use on the stream file.</em>
+<a id='L81' name='L81'></a>  81 <em class='comment'> * Operation flag is set to op.</em>
+<a id='L82' name='L82'></a>  82 <em class='comment'> */</em>
+<a id='L83' name='L83'></a>  83 <strong class='reserved'>void</strong>
+<a id='L84' name='L84'></a>  84 <a href='../R/26709.html' title='Multiple referred from 8 places.'>xdrstdio_create</a> (<a href='../D/17489.html' title='Multiple defined in 2 places.'>XDR</a> *<a href='../Y/29411.html' title='Multiple used in 952 places.'>xdrs</a>, <a href='../S/5474.html#L7' title='Defined at 7 in libio/bits/types/FILE.h.'>FILE</a> *<a href='../Y/14544.html' title='Multiple used in 1295 places.'>file</a>, <strong class='reserved'>enum</strong> <a href='../S/18256.html#L81' title='Defined at 81 in sunrpc/rpc/xdr.h.'>xdr_op</a> <a href='../Y/21719.html' title='Multiple used in 173 places.'>op</a>)
+<a id='L85' name='L85'></a>  85 <em class='brace'>{</em>
+<a id='L86' name='L86'></a>  86   <a href='../Y/29411.html' title='Multiple used in 952 places.'>xdrs</a>-&gt;<a href='../Y/29282.html' title='Multiple used in 81 places.'>x_op</a> = <a href='../Y/21719.html' title='Multiple used in 173 places.'>op</a>;
+<a id='L87' name='L87'></a>  87   <em class='comment'>/* We have to add the const since the `struct xdr_ops' in `struct XDR'</em>
+<a id='L88' name='L88'></a>  88 <em class='comment'>     is not `const'.  */</em>
+<a id='L89' name='L89'></a>  89   <a href='../Y/29411.html' title='Multiple used in 952 places.'>xdrs</a>-&gt;<a href='../Y/29283.html' title='Multiple used in 28 places.'>x_ops</a> = (<strong class='reserved'>struct</strong> <a href='../S/18256.html#L113' title='Defined at 113 in sunrpc/rpc/xdr.h.'>xdr_ops</a> *) &amp;<a href='../Y/29412.html' title='Multiple used in 2 places.'>xdrstdio_ops</a>;
+<a id='L90' name='L90'></a>  90   <a href='../Y/29411.html' title='Multiple used in 952 places.'>xdrs</a>-&gt;<a href='../Y/29284.html' title='Multiple used in 52 places.'>x_private</a> = (<a href='../D/28435.html' title='Multiple defined in 2 places.'>caddr_t</a>) <a href='../Y/14544.html' title='Multiple used in 1295 places.'>file</a>;
+<a id='L91' name='L91'></a>  91   <a href='../Y/29411.html' title='Multiple used in 952 places.'>xdrs</a>-&gt;<a href='../Y/29276.html' title='Multiple used in 28 places.'>x_handy</a> = 0;
+<a id='L92' name='L92'></a>  92   <a href='../Y/29411.html' title='Multiple used in 952 places.'>xdrs</a>-&gt;<a href='../Y/29265.html' title='Multiple used in 11 places.'>x_base</a> = 0;
+<a id='L93' name='L93'></a>  93 <em class='brace'>}</em>
+<a id='L94' name='L94'></a>  94 
+<a id='L95' name='L95'></a>  95 <em class='comment'>/*</em>
+<a id='L96' name='L96'></a>  96 <em class='comment'> * Destroy a stdio xdr stream.</em>
+<a id='L97' name='L97'></a>  97 <em class='comment'> * Cleans up the xdr stream handle xdrs previously set up by xdrstdio_create.</em>
+<a id='L98' name='L98'></a>  98 <em class='comment'> */</em>
+<a id='L99' name='L99'></a>  99 <strong class='reserved'>static</strong> <strong class='reserved'>void</strong>
+<a id='L100' name='L100'></a> 100 <a href='../R/26710.html' title='Multiple referred from 2 places.'>xdrstdio_destroy</a> (<a href='../D/17489.html' title='Multiple defined in 2 places.'>XDR</a> *<a href='../Y/29411.html' title='Multiple used in 952 places.'>xdrs</a>)
+<a id='L101' name='L101'></a> 101 <em class='brace'>{</em>
+<a id='L102' name='L102'></a> 102   (<strong class='reserved'>void</strong>) <a href='../D/30459.html' title='Multiple defined in 5 places.'>fflush</a> ((<a href='../S/5474.html#L7' title='Defined at 7 in libio/bits/types/FILE.h.'>FILE</a> *) <a href='../Y/29411.html' title='Multiple used in 952 places.'>xdrs</a>-&gt;<a href='../Y/29284.html' title='Multiple used in 52 places.'>x_private</a>);
+<a id='L103' name='L103'></a> 103   <em class='comment'>/* xx should we close the file ?? */</em>
+<a id='L104' name='L104'></a> 104 <em class='brace'>}</em>;
+<a id='L105' name='L105'></a> 105 
+<a id='L106' name='L106'></a> 106 <strong class='reserved'>static</strong> <a href='../S/18258.html#L37' title='Defined at 37 in sunrpc/rpc/types.h.'>bool_t</a>
+<a id='L107' name='L107'></a> 107 <a href='../R/26713.html' title='Multiple referred from 2 places.'>xdrstdio_getlong</a> (<a href='../D/17489.html' title='Multiple defined in 2 places.'>XDR</a> *<a href='../Y/29411.html' title='Multiple used in 952 places.'>xdrs</a>, <strong class='reserved'>long</strong> *<a href='../Y/18567.html' title='Multiple used in 120 places.'>lp</a>)
+<a id='L108' name='L108'></a> 108 <em class='brace'>{</em>
+<a id='L109' name='L109'></a> 109   <a href='../S/223.html#L26' title='Defined at 26 in bits/stdint-uintn.h.'>uint32_t</a> <a href='../Y/20080.html' title='Multiple used in 10 places.'>mycopy</a>;
+<a id='L110' name='L110'></a> 110 
+<a id='L111' name='L111'></a> 111   <strong class='reserved'>if</strong> (<a href='../D/30783.html' title='Multiple defined in 2 places.'>fread</a> ((<a href='../D/28435.html' title='Multiple defined in 2 places.'>caddr_t</a>) &amp;<a href='../Y/20080.html' title='Multiple used in 10 places.'>mycopy</a>, 4, 1, (<a href='../S/5474.html#L7' title='Defined at 7 in libio/bits/types/FILE.h.'>FILE</a> *) <a href='../Y/29411.html' title='Multiple used in 952 places.'>xdrs</a>-&gt;<a href='../Y/29284.html' title='Multiple used in 52 places.'>x_private</a>) != 1)
+<a id='L112' name='L112'></a> 112     <strong class='reserved'>return</strong> <a href='../S/18258.html#L49' title='Defined at 49 in sunrpc/rpc/types.h.'>FALSE</a>;
+<a id='L113' name='L113'></a> 113   *<a href='../Y/18567.html' title='Multiple used in 120 places.'>lp</a> = (<strong class='reserved'>long</strong>) <a href='../D/34395.html' title='Multiple defined in 3 places.'>ntohl</a> (<a href='../Y/20080.html' title='Multiple used in 10 places.'>mycopy</a>);
+<a id='L114' name='L114'></a> 114   <strong class='reserved'>return</strong> <a href='../S/18258.html#L53' title='Defined at 53 in sunrpc/rpc/types.h.'>TRUE</a>;
+<a id='L115' name='L115'></a> 115 <em class='brace'>}</em>
+<a id='L116' name='L116'></a> 116 
+<a id='L117' name='L117'></a> 117 <strong class='reserved'>static</strong> <a href='../S/18258.html#L37' title='Defined at 37 in sunrpc/rpc/types.h.'>bool_t</a>
+<a id='L118' name='L118'></a> 118 <a href='../R/26718.html' title='Multiple referred from 2 places.'>xdrstdio_putlong</a> (<a href='../D/17489.html' title='Multiple defined in 2 places.'>XDR</a> *<a href='../Y/29411.html' title='Multiple used in 952 places.'>xdrs</a>, <strong class='reserved'>const</strong> <strong class='reserved'>long</strong> *<a href='../Y/18567.html' title='Multiple used in 120 places.'>lp</a>)
+<a id='L119' name='L119'></a> 119 <em class='brace'>{</em>
+<a id='L120' name='L120'></a> 120   <a href='../S/137.html#L26' title='Defined at 26 in bits/stdint-intn.h.'>int32_t</a> <a href='../Y/20080.html' title='Multiple used in 10 places.'>mycopy</a> = <a href='../D/31573.html' title='Multiple defined in 8 places.'>htonl</a> ((<a href='../S/223.html#L26' title='Defined at 26 in bits/stdint-uintn.h.'>uint32_t</a>) *<a href='../Y/18567.html' title='Multiple used in 120 places.'>lp</a>);
+<a id='L121' name='L121'></a> 121 
+<a id='L122' name='L122'></a> 122   <strong class='reserved'>if</strong> (<a href='../D/30985.html' title='Multiple defined in 2 places.'>fwrite</a> ((<a href='../D/28435.html' title='Multiple defined in 2 places.'>caddr_t</a>) &amp;<a href='../Y/20080.html' title='Multiple used in 10 places.'>mycopy</a>, 4, 1, (<a href='../S/5474.html#L7' title='Defined at 7 in libio/bits/types/FILE.h.'>FILE</a> *) <a href='../Y/29411.html' title='Multiple used in 952 places.'>xdrs</a>-&gt;<a href='../Y/29284.html' title='Multiple used in 52 places.'>x_private</a>) != 1)
+<a id='L123' name='L123'></a> 123     <strong class='reserved'>return</strong> <a href='../S/18258.html#L49' title='Defined at 49 in sunrpc/rpc/types.h.'>FALSE</a>;
+<a id='L124' name='L124'></a> 124   <strong class='reserved'>return</strong> <a href='../S/18258.html#L53' title='Defined at 53 in sunrpc/rpc/types.h.'>TRUE</a>;
+<a id='L125' name='L125'></a> 125 <em class='brace'>}</em>
+<a id='L126' name='L126'></a> 126 
+<a id='L127' name='L127'></a> 127 <strong class='reserved'>static</strong> <a href='../S/18258.html#L37' title='Defined at 37 in sunrpc/rpc/types.h.'>bool_t</a>
+<a id='L128' name='L128'></a> 128 <a href='../R/26711.html' title='Multiple referred from 2 places.'>xdrstdio_getbytes</a> (<a href='../D/17489.html' title='Multiple defined in 2 places.'>XDR</a> *<a href='../Y/29411.html' title='Multiple used in 952 places.'>xdrs</a>, <strong class='reserved'>const</strong> <a href='../D/28435.html' title='Multiple defined in 2 places.'>caddr_t</a> <a href='../S/2561.html#L5' title='Defined at 5 in elf/nodelmod3.c.'>addr</a>, <a href='../D/38628.html' title='Multiple defined in 2 places.'>u_int</a> <a href='../D/32598.html' title='Multiple defined in 10 places.'>len</a>)
+<a id='L129' name='L129'></a> 129 <em class='brace'>{</em>
+<a id='L130' name='L130'></a> 130   <strong class='reserved'>if</strong> ((<a href='../D/32598.html' title='Multiple defined in 10 places.'>len</a> != 0) &amp;&amp; (<a href='../D/30783.html' title='Multiple defined in 2 places.'>fread</a> (<a href='../S/2561.html#L5' title='Defined at 5 in elf/nodelmod3.c.'>addr</a>, (<strong class='reserved'>int</strong>) <a href='../D/32598.html' title='Multiple defined in 10 places.'>len</a>, 1,
+<a id='L131' name='L131'></a> 131                 (<a href='../S/5474.html#L7' title='Defined at 7 in libio/bits/types/FILE.h.'>FILE</a> *) <a href='../Y/29411.html' title='Multiple used in 952 places.'>xdrs</a>-&gt;<a href='../Y/29284.html' title='Multiple used in 52 places.'>x_private</a>) != 1))
+<a id='L132' name='L132'></a> 132     <strong class='reserved'>return</strong> <a href='../S/18258.html#L49' title='Defined at 49 in sunrpc/rpc/types.h.'>FALSE</a>;
+<a id='L133' name='L133'></a> 133   <strong class='reserved'>return</strong> <a href='../S/18258.html#L53' title='Defined at 53 in sunrpc/rpc/types.h.'>TRUE</a>;
+<a id='L134' name='L134'></a> 134 <em class='brace'>}</em>
+<a id='L135' name='L135'></a> 135 
+<a id='L136' name='L136'></a> 136 <strong class='reserved'>static</strong> <a href='../S/18258.html#L37' title='Defined at 37 in sunrpc/rpc/types.h.'>bool_t</a>
+<a id='L137' name='L137'></a> 137 <a href='../R/26716.html' title='Multiple referred from 2 places.'>xdrstdio_putbytes</a> (<a href='../D/17489.html' title='Multiple defined in 2 places.'>XDR</a> *<a href='../Y/29411.html' title='Multiple used in 952 places.'>xdrs</a>, <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../S/2561.html#L5' title='Defined at 5 in elf/nodelmod3.c.'>addr</a>, <a href='../D/38628.html' title='Multiple defined in 2 places.'>u_int</a> <a href='../D/32598.html' title='Multiple defined in 10 places.'>len</a>)
+<a id='L138' name='L138'></a> 138 <em class='brace'>{</em>
+<a id='L139' name='L139'></a> 139   <strong class='reserved'>if</strong> ((<a href='../D/32598.html' title='Multiple defined in 10 places.'>len</a> != 0) &amp;&amp; (<a href='../D/30985.html' title='Multiple defined in 2 places.'>fwrite</a> (<a href='../S/2561.html#L5' title='Defined at 5 in elf/nodelmod3.c.'>addr</a>, (<strong class='reserved'>int</strong>) <a href='../D/32598.html' title='Multiple defined in 10 places.'>len</a>, 1,
+<a id='L140' name='L140'></a> 140                  (<a href='../S/5474.html#L7' title='Defined at 7 in libio/bits/types/FILE.h.'>FILE</a> *) <a href='../Y/29411.html' title='Multiple used in 952 places.'>xdrs</a>-&gt;<a href='../Y/29284.html' title='Multiple used in 52 places.'>x_private</a>) != 1))
+<a id='L141' name='L141'></a> 141     <strong class='reserved'>return</strong> <a href='../S/18258.html#L49' title='Defined at 49 in sunrpc/rpc/types.h.'>FALSE</a>;
+<a id='L142' name='L142'></a> 142   <strong class='reserved'>return</strong> <a href='../S/18258.html#L53' title='Defined at 53 in sunrpc/rpc/types.h.'>TRUE</a>;
+<a id='L143' name='L143'></a> 143 <em class='brace'>}</em>
+<a id='L144' name='L144'></a> 144 
+<a id='L145' name='L145'></a> 145 <strong class='reserved'>static</strong> <a href='../D/38628.html' title='Multiple defined in 2 places.'>u_int</a>
+<a id='L146' name='L146'></a> 146 <a href='../R/26714.html' title='Multiple referred from 2 places.'>xdrstdio_getpos</a> (<strong class='reserved'>const</strong> <a href='../D/17489.html' title='Multiple defined in 2 places.'>XDR</a> *<a href='../Y/29411.html' title='Multiple used in 952 places.'>xdrs</a>)
+<a id='L147' name='L147'></a> 147 <em class='brace'>{</em>
+<a id='L148' name='L148'></a> 148   <strong class='reserved'>return</strong> (<a href='../D/38628.html' title='Multiple defined in 2 places.'>u_int</a>) <a href='../D/30915.html' title='Multiple defined in 2 places.'>ftell</a> ((<a href='../S/5474.html#L7' title='Defined at 7 in libio/bits/types/FILE.h.'>FILE</a> *) <a href='../Y/29411.html' title='Multiple used in 952 places.'>xdrs</a>-&gt;<a href='../Y/29284.html' title='Multiple used in 52 places.'>x_private</a>);
+<a id='L149' name='L149'></a> 149 <em class='brace'>}</em>
+<a id='L150' name='L150'></a> 150 
+<a id='L151' name='L151'></a> 151 <strong class='reserved'>static</strong> <a href='../S/18258.html#L37' title='Defined at 37 in sunrpc/rpc/types.h.'>bool_t</a>
+<a id='L152' name='L152'></a> 152 <a href='../R/26719.html' title='Multiple referred from 2 places.'>xdrstdio_setpos</a> (<a href='../D/17489.html' title='Multiple defined in 2 places.'>XDR</a> *<a href='../Y/29411.html' title='Multiple used in 952 places.'>xdrs</a>, <a href='../D/38628.html' title='Multiple defined in 2 places.'>u_int</a> <a href='../D/34790.html' title='Multiple defined in 3 places.'>pos</a>)
+<a id='L153' name='L153'></a> 153 <em class='brace'>{</em>
+<a id='L154' name='L154'></a> 154   <strong class='reserved'>return</strong> <a href='../S/5567.html#L31' title='Defined at 31 in libio/fseek.c.'>fseek</a> ((<a href='../S/5474.html#L7' title='Defined at 7 in libio/bits/types/FILE.h.'>FILE</a> *) <a href='../Y/29411.html' title='Multiple used in 952 places.'>xdrs</a>-&gt;<a href='../Y/29284.html' title='Multiple used in 52 places.'>x_private</a>, (<strong class='reserved'>long</strong>) <a href='../D/34790.html' title='Multiple defined in 3 places.'>pos</a>, 0) &lt; 0 ? <a href='../S/18258.html#L49' title='Defined at 49 in sunrpc/rpc/types.h.'>FALSE</a> : <a href='../S/18258.html#L53' title='Defined at 53 in sunrpc/rpc/types.h.'>TRUE</a>;
+<a id='L155' name='L155'></a> 155 <em class='brace'>}</em>
+<a id='L156' name='L156'></a> 156 
+<a id='L157' name='L157'></a> 157 <strong class='reserved'>static</strong> <a href='../S/137.html#L26' title='Defined at 26 in bits/stdint-intn.h.'>int32_t</a> *
+<a id='L158' name='L158'></a> 158 <a href='../R/26715.html' title='Multiple referred from 2 places.'>xdrstdio_inline</a> (<a href='../D/17489.html' title='Multiple defined in 2 places.'>XDR</a> *<a href='../Y/29411.html' title='Multiple used in 952 places.'>xdrs</a>, <a href='../D/38628.html' title='Multiple defined in 2 places.'>u_int</a> <a href='../D/32598.html' title='Multiple defined in 10 places.'>len</a>)
+<a id='L159' name='L159'></a> 159 <em class='brace'>{</em>
+<a id='L160' name='L160'></a> 160   <em class='comment'>/*</em>
+<a id='L161' name='L161'></a> 161 <em class='comment'>   * Must do some work to implement this: must insure</em>
+<a id='L162' name='L162'></a> 162 <em class='comment'>   * enough data in the underlying stdio buffer,</em>
+<a id='L163' name='L163'></a> 163 <em class='comment'>   * that the buffer is aligned so that we can indirect through a</em>
+<a id='L164' name='L164'></a> 164 <em class='comment'>   * long *, and stuff this pointer in xdrs-&gt;x_buf.  Doing</em>
+<a id='L165' name='L165'></a> 165 <em class='comment'>   * a fread or fwrite to a scratch buffer would defeat</em>
+<a id='L166' name='L166'></a> 166 <em class='comment'>   * most of the gains to be had here and require storage</em>
+<a id='L167' name='L167'></a> 167 <em class='comment'>   * management on this buffer, so we don't do this.</em>
+<a id='L168' name='L168'></a> 168 <em class='comment'>   */</em>
+<a id='L169' name='L169'></a> 169   <strong class='reserved'>return</strong> <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>;
+<a id='L170' name='L170'></a> 170 <em class='brace'>}</em>
+<a id='L171' name='L171'></a> 171 
+<a id='L172' name='L172'></a> 172 <strong class='reserved'>static</strong> <a href='../S/18258.html#L37' title='Defined at 37 in sunrpc/rpc/types.h.'>bool_t</a>
+<a id='L173' name='L173'></a> 173 <a href='../R/26712.html' title='Multiple referred from 2 places.'>xdrstdio_getint32</a> (<a href='../D/17489.html' title='Multiple defined in 2 places.'>XDR</a> *<a href='../Y/29411.html' title='Multiple used in 952 places.'>xdrs</a>, <a href='../S/137.html#L26' title='Defined at 26 in bits/stdint-intn.h.'>int32_t</a> *<a href='../S/12142.html#L107' title='Defined at 107 in sysdeps/generic/netinet/ip.h.'>ip</a>)
+<a id='L174' name='L174'></a> 174 <em class='brace'>{</em>
+<a id='L175' name='L175'></a> 175   <a href='../S/137.html#L26' title='Defined at 26 in bits/stdint-intn.h.'>int32_t</a> <a href='../Y/20080.html' title='Multiple used in 10 places.'>mycopy</a>;
+<a id='L176' name='L176'></a> 176 
+<a id='L177' name='L177'></a> 177   <strong class='reserved'>if</strong> (<a href='../D/30783.html' title='Multiple defined in 2 places.'>fread</a> ((<a href='../D/28435.html' title='Multiple defined in 2 places.'>caddr_t</a>) &amp;<a href='../Y/20080.html' title='Multiple used in 10 places.'>mycopy</a>, 4, 1, (<a href='../S/5474.html#L7' title='Defined at 7 in libio/bits/types/FILE.h.'>FILE</a> *) <a href='../Y/29411.html' title='Multiple used in 952 places.'>xdrs</a>-&gt;<a href='../Y/29284.html' title='Multiple used in 52 places.'>x_private</a>) != 1)
+<a id='L178' name='L178'></a> 178     <strong class='reserved'>return</strong> <a href='../S/18258.html#L49' title='Defined at 49 in sunrpc/rpc/types.h.'>FALSE</a>;
+<a id='L179' name='L179'></a> 179   *<a href='../S/12142.html#L107' title='Defined at 107 in sysdeps/generic/netinet/ip.h.'>ip</a> = <a href='../D/34395.html' title='Multiple defined in 3 places.'>ntohl</a> (<a href='../Y/20080.html' title='Multiple used in 10 places.'>mycopy</a>);
+<a id='L180' name='L180'></a> 180   <strong class='reserved'>return</strong> <a href='../S/18258.html#L53' title='Defined at 53 in sunrpc/rpc/types.h.'>TRUE</a>;
+<a id='L181' name='L181'></a> 181 <em class='brace'>}</em>
+<a id='L182' name='L182'></a> 182 
+<a id='L183' name='L183'></a> 183 <strong class='reserved'>static</strong> <a href='../S/18258.html#L37' title='Defined at 37 in sunrpc/rpc/types.h.'>bool_t</a>
+<a id='L184' name='L184'></a> 184 <a href='../R/26717.html' title='Multiple referred from 2 places.'>xdrstdio_putint32</a> (<a href='../D/17489.html' title='Multiple defined in 2 places.'>XDR</a> *<a href='../Y/29411.html' title='Multiple used in 952 places.'>xdrs</a>, <strong class='reserved'>const</strong> <a href='../S/137.html#L26' title='Defined at 26 in bits/stdint-intn.h.'>int32_t</a> *<a href='../S/12142.html#L107' title='Defined at 107 in sysdeps/generic/netinet/ip.h.'>ip</a>)
+<a id='L185' name='L185'></a> 185 <em class='brace'>{</em>
+<a id='L186' name='L186'></a> 186   <a href='../S/137.html#L26' title='Defined at 26 in bits/stdint-intn.h.'>int32_t</a> <a href='../Y/20080.html' title='Multiple used in 10 places.'>mycopy</a> = <a href='../D/31573.html' title='Multiple defined in 8 places.'>htonl</a> (*<a href='../S/12142.html#L107' title='Defined at 107 in sysdeps/generic/netinet/ip.h.'>ip</a>);
+<a id='L187' name='L187'></a> 187 
+<a id='L188' name='L188'></a> 188   <a href='../S/12142.html#L107' title='Defined at 107 in sysdeps/generic/netinet/ip.h.'>ip</a> = &amp;<a href='../Y/20080.html' title='Multiple used in 10 places.'>mycopy</a>;
+<a id='L189' name='L189'></a> 189   <strong class='reserved'>if</strong> (<a href='../D/30985.html' title='Multiple defined in 2 places.'>fwrite</a> ((<a href='../D/28435.html' title='Multiple defined in 2 places.'>caddr_t</a>) <a href='../S/12142.html#L107' title='Defined at 107 in sysdeps/generic/netinet/ip.h.'>ip</a>, 4, 1, (<a href='../S/5474.html#L7' title='Defined at 7 in libio/bits/types/FILE.h.'>FILE</a> *) <a href='../Y/29411.html' title='Multiple used in 952 places.'>xdrs</a>-&gt;<a href='../Y/29284.html' title='Multiple used in 52 places.'>x_private</a>) != 1)
+<a id='L190' name='L190'></a> 190     <strong class='reserved'>return</strong> <a href='../S/18258.html#L49' title='Defined at 49 in sunrpc/rpc/types.h.'>FALSE</a>;
+<a id='L191' name='L191'></a> 191   <strong class='reserved'>return</strong> <a href='../S/18258.html#L53' title='Defined at 53 in sunrpc/rpc/types.h.'>TRUE</a>;
+<a id='L192' name='L192'></a> 192 <em class='brace'>}</em>
+<a id='L193' name='L193'></a> 193 <em class='sharp'>#ifdef</em> <a href='../Y/438.html' title='Multiple used in 61 places.'>EXPORT_RPC_SYMBOLS</a>
+<a id='L194' name='L194'></a> 194 <a href='../D/32797.html' title='Multiple defined in 447 places.'>libc_hidden_def</a> (<a href='../S/18266.html#L84' title='Defined at 84 in sunrpc/xdr_stdio.c.'>xdrstdio_create</a>)
+<a id='L195' name='L195'></a> 195 <em class='sharp'>#else</em>
+<a id='L196' name='L196'></a> 196 <a href='../D/32799.html' title='Multiple defined in 73 places.'>libc_hidden_nolink_sunrpc</a> (<a href='../S/18266.html#L84' title='Defined at 84 in sunrpc/xdr_stdio.c.'>xdrstdio_create</a>, <a href='../S/1773.html#L416' title='Defined at 416 in nss/getXXbyYY_r.c.'>GLIBC_2_0</a>)
+<a id='L197' name='L197'></a> 197 <em class='sharp'>#endif</em>
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L84'>[^]</a><a href='#L184'>[v]</a><a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

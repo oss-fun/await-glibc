@@ -1,0 +1,197 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>resolv/tst-res_hnok.c</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18942.html'>resolv</a>/tst-res_hnok.c</h2>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L96'>[^]</a><a href='#L138'>[v]</a>[top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<h2 class='header'>DEFINITIONS</h2>
+This source file includes following definitions.
+<ol>
+<li><a href='#L96' title='Defined at 96.'>one_test</a></li>
+<li><a href='#L113' title='Defined at 113.'>one_char</a></li>
+<li><a href='#L138' title='Defined at 138.'>do_test</a></li>
+</ol>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* Tests for res_hnok and related functions.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   Copyright (C) 2017-2022 Free Software Foundation, Inc.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'></em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'></em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'></em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   License along with the GNU C Library; if not, see</em>
+<a id='L17' name='L17'></a>  17 <em class='comment'>   &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L18' name='L18'></a>  18 
+<a id='L19' name='L19'></a>  19 <em class='sharp'>#include</em> &lt;<a href='17971.html'>array_length.h</a>&gt;
+<a id='L20' name='L20'></a>  20 <em class='sharp'>#include</em> &lt;<a href='../I/1927.html'>resolv.h</a>&gt;
+<a id='L21' name='L21'></a>  21 <em class='sharp'>#include</em> &lt;<a href='../I/1973.html'>string.h</a>&gt;
+<a id='L22' name='L22'></a>  22 <em class='sharp'>#include</em> &lt;<a href='5739.html'>support/check.h</a>&gt;
+<a id='L23' name='L23'></a>  23 <em class='sharp'>#include</em> &lt;<a href='5902.html'>support/test-driver.h</a>&gt;
+<a id='L24' name='L24'></a>  24 
+<a id='L25' name='L25'></a>  25 <em class='comment'>/* Bits which indicate which functions are supposed to report</em>
+<a id='L26' name='L26'></a>  26 <em class='comment'>   success.  */</em>
+<a id='L27' name='L27'></a>  27 <strong class='reserved'>enum</strong>
+<a id='L28' name='L28'></a>  28   <em class='brace'>{</em>
+<a id='L29' name='L29'></a>  29     <a href='../R/20326.html' title='Multiple referred from 5 places.'>hnok</a> = 1,
+<a id='L30' name='L30'></a>  30     <a href='../R/18653.html' title='Multiple referred from 11 places.'>dnok</a> = 2,
+<a id='L31' name='L31'></a>  31     <a href='../R/21621.html' title='Multiple referred from 8 places.'>mailok</a> = 4,
+<a id='L32' name='L32'></a>  32     <a href='../R/22807.html' title='Multiple referred from 6 places.'>ownok</a> = 8,
+<a id='L33' name='L33'></a>  33     <a href='../R/17167.html' title='Multiple referred from 5 places.'>allnomailok</a> = <a href='../D/31522.html' title='Multiple defined in 2 places.'>hnok</a> | <a href='../D/29564.html' title='Multiple defined in 2 places.'>dnok</a> | <a href='../D/34608.html' title='Multiple defined in 2 places.'>ownok</a>,
+<a id='L34' name='L34'></a>  34     <a href='../R/17218.html' title='Multiple referred from 10 places.'>allok</a> = <a href='../D/31522.html' title='Multiple defined in 2 places.'>hnok</a> | <a href='../D/29564.html' title='Multiple defined in 2 places.'>dnok</a> | <a href='../D/33252.html' title='Multiple defined in 2 places.'>mailok</a> | <a href='../D/34608.html' title='Multiple defined in 2 places.'>ownok</a>
+<a id='L35' name='L35'></a>  35   <em class='brace'>}</em>;
+<a id='L36' name='L36'></a>  36 
+<a id='L37' name='L37'></a>  37 <em class='comment'>/* A string of 60 characters.  */</em>
+<a id='L38' name='L38'></a>  38 <em class='sharp'>#define</em> <a href='../R/8102.html' title='Multiple referred from 14 places.'>STRING60</a> "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz"
+<a id='L39' name='L39'></a>  39 
+<a id='L40' name='L40'></a>  40 <em class='comment'>/* A string of 63 characters (maximum label length).  */</em>
+<a id='L41' name='L41'></a>  41 <em class='sharp'>#define</em> <a href='../R/8105.html' title='Multiple referred from 19 places.'>STRING63</a> <a href='../D/14896.html' title='Multiple defined in 2 places.'>STRING60</a> "zzz"
+<a id='L42' name='L42'></a>  42 
+<a id='L43' name='L43'></a>  43 <em class='comment'>/* Combines a test name with the expected results.  */</em>
+<a id='L44' name='L44'></a>  44 <strong class='reserved'>struct</strong> <a href='../R/25213.html' title='Multiple referred from 24 places.'>test_case</a>
+<a id='L45' name='L45'></a>  45 <em class='brace'>{</em>
+<a id='L46' name='L46'></a>  46   <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../Y/13038.html' title='Multiple used in 79 places.'>dn</a>;
+<a id='L47' name='L47'></a>  47   <strong class='reserved'>unsigned</strong> <strong class='reserved'>int</strong> <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a>;          <em class='comment'>/* Combination of the *ok flags.  */</em>
+<a id='L48' name='L48'></a>  48 <em class='brace'>}</em>;
+<a id='L49' name='L49'></a>  49 
+<a id='L50' name='L50'></a>  50 <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <strong class='reserved'>struct</strong> <a href='../D/37614.html' title='Multiple defined in 7 places.'>test_case</a> <a href='../D/37946.html' title='Multiple defined in 4 places.'>tests</a>[] =
+<a id='L51' name='L51'></a>  51   <em class='brace'>{</em>
+<a id='L52' name='L52'></a>  52     <em class='brace'>{</em> "", <a href='../D/27700.html' title='Multiple defined in 2 places.'>allok</a> <em class='brace'>}</em>,
+<a id='L53' name='L53'></a>  53     <em class='brace'>{</em> ".", <a href='../D/27700.html' title='Multiple defined in 2 places.'>allok</a> <em class='brace'>}</em>,
+<a id='L54' name='L54'></a>  54     <em class='brace'>{</em> "..", 0 <em class='brace'>}</em>,
+<a id='L55' name='L55'></a>  55     <em class='brace'>{</em> "www", <a href='../D/27649.html' title='Multiple defined in 2 places.'>allnomailok</a> <em class='brace'>}</em>,
+<a id='L56' name='L56'></a>  56     <em class='brace'>{</em> "www.", <a href='../D/27649.html' title='Multiple defined in 2 places.'>allnomailok</a> <em class='brace'>}</em>,
+<a id='L57' name='L57'></a>  57     <em class='brace'>{</em> "example", <a href='../D/27649.html' title='Multiple defined in 2 places.'>allnomailok</a> <em class='brace'>}</em>,
+<a id='L58' name='L58'></a>  58     <em class='brace'>{</em> "example.com", <a href='../D/27700.html' title='Multiple defined in 2 places.'>allok</a> <em class='brace'>}</em>,
+<a id='L59' name='L59'></a>  59     <em class='brace'>{</em> "www.example.com", <a href='../D/27700.html' title='Multiple defined in 2 places.'>allok</a> <em class='brace'>}</em>,
+<a id='L60' name='L60'></a>  60     <em class='brace'>{</em> "www.example.com.", <a href='../D/27700.html' title='Multiple defined in 2 places.'>allok</a> <em class='brace'>}</em>,
+<a id='L61' name='L61'></a>  61     <em class='brace'>{</em> "www-.example.com.", <a href='../D/27700.html' title='Multiple defined in 2 places.'>allok</a> <em class='brace'>}</em>,
+<a id='L62' name='L62'></a>  62     <em class='brace'>{</em> "www.-example.com.", <a href='../D/27700.html' title='Multiple defined in 2 places.'>allok</a> <em class='brace'>}</em>,
+<a id='L63' name='L63'></a>  63     <em class='brace'>{</em> "*.example.com", <a href='../D/29564.html' title='Multiple defined in 2 places.'>dnok</a> | <a href='../D/33252.html' title='Multiple defined in 2 places.'>mailok</a> | <a href='../D/34608.html' title='Multiple defined in 2 places.'>ownok</a> <em class='brace'>}</em>,
+<a id='L64' name='L64'></a>  64     <em class='brace'>{</em> "-v", <a href='../D/29564.html' title='Multiple defined in 2 places.'>dnok</a> <em class='brace'>}</em>,
+<a id='L65' name='L65'></a>  65     <em class='brace'>{</em> "-v.example.com", <a href='../D/33252.html' title='Multiple defined in 2 places.'>mailok</a> | <a href='../D/29564.html' title='Multiple defined in 2 places.'>dnok</a> <em class='brace'>}</em>,
+<a id='L66' name='L66'></a>  66     <em class='brace'>{</em> "**.example.com", <a href='../D/29564.html' title='Multiple defined in 2 places.'>dnok</a> | <a href='../D/33252.html' title='Multiple defined in 2 places.'>mailok</a> <em class='brace'>}</em>,
+<a id='L67' name='L67'></a>  67     <em class='brace'>{</em> "www.example.com\\", 0 <em class='brace'>}</em>,
+<a id='L68' name='L68'></a>  68     <em class='brace'>{</em> <a href='../D/14899.html' title='Multiple defined in 2 places.'>STRING63</a>, <a href='../D/27649.html' title='Multiple defined in 2 places.'>allnomailok</a> <em class='brace'>}</em>,
+<a id='L69' name='L69'></a>  69     <em class='brace'>{</em> <a href='../D/14899.html' title='Multiple defined in 2 places.'>STRING63</a> ".", <a href='../D/27649.html' title='Multiple defined in 2 places.'>allnomailok</a> <em class='brace'>}</em>,
+<a id='L70' name='L70'></a>  70     <em class='brace'>{</em> <a href='../D/14899.html' title='Multiple defined in 2 places.'>STRING63</a> "\\.", 0 <em class='brace'>}</em>,
+<a id='L71' name='L71'></a>  71     <em class='brace'>{</em> <a href='../D/14899.html' title='Multiple defined in 2 places.'>STRING63</a> "z", 0 <em class='brace'>}</em>,
+<a id='L72' name='L72'></a>  72     <em class='brace'>{</em> <a href='../D/14899.html' title='Multiple defined in 2 places.'>STRING63</a> ".example.com", <a href='../D/27700.html' title='Multiple defined in 2 places.'>allok</a> <em class='brace'>}</em>,
+<a id='L73' name='L73'></a>  73     <em class='brace'>{</em> <a href='../D/14899.html' title='Multiple defined in 2 places.'>STRING63</a> "." <a href='../D/14899.html' title='Multiple defined in 2 places.'>STRING63</a> "." <a href='../D/14899.html' title='Multiple defined in 2 places.'>STRING63</a> "." <a href='../D/14896.html' title='Multiple defined in 2 places.'>STRING60</a> "z", <a href='../D/27700.html' title='Multiple defined in 2 places.'>allok</a> <em class='brace'>}</em>,
+<a id='L74' name='L74'></a>  74     <em class='brace'>{</em> <a href='../D/14899.html' title='Multiple defined in 2 places.'>STRING63</a> "." <a href='../D/14899.html' title='Multiple defined in 2 places.'>STRING63</a> "." <a href='../D/14899.html' title='Multiple defined in 2 places.'>STRING63</a> "." <a href='../D/14896.html' title='Multiple defined in 2 places.'>STRING60</a> "z.", <a href='../D/27700.html' title='Multiple defined in 2 places.'>allok</a> <em class='brace'>}</em>,
+<a id='L75' name='L75'></a>  75     <em class='brace'>{</em> <a href='../D/14899.html' title='Multiple defined in 2 places.'>STRING63</a> "." <a href='../D/14899.html' title='Multiple defined in 2 places.'>STRING63</a> "." <a href='../D/14899.html' title='Multiple defined in 2 places.'>STRING63</a> "." <a href='../D/14896.html' title='Multiple defined in 2 places.'>STRING60</a> "zz", 0 <em class='brace'>}</em>,
+<a id='L76' name='L76'></a>  76     <em class='brace'>{</em> <a href='../D/14899.html' title='Multiple defined in 2 places.'>STRING63</a> "." <a href='../D/14899.html' title='Multiple defined in 2 places.'>STRING63</a> "." <a href='../D/14899.html' title='Multiple defined in 2 places.'>STRING63</a> "." <a href='../D/14896.html' title='Multiple defined in 2 places.'>STRING60</a> "zzz", 0 <em class='brace'>}</em>,
+<a id='L77' name='L77'></a>  77     <em class='brace'>{</em> "hostmaster@mail.example.com", <a href='../D/29564.html' title='Multiple defined in 2 places.'>dnok</a> | <a href='../D/33252.html' title='Multiple defined in 2 places.'>mailok</a> <em class='brace'>}</em>,
+<a id='L78' name='L78'></a>  78     <em class='brace'>{</em> "hostmaster\\@mail.example.com", <a href='../D/29564.html' title='Multiple defined in 2 places.'>dnok</a> | <a href='../D/33252.html' title='Multiple defined in 2 places.'>mailok</a> <em class='brace'>}</em>,
+<a id='L79' name='L79'></a>  79     <em class='brace'>{</em> "with whitespace", 0 <em class='brace'>}</em>,
+<a id='L80' name='L80'></a>  80     <em class='brace'>{</em> "with\twhitespace", 0 <em class='brace'>}</em>,
+<a id='L81' name='L81'></a>  81     <em class='brace'>{</em> "with\nwhitespace", 0 <em class='brace'>}</em>,
+<a id='L82' name='L82'></a>  82     <em class='brace'>{</em> "with.whitespace ", 0 <em class='brace'>}</em>,
+<a id='L83' name='L83'></a>  83     <em class='brace'>{</em> "with.whitespace\t", 0 <em class='brace'>}</em>,
+<a id='L84' name='L84'></a>  84     <em class='brace'>{</em> "with.whitespace\n", 0 <em class='brace'>}</em>,
+<a id='L85' name='L85'></a>  85     <em class='brace'>{</em> "with\\ whitespace", 0 <em class='brace'>}</em>,
+<a id='L86' name='L86'></a>  86     <em class='brace'>{</em> "with\\\twhitespace", 0 <em class='brace'>}</em>,
+<a id='L87' name='L87'></a>  87     <em class='brace'>{</em> "with\\\nwhitespace", 0 <em class='brace'>}</em>,
+<a id='L88' name='L88'></a>  88     <em class='brace'>{</em> "with.whitespace\\ ", 0 <em class='brace'>}</em>,
+<a id='L89' name='L89'></a>  89     <em class='brace'>{</em> "with.whitespace\\\t", 0 <em class='brace'>}</em>,
+<a id='L90' name='L90'></a>  90     <em class='brace'>{</em> "with.whitespace\\\n", 0 <em class='brace'>}</em>,
+<a id='L91' name='L91'></a>  91   <em class='brace'>}</em>;
+<a id='L92' name='L92'></a>  92 
+<a id='L93' name='L93'></a>  93 <em class='comment'>/* Run test case *TEST with FUNC (named FUNCNAME) and report an error</em>
+<a id='L94' name='L94'></a>  94 <em class='comment'>   if the result does not match the result flag at BIT.  */</em>
+<a id='L95' name='L95'></a>  95 <strong class='reserved'>static</strong> <strong class='reserved'>void</strong>
+<a id='L96' name='L96'></a>  96 <a href='../R/22724.html' title='Multiple referred from 35 places.'>one_test</a> (<strong class='reserved'>const</strong> <strong class='reserved'>struct</strong> <a href='../D/37614.html' title='Multiple defined in 7 places.'>test_case</a> *<a href='../D/37584.html' title='Multiple defined in 43 places.'>test</a>, <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../Y/15286.html' title='Multiple used in 4 places.'>funcname</a>,
+<a id='L97' name='L97'></a>  97           <strong class='reserved'>int</strong> (*<a href='../D/30951.html' title='Multiple defined in 15 places.'>func</a>) (<strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *), <strong class='reserved'>unsigned</strong> <strong class='reserved'>int</strong> <a href='../Y/10863.html' title='Multiple used in 88 places.'>bit</a>)
+<a id='L98' name='L98'></a>  98 <em class='brace'>{</em>
+<a id='L99' name='L99'></a>  99   <strong class='reserved'>int</strong> <a href='../Y/14144.html' title='Multiple used in 879 places.'>expected</a> = (<a href='../D/37584.html' title='Multiple defined in 43 places.'>test</a>-&gt;<a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a> &amp; <a href='../Y/10863.html' title='Multiple used in 88 places.'>bit</a>) != 0;
+<a id='L100' name='L100'></a> 100   <strong class='reserved'>int</strong> <a href='../Y/9890.html' title='Multiple used in 140 places.'>actual</a> = <a href='../D/30951.html' title='Multiple defined in 15 places.'>func</a> (<a href='../D/37584.html' title='Multiple defined in 43 places.'>test</a>-&gt;<a href='../Y/13038.html' title='Multiple used in 79 places.'>dn</a>);
+<a id='L101' name='L101'></a> 101   <strong class='reserved'>if</strong> (<a href='../Y/9890.html' title='Multiple used in 140 places.'>actual</a> != <a href='../Y/14144.html' title='Multiple used in 879 places.'>expected</a>)
+<a id='L102' name='L102'></a> 102     <em class='brace'>{</em>
+<a id='L103' name='L103'></a> 103       <a href='../S/5807.html#L59' title='Defined at 59 in support/support_record_failure.c.'>support_record_failure</a> ();
+<a id='L104' name='L104'></a> 104       <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("error: %s (\"%s\"): expected=%d, actual=%d\n",
+<a id='L105' name='L105'></a> 105               <a href='../Y/15286.html' title='Multiple used in 4 places.'>funcname</a>, <a href='../D/37584.html' title='Multiple defined in 43 places.'>test</a>-&gt;<a href='../Y/13038.html' title='Multiple used in 79 places.'>dn</a>, <a href='../Y/14144.html' title='Multiple used in 879 places.'>expected</a>, <a href='../Y/9890.html' title='Multiple used in 140 places.'>actual</a>);
+<a id='L106' name='L106'></a> 106     <em class='brace'>}</em>
+<a id='L107' name='L107'></a> 107 <em class='brace'>}</em>
+<a id='L108' name='L108'></a> 108 
+<a id='L109' name='L109'></a> 109 <em class='comment'>/* Run 255 tests using all the bytes from 1 to 255, surround the byte</em>
+<a id='L110' name='L110'></a> 110 <em class='comment'>   with the strings PREFIX and SUFFIX, and check that FUNC (named</em>
+<a id='L111' name='L111'></a> 111 <em class='comment'>   FUNCNAME) accepts only those bytes listed in ACCEPTED.  */</em>
+<a id='L112' name='L112'></a> 112 <strong class='reserved'>static</strong> <strong class='reserved'>void</strong>
+<a id='L113' name='L113'></a> 113 <a href='../R/22722.html' title='Multiple referred from 4 places.'>one_char</a> (<strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../Y/22699.html' title='Multiple used in 66 places.'>prefix</a>, <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../Y/9842.html' title='Multiple used in 4 places.'>accepted</a>, <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../D/37209.html' title='Multiple defined in 3 places.'>suffix</a>,
+<a id='L114' name='L114'></a> 114           <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../Y/15286.html' title='Multiple used in 4 places.'>funcname</a>, <strong class='reserved'>int</strong> (*<a href='../D/30951.html' title='Multiple defined in 15 places.'>func</a>) (<strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *))
+<a id='L115' name='L115'></a> 115 <em class='brace'>{</em>
+<a id='L116' name='L116'></a> 116   <strong class='reserved'>for</strong> (<strong class='reserved'>int</strong> <a href='../D/28608.html' title='Multiple defined in 4 places.'>ch</a> = 1; <a href='../D/28608.html' title='Multiple defined in 4 places.'>ch</a> &lt;= 255; ++<a href='../D/28608.html' title='Multiple defined in 4 places.'>ch</a>)
+<a id='L117' name='L117'></a> 117     <em class='brace'>{</em>
+<a id='L118' name='L118'></a> 118       <strong class='reserved'>char</strong> <a href='../Y/13038.html' title='Multiple used in 79 places.'>dn</a>[1024];
+<a id='L119' name='L119'></a> 119       <a href='../D/36842.html' title='Multiple defined in 3 places.'>snprintf</a> (<a href='../Y/13038.html' title='Multiple used in 79 places.'>dn</a>, <strong class='reserved'>sizeof</strong> (<a href='../Y/13038.html' title='Multiple used in 79 places.'>dn</a>), "%s%c%s", <a href='../Y/22699.html' title='Multiple used in 66 places.'>prefix</a>, <a href='../D/28608.html' title='Multiple defined in 4 places.'>ch</a>, <a href='../D/37209.html' title='Multiple defined in 3 places.'>suffix</a>);
+<a id='L120' name='L120'></a> 120       <strong class='reserved'>int</strong> <a href='../Y/14144.html' title='Multiple used in 879 places.'>expected</a> = <a href='../D/37065.html' title='Multiple defined in 30 places.'>strchr</a> (<a href='../Y/9842.html' title='Multiple used in 4 places.'>accepted</a>, <a href='../D/28608.html' title='Multiple defined in 4 places.'>ch</a>) != <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>;
+<a id='L121' name='L121'></a> 121       <strong class='reserved'>int</strong> <a href='../Y/9890.html' title='Multiple used in 140 places.'>actual</a> = <a href='../D/30951.html' title='Multiple defined in 15 places.'>func</a> (<a href='../Y/13038.html' title='Multiple used in 79 places.'>dn</a>);
+<a id='L122' name='L122'></a> 122       <strong class='reserved'>if</strong> (<a href='../Y/9890.html' title='Multiple used in 140 places.'>actual</a> != <a href='../Y/14144.html' title='Multiple used in 879 places.'>expected</a>)
+<a id='L123' name='L123'></a> 123         <em class='brace'>{</em>
+<a id='L124' name='L124'></a> 124           <a href='../S/5807.html#L59' title='Defined at 59 in support/support_record_failure.c.'>support_record_failure</a> ();
+<a id='L125' name='L125'></a> 125           <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("error: %s (\"%s\"): expected=%d, actual=%d\n",
+<a id='L126' name='L126'></a> 126                   <a href='../Y/15286.html' title='Multiple used in 4 places.'>funcname</a>, <a href='../Y/13038.html' title='Multiple used in 79 places.'>dn</a>, <a href='../Y/14144.html' title='Multiple used in 879 places.'>expected</a>, <a href='../Y/9890.html' title='Multiple used in 140 places.'>actual</a>);
+<a id='L127' name='L127'></a> 127         <em class='brace'>}</em>
+<a id='L128' name='L128'></a> 128     <em class='brace'>}</em>
+<a id='L129' name='L129'></a> 129 <em class='brace'>}</em>
+<a id='L130' name='L130'></a> 130 
+<a id='L131' name='L131'></a> 131 <em class='sharp'>#define</em> <a href='../R/4273.html' title='Multiple referred from 4 places.'>LETTERSDIGITS</a> \
+<a id='L132' name='L132'></a> 132   "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+<a id='L133' name='L133'></a> 133 
+<a id='L134' name='L134'></a> 134 <em class='sharp'>#define</em> <a href='../S/6329.html#L159' title='Referred from 159 in resolv/tst-res_hnok.c.'>PRINTABLE</a> \
+<a id='L135' name='L135'></a> 135   "!\"#$%&amp;'()*+,/:;&lt;=&gt;?@[\\]^`{|}~"
+<a id='L136' name='L136'></a> 136 
+<a id='L137' name='L137'></a> 137 <strong class='reserved'>static</strong> <strong class='reserved'>int</strong>
+<a id='L138' name='L138'></a> 138 <a href='../R/18782.html' title='Multiple referred from 1850 places.'>do_test</a> (<strong class='reserved'>void</strong>)
+<a id='L139' name='L139'></a> 139 <em class='brace'>{</em>
+<a id='L140' name='L140'></a> 140   <strong class='reserved'>for</strong> (<strong class='reserved'>const</strong> <strong class='reserved'>struct</strong> <a href='../D/37614.html' title='Multiple defined in 7 places.'>test_case</a> *<a href='../D/37584.html' title='Multiple defined in 43 places.'>test</a> = <a href='../D/37946.html' title='Multiple defined in 4 places.'>tests</a>; <a href='../D/37584.html' title='Multiple defined in 43 places.'>test</a> &lt; <a href='../S/17971.html#L34' title='Defined at 34 in include/array_length.h.'>array_end</a> (<a href='../D/37946.html' title='Multiple defined in 4 places.'>tests</a>); ++<a href='../D/37584.html' title='Multiple defined in 43 places.'>test</a>)
+<a id='L141' name='L141'></a> 141     <em class='brace'>{</em>
+<a id='L142' name='L142'></a> 142       <strong class='reserved'>if</strong> (<a href='../Y/27048.html' title='Multiple used in 128 places.'>test_verbose</a>)
+<a id='L143' name='L143'></a> 143         <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("info: testing domain name [[[%s]]] (0x%x)\n",
+<a id='L144' name='L144'></a> 144                 <a href='../D/37584.html' title='Multiple defined in 43 places.'>test</a>-&gt;<a href='../Y/13038.html' title='Multiple used in 79 places.'>dn</a>, <a href='../D/37584.html' title='Multiple defined in 43 places.'>test</a>-&gt;<a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a>);
+<a id='L145' name='L145'></a> 145       <a href='../D/34516.html' title='Multiple defined in 11 places.'>one_test</a> (<a href='../D/37584.html' title='Multiple defined in 43 places.'>test</a>, "res_hnok", <a href='../Y/23849.html' title='Multiple used in 8 places.'>res_hnok</a>, <a href='../D/31522.html' title='Multiple defined in 2 places.'>hnok</a>);
+<a id='L146' name='L146'></a> 146       <a href='../D/34516.html' title='Multiple defined in 11 places.'>one_test</a> (<a href='../D/37584.html' title='Multiple defined in 43 places.'>test</a>, "res_dnok", <a href='../Y/23845.html' title='Multiple used in 6 places.'>res_dnok</a>, <a href='../D/29564.html' title='Multiple defined in 2 places.'>dnok</a>);
+<a id='L147' name='L147'></a> 147       <a href='../D/34516.html' title='Multiple defined in 11 places.'>one_test</a> (<a href='../D/37584.html' title='Multiple defined in 43 places.'>test</a>, "res_mailok", <a href='../Y/23851.html' title='Multiple used in 5 places.'>res_mailok</a>, <a href='../D/33252.html' title='Multiple defined in 2 places.'>mailok</a>);
+<a id='L148' name='L148'></a> 148       <a href='../D/34516.html' title='Multiple defined in 11 places.'>one_test</a> (<a href='../D/37584.html' title='Multiple defined in 43 places.'>test</a>, "res_ownok", <a href='../Y/23860.html' title='Multiple used in 3 places.'>res_ownok</a>, <a href='../D/34608.html' title='Multiple defined in 2 places.'>ownok</a>);
+<a id='L149' name='L149'></a> 149     <em class='brace'>}</em>
+<a id='L150' name='L150'></a> 150 
+<a id='L151' name='L151'></a> 151   <a href='../S/6329.html#L113' title='Defined at 113 in resolv/tst-res_hnok.c.'>one_char</a>
+<a id='L152' name='L152'></a> 152     ("", <a href='../S/6329.html#L131' title='Defined at 131 in resolv/tst-res_hnok.c.'>LETTERSDIGITS</a> "._", "", "res_hnok", <a href='../Y/23849.html' title='Multiple used in 8 places.'>res_hnok</a>);
+<a id='L153' name='L153'></a> 153   <a href='../S/6329.html#L113' title='Defined at 113 in resolv/tst-res_hnok.c.'>one_char</a>
+<a id='L154' name='L154'></a> 154     ("middle",
+<a id='L155' name='L155'></a> 155      <a href='../S/6329.html#L131' title='Defined at 131 in resolv/tst-res_hnok.c.'>LETTERSDIGITS</a> ".-_\\", <em class='comment'>/* "middle\\suffix" == "middlesuffix", so good.  */</em>
+<a id='L156' name='L156'></a> 156      "suffix", "res_hnok", <a href='../Y/23849.html' title='Multiple used in 8 places.'>res_hnok</a>);
+<a id='L157' name='L157'></a> 157   <a href='../S/6329.html#L113' title='Defined at 113 in resolv/tst-res_hnok.c.'>one_char</a>
+<a id='L158' name='L158'></a> 158     ("middle",
+<a id='L159' name='L159'></a> 159      <a href='../S/6329.html#L131' title='Defined at 131 in resolv/tst-res_hnok.c.'>LETTERSDIGITS</a> ".-_" <a href='../S/6329.html#L134' title='Defined at 134 in resolv/tst-res_hnok.c.'>PRINTABLE</a>,
+<a id='L160' name='L160'></a> 160      "suffix.example", "res_mailok", <a href='../Y/23851.html' title='Multiple used in 5 places.'>res_mailok</a>);
+<a id='L161' name='L161'></a> 161   <a href='../S/6329.html#L113' title='Defined at 113 in resolv/tst-res_hnok.c.'>one_char</a>
+<a id='L162' name='L162'></a> 162     ("mailbox.middle",
+<a id='L163' name='L163'></a> 163      <a href='../S/6329.html#L131' title='Defined at 131 in resolv/tst-res_hnok.c.'>LETTERSDIGITS</a> ".-_\\",
+<a id='L164' name='L164'></a> 164      "suffix.example", "res_mailok", <a href='../Y/23851.html' title='Multiple used in 5 places.'>res_mailok</a>);
+<a id='L165' name='L165'></a> 165 
+<a id='L166' name='L166'></a> 166   <strong class='reserved'>return</strong> 0;
+<a id='L167' name='L167'></a> 167 <em class='brace'>}</em>
+<a id='L168' name='L168'></a> 168 
+<a id='L169' name='L169'></a> 169 <em class='sharp'>#include</em> &lt;support/test-driver.c&gt;
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L96'>[^]</a><a href='#L138'>[v]</a><a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

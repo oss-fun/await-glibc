@@ -1,0 +1,134 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>sysdeps/x86_64/rshift.S</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18977.html'>sysdeps</a>/<a href='../files/19391.html'>x86_64</a>/rshift.S</h2>
+<em class='comment'>/* [&lt;][&gt;][^][v][top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* x86-64 __mpn_rshift --</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   Copyright (C) 2007-2022 Free Software Foundation, Inc.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'>   This file is part of the GNU MP Library.</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'></em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   The GNU MP Library is free software; you can redistribute it and/or modify</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   it under the terms of the GNU Lesser General Public License as published by</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   the Free Software Foundation; either version 2.1 of the License, or (at your</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'>   option) any later version.</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'></em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   The GNU MP Library is distributed in the hope that it will be useful, but</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'>   License for more details.</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'></em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   You should have received a copy of the GNU Lesser General Public License</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   along with the GNU MP Library; see the file COPYING.LIB.  If not,</em>
+<a id='L17' name='L17'></a>  17 <em class='comment'>   see &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L18' name='L18'></a>  18 
+<a id='L19' name='L19'></a>  19 <em class='sharp'>#include</em> "<a href='../I/5967.html'>sysdep.h</a>"
+<a id='L20' name='L20'></a>  20 <em class='sharp'>#include</em> "<a href='../I/6421.html'>asm-syntax.h</a>"
+<a id='L21' name='L21'></a>  21 
+<a id='L22' name='L22'></a>  22 <em class='sharp'>#define</em> <a href='../R/23925.html' title='Multiple referred from 459 places.'>rp</a>  %rdi
+<a id='L23' name='L23'></a>  23 <em class='sharp'>#define</em> <a href='../R/26210.html' title='Multiple referred from 111 places.'>up</a>  %rsi
+<a id='L24' name='L24'></a>  24 <em class='sharp'>#define</em> <a href='../R/22113.html' title='Multiple referred from 4396 places.'>n</a>   %rdx
+<a id='L25' name='L25'></a>  25 <em class='sharp'>#define</em> <a href='../R/18197.html' title='Multiple referred from 2689 places.'>cnt</a> %cl
+<a id='L26' name='L26'></a>  26 
+<a id='L27' name='L27'></a>  27     .text
+<a id='L28' name='L28'></a>  28 <a href='../D/3651.html' title='Multiple defined in 54 places.'>ENTRY</a> (<a href='../R/15067.html' title='Multiple referred from 11 places.'>__mpn_rshift</a>)
+<a id='L29' name='L29'></a>  29     mov %edx, %eax
+<a id='L30' name='L30'></a>  30     and $3, %eax
+<a id='L31' name='L31'></a>  31     jne L(nb00)
+<a id='L32' name='L32'></a>  32 L(b00): <em class='comment'>/* n = 4, 8, 12, ... */</em>
+<a id='L33' name='L33'></a>  33     mov (up), %r10
+<a id='L34' name='L34'></a>  34     mov 8(up), %r11
+<a id='L35' name='L35'></a>  35     xor %eax, %eax
+<a id='L36' name='L36'></a>  36     shrd    %cl, %r10, %rax
+<a id='L37' name='L37'></a>  37     mov 16(up), %r8
+<a id='L38' name='L38'></a>  38     lea 8(up), up
+<a id='L39' name='L39'></a>  39     lea -24(rp), rp
+<a id='L40' name='L40'></a>  40     sub $4, n
+<a id='L41' name='L41'></a>  41     jmp L(00)
+<a id='L42' name='L42'></a>  42 
+<a id='L43' name='L43'></a>  43 L(nb00):<em class='comment'>/* n = 1, 5, 9, ... */</em>
+<a id='L44' name='L44'></a>  44     cmp $2, %eax
+<a id='L45' name='L45'></a>  45     jae L(nb01)
+<a id='L46' name='L46'></a>  46 L(b01): mov (up), %r9
+<a id='L47' name='L47'></a>  47     xor %eax, %eax
+<a id='L48' name='L48'></a>  48     shrd    %cl, %r9, %rax
+<a id='L49' name='L49'></a>  49     sub $2, n
+<a id='L50' name='L50'></a>  50     jb  L(le1)
+<a id='L51' name='L51'></a>  51     mov 8(up), %r10
+<a id='L52' name='L52'></a>  52     mov 16(up), %r11
+<a id='L53' name='L53'></a>  53     lea 16(up), up
+<a id='L54' name='L54'></a>  54     lea -16(rp), rp
+<a id='L55' name='L55'></a>  55     jmp L(01)
+<a id='L56' name='L56'></a>  56 L(le1): shr %cl, %r9
+<a id='L57' name='L57'></a>  57     mov %r9, (rp)
+<a id='L58' name='L58'></a>  58     ret
+<a id='L59' name='L59'></a>  59 
+<a id='L60' name='L60'></a>  60 L(nb01):<em class='comment'>/* n = 2, 6, 10, ... */</em>
+<a id='L61' name='L61'></a>  61     jne L(b11)
+<a id='L62' name='L62'></a>  62 L(b10): mov (up), %r8
+<a id='L63' name='L63'></a>  63     mov 8(up), %r9
+<a id='L64' name='L64'></a>  64     xor %eax, %eax
+<a id='L65' name='L65'></a>  65     shrd    %cl, %r8, %rax
+<a id='L66' name='L66'></a>  66     sub $3, n
+<a id='L67' name='L67'></a>  67     jb  L(le2)
+<a id='L68' name='L68'></a>  68     mov 16(up), %r10
+<a id='L69' name='L69'></a>  69     lea 24(up), up
+<a id='L70' name='L70'></a>  70     lea -8(rp), rp
+<a id='L71' name='L71'></a>  71     jmp L(10)
+<a id='L72' name='L72'></a>  72 L(le2): shrd    %cl, %r9, %r8
+<a id='L73' name='L73'></a>  73     mov %r8, (rp)
+<a id='L74' name='L74'></a>  74     shr %cl, %r9
+<a id='L75' name='L75'></a>  75     mov %r9, 8(rp)
+<a id='L76' name='L76'></a>  76     ret
+<a id='L77' name='L77'></a>  77 
+<a id='L78' name='L78'></a>  78     .p2align 4
+<a id='L79' name='L79'></a>  79 L(b11): <em class='comment'>/* n = 3, 7, 11, ... */</em>
+<a id='L80' name='L80'></a>  80     mov (up), %r11
+<a id='L81' name='L81'></a>  81     mov 8(up), %r8
+<a id='L82' name='L82'></a>  82     xor %eax, %eax
+<a id='L83' name='L83'></a>  83     shrd    %cl, %r11, %rax
+<a id='L84' name='L84'></a>  84     mov 16(up), %r9
+<a id='L85' name='L85'></a>  85     lea 32(up), up
+<a id='L86' name='L86'></a>  86     sub $4, n
+<a id='L87' name='L87'></a>  87     jb  L(end)
+<a id='L88' name='L88'></a>  88 
+<a id='L89' name='L89'></a>  89     .p2align 4
+<a id='L90' name='L90'></a>  90 L(top): shrd    %cl, %r8, %r11
+<a id='L91' name='L91'></a>  91     mov -8(up), %r10
+<a id='L92' name='L92'></a>  92     mov %r11, (rp)
+<a id='L93' name='L93'></a>  93 L(10):  shrd    %cl, %r9, %r8
+<a id='L94' name='L94'></a>  94     mov (up), %r11
+<a id='L95' name='L95'></a>  95     mov %r8, 8(rp)
+<a id='L96' name='L96'></a>  96 L(01):  shrd    %cl, %r10, %r9
+<a id='L97' name='L97'></a>  97     mov 8(up), %r8
+<a id='L98' name='L98'></a>  98     mov %r9, 16(rp)
+<a id='L99' name='L99'></a>  99 L(00):  shrd    %cl, %r11, %r10
+<a id='L100' name='L100'></a> 100     mov 16(up), %r9
+<a id='L101' name='L101'></a> 101     mov %r10, 24(rp)
+<a id='L102' name='L102'></a> 102     add $32, up
+<a id='L103' name='L103'></a> 103     lea 32(rp), rp
+<a id='L104' name='L104'></a> 104     sub $4, n
+<a id='L105' name='L105'></a> 105     jnc L(top)
+<a id='L106' name='L106'></a> 106 
+<a id='L107' name='L107'></a> 107 L(end): shrd    %cl, %r8, %r11
+<a id='L108' name='L108'></a> 108     mov %r11, (rp)
+<a id='L109' name='L109'></a> 109     shrd    %cl, %r9, %r8
+<a id='L110' name='L110'></a> 110     mov %r8, 8(rp)
+<a id='L111' name='L111'></a> 111     shr %cl, %r9
+<a id='L112' name='L112'></a> 112     mov %r9, 16(rp)
+<a id='L113' name='L113'></a> 113     ret
+<a id='L114' name='L114'></a> 114 END (__mpn_rshift)
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;][^][v]<a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

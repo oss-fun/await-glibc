@@ -1,0 +1,220 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>stdio-common/printf.h</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18967.html'>stdio-common</a>/printf.h</h2>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L108'>[^]</a>[v][top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<h2 class='header'><a href='../J/1912.html' title='Multiple included from 19 places.'>INCLUDED FROM</a></h2>
+<hr />
+<h2 class='header'>DEFINITIONS</h2>
+This source file includes following definitions.
+<ol>
+<li><a href='#L108' title='Defined at 108.'>register_printf_function</a></li>
+</ol>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* Copyright (C) 1991-2022 Free Software Foundation, Inc.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'></em>
+<a id='L4' name='L4'></a>   4 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'></em>
+<a id='L9' name='L9'></a>   9 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'></em>
+<a id='L14' name='L14'></a>  14 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   License along with the GNU C Library; if not, see</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L17' name='L17'></a>  17 
+<a id='L18' name='L18'></a>  18 <em class='sharp'>#ifndef</em> <a href='../S/6149.html#L20' title='Defined at 20 in stdio-common/printf.h.'>_PRINTF_H</a>
+<a id='L19' name='L19'></a>  19 
+<a id='L20' name='L20'></a>  20 <em class='sharp'>#define</em> <a href='../R/11646.html' title='Multiple referred from 3 places.'>_PRINTF_H</a>   1
+<a id='L21' name='L21'></a>  21 <em class='sharp'>#include</em> &lt;<a href='17866.html'>features.h</a>&gt;
+<a id='L22' name='L22'></a>  22 
+<a id='L23' name='L23'></a>  23 <a href='../D/21188.html' title='Multiple defined in 2 places.'>__BEGIN_DECLS</a>
+<a id='L24' name='L24'></a>  24 
+<a id='L25' name='L25'></a>  25 <em class='sharp'>#include</em> &lt;<a href='../I/1787.html'>bits/types/FILE.h</a>&gt;
+<a id='L26' name='L26'></a>  26 
+<a id='L27' name='L27'></a>  27 <em class='sharp'>#define</em> __need_size_t
+<a id='L28' name='L28'></a>  28 <em class='sharp'>#define</em> __need_wchar_t
+<a id='L29' name='L29'></a>  29 <em class='sharp'>#include</em> &lt;stddef.h&gt;
+<a id='L30' name='L30'></a>  30 
+<a id='L31' name='L31'></a>  31 <em class='sharp'>#include</em> &lt;stdarg.h&gt;
+<a id='L32' name='L32'></a>  32 
+<a id='L33' name='L33'></a>  33 
+<a id='L34' name='L34'></a>  34 <strong class='reserved'>struct</strong> <a href='../R/23127.html' title='Multiple referred from 40 places.'>printf_info</a>
+<a id='L35' name='L35'></a>  35 <em class='brace'>{</em>
+<a id='L36' name='L36'></a>  36   <strong class='reserved'>int</strong> <a href='../Y/22682.html' title='Multiple used in 100 places.'>prec</a>;         <em class='comment'>/* Precision.  */</em>
+<a id='L37' name='L37'></a>  37   <strong class='reserved'>int</strong> <a href='../Y/29072.html' title='Multiple used in 316 places.'>width</a>;            <em class='comment'>/* Width.  */</em>
+<a id='L38' name='L38'></a>  38   <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> <a href='../Y/25793.html' title='Multiple used in 212 places.'>spec</a>;         <em class='comment'>/* Format letter.  */</em>
+<a id='L39' name='L39'></a>  39   <strong class='reserved'>unsigned</strong> <strong class='reserved'>int</strong> <a href='../Y/17210.html' title='Multiple used in 39 places.'>is_long_double</a>:1;<em class='comment'>/* L flag.  */</em>
+<a id='L40' name='L40'></a>  40   <strong class='reserved'>unsigned</strong> <strong class='reserved'>int</strong> <a href='../Y/17227.html' title='Multiple used in 12 places.'>is_short</a>:1;  <em class='comment'>/* h flag.  */</em>
+<a id='L41' name='L41'></a>  41   <strong class='reserved'>unsigned</strong> <strong class='reserved'>int</strong> <a href='../Y/17209.html' title='Multiple used in 22 places.'>is_long</a>:1;   <em class='comment'>/* l flag.  */</em>
+<a id='L42' name='L42'></a>  42   <strong class='reserved'>unsigned</strong> <strong class='reserved'>int</strong> <a href='../Y/10189.html' title='Multiple used in 28 places.'>alt</a>:1;       <em class='comment'>/* # flag.  */</em>
+<a id='L43' name='L43'></a>  43   <strong class='reserved'>unsigned</strong> <strong class='reserved'>int</strong> <a href='../S/5726.html#L1051' title='Defined at 1051 in argp/argp-help.c.'>space</a>:1;     <em class='comment'>/* Space flag.  */</em>
+<a id='L44' name='L44'></a>  44   <strong class='reserved'>unsigned</strong> <strong class='reserved'>int</strong> <a href='../Y/17987.html' title='Multiple used in 365 places.'>left</a>:1;      <em class='comment'>/* - flag.  */</em>
+<a id='L45' name='L45'></a>  45   <strong class='reserved'>unsigned</strong> <strong class='reserved'>int</strong> <a href='../Y/25330.html' title='Multiple used in 22 places.'>showsign</a>:1;  <em class='comment'>/* + flag.  */</em>
+<a id='L46' name='L46'></a>  46   <strong class='reserved'>unsigned</strong> <strong class='reserved'>int</strong> <a href='../D/31398.html' title='Multiple defined in 8 places.'>group</a>:1;     <em class='comment'>/* ' flag.  */</em>
+<a id='L47' name='L47'></a>  47   <strong class='reserved'>unsigned</strong> <strong class='reserved'>int</strong> <a href='../Y/14244.html' title='Multiple used in 174 places.'>extra</a>:1;     <em class='comment'>/* For special use.  */</em>
+<a id='L48' name='L48'></a>  48   <strong class='reserved'>unsigned</strong> <strong class='reserved'>int</strong> <a href='../Y/17197.html' title='Multiple used in 10 places.'>is_char</a>:1;   <em class='comment'>/* hh flag.  */</em>
+<a id='L49' name='L49'></a>  49   <strong class='reserved'>unsigned</strong> <strong class='reserved'>int</strong> <a href='../S/5505.html#L79' title='Defined at 79 in libio/tst-bz24153.c.'>wide</a>:1;      <em class='comment'>/* Nonzero for wide character streams.  */</em>
+<a id='L50' name='L50'></a>  50   <strong class='reserved'>unsigned</strong> <strong class='reserved'>int</strong> <a href='../Y/16290.html' title='Multiple used in 8 places.'>i18n</a>:1;      <em class='comment'>/* I flag.  */</em>
+<a id='L51' name='L51'></a>  51   <strong class='reserved'>unsigned</strong> <strong class='reserved'>int</strong> <a href='../Y/17194.html' title='Multiple used in 22 places.'>is_binary128</a>:1;  <em class='comment'>/* Floating-point argument is ABI-compatible</em>
+<a id='L52' name='L52'></a>  52 <em class='comment'>                   with IEC 60559 binary128.  */</em>
+<a id='L53' name='L53'></a>  53   <strong class='reserved'>unsigned</strong> <strong class='reserved'>int</strong> <a href='../Y/6464.html' title='Multiple used in 15 places.'>__pad</a>:3;     <em class='comment'>/* Unused so far.  */</em>
+<a id='L54' name='L54'></a>  54   <strong class='reserved'>unsigned</strong> <strong class='reserved'>short</strong> <strong class='reserved'>int</strong> <a href='../D/38799.html' title='Multiple defined in 19 places.'>user</a>;  <em class='comment'>/* Bits for user-installed modifiers.  */</em>
+<a id='L55' name='L55'></a>  55   <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> <a href='../Y/22142.html' title='Multiple used in 173 places.'>pad</a>;          <em class='comment'>/* Padding character.  */</em>
+<a id='L56' name='L56'></a>  56 <em class='brace'>}</em>;
+<a id='L57' name='L57'></a>  57 
+<a id='L58' name='L58'></a>  58 
+<a id='L59' name='L59'></a>  59 <em class='comment'>/* Type of a printf specifier-handler function.</em>
+<a id='L60' name='L60'></a>  60 <em class='comment'>   STREAM is the FILE on which to write output.</em>
+<a id='L61' name='L61'></a>  61 <em class='comment'>   INFO gives information about the format specification.</em>
+<a id='L62' name='L62'></a>  62 <em class='comment'>   ARGS is a vector of pointers to the argument data;</em>
+<a id='L63' name='L63'></a>  63 <em class='comment'>   the number of pointers will be the number returned</em>
+<a id='L64' name='L64'></a>  64 <em class='comment'>   by the associated arginfo function for the same INFO.</em>
+<a id='L65' name='L65'></a>  65 <em class='comment'></em>
+<a id='L66' name='L66'></a>  66 <em class='comment'>   The function should return the number of characters written,</em>
+<a id='L67' name='L67'></a>  67 <em class='comment'>   or -1 for errors.  */</em>
+<a id='L68' name='L68'></a>  68 
+<a id='L69' name='L69'></a>  69 <strong class='reserved'>typedef</strong> <strong class='reserved'>int</strong> <a href='../R/23126.html' title='Multiple referred from 10 places.'>printf_function</a> (<a href='../S/5474.html#L7' title='Defined at 7 in libio/bits/types/FILE.h.'>FILE</a> *<a href='../Y/7737.html' title='Multiple used in 188 places.'>__stream</a>,
+<a id='L70' name='L70'></a>  70                  <strong class='reserved'>const</strong> <strong class='reserved'>struct</strong> <a href='../S/6149.html#L34' title='Defined at 34 in stdio-common/printf.h.'>printf_info</a> *<a href='../Y/5141.html' title='Multiple used in 17 places.'>__info</a>,
+<a id='L71' name='L71'></a>  71                  <strong class='reserved'>const</strong> <strong class='reserved'>void</strong> *<strong class='reserved'>const</strong> *<a href='../Y/3552.html' title='Multiple used in 6 places.'>__args</a>);
+<a id='L72' name='L72'></a>  72 
+<a id='L73' name='L73'></a>  73 <em class='comment'>/* Type of a printf specifier-arginfo function.</em>
+<a id='L74' name='L74'></a>  74 <em class='comment'>   INFO gives information about the format specification.</em>
+<a id='L75' name='L75'></a>  75 <em class='comment'>   N, ARGTYPES, *SIZE has to contain the size of the parameter for</em>
+<a id='L76' name='L76'></a>  76 <em class='comment'>   user-defined types, and return value are as for parse_printf_format</em>
+<a id='L77' name='L77'></a>  77 <em class='comment'>   except that -1 should be returned if the handler cannot handle</em>
+<a id='L78' name='L78'></a>  78 <em class='comment'>   this case.  This allows to partially overwrite the functionality</em>
+<a id='L79' name='L79'></a>  79 <em class='comment'>   of existing format specifiers.  */</em>
+<a id='L80' name='L80'></a>  80 
+<a id='L81' name='L81'></a>  81 <strong class='reserved'>typedef</strong> <strong class='reserved'>int</strong> <a href='../R/23125.html' title='Multiple referred from 7 places.'>printf_arginfo_size_function</a> (<strong class='reserved'>const</strong> <strong class='reserved'>struct</strong> <a href='../S/6149.html#L34' title='Defined at 34 in stdio-common/printf.h.'>printf_info</a> *<a href='../Y/5141.html' title='Multiple used in 17 places.'>__info</a>,
+<a id='L82' name='L82'></a>  82                       <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/6016.html' title='Multiple used in 299 places.'>__n</a>, <strong class='reserved'>int</strong> *<a href='../Y/3555.html' title='Multiple used in 4 places.'>__argtypes</a>,
+<a id='L83' name='L83'></a>  83                       <strong class='reserved'>int</strong> *<a href='../Y/7482.html' title='Multiple used in 154 places.'>__size</a>);
+<a id='L84' name='L84'></a>  84 
+<a id='L85' name='L85'></a>  85 <em class='comment'>/* Old version of 'printf_arginfo_function' without a SIZE parameter.  */</em>
+<a id='L86' name='L86'></a>  86 
+<a id='L87' name='L87'></a>  87 <strong class='reserved'>typedef</strong> <strong class='reserved'>int</strong> <a href='../R/23124.html' title='Multiple referred from 3 places.'>printf_arginfo_function</a> (<strong class='reserved'>const</strong> <strong class='reserved'>struct</strong> <a href='../S/6149.html#L34' title='Defined at 34 in stdio-common/printf.h.'>printf_info</a> *<a href='../Y/5141.html' title='Multiple used in 17 places.'>__info</a>,
+<a id='L88' name='L88'></a>  88                      <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/6016.html' title='Multiple used in 299 places.'>__n</a>, <strong class='reserved'>int</strong> *<a href='../Y/3555.html' title='Multiple used in 4 places.'>__argtypes</a>);
+<a id='L89' name='L89'></a>  89 
+<a id='L90' name='L90'></a>  90 <em class='comment'>/* Type of a function to get a value of a user-defined from the</em>
+<a id='L91' name='L91'></a>  91 <em class='comment'>   variable argument list.  */</em>
+<a id='L92' name='L92'></a>  92 <strong class='reserved'>typedef</strong> <strong class='reserved'>void</strong> <a href='../R/23134.html' title='Multiple referred from 5 places.'>printf_va_arg_function</a> (<strong class='reserved'>void</strong> *<a href='../Y/5666.html' title='Multiple used in 7 places.'>__mem</a>, <a href='../S/5479.html#L52' title='Defined at 52 in libio/stdio.h.'>va_list</a> *<a href='../Y/3519.html' title='Multiple used in 34 places.'>__ap</a>);
+<a id='L93' name='L93'></a>  93 
+<a id='L94' name='L94'></a>  94 
+<a id='L95' name='L95'></a>  95 <em class='comment'>/* Register FUNC to be called to format SPEC specifiers; ARGINFO must be</em>
+<a id='L96' name='L96'></a>  96 <em class='comment'>   specified to determine how many arguments a SPEC conversion requires and</em>
+<a id='L97' name='L97'></a>  97 <em class='comment'>   what their types are.  */</em>
+<a id='L98' name='L98'></a>  98 
+<a id='L99' name='L99'></a>  99 <strong class='reserved'>extern</strong> <strong class='reserved'>int</strong> <a href='../Y/23684.html' title='Multiple used in 3 places.'>register_printf_specifier</a> (<strong class='reserved'>int</strong> <a href='../Y/7526.html' title='Multiple used in 2 places.'>__spec</a>, <a href='../S/6149.html#L69' title='Defined at 69 in stdio-common/printf.h.'>printf_function</a> <a href='../Y/4637.html' title='Multiple used in 22 places.'>__func</a>,
+<a id='L100' name='L100'></a> 100                       <a href='../S/6149.html#L81' title='Defined at 81 in stdio-common/printf.h.'>printf_arginfo_size_function</a> <a href='../Y/3545.html' title='Multiple used in 2 places.'>__arginfo</a>)
+<a id='L101' name='L101'></a> 101   <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a>;
+<a id='L102' name='L102'></a> 102 
+<a id='L103' name='L103'></a> 103 
+<a id='L104' name='L104'></a> 104 <em class='comment'>/* Obsolete interface similar to register_printf_specifier.  It can only</em>
+<a id='L105' name='L105'></a> 105 <em class='comment'>   handle basic data types because the ARGINFO callback does not return</em>
+<a id='L106' name='L106'></a> 106 <em class='comment'>   information on the size of the user-defined type.  */</em>
+<a id='L107' name='L107'></a> 107 
+<a id='L108' name='L108'></a> 108 <strong class='reserved'>extern</strong> <strong class='reserved'>int</strong> <a href='../R/23688.html' title='Multiple referred from 4 places.'>register_printf_function</a> (<strong class='reserved'>int</strong> <a href='../Y/7526.html' title='Multiple used in 2 places.'>__spec</a>, <a href='../S/6149.html#L69' title='Defined at 69 in stdio-common/printf.h.'>printf_function</a> <a href='../Y/4637.html' title='Multiple used in 22 places.'>__func</a>,
+<a id='L109' name='L109'></a> 109                      <a href='../S/6149.html#L87' title='Defined at 87 in stdio-common/printf.h.'>printf_arginfo_function</a> <a href='../Y/3545.html' title='Multiple used in 2 places.'>__arginfo</a>)
+<a id='L110' name='L110'></a> 110   <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a> <a href='../D/23308.html' title='Multiple defined in 2 places.'>__attribute_deprecated__</a>;
+<a id='L111' name='L111'></a> 111 
+<a id='L112' name='L112'></a> 112 
+<a id='L113' name='L113'></a> 113 <em class='comment'>/* Register a new modifier character sequence.  If the call succeeds</em>
+<a id='L114' name='L114'></a> 114 <em class='comment'>   it returns a positive value representing the bit set in the USER</em>
+<a id='L115' name='L115'></a> 115 <em class='comment'>   field in 'struct printf_info'.  */</em>
+<a id='L116' name='L116'></a> 116 
+<a id='L117' name='L117'></a> 117 <strong class='reserved'>extern</strong> <strong class='reserved'>int</strong> <a href='../Y/23683.html' title='Multiple used in 2 places.'>register_printf_modifier</a> (<strong class='reserved'>const</strong> <a href='../Y/28915.html' title='Multiple used in 1475 places.'>wchar_t</a> *<a href='../Y/7641.html' title='Multiple used in 29 places.'>__str</a>) <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a> <a href='../D/26536.html' title='Multiple defined in 2 places.'>__wur</a>;
+<a id='L118' name='L118'></a> 118 
+<a id='L119' name='L119'></a> 119 
+<a id='L120' name='L120'></a> 120 <em class='comment'>/* Register variable argument handler for user type.  The return value</em>
+<a id='L121' name='L121'></a> 121 <em class='comment'>   is to be used in ARGINFO functions to signal the use of the</em>
+<a id='L122' name='L122'></a> 122 <em class='comment'>   type.  */</em>
+<a id='L123' name='L123'></a> 123 <strong class='reserved'>extern</strong> <strong class='reserved'>int</strong> <a href='../Y/23685.html' title='Multiple used in 3 places.'>register_printf_type</a> (<a href='../S/6149.html#L92' title='Defined at 92 in stdio-common/printf.h.'>printf_va_arg_function</a> <a href='../Y/4425.html' title='Multiple used in 28 places.'>__fct</a>) <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a> <a href='../D/26536.html' title='Multiple defined in 2 places.'>__wur</a>;
+<a id='L124' name='L124'></a> 124 
+<a id='L125' name='L125'></a> 125 
+<a id='L126' name='L126'></a> 126 <em class='comment'>/* Parse FMT, and fill in N elements of ARGTYPES with the</em>
+<a id='L127' name='L127'></a> 127 <em class='comment'>   types needed for the conversions FMT specifies.  Returns</em>
+<a id='L128' name='L128'></a> 128 <em class='comment'>   the number of arguments required by FMT.</em>
+<a id='L129' name='L129'></a> 129 <em class='comment'></em>
+<a id='L130' name='L130'></a> 130 <em class='comment'>   The ARGINFO function registered with a user-defined format is passed a</em>
+<a id='L131' name='L131'></a> 131 <em class='comment'>   `struct printf_info' describing the format spec being parsed.  A width</em>
+<a id='L132' name='L132'></a> 132 <em class='comment'>   or precision of INT_MIN means a `*' was used to indicate that the</em>
+<a id='L133' name='L133'></a> 133 <em class='comment'>   width/precision will come from an arg.  The function should fill in the</em>
+<a id='L134' name='L134'></a> 134 <em class='comment'>   array it is passed with the types of the arguments it wants, and return</em>
+<a id='L135' name='L135'></a> 135 <em class='comment'>   the number of arguments it wants.  */</em>
+<a id='L136' name='L136'></a> 136 
+<a id='L137' name='L137'></a> 137 <strong class='reserved'>extern</strong> <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../S/6059.html#L59' title='Defined at 59 in stdio-common/printf-prs.c.'>parse_printf_format</a> (<strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<strong class='reserved'>__restrict</strong> <a href='../Y/4539.html' title='Multiple used in 77 places.'>__fmt</a>, <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/6016.html' title='Multiple used in 299 places.'>__n</a>,
+<a id='L138' name='L138'></a> 138                    <strong class='reserved'>int</strong> *<strong class='reserved'>__restrict</strong> <a href='../Y/3555.html' title='Multiple used in 4 places.'>__argtypes</a>) <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a>;
+<a id='L139' name='L139'></a> 139 
+<a id='L140' name='L140'></a> 140 
+<a id='L141' name='L141'></a> 141 <em class='comment'>/* Codes returned by `parse_printf_format' for basic types.</em>
+<a id='L142' name='L142'></a> 142 <em class='comment'></em>
+<a id='L143' name='L143'></a> 143 <em class='comment'>   These values cover all the standard format specifications.</em>
+<a id='L144' name='L144'></a> 144 <em class='comment'>   Users can reserve new values after PA_LAST for their own types</em>
+<a id='L145' name='L145'></a> 145 <em class='comment'>   using 'register_printf_type'.  */</em>
+<a id='L146' name='L146'></a> 146 
+<a id='L147' name='L147'></a> 147 <strong class='reserved'>enum</strong>
+<a id='L148' name='L148'></a> 148 <em class='brace'>{</em>               <em class='comment'>/* C type: */</em>
+<a id='L149' name='L149'></a> 149   <a href='../Y/1395.html' title='Multiple used in 15 places.'>PA_INT</a>,           <em class='comment'>/* int */</em>
+<a id='L150' name='L150'></a> 150   <a href='../Y/1392.html' title='Multiple used in 4 places.'>PA_CHAR</a>,          <em class='comment'>/* int, cast to char */</em>
+<a id='L151' name='L151'></a> 151   <a href='../Y/1399.html' title='Multiple used in 3 places.'>PA_WCHAR</a>,         <em class='comment'>/* wide char */</em>
+<a id='L152' name='L152'></a> 152   <a href='../Y/1398.html' title='Multiple used in 3 places.'>PA_STRING</a>,            <em class='comment'>/* const char *, a '\0'-terminated string */</em>
+<a id='L153' name='L153'></a> 153   <a href='../Y/1400.html' title='Multiple used in 3 places.'>PA_WSTRING</a>,           <em class='comment'>/* const wchar_t *, wide character string */</em>
+<a id='L154' name='L154'></a> 154   <a href='../Y/1397.html' title='Multiple used in 4 places.'>PA_POINTER</a>,           <em class='comment'>/* void * */</em>
+<a id='L155' name='L155'></a> 155   <a href='../Y/1394.html' title='Multiple used in 2 places.'>PA_FLOAT</a>,         <em class='comment'>/* float */</em>
+<a id='L156' name='L156'></a> 156   <a href='../Y/1393.html' title='Multiple used in 7 places.'>PA_DOUBLE</a>,            <em class='comment'>/* double */</em>
+<a id='L157' name='L157'></a> 157   <a href='../Y/1396.html' title='Multiple used in 7 places.'>PA_LAST</a>
+<a id='L158' name='L158'></a> 158 <em class='brace'>}</em>;
+<a id='L159' name='L159'></a> 159 
+<a id='L160' name='L160'></a> 160 <em class='comment'>/* Flag bits that can be set in a type returned by `parse_printf_format'.  */</em>
+<a id='L161' name='L161'></a> 161 <em class='sharp'>#define</em> PA_FLAG_MASK        0xff00
+<a id='L162' name='L162'></a> 162 <em class='sharp'>#define</em> <a href='../R/5946.html' title='Multiple referred from 3 places.'>PA_FLAG_LONG_LONG</a>   (1 &lt;&lt; 8)
+<a id='L163' name='L163'></a> 163 <em class='sharp'>#define</em> <a href='../R/5945.html' title='Multiple referred from 4 places.'>PA_FLAG_LONG_DOUBLE</a> <a href='../S/6149.html#L162' title='Defined at 162 in stdio-common/printf.h.'>PA_FLAG_LONG_LONG</a>
+<a id='L164' name='L164'></a> 164 <em class='sharp'>#define</em> <a href='../R/5944.html' title='Multiple referred from 3 places.'>PA_FLAG_LONG</a>        (1 &lt;&lt; 9)
+<a id='L165' name='L165'></a> 165 <em class='sharp'>#define</em> <a href='../R/5948.html' title='Multiple referred from 2 places.'>PA_FLAG_SHORT</a>       (1 &lt;&lt; 10)
+<a id='L166' name='L166'></a> 166 <em class='sharp'>#define</em> <a href='../R/5947.html' title='Multiple referred from 2 places.'>PA_FLAG_PTR</a>     (1 &lt;&lt; 11)
+<a id='L167' name='L167'></a> 167 
+<a id='L168' name='L168'></a> 168 
+<a id='L169' name='L169'></a> 169 
+<a id='L170' name='L170'></a> 170 <em class='comment'>/* Function which can be registered as `printf'-handlers.  */</em>
+<a id='L171' name='L171'></a> 171 
+<a id='L172' name='L172'></a> 172 <em class='comment'>/* Print floating point value using using abbreviations for the orders</em>
+<a id='L173' name='L173'></a> 173 <em class='comment'>   of magnitude used for numbers ('k' for kilo, 'm' for mega etc).  If</em>
+<a id='L174' name='L174'></a> 174 <em class='comment'>   the format specifier is a uppercase character powers of 1000 are</em>
+<a id='L175' name='L175'></a> 175 <em class='comment'>   used.  Otherwise powers of 1024.  */</em>
+<a id='L176' name='L176'></a> 176 <strong class='reserved'>extern</strong> <strong class='reserved'>int</strong> <a href='../S/8793.html#L5' title='Defined at 5 in sysdeps/ieee754/ldbl-opt/nldbl-printf_size.c.'>printf_size</a> (<a href='../S/5474.html#L7' title='Defined at 7 in libio/bits/types/FILE.h.'>FILE</a> *<strong class='reserved'>__restrict</strong> <a href='../Y/4552.html' title='Multiple used in 72 places.'>__fp</a>,
+<a id='L177' name='L177'></a> 177             <strong class='reserved'>const</strong> <strong class='reserved'>struct</strong> <a href='../S/6149.html#L34' title='Defined at 34 in stdio-common/printf.h.'>printf_info</a> *<a href='../Y/5141.html' title='Multiple used in 17 places.'>__info</a>,
+<a id='L178' name='L178'></a> 178             <strong class='reserved'>const</strong> <strong class='reserved'>void</strong> *<strong class='reserved'>const</strong> *<strong class='reserved'>__restrict</strong> <a href='../Y/3552.html' title='Multiple used in 6 places.'>__args</a>) <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a>;
+<a id='L179' name='L179'></a> 179 
+<a id='L180' name='L180'></a> 180 <em class='comment'>/* This is the appropriate argument information function for `printf_size'.  */</em>
+<a id='L181' name='L181'></a> 181 <strong class='reserved'>extern</strong> <strong class='reserved'>int</strong> <a href='../S/6128.html#L221' title='Defined at 221 in stdio-common/printf_size.c.'>printf_size_info</a> (<strong class='reserved'>const</strong> <strong class='reserved'>struct</strong> <a href='../S/6149.html#L34' title='Defined at 34 in stdio-common/printf.h.'>printf_info</a> *<strong class='reserved'>__restrict</strong>
+<a id='L182' name='L182'></a> 182                  <a href='../Y/5141.html' title='Multiple used in 17 places.'>__info</a>, <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/6016.html' title='Multiple used in 299 places.'>__n</a>, <strong class='reserved'>int</strong> *<strong class='reserved'>__restrict</strong> <a href='../Y/3555.html' title='Multiple used in 4 places.'>__argtypes</a>)
+<a id='L183' name='L183'></a> 183      <a href='../D/22813.html' title='Multiple defined in 5 places.'>__THROW</a>;
+<a id='L184' name='L184'></a> 184 
+<a id='L185' name='L185'></a> 185 <em class='sharp'>#include</em> &lt;<a href='../I/120.html'>bits/floatn.h</a>&gt;
+<a id='L186' name='L186'></a> 186 <em class='sharp'>#if</em> <strong class='reserved'>defined</strong> <a href='../S/3878.html#L594' title='Defined at 594 in misc/sys/cdefs.h.'>__LDBL_COMPAT</a> || <a href='../D/21769.html' title='Multiple defined in 8 places.'>__LDOUBLE_REDIRECTS_TO_FLOAT128_ABI</a> == 1
+<a id='L187' name='L187'></a> 187 <em class='sharp'># include</em> &lt;<a href='../I/1767.html'>bits/printf-ldbl.h</a>&gt;
+<a id='L188' name='L188'></a> 188 <em class='sharp'>#endif</em>
+<a id='L189' name='L189'></a> 189 
+<a id='L190' name='L190'></a> 190 <a href='../D/21523.html' title='Multiple defined in 2 places.'>__END_DECLS</a>
+<a id='L191' name='L191'></a> 191 
+<a id='L192' name='L192'></a> 192 <em class='sharp'>#endif</em> <em class='comment'>/* printf.h  */</em>
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;][^]<a href='#L108'>[v]</a><a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

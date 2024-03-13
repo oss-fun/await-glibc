@@ -1,0 +1,370 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>locale/programs/ld-numeric.c</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18907.html'>locale</a>/<a href='../files/18910.html'>programs</a>/ld-numeric.c</h2>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L47'>[^]</a><a href='#L149'>[v]</a>[top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<h2 class='header'>DEFINITIONS</h2>
+This source file includes following definitions.
+<ol>
+<li><a href='#L47' title='Defined at 47.'>numeric_startup</a></li>
+<li><a href='#L66' title='Defined at 66.'>numeric_finish</a></li>
+<li><a href='#L130' title='Defined at 130.'>numeric_output</a></li>
+<li><a href='#L149' title='Defined at 149.'>numeric_read</a></li>
+</ol>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* Copyright (C) 1995-2022 Free Software Foundation, Inc.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'></em>
+<a id='L4' name='L4'></a>   4 <em class='comment'>   This program is free software; you can redistribute it and/or modify</em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   it under the terms of the GNU General Public License as published</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   by the Free Software Foundation; version 2 of the License, or</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   (at your option) any later version.</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'></em>
+<a id='L9' name='L9'></a>   9 <em class='comment'>   This program is distributed in the hope that it will be useful,</em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   GNU General Public License for more details.</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'></em>
+<a id='L14' name='L14'></a>  14 <em class='comment'>   You should have received a copy of the GNU General Public License</em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   along with this program; if not, see &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L16' name='L16'></a>  16 
+<a id='L17' name='L17'></a>  17 <em class='sharp'>#ifdef</em> <a href='../S/18012.html#L105' title='Defined at 105 in include/libc-symbols.h.'>HAVE_CONFIG_H</a>
+<a id='L18' name='L18'></a>  18 <em class='sharp'># include</em> &lt;<a href='../I/198.html'>config.h</a>&gt;
+<a id='L19' name='L19'></a>  19 <em class='sharp'>#endif</em>
+<a id='L20' name='L20'></a>  20 
+<a id='L21' name='L21'></a>  21 <em class='sharp'>#include</em> &lt;<a href='../I/1874.html'>langinfo.h</a>&gt;
+<a id='L22' name='L22'></a>  22 <em class='sharp'>#include</em> &lt;<a href='../I/1973.html'>string.h</a>&gt;
+<a id='L23' name='L23'></a>  23 <em class='sharp'>#include</em> &lt;<a href='../I/1969.html'>stdint.h</a>&gt;
+<a id='L24' name='L24'></a>  24 <em class='sharp'>#include</em> &lt;<a href='../I/2019.html'>sys/uio.h</a>&gt;
+<a id='L25' name='L25'></a>  25 
+<a id='L26' name='L26'></a>  26 <em class='sharp'>#include</em> &lt;<a href='../I/23.html'>assert.h</a>&gt;
+<a id='L27' name='L27'></a>  27 
+<a id='L28' name='L28'></a>  28 <em class='sharp'>#include</em> "<a href='2261.html'>localedef.h</a>"
+<a id='L29' name='L29'></a>  29 <em class='sharp'>#include</em> "<a href='2245.html'>linereader.h</a>"
+<a id='L30' name='L30'></a>  30 <em class='sharp'>#include</em> "<a href='2281.html'>localeinfo.h</a>"
+<a id='L31' name='L31'></a>  31 <em class='sharp'>#include</em> "<a href='2260.html'>locfile.h</a>"
+<a id='L32' name='L32'></a>  32 
+<a id='L33' name='L33'></a>  33 
+<a id='L34' name='L34'></a>  34 <em class='comment'>/* The real definition of the struct for the LC_NUMERIC locale.  */</em>
+<a id='L35' name='L35'></a>  35 <strong class='reserved'>struct</strong> <a href='../R/21454.html' title='Multiple referred from 7 places.'>locale_numeric_t</a>
+<a id='L36' name='L36'></a>  36 <em class='brace'>{</em>
+<a id='L37' name='L37'></a>  37   <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../Y/12562.html' title='Multiple used in 9 places.'>decimal_point</a>;
+<a id='L38' name='L38'></a>  38   <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../Y/27175.html' title='Multiple used in 32 places.'>thousands_sep</a>;
+<a id='L39' name='L39'></a>  39   <strong class='reserved'>char</strong> *<a href='../Y/15821.html' title='Multiple used in 110 places.'>grouping</a>;
+<a id='L40' name='L40'></a>  40   <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/15822.html' title='Multiple used in 4 places.'>grouping_len</a>;
+<a id='L41' name='L41'></a>  41   <a href='../S/223.html#L26' title='Defined at 26 in bits/stdint-uintn.h.'>uint32_t</a> <a href='../Y/12563.html' title='Multiple used in 4 places.'>decimal_point_wc</a>;
+<a id='L42' name='L42'></a>  42   <a href='../S/223.html#L26' title='Defined at 26 in bits/stdint-uintn.h.'>uint32_t</a> <a href='../Y/27177.html' title='Multiple used in 2 places.'>thousands_sep_wc</a>;
+<a id='L43' name='L43'></a>  43 <em class='brace'>}</em>;
+<a id='L44' name='L44'></a>  44 
+<a id='L45' name='L45'></a>  45 
+<a id='L46' name='L46'></a>  46 <strong class='reserved'>static</strong> <strong class='reserved'>void</strong>
+<a id='L47' name='L47'></a>  47 <a href='../R/22639.html' title='Multiple referred from 2 places.'>numeric_startup</a> (<strong class='reserved'>struct</strong> <a href='../S/2245.html#L60' title='Defined at 60 in locale/programs/linereader.h.'>linereader</a> *<a href='../S/13613.html#L27' title='Defined at 27 in sysdeps/aarch64/dl-trampoline.S.'>lr</a>, <strong class='reserved'>struct</strong> <a href='../S/2261.html#L81' title='Defined at 81 in locale/programs/localedef.h.'>localedef_t</a> *<a href='../S/307.html#L309' title='Defined at 309 in intl/l10nflist.c.'>locale</a>,
+<a id='L48' name='L48'></a>  48          <strong class='reserved'>int</strong> <a href='../Y/16609.html' title='Multiple used in 188 places.'>ignore_content</a>)
+<a id='L49' name='L49'></a>  49 <em class='brace'>{</em>
+<a id='L50' name='L50'></a>  50   <strong class='reserved'>if</strong> (!<a href='../Y/16609.html' title='Multiple used in 188 places.'>ignore_content</a>)
+<a id='L51' name='L51'></a>  51     <em class='brace'>{</em>
+<a id='L52' name='L52'></a>  52       <a href='../S/307.html#L309' title='Defined at 309 in intl/l10nflist.c.'>locale</a>-&gt;<a href='../Y/11337.html' title='Multiple used in 112 places.'>categories</a>[<a href='../S/2285.html#L36' title='Defined at 36 in locale/locale.h.'>LC_NUMERIC</a>].<a href='../Y/21376.html' title='Multiple used in 31 places.'>numeric</a> =
+<a id='L53' name='L53'></a>  53     (<strong class='reserved'>struct</strong> <a href='../S/2269.html#L35' title='Defined at 35 in locale/programs/ld-numeric.c.'>locale_numeric_t</a> *) <a href='../D/39422.html' title='Multiple defined in 2 places.'>xcalloc</a> (1,
+<a id='L54' name='L54'></a>  54                          <strong class='reserved'>sizeof</strong> (<strong class='reserved'>struct</strong> <a href='../S/2269.html#L35' title='Defined at 35 in locale/programs/ld-numeric.c.'>locale_numeric_t</a>));
+<a id='L55' name='L55'></a>  55     <em class='brace'>}</em>
+<a id='L56' name='L56'></a>  56 
+<a id='L57' name='L57'></a>  57   <strong class='reserved'>if</strong> (<a href='../S/13613.html#L27' title='Defined at 27 in sysdeps/aarch64/dl-trampoline.S.'>lr</a> != <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>)
+<a id='L58' name='L58'></a>  58     <em class='brace'>{</em>
+<a id='L59' name='L59'></a>  59       <a href='../S/13613.html#L27' title='Defined at 27 in sysdeps/aarch64/dl-trampoline.S.'>lr</a>-&gt;<a href='../Y/27754.html' title='Multiple used in 20 places.'>translate_strings</a> = 1;
+<a id='L60' name='L60'></a>  60       <a href='../S/13613.html#L27' title='Defined at 27 in sysdeps/aarch64/dl-trampoline.S.'>lr</a>-&gt;<a href='../Y/24017.html' title='Multiple used in 27 places.'>return_widestr</a> = 0;
+<a id='L61' name='L61'></a>  61     <em class='brace'>}</em>
+<a id='L62' name='L62'></a>  62 <em class='brace'>}</em>
+<a id='L63' name='L63'></a>  63 
+<a id='L64' name='L64'></a>  64 
+<a id='L65' name='L65'></a>  65 <strong class='reserved'>void</strong>
+<a id='L66' name='L66'></a>  66 <a href='../R/22636.html' title='Multiple referred from 2 places.'>numeric_finish</a> (<strong class='reserved'>struct</strong> <a href='../S/2261.html#L81' title='Defined at 81 in locale/programs/localedef.h.'>localedef_t</a> *<a href='../S/307.html#L309' title='Defined at 309 in intl/l10nflist.c.'>locale</a>, <strong class='reserved'>const</strong> <strong class='reserved'>struct</strong> <a href='../S/2252.html#L36' title='Defined at 36 in locale/programs/charmap.h.'>charmap_t</a> *<a href='../Y/11481.html' title='Multiple used in 472 places.'>charmap</a>)
+<a id='L67' name='L67'></a>  67 <em class='brace'>{</em>
+<a id='L68' name='L68'></a>  68   <strong class='reserved'>struct</strong> <a href='../S/2269.html#L35' title='Defined at 35 in locale/programs/ld-numeric.c.'>locale_numeric_t</a> *<a href='../Y/21376.html' title='Multiple used in 31 places.'>numeric</a> = <a href='../S/307.html#L309' title='Defined at 309 in intl/l10nflist.c.'>locale</a>-&gt;<a href='../Y/11337.html' title='Multiple used in 112 places.'>categories</a>[<a href='../S/2285.html#L36' title='Defined at 36 in locale/locale.h.'>LC_NUMERIC</a>].<a href='../Y/21376.html' title='Multiple used in 31 places.'>numeric</a>;
+<a id='L69' name='L69'></a>  69   <strong class='reserved'>int</strong> <a href='../Y/21113.html' title='Multiple used in 51 places.'>nothing</a> = 0;
+<a id='L70' name='L70'></a>  70 
+<a id='L71' name='L71'></a>  71   <em class='comment'>/* Now resolve copying and also handle completely missing definitions.  */</em>
+<a id='L72' name='L72'></a>  72   <strong class='reserved'>if</strong> (<a href='../Y/21376.html' title='Multiple used in 31 places.'>numeric</a> == <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>)
+<a id='L73' name='L73'></a>  73     <em class='brace'>{</em>
+<a id='L74' name='L74'></a>  74       <em class='comment'>/* First see whether we were supposed to copy.  If yes, find the</em>
+<a id='L75' name='L75'></a>  75 <em class='comment'>     actual definition.  */</em>
+<a id='L76' name='L76'></a>  76       <strong class='reserved'>if</strong> (<a href='../S/307.html#L309' title='Defined at 309 in intl/l10nflist.c.'>locale</a>-&gt;<a href='../Y/12010.html' title='Multiple used in 35 places.'>copy_name</a>[<a href='../S/2285.html#L36' title='Defined at 36 in locale/locale.h.'>LC_NUMERIC</a>] != <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>)
+<a id='L77' name='L77'></a>  77     <em class='brace'>{</em>
+<a id='L78' name='L78'></a>  78       <em class='comment'>/* Find the copying locale.  This has to happen transitively since</em>
+<a id='L79' name='L79'></a>  79 <em class='comment'>         the locale we are copying from might also copying another one.  */</em>
+<a id='L80' name='L80'></a>  80       <strong class='reserved'>struct</strong> <a href='../S/2261.html#L81' title='Defined at 81 in locale/programs/localedef.h.'>localedef_t</a> *<a href='../Y/15029.html' title='Multiple used in 605 places.'>from</a> = <a href='../S/307.html#L309' title='Defined at 309 in intl/l10nflist.c.'>locale</a>;
+<a id='L81' name='L81'></a>  81 
+<a id='L82' name='L82'></a>  82       <strong class='reserved'>do</strong>
+<a id='L83' name='L83'></a>  83         <a href='../Y/15029.html' title='Multiple used in 605 places.'>from</a> = <a href='../S/2244.html#L665' title='Defined at 665 in locale/programs/localedef.c.'>find_locale</a> (<a href='../S/2285.html#L36' title='Defined at 36 in locale/locale.h.'>LC_NUMERIC</a>, <a href='../Y/15029.html' title='Multiple used in 605 places.'>from</a>-&gt;<a href='../Y/12010.html' title='Multiple used in 35 places.'>copy_name</a>[<a href='../S/2285.html#L36' title='Defined at 36 in locale/locale.h.'>LC_NUMERIC</a>],
+<a id='L84' name='L84'></a>  84                 <a href='../Y/15029.html' title='Multiple used in 605 places.'>from</a>-&gt;<a href='../Y/23789.html' title='Multiple used in 101 places.'>repertoire_name</a>, <a href='../Y/11481.html' title='Multiple used in 472 places.'>charmap</a>);
+<a id='L85' name='L85'></a>  85       <strong class='reserved'>while</strong> (<a href='../Y/15029.html' title='Multiple used in 605 places.'>from</a>-&gt;<a href='../Y/11337.html' title='Multiple used in 112 places.'>categories</a>[<a href='../S/2285.html#L36' title='Defined at 36 in locale/locale.h.'>LC_NUMERIC</a>].<a href='../Y/21376.html' title='Multiple used in 31 places.'>numeric</a> == <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>
+<a id='L86' name='L86'></a>  86          &amp;&amp; <a href='../Y/15029.html' title='Multiple used in 605 places.'>from</a>-&gt;<a href='../Y/12010.html' title='Multiple used in 35 places.'>copy_name</a>[<a href='../S/2285.html#L36' title='Defined at 36 in locale/locale.h.'>LC_NUMERIC</a>] != <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>);
+<a id='L87' name='L87'></a>  87 
+<a id='L88' name='L88'></a>  88       <a href='../Y/21376.html' title='Multiple used in 31 places.'>numeric</a> = <a href='../S/307.html#L309' title='Defined at 309 in intl/l10nflist.c.'>locale</a>-&gt;<a href='../Y/11337.html' title='Multiple used in 112 places.'>categories</a>[<a href='../S/2285.html#L36' title='Defined at 36 in locale/locale.h.'>LC_NUMERIC</a>].<a href='../Y/21376.html' title='Multiple used in 31 places.'>numeric</a>
+<a id='L89' name='L89'></a>  89         = <a href='../Y/15029.html' title='Multiple used in 605 places.'>from</a>-&gt;<a href='../Y/11337.html' title='Multiple used in 112 places.'>categories</a>[<a href='../S/2285.html#L36' title='Defined at 36 in locale/locale.h.'>LC_NUMERIC</a>].<a href='../Y/21376.html' title='Multiple used in 31 places.'>numeric</a>;
+<a id='L90' name='L90'></a>  90     <em class='brace'>}</em>
+<a id='L91' name='L91'></a>  91 
+<a id='L92' name='L92'></a>  92       <em class='comment'>/* If there is still no definition issue an warning and create an</em>
+<a id='L93' name='L93'></a>  93 <em class='comment'>     empty one.  */</em>
+<a id='L94' name='L94'></a>  94       <strong class='reserved'>if</strong> (<a href='../Y/21376.html' title='Multiple used in 31 places.'>numeric</a> == <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>)
+<a id='L95' name='L95'></a>  95     <em class='brace'>{</em>
+<a id='L96' name='L96'></a>  96       <a href='../S/2272.html#L133' title='Defined at 133 in locale/programs/record-status.c.'>record_warning</a> (<a href='../D/17731.html' title='Multiple defined in 12 places.'>_</a>("\
+<a id='L97' name='L97'></a>  97 No definition for %s category found"), "LC_NUMERIC");
+<a id='L98' name='L98'></a>  98       <a href='../S/2269.html#L47' title='Defined at 47 in locale/programs/ld-numeric.c.'>numeric_startup</a> (<a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>, <a href='../S/307.html#L309' title='Defined at 309 in intl/l10nflist.c.'>locale</a>, 0);
+<a id='L99' name='L99'></a>  99       <a href='../Y/21376.html' title='Multiple used in 31 places.'>numeric</a> = <a href='../S/307.html#L309' title='Defined at 309 in intl/l10nflist.c.'>locale</a>-&gt;<a href='../Y/11337.html' title='Multiple used in 112 places.'>categories</a>[<a href='../S/2285.html#L36' title='Defined at 36 in locale/locale.h.'>LC_NUMERIC</a>].<a href='../Y/21376.html' title='Multiple used in 31 places.'>numeric</a>;
+<a id='L100' name='L100'></a> 100       <a href='../Y/21113.html' title='Multiple used in 51 places.'>nothing</a> = 1;
+<a id='L101' name='L101'></a> 101     <em class='brace'>}</em>
+<a id='L102' name='L102'></a> 102     <em class='brace'>}</em>
+<a id='L103' name='L103'></a> 103 
+<a id='L104' name='L104'></a> 104   <em class='comment'>/* The decimal point must not be empty.  This is not said explicitly</em>
+<a id='L105' name='L105'></a> 105 <em class='comment'>     in POSIX but ANSI C (ISO/IEC 9899) says in 4.4.2.1 it has to be</em>
+<a id='L106' name='L106'></a> 106 <em class='comment'>     != "".  */</em>
+<a id='L107' name='L107'></a> 107   <strong class='reserved'>if</strong> (<a href='../Y/21376.html' title='Multiple used in 31 places.'>numeric</a>-&gt;<a href='../Y/12562.html' title='Multiple used in 9 places.'>decimal_point</a> == <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>)
+<a id='L108' name='L108'></a> 108     <em class='brace'>{</em>
+<a id='L109' name='L109'></a> 109       <strong class='reserved'>if</strong> (! <a href='../Y/21113.html' title='Multiple used in 51 places.'>nothing</a>)
+<a id='L110' name='L110'></a> 110     <a href='../S/2272.html#L168' title='Defined at 168 in locale/programs/record-status.c.'>record_error</a> (0, 0, <a href='../D/17731.html' title='Multiple defined in 12 places.'>_</a>("%s: field `%s' not defined"),
+<a id='L111' name='L111'></a> 111               "LC_NUMERIC", "decimal_point");
+<a id='L112' name='L112'></a> 112       <a href='../Y/21376.html' title='Multiple used in 31 places.'>numeric</a>-&gt;<a href='../Y/12562.html' title='Multiple used in 9 places.'>decimal_point</a> = ".";
+<a id='L113' name='L113'></a> 113     <em class='brace'>}</em>
+<a id='L114' name='L114'></a> 114   <strong class='reserved'>else</strong> <strong class='reserved'>if</strong> (<a href='../Y/21376.html' title='Multiple used in 31 places.'>numeric</a>-&gt;<a href='../Y/12562.html' title='Multiple used in 9 places.'>decimal_point</a>[0] == '\0' &amp;&amp; ! <a href='../Y/21113.html' title='Multiple used in 51 places.'>nothing</a>)
+<a id='L115' name='L115'></a> 115     <em class='brace'>{</em>
+<a id='L116' name='L116'></a> 116       <a href='../S/2272.html#L168' title='Defined at 168 in locale/programs/record-status.c.'>record_error</a> (0, 0, <a href='../D/17731.html' title='Multiple defined in 12 places.'>_</a>("\
+<a id='L117' name='L117'></a> 117 %s: value for field `%s' must not be an empty string"),
+<a id='L118' name='L118'></a> 118             "LC_NUMERIC", "decimal_point");
+<a id='L119' name='L119'></a> 119     <em class='brace'>}</em>
+<a id='L120' name='L120'></a> 120   <strong class='reserved'>if</strong> (<a href='../Y/21376.html' title='Multiple used in 31 places.'>numeric</a>-&gt;<a href='../Y/12563.html' title='Multiple used in 4 places.'>decimal_point_wc</a> == L'\0')
+<a id='L121' name='L121'></a> 121     <a href='../Y/21376.html' title='Multiple used in 31 places.'>numeric</a>-&gt;<a href='../Y/12563.html' title='Multiple used in 4 places.'>decimal_point_wc</a> = L'.';
+<a id='L122' name='L122'></a> 122 
+<a id='L123' name='L123'></a> 123   <strong class='reserved'>if</strong> (<a href='../Y/21376.html' title='Multiple used in 31 places.'>numeric</a>-&gt;<a href='../Y/15822.html' title='Multiple used in 4 places.'>grouping_len</a> == 0 &amp;&amp; ! <a href='../Y/21113.html' title='Multiple used in 51 places.'>nothing</a>)
+<a id='L124' name='L124'></a> 124     <a href='../S/2272.html#L168' title='Defined at 168 in locale/programs/record-status.c.'>record_error</a> (0, 0, <a href='../D/17731.html' title='Multiple defined in 12 places.'>_</a>("%s: field `%s' not defined"),
+<a id='L125' name='L125'></a> 125           "LC_NUMERIC", "grouping");
+<a id='L126' name='L126'></a> 126 <em class='brace'>}</em>
+<a id='L127' name='L127'></a> 127 
+<a id='L128' name='L128'></a> 128 
+<a id='L129' name='L129'></a> 129 <strong class='reserved'>void</strong>
+<a id='L130' name='L130'></a> 130 <a href='../R/22637.html' title='Multiple referred from 2 places.'>numeric_output</a> (<strong class='reserved'>struct</strong> <a href='../S/2261.html#L81' title='Defined at 81 in locale/programs/localedef.h.'>localedef_t</a> *<a href='../S/307.html#L309' title='Defined at 309 in intl/l10nflist.c.'>locale</a>, <strong class='reserved'>const</strong> <strong class='reserved'>struct</strong> <a href='../S/2252.html#L36' title='Defined at 36 in locale/programs/charmap.h.'>charmap_t</a> *<a href='../Y/11481.html' title='Multiple used in 472 places.'>charmap</a>,
+<a id='L131' name='L131'></a> 131         <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../Y/22008.html' title='Multiple used in 60 places.'>output_path</a>)
+<a id='L132' name='L132'></a> 132 <em class='brace'>{</em>
+<a id='L133' name='L133'></a> 133   <strong class='reserved'>struct</strong> <a href='../S/2269.html#L35' title='Defined at 35 in locale/programs/ld-numeric.c.'>locale_numeric_t</a> *<a href='../Y/21376.html' title='Multiple used in 31 places.'>numeric</a> = <a href='../S/307.html#L309' title='Defined at 309 in intl/l10nflist.c.'>locale</a>-&gt;<a href='../Y/11337.html' title='Multiple used in 112 places.'>categories</a>[<a href='../S/2285.html#L36' title='Defined at 36 in locale/locale.h.'>LC_NUMERIC</a>].<a href='../Y/21376.html' title='Multiple used in 31 places.'>numeric</a>;
+<a id='L134' name='L134'></a> 134   <strong class='reserved'>struct</strong> <a href='../S/2260.html#L30' title='Defined at 30 in locale/programs/locfile.h.'>locale_file</a> <a href='../Y/14544.html' title='Multiple used in 1295 places.'>file</a>;
+<a id='L135' name='L135'></a> 135 
+<a id='L136' name='L136'></a> 136   <a href='../S/2270.html#L568' title='Defined at 568 in locale/programs/locfile.c.'>init_locale_data</a> (&amp;<a href='../Y/14544.html' title='Multiple used in 1295 places.'>file</a>, <a href='../S/2199.html#L38' title='Defined at 38 in locale/langinfo.h.'>_NL_ITEM_INDEX</a> (<a href='../S/2199.html#L567' title='Defined at 567 in locale/langinfo.h.'>_NL_NUM_LC_NUMERIC</a>));
+<a id='L137' name='L137'></a> 137   <a href='../S/2270.html#L613' title='Defined at 613 in locale/programs/locfile.c.'>add_locale_string</a> (&amp;<a href='../Y/14544.html' title='Multiple used in 1295 places.'>file</a>, <a href='../Y/21376.html' title='Multiple used in 31 places.'>numeric</a>-&gt;<a href='../Y/12562.html' title='Multiple used in 9 places.'>decimal_point</a> ?: "");
+<a id='L138' name='L138'></a> 138   <a href='../S/2270.html#L613' title='Defined at 613 in locale/programs/locfile.c.'>add_locale_string</a> (&amp;<a href='../Y/14544.html' title='Multiple used in 1295 places.'>file</a>, <a href='../Y/21376.html' title='Multiple used in 31 places.'>numeric</a>-&gt;<a href='../Y/27175.html' title='Multiple used in 32 places.'>thousands_sep</a> ?: "");
+<a id='L139' name='L139'></a> 139   <a href='../S/2270.html#L595' title='Defined at 595 in locale/programs/locfile.c.'>add_locale_raw_data</a> (&amp;<a href='../Y/14544.html' title='Multiple used in 1295 places.'>file</a>, <a href='../Y/21376.html' title='Multiple used in 31 places.'>numeric</a>-&gt;<a href='../Y/15821.html' title='Multiple used in 110 places.'>grouping</a>, <a href='../Y/21376.html' title='Multiple used in 31 places.'>numeric</a>-&gt;<a href='../Y/15822.html' title='Multiple used in 4 places.'>grouping_len</a>);
+<a id='L140' name='L140'></a> 140   <a href='../S/2270.html#L628' title='Defined at 628 in locale/programs/locfile.c.'>add_locale_uint32</a> (&amp;<a href='../Y/14544.html' title='Multiple used in 1295 places.'>file</a>, <a href='../Y/21376.html' title='Multiple used in 31 places.'>numeric</a>-&gt;<a href='../Y/12563.html' title='Multiple used in 4 places.'>decimal_point_wc</a>);
+<a id='L141' name='L141'></a> 141   <a href='../S/2270.html#L628' title='Defined at 628 in locale/programs/locfile.c.'>add_locale_uint32</a> (&amp;<a href='../Y/14544.html' title='Multiple used in 1295 places.'>file</a>, <a href='../Y/21376.html' title='Multiple used in 31 places.'>numeric</a>-&gt;<a href='../Y/27177.html' title='Multiple used in 2 places.'>thousands_sep_wc</a>);
+<a id='L142' name='L142'></a> 142   <a href='../S/2270.html#L613' title='Defined at 613 in locale/programs/locfile.c.'>add_locale_string</a> (&amp;<a href='../Y/14544.html' title='Multiple used in 1295 places.'>file</a>, <a href='../Y/11481.html' title='Multiple used in 472 places.'>charmap</a>-&gt;<a href='../Y/11810.html' title='Multiple used in 18 places.'>code_set_name</a>);
+<a id='L143' name='L143'></a> 143   <a href='../S/2270.html#L698' title='Defined at 698 in locale/programs/locfile.c.'>write_locale_data</a> (<a href='../Y/22008.html' title='Multiple used in 60 places.'>output_path</a>, <a href='../S/2285.html#L36' title='Defined at 36 in locale/locale.h.'>LC_NUMERIC</a>, "LC_NUMERIC", &amp;<a href='../Y/14544.html' title='Multiple used in 1295 places.'>file</a>);
+<a id='L144' name='L144'></a> 144 <em class='brace'>}</em>
+<a id='L145' name='L145'></a> 145 
+<a id='L146' name='L146'></a> 146 
+<a id='L147' name='L147'></a> 147 <em class='comment'>/* The parser for the LC_NUMERIC section of the locale definition.  */</em>
+<a id='L148' name='L148'></a> 148 <strong class='reserved'>void</strong>
+<a id='L149' name='L149'></a> 149 <a href='../R/22638.html' title='Multiple referred from 2 places.'>numeric_read</a> (<strong class='reserved'>struct</strong> <a href='../S/2245.html#L60' title='Defined at 60 in locale/programs/linereader.h.'>linereader</a> *<a href='../Y/17927.html' title='Multiple used in 616 places.'>ldfile</a>, <strong class='reserved'>struct</strong> <a href='../S/2261.html#L81' title='Defined at 81 in locale/programs/localedef.h.'>localedef_t</a> *<a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a>,
+<a id='L150' name='L150'></a> 150           <strong class='reserved'>const</strong> <strong class='reserved'>struct</strong> <a href='../S/2252.html#L36' title='Defined at 36 in locale/programs/charmap.h.'>charmap_t</a> *<a href='../Y/11481.html' title='Multiple used in 472 places.'>charmap</a>, <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../Y/23789.html' title='Multiple used in 101 places.'>repertoire_name</a>,
+<a id='L151' name='L151'></a> 151           <strong class='reserved'>int</strong> <a href='../Y/16609.html' title='Multiple used in 188 places.'>ignore_content</a>)
+<a id='L152' name='L152'></a> 152 <em class='brace'>{</em>
+<a id='L153' name='L153'></a> 153   <strong class='reserved'>struct</strong> <a href='../S/2256.html#L26' title='Defined at 26 in locale/programs/repertoire.h.'>repertoire_t</a> *<a href='../Y/23787.html' title='Multiple used in 146 places.'>repertoire</a> = <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>;
+<a id='L154' name='L154'></a> 154   <strong class='reserved'>struct</strong> <a href='../S/2269.html#L35' title='Defined at 35 in locale/programs/ld-numeric.c.'>locale_numeric_t</a> *<a href='../Y/21376.html' title='Multiple used in 31 places.'>numeric</a>;
+<a id='L155' name='L155'></a> 155   <strong class='reserved'>struct</strong> <a href='../S/2245.html#L35' title='Defined at 35 in locale/programs/linereader.h.'>token</a> *<a href='../Y/21123.html' title='Multiple used in 635 places.'>now</a>;
+<a id='L156' name='L156'></a> 156   <strong class='reserved'>enum</strong> <a href='../S/2259.html#L20' title='Defined at 20 in locale/programs/locfile-token.h.'>token_t</a> <a href='../Y/21129.html' title='Multiple used in 229 places.'>nowtok</a>;
+<a id='L157' name='L157'></a> 157 
+<a id='L158' name='L158'></a> 158   <em class='comment'>/* Get the repertoire we have to use.  */</em>
+<a id='L159' name='L159'></a> 159   <strong class='reserved'>if</strong> (<a href='../Y/23789.html' title='Multiple used in 101 places.'>repertoire_name</a> != <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>)
+<a id='L160' name='L160'></a> 160     <a href='../Y/23787.html' title='Multiple used in 146 places.'>repertoire</a> = <a href='../S/2277.html#L55' title='Defined at 55 in locale/programs/repertoire.c.'>repertoire_read</a> (<a href='../Y/23789.html' title='Multiple used in 101 places.'>repertoire_name</a>);
+<a id='L161' name='L161'></a> 161 
+<a id='L162' name='L162'></a> 162   <em class='comment'>/* The rest of the line containing `LC_NUMERIC' must be free.  */</em>
+<a id='L163' name='L163'></a> 163   <a href='../S/2254.html#L113' title='Defined at 113 in locale/programs/linereader.c.'>lr_ignore_rest</a> (<a href='../Y/17927.html' title='Multiple used in 616 places.'>ldfile</a>, 1);
+<a id='L164' name='L164'></a> 164 
+<a id='L165' name='L165'></a> 165 
+<a id='L166' name='L166'></a> 166   <strong class='reserved'>do</strong>
+<a id='L167' name='L167'></a> 167     <em class='brace'>{</em>
+<a id='L168' name='L168'></a> 168       <a href='../Y/21123.html' title='Multiple used in 635 places.'>now</a> = <a href='../S/2254.html#L191' title='Defined at 191 in locale/programs/linereader.c.'>lr_token</a> (<a href='../Y/17927.html' title='Multiple used in 616 places.'>ldfile</a>, <a href='../Y/11481.html' title='Multiple used in 472 places.'>charmap</a>, <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a>, <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>, <a href='../Y/28650.html' title='Multiple used in 255 places.'>verbose</a>);
+<a id='L169' name='L169'></a> 169       <a href='../Y/21129.html' title='Multiple used in 229 places.'>nowtok</a> = <a href='../Y/21123.html' title='Multiple used in 635 places.'>now</a>-&gt;<a href='../Y/27608.html' title='Multiple used in 312 places.'>tok</a>;
+<a id='L170' name='L170'></a> 170     <em class='brace'>}</em>
+<a id='L171' name='L171'></a> 171   <strong class='reserved'>while</strong> (<a href='../Y/21129.html' title='Multiple used in 229 places.'>nowtok</a> == <a href='../S/2259.html#L25' title='Defined at 25 in locale/programs/locfile-token.h.'>tok_eol</a>);
+<a id='L172' name='L172'></a> 172 
+<a id='L173' name='L173'></a> 173   <em class='comment'>/* If we see `copy' now we are almost done.  */</em>
+<a id='L174' name='L174'></a> 174   <strong class='reserved'>if</strong> (<a href='../Y/21129.html' title='Multiple used in 229 places.'>nowtok</a> == <a href='../S/2259.html#L67' title='Defined at 67 in locale/programs/locfile-token.h.'>tok_copy</a>)
+<a id='L175' name='L175'></a> 175     <em class='brace'>{</em>
+<a id='L176' name='L176'></a> 176       <a href='../S/2270.html#L955' title='Defined at 955 in locale/programs/locfile.c.'>handle_copy</a> (<a href='../Y/17927.html' title='Multiple used in 616 places.'>ldfile</a>, <a href='../Y/11481.html' title='Multiple used in 472 places.'>charmap</a>, <a href='../Y/23789.html' title='Multiple used in 101 places.'>repertoire_name</a>, <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a>, <a href='../S/2259.html#L163' title='Defined at 163 in locale/programs/locfile-token.h.'>tok_lc_numeric</a>,
+<a id='L177' name='L177'></a> 177            <a href='../S/2285.html#L36' title='Defined at 36 in locale/locale.h.'>LC_NUMERIC</a>, "LC_NUMERIC", <a href='../Y/16609.html' title='Multiple used in 188 places.'>ignore_content</a>);
+<a id='L178' name='L178'></a> 178       <strong class='reserved'>return</strong>;
+<a id='L179' name='L179'></a> 179     <em class='brace'>}</em>
+<a id='L180' name='L180'></a> 180 
+<a id='L181' name='L181'></a> 181   <em class='comment'>/* Prepare the data structures.  */</em>
+<a id='L182' name='L182'></a> 182   <a href='../S/2269.html#L47' title='Defined at 47 in locale/programs/ld-numeric.c.'>numeric_startup</a> (<a href='../Y/17927.html' title='Multiple used in 616 places.'>ldfile</a>, <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a>, <a href='../Y/16609.html' title='Multiple used in 188 places.'>ignore_content</a>);
+<a id='L183' name='L183'></a> 183   <a href='../Y/21376.html' title='Multiple used in 31 places.'>numeric</a> = <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a>-&gt;<a href='../Y/11337.html' title='Multiple used in 112 places.'>categories</a>[<a href='../S/2285.html#L36' title='Defined at 36 in locale/locale.h.'>LC_NUMERIC</a>].<a href='../Y/21376.html' title='Multiple used in 31 places.'>numeric</a>;
+<a id='L184' name='L184'></a> 184 
+<a id='L185' name='L185'></a> 185   <strong class='reserved'>while</strong> (1)
+<a id='L186' name='L186'></a> 186     <em class='brace'>{</em>
+<a id='L187' name='L187'></a> 187       <em class='comment'>/* Of course we don't proceed beyond the end of file.  */</em>
+<a id='L188' name='L188'></a> 188       <strong class='reserved'>if</strong> (<a href='../Y/21129.html' title='Multiple used in 229 places.'>nowtok</a> == <a href='../S/2259.html#L24' title='Defined at 24 in locale/programs/locfile-token.h.'>tok_eof</a>)
+<a id='L189' name='L189'></a> 189     <strong class='reserved'>break</strong>;
+<a id='L190' name='L190'></a> 190 
+<a id='L191' name='L191'></a> 191       <em class='comment'>/* Ingore empty lines.  */</em>
+<a id='L192' name='L192'></a> 192       <strong class='reserved'>if</strong> (<a href='../Y/21129.html' title='Multiple used in 229 places.'>nowtok</a> == <a href='../S/2259.html#L25' title='Defined at 25 in locale/programs/locfile-token.h.'>tok_eol</a>)
+<a id='L193' name='L193'></a> 193     <em class='brace'>{</em>
+<a id='L194' name='L194'></a> 194       <a href='../Y/21123.html' title='Multiple used in 635 places.'>now</a> = <a href='../S/2254.html#L191' title='Defined at 191 in locale/programs/linereader.c.'>lr_token</a> (<a href='../Y/17927.html' title='Multiple used in 616 places.'>ldfile</a>, <a href='../Y/11481.html' title='Multiple used in 472 places.'>charmap</a>, <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a>, <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>, <a href='../Y/28650.html' title='Multiple used in 255 places.'>verbose</a>);
+<a id='L195' name='L195'></a> 195       <a href='../Y/21129.html' title='Multiple used in 229 places.'>nowtok</a> = <a href='../Y/21123.html' title='Multiple used in 635 places.'>now</a>-&gt;<a href='../Y/27608.html' title='Multiple used in 312 places.'>tok</a>;
+<a id='L196' name='L196'></a> 196       <strong class='reserved'>continue</strong>;
+<a id='L197' name='L197'></a> 197     <em class='brace'>}</em>
+<a id='L198' name='L198'></a> 198 
+<a id='L199' name='L199'></a> 199       <strong class='reserved'>switch</strong> (<a href='../Y/21129.html' title='Multiple used in 229 places.'>nowtok</a>)
+<a id='L200' name='L200'></a> 200     <em class='brace'>{</em>
+<a id='L201' name='L201'></a> 201 <em class='sharp'>#define</em> <a href='../R/8194.html' title='Multiple referred from 56 places.'>STR_ELEM</a>(<a href='../Y/11327.html' title='Multiple used in 164 places.'>cat</a>) \
+<a id='L202' name='L202'></a> 202     <strong class='reserved'>case</strong> <a href='../Y/27609.html' title='Multiple used in 16 places.'>tok_</a>##<a href='../Y/11327.html' title='Multiple used in 164 places.'>cat</a>:                               \
+<a id='L203' name='L203'></a> 203       <em class='comment'>/* Ignore the rest of the line if we don't need the input of        \</em>
+<a id='L204' name='L204'></a> 204 <em class='comment'>         this line.  */</em>                           \
+<a id='L205' name='L205'></a> 205       <strong class='reserved'>if</strong> (<a href='../Y/16609.html' title='Multiple used in 188 places.'>ignore_content</a>)                             \
+<a id='L206' name='L206'></a> 206         <em class='brace'>{</em>                                     \
+<a id='L207' name='L207'></a> 207           <a href='../S/2254.html#L113' title='Defined at 113 in locale/programs/linereader.c.'>lr_ignore_rest</a> (<a href='../Y/17927.html' title='Multiple used in 616 places.'>ldfile</a>, 0);                     \
+<a id='L208' name='L208'></a> 208           <strong class='reserved'>break</strong>;                                  \
+<a id='L209' name='L209'></a> 209         <em class='brace'>}</em>                                     \
+<a id='L210' name='L210'></a> 210                                           \
+<a id='L211' name='L211'></a> 211       <a href='../Y/17927.html' title='Multiple used in 616 places.'>ldfile</a>-&gt;<a href='../Y/24017.html' title='Multiple used in 27 places.'>return_widestr</a> = 1;                         \
+<a id='L212' name='L212'></a> 212       <a href='../Y/21123.html' title='Multiple used in 635 places.'>now</a> = <a href='../S/2254.html#L191' title='Defined at 191 in locale/programs/linereader.c.'>lr_token</a> (<a href='../Y/17927.html' title='Multiple used in 616 places.'>ldfile</a>, <a href='../Y/11481.html' title='Multiple used in 472 places.'>charmap</a>, <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a>, <a href='../Y/23787.html' title='Multiple used in 146 places.'>repertoire</a>, <a href='../Y/28650.html' title='Multiple used in 255 places.'>verbose</a>);          \
+<a id='L213' name='L213'></a> 213       <strong class='reserved'>if</strong> (<a href='../Y/21123.html' title='Multiple used in 635 places.'>now</a>-&gt;<a href='../Y/27608.html' title='Multiple used in 312 places.'>tok</a> != <a href='../S/2259.html#L41' title='Defined at 41 in locale/programs/locfile-token.h.'>tok_string</a>)                         \
+<a id='L214' name='L214'></a> 214         <strong class='reserved'>goto</strong> <a href='../Y/13902.html' title='Multiple used in 92 places.'>err_label</a>;                           \
+<a id='L215' name='L215'></a> 215       <strong class='reserved'>if</strong> (<a href='../Y/21376.html' title='Multiple used in 31 places.'>numeric</a>-&gt;<a href='../Y/11327.html' title='Multiple used in 164 places.'>cat</a> != <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>)                       \
+<a id='L216' name='L216'></a> 216         <a href='../S/2245.html#L100' title='Defined at 100 in locale/programs/linereader.h.'>lr_error</a> (<a href='../Y/17927.html' title='Multiple used in 616 places.'>ldfile</a>, <a href='../D/17731.html' title='Multiple defined in 12 places.'>_</a>("\
+<a id='L217' name='L217'></a> 217 %s: field `%s' declared more than once"), "LC_NUMERIC", #<a href='../Y/11327.html' title='Multiple used in 164 places.'>cat</a>);            \
+<a id='L218' name='L218'></a> 218       <strong class='reserved'>else</strong> <strong class='reserved'>if</strong> (!<a href='../Y/16609.html' title='Multiple used in 188 places.'>ignore_content</a> &amp;&amp; <a href='../Y/21123.html' title='Multiple used in 635 places.'>now</a>-&gt;<a href='../D/38896.html' title='Multiple defined in 2 places.'>val</a>.<a href='../D/37053.html' title='Multiple defined in 6 places.'>str</a>.<a href='../Y/26099.html' title='Multiple used in 119 places.'>startmb</a> == <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>)       \
+<a id='L219' name='L219'></a> 219         <em class='brace'>{</em>                                     \
+<a id='L220' name='L220'></a> 220           <a href='../S/2245.html#L100' title='Defined at 100 in locale/programs/linereader.h.'>lr_error</a> (<a href='../Y/17927.html' title='Multiple used in 616 places.'>ldfile</a>, <a href='../D/17731.html' title='Multiple defined in 12 places.'>_</a>("\
+<a id='L221' name='L221'></a> 221 %s: unknown character in field `%s'"), "LC_NUMERIC", #<a href='../Y/11327.html' title='Multiple used in 164 places.'>cat</a>);           \
+<a id='L222' name='L222'></a> 222           <a href='../Y/21376.html' title='Multiple used in 31 places.'>numeric</a>-&gt;<a href='../Y/11327.html' title='Multiple used in 164 places.'>cat</a> = "";                          \
+<a id='L223' name='L223'></a> 223           <a href='../Y/21376.html' title='Multiple used in 31 places.'>numeric</a>-&gt;<a href='../Y/11327.html' title='Multiple used in 164 places.'>cat</a>##<a href='../Y/9630.html' title='Multiple used in 4 places.'>_wc</a> = L'\0';                      \
+<a id='L224' name='L224'></a> 224         <em class='brace'>}</em>                                     \
+<a id='L225' name='L225'></a> 225       <strong class='reserved'>else</strong> <strong class='reserved'>if</strong> (<a href='../Y/21123.html' title='Multiple used in 635 places.'>now</a>-&gt;<a href='../D/38896.html' title='Multiple defined in 2 places.'>val</a>.<a href='../D/37053.html' title='Multiple defined in 6 places.'>str</a>.<a href='../Y/26112.html' title='Multiple used in 18 places.'>startwc</a> != <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a> &amp;&amp; <a href='../Y/21123.html' title='Multiple used in 635 places.'>now</a>-&gt;<a href='../D/38896.html' title='Multiple defined in 2 places.'>val</a>.<a href='../D/37053.html' title='Multiple defined in 6 places.'>str</a>.<a href='../Y/18048.html' title='Multiple used in 5 places.'>lenwc</a> &gt; 2)    \
+<a id='L226' name='L226'></a> 226         <em class='brace'>{</em>                                     \
+<a id='L227' name='L227'></a> 227           <a href='../S/2245.html#L100' title='Defined at 100 in locale/programs/linereader.h.'>lr_error</a> (<a href='../Y/17927.html' title='Multiple used in 616 places.'>ldfile</a>, <a href='../D/17731.html' title='Multiple defined in 12 places.'>_</a>("\
+<a id='L228' name='L228'></a> 228 %s: value for field `%s' must be a single character"), "LC_NUMERIC", #<a href='../Y/11327.html' title='Multiple used in 164 places.'>cat</a>);   \
+<a id='L229' name='L229'></a> 229         <em class='brace'>}</em>                                     \
+<a id='L230' name='L230'></a> 230       <strong class='reserved'>else</strong> <strong class='reserved'>if</strong> (!<a href='../Y/16609.html' title='Multiple used in 188 places.'>ignore_content</a>)                       \
+<a id='L231' name='L231'></a> 231         <em class='brace'>{</em>                                     \
+<a id='L232' name='L232'></a> 232           <a href='../Y/21376.html' title='Multiple used in 31 places.'>numeric</a>-&gt;<a href='../Y/11327.html' title='Multiple used in 164 places.'>cat</a> = <a href='../Y/21123.html' title='Multiple used in 635 places.'>now</a>-&gt;<a href='../D/38896.html' title='Multiple defined in 2 places.'>val</a>.<a href='../D/37053.html' title='Multiple defined in 6 places.'>str</a>.<a href='../Y/26099.html' title='Multiple used in 119 places.'>startmb</a>;                \
+<a id='L233' name='L233'></a> 233                                           \
+<a id='L234' name='L234'></a> 234           <strong class='reserved'>if</strong> (<a href='../Y/21123.html' title='Multiple used in 635 places.'>now</a>-&gt;<a href='../D/38896.html' title='Multiple defined in 2 places.'>val</a>.<a href='../D/37053.html' title='Multiple defined in 6 places.'>str</a>.<a href='../Y/26112.html' title='Multiple used in 18 places.'>startwc</a> != <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>)                   \
+<a id='L235' name='L235'></a> 235         <a href='../Y/21376.html' title='Multiple used in 31 places.'>numeric</a>-&gt;<a href='../Y/11327.html' title='Multiple used in 164 places.'>cat</a>##<a href='../Y/9630.html' title='Multiple used in 4 places.'>_wc</a> = *<a href='../Y/21123.html' title='Multiple used in 635 places.'>now</a>-&gt;<a href='../D/38896.html' title='Multiple defined in 2 places.'>val</a>.<a href='../D/37053.html' title='Multiple defined in 6 places.'>str</a>.<a href='../Y/26112.html' title='Multiple used in 18 places.'>startwc</a>;            \
+<a id='L236' name='L236'></a> 236         <em class='brace'>}</em>                                     \
+<a id='L237' name='L237'></a> 237       <a href='../Y/17927.html' title='Multiple used in 616 places.'>ldfile</a>-&gt;<a href='../Y/24017.html' title='Multiple used in 27 places.'>return_widestr</a> = 0;                         \
+<a id='L238' name='L238'></a> 238       <strong class='reserved'>break</strong>
+<a id='L239' name='L239'></a> 239 
+<a id='L240' name='L240'></a> 240       <a href='../D/14992.html' title='Multiple defined in 8 places.'>STR_ELEM</a> (<a href='../Y/12562.html' title='Multiple used in 9 places.'>decimal_point</a>);
+<a id='L241' name='L241'></a> 241       <a href='../D/14992.html' title='Multiple defined in 8 places.'>STR_ELEM</a> (<a href='../Y/27175.html' title='Multiple used in 32 places.'>thousands_sep</a>);
+<a id='L242' name='L242'></a> 242 
+<a id='L243' name='L243'></a> 243     <strong class='reserved'>case</strong> <a href='../S/2259.html#L166' title='Defined at 166 in locale/programs/locfile-token.h.'>tok_grouping</a>:
+<a id='L244' name='L244'></a> 244       <em class='comment'>/* Ignore the rest of the line if we don't need the input of</em>
+<a id='L245' name='L245'></a> 245 <em class='comment'>         this line.  */</em>
+<a id='L246' name='L246'></a> 246       <strong class='reserved'>if</strong> (<a href='../Y/16609.html' title='Multiple used in 188 places.'>ignore_content</a>)
+<a id='L247' name='L247'></a> 247         <em class='brace'>{</em>
+<a id='L248' name='L248'></a> 248           <a href='../S/2254.html#L113' title='Defined at 113 in locale/programs/linereader.c.'>lr_ignore_rest</a> (<a href='../Y/17927.html' title='Multiple used in 616 places.'>ldfile</a>, 0);
+<a id='L249' name='L249'></a> 249           <strong class='reserved'>break</strong>;
+<a id='L250' name='L250'></a> 250         <em class='brace'>}</em>
+<a id='L251' name='L251'></a> 251 
+<a id='L252' name='L252'></a> 252       <a href='../Y/21123.html' title='Multiple used in 635 places.'>now</a> = <a href='../S/2254.html#L191' title='Defined at 191 in locale/programs/linereader.c.'>lr_token</a> (<a href='../Y/17927.html' title='Multiple used in 616 places.'>ldfile</a>, <a href='../Y/11481.html' title='Multiple used in 472 places.'>charmap</a>, <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a>, <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>, <a href='../Y/28650.html' title='Multiple used in 255 places.'>verbose</a>);
+<a id='L253' name='L253'></a> 253       <strong class='reserved'>if</strong> (<a href='../Y/21123.html' title='Multiple used in 635 places.'>now</a>-&gt;<a href='../Y/27608.html' title='Multiple used in 312 places.'>tok</a> != <a href='../S/2259.html#L40' title='Defined at 40 in locale/programs/locfile-token.h.'>tok_minus1</a> &amp;&amp; <a href='../Y/21123.html' title='Multiple used in 635 places.'>now</a>-&gt;<a href='../Y/27608.html' title='Multiple used in 312 places.'>tok</a> != <a href='../S/2259.html#L39' title='Defined at 39 in locale/programs/locfile-token.h.'>tok_number</a>)
+<a id='L254' name='L254'></a> 254         <strong class='reserved'>goto</strong> <a href='../Y/13902.html' title='Multiple used in 92 places.'>err_label</a>;
+<a id='L255' name='L255'></a> 255       <strong class='reserved'>else</strong>
+<a id='L256' name='L256'></a> 256         <em class='brace'>{</em>
+<a id='L257' name='L257'></a> 257           <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/9862.html' title='Multiple used in 218 places.'>act</a> = 0;
+<a id='L258' name='L258'></a> 258           <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../S/9052.html#L32' title='Defined at 32 in sysdeps/ieee754/dbl-64/mydefs.h.'>max</a> = 10;
+<a id='L259' name='L259'></a> 259           <strong class='reserved'>char</strong> *<a href='../Y/15821.html' title='Multiple used in 110 places.'>grouping</a> = <a href='../D/39545.html' title='Multiple defined in 5 places.'>xmalloc</a> (<a href='../S/9052.html#L32' title='Defined at 32 in sysdeps/ieee754/dbl-64/mydefs.h.'>max</a>);
+<a id='L260' name='L260'></a> 260 
+<a id='L261' name='L261'></a> 261           <strong class='reserved'>do</strong>
+<a id='L262' name='L262'></a> 262         <em class='brace'>{</em>
+<a id='L263' name='L263'></a> 263           <strong class='reserved'>if</strong> (<a href='../Y/9862.html' title='Multiple used in 218 places.'>act</a> + 1 &gt;= <a href='../S/9052.html#L32' title='Defined at 32 in sysdeps/ieee754/dbl-64/mydefs.h.'>max</a>)
+<a id='L264' name='L264'></a> 264             <em class='brace'>{</em>
+<a id='L265' name='L265'></a> 265               <a href='../S/9052.html#L32' title='Defined at 32 in sysdeps/ieee754/dbl-64/mydefs.h.'>max</a> *= 2;
+<a id='L266' name='L266'></a> 266               <a href='../Y/15821.html' title='Multiple used in 110 places.'>grouping</a> = <a href='../D/39614.html' title='Multiple defined in 3 places.'>xrealloc</a> (<a href='../Y/15821.html' title='Multiple used in 110 places.'>grouping</a>, <a href='../S/9052.html#L32' title='Defined at 32 in sysdeps/ieee754/dbl-64/mydefs.h.'>max</a>);
+<a id='L267' name='L267'></a> 267             <em class='brace'>}</em>
+<a id='L268' name='L268'></a> 268 
+<a id='L269' name='L269'></a> 269           <strong class='reserved'>if</strong> (<a href='../Y/9862.html' title='Multiple used in 218 places.'>act</a> &gt; 0 &amp;&amp; <a href='../Y/15821.html' title='Multiple used in 110 places.'>grouping</a>[<a href='../Y/9862.html' title='Multiple used in 218 places.'>act</a> - 1] == '\177')
+<a id='L270' name='L270'></a> 270             <em class='brace'>{</em>
+<a id='L271' name='L271'></a> 271               <a href='../S/2245.html#L100' title='Defined at 100 in locale/programs/linereader.h.'>lr_error</a> (<a href='../Y/17927.html' title='Multiple used in 616 places.'>ldfile</a>, <a href='../D/17731.html' title='Multiple defined in 12 places.'>_</a>("\
+<a id='L272' name='L272'></a> 272 %s: `-1' must be last entry in `%s' field"), "LC_NUMERIC", "grouping");
+<a id='L273' name='L273'></a> 273               <a href='../S/2254.html#L113' title='Defined at 113 in locale/programs/linereader.c.'>lr_ignore_rest</a> (<a href='../Y/17927.html' title='Multiple used in 616 places.'>ldfile</a>, 0);
+<a id='L274' name='L274'></a> 274               <strong class='reserved'>break</strong>;
+<a id='L275' name='L275'></a> 275             <em class='brace'>}</em>
+<a id='L276' name='L276'></a> 276 
+<a id='L277' name='L277'></a> 277           <strong class='reserved'>if</strong> (<a href='../Y/21123.html' title='Multiple used in 635 places.'>now</a>-&gt;<a href='../Y/27608.html' title='Multiple used in 312 places.'>tok</a> == <a href='../S/2259.html#L40' title='Defined at 40 in locale/programs/locfile-token.h.'>tok_minus1</a>)
+<a id='L278' name='L278'></a> 278             <a href='../Y/15821.html' title='Multiple used in 110 places.'>grouping</a>[<a href='../Y/9862.html' title='Multiple used in 218 places.'>act</a>++] = '\177';
+<a id='L279' name='L279'></a> 279           <strong class='reserved'>else</strong> <strong class='reserved'>if</strong> (<a href='../Y/21123.html' title='Multiple used in 635 places.'>now</a>-&gt;<a href='../D/38896.html' title='Multiple defined in 2 places.'>val</a>.<a href='../S/259.html#L34' title='Defined at 34 in intl/plural-exp.h.'>num</a> == 0)
+<a id='L280' name='L280'></a> 280             <em class='brace'>{</em>
+<a id='L281' name='L281'></a> 281               <em class='comment'>/* A value of 0 disables grouping from here on but</em>
+<a id='L282' name='L282'></a> 282 <em class='comment'>             we must not store a NUL character since this</em>
+<a id='L283' name='L283'></a> 283 <em class='comment'>             terminates the string.  Use something different</em>
+<a id='L284' name='L284'></a> 284 <em class='comment'>             which must not be used otherwise.  */</em>
+<a id='L285' name='L285'></a> 285               <a href='../Y/15821.html' title='Multiple used in 110 places.'>grouping</a>[<a href='../Y/9862.html' title='Multiple used in 218 places.'>act</a>++] = '\377';
+<a id='L286' name='L286'></a> 286             <em class='brace'>}</em>
+<a id='L287' name='L287'></a> 287           <strong class='reserved'>else</strong> <strong class='reserved'>if</strong> (<a href='../Y/21123.html' title='Multiple used in 635 places.'>now</a>-&gt;<a href='../D/38896.html' title='Multiple defined in 2 places.'>val</a>.<a href='../S/259.html#L34' title='Defined at 34 in intl/plural-exp.h.'>num</a> &gt; 126)
+<a id='L288' name='L288'></a> 288             <a href='../S/2245.html#L100' title='Defined at 100 in locale/programs/linereader.h.'>lr_error</a> (<a href='../Y/17927.html' title='Multiple used in 616 places.'>ldfile</a>, <a href='../D/17731.html' title='Multiple defined in 12 places.'>_</a>("\
+<a id='L289' name='L289'></a> 289 %s: values for field `%s' must be smaller than 127"),
+<a id='L290' name='L290'></a> 290                   "LC_NUMERIC", "grouping");
+<a id='L291' name='L291'></a> 291           <strong class='reserved'>else</strong>
+<a id='L292' name='L292'></a> 292             <a href='../Y/15821.html' title='Multiple used in 110 places.'>grouping</a>[<a href='../Y/9862.html' title='Multiple used in 218 places.'>act</a>++] = <a href='../Y/21123.html' title='Multiple used in 635 places.'>now</a>-&gt;<a href='../D/38896.html' title='Multiple defined in 2 places.'>val</a>.<a href='../S/259.html#L34' title='Defined at 34 in intl/plural-exp.h.'>num</a>;
+<a id='L293' name='L293'></a> 293 
+<a id='L294' name='L294'></a> 294           <em class='comment'>/* Next must be semicolon.  */</em>
+<a id='L295' name='L295'></a> 295           <a href='../Y/21123.html' title='Multiple used in 635 places.'>now</a> = <a href='../S/2254.html#L191' title='Defined at 191 in locale/programs/linereader.c.'>lr_token</a> (<a href='../Y/17927.html' title='Multiple used in 616 places.'>ldfile</a>, <a href='../Y/11481.html' title='Multiple used in 472 places.'>charmap</a>, <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a>, <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>, <a href='../Y/28650.html' title='Multiple used in 255 places.'>verbose</a>);
+<a id='L296' name='L296'></a> 296           <strong class='reserved'>if</strong> (<a href='../Y/21123.html' title='Multiple used in 635 places.'>now</a>-&gt;<a href='../Y/27608.html' title='Multiple used in 312 places.'>tok</a> != <a href='../S/2259.html#L33' title='Defined at 33 in locale/programs/locfile-token.h.'>tok_semicolon</a>)
+<a id='L297' name='L297'></a> 297             <strong class='reserved'>break</strong>;
+<a id='L298' name='L298'></a> 298 
+<a id='L299' name='L299'></a> 299           <a href='../Y/21123.html' title='Multiple used in 635 places.'>now</a> = <a href='../S/2254.html#L191' title='Defined at 191 in locale/programs/linereader.c.'>lr_token</a> (<a href='../Y/17927.html' title='Multiple used in 616 places.'>ldfile</a>, <a href='../Y/11481.html' title='Multiple used in 472 places.'>charmap</a>, <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a>, <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>, <a href='../Y/28650.html' title='Multiple used in 255 places.'>verbose</a>);
+<a id='L300' name='L300'></a> 300         <em class='brace'>}</em>
+<a id='L301' name='L301'></a> 301           <strong class='reserved'>while</strong> (<a href='../Y/21123.html' title='Multiple used in 635 places.'>now</a>-&gt;<a href='../Y/27608.html' title='Multiple used in 312 places.'>tok</a> == <a href='../S/2259.html#L40' title='Defined at 40 in locale/programs/locfile-token.h.'>tok_minus1</a> || <a href='../Y/21123.html' title='Multiple used in 635 places.'>now</a>-&gt;<a href='../Y/27608.html' title='Multiple used in 312 places.'>tok</a> == <a href='../S/2259.html#L39' title='Defined at 39 in locale/programs/locfile-token.h.'>tok_number</a>);
+<a id='L302' name='L302'></a> 302 
+<a id='L303' name='L303'></a> 303           <strong class='reserved'>if</strong> (<a href='../Y/21123.html' title='Multiple used in 635 places.'>now</a>-&gt;<a href='../Y/27608.html' title='Multiple used in 312 places.'>tok</a> != <a href='../S/2259.html#L25' title='Defined at 25 in locale/programs/locfile-token.h.'>tok_eol</a>)
+<a id='L304' name='L304'></a> 304         <strong class='reserved'>goto</strong> <a href='../Y/13902.html' title='Multiple used in 92 places.'>err_label</a>;
+<a id='L305' name='L305'></a> 305 
+<a id='L306' name='L306'></a> 306           <em class='comment'>/* A single -1 means no grouping.  */</em>
+<a id='L307' name='L307'></a> 307           <strong class='reserved'>if</strong> (<a href='../Y/9862.html' title='Multiple used in 218 places.'>act</a> == 1 &amp;&amp; <a href='../Y/15821.html' title='Multiple used in 110 places.'>grouping</a>[0] == '\177')
+<a id='L308' name='L308'></a> 308         <a href='../Y/9862.html' title='Multiple used in 218 places.'>act</a>--;
+<a id='L309' name='L309'></a> 309           <a href='../Y/15821.html' title='Multiple used in 110 places.'>grouping</a>[<a href='../Y/9862.html' title='Multiple used in 218 places.'>act</a>++] = '\0';
+<a id='L310' name='L310'></a> 310 
+<a id='L311' name='L311'></a> 311           <a href='../Y/21376.html' title='Multiple used in 31 places.'>numeric</a>-&gt;<a href='../Y/15821.html' title='Multiple used in 110 places.'>grouping</a> = <a href='../D/39614.html' title='Multiple defined in 3 places.'>xrealloc</a> (<a href='../Y/15821.html' title='Multiple used in 110 places.'>grouping</a>, <a href='../Y/9862.html' title='Multiple used in 218 places.'>act</a>);
+<a id='L312' name='L312'></a> 312           <a href='../Y/21376.html' title='Multiple used in 31 places.'>numeric</a>-&gt;<a href='../Y/15822.html' title='Multiple used in 4 places.'>grouping_len</a> = <a href='../Y/9862.html' title='Multiple used in 218 places.'>act</a>;
+<a id='L313' name='L313'></a> 313         <em class='brace'>}</em>
+<a id='L314' name='L314'></a> 314       <strong class='reserved'>break</strong>;
+<a id='L315' name='L315'></a> 315 
+<a id='L316' name='L316'></a> 316     <strong class='reserved'>case</strong> <a href='../S/2259.html#L47' title='Defined at 47 in locale/programs/locfile-token.h.'>tok_end</a>:
+<a id='L317' name='L317'></a> 317       <em class='comment'>/* Next we assume `LC_NUMERIC'.  */</em>
+<a id='L318' name='L318'></a> 318       <a href='../Y/21123.html' title='Multiple used in 635 places.'>now</a> = <a href='../S/2254.html#L191' title='Defined at 191 in locale/programs/linereader.c.'>lr_token</a> (<a href='../Y/17927.html' title='Multiple used in 616 places.'>ldfile</a>, <a href='../Y/11481.html' title='Multiple used in 472 places.'>charmap</a>, <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a>, <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>, <a href='../Y/28650.html' title='Multiple used in 255 places.'>verbose</a>);
+<a id='L319' name='L319'></a> 319       <strong class='reserved'>if</strong> (<a href='../Y/21123.html' title='Multiple used in 635 places.'>now</a>-&gt;<a href='../Y/27608.html' title='Multiple used in 312 places.'>tok</a> == <a href='../S/2259.html#L24' title='Defined at 24 in locale/programs/locfile-token.h.'>tok_eof</a>)
+<a id='L320' name='L320'></a> 320         <strong class='reserved'>break</strong>;
+<a id='L321' name='L321'></a> 321       <strong class='reserved'>if</strong> (<a href='../Y/21123.html' title='Multiple used in 635 places.'>now</a>-&gt;<a href='../Y/27608.html' title='Multiple used in 312 places.'>tok</a> == <a href='../S/2259.html#L25' title='Defined at 25 in locale/programs/locfile-token.h.'>tok_eol</a>)
+<a id='L322' name='L322'></a> 322         <a href='../S/2245.html#L100' title='Defined at 100 in locale/programs/linereader.h.'>lr_error</a> (<a href='../Y/17927.html' title='Multiple used in 616 places.'>ldfile</a>, <a href='../D/17731.html' title='Multiple defined in 12 places.'>_</a>("%s: incomplete `END' line"), "LC_NUMERIC");
+<a id='L323' name='L323'></a> 323       <strong class='reserved'>else</strong> <strong class='reserved'>if</strong> (<a href='../Y/21123.html' title='Multiple used in 635 places.'>now</a>-&gt;<a href='../Y/27608.html' title='Multiple used in 312 places.'>tok</a> != <a href='../S/2259.html#L163' title='Defined at 163 in locale/programs/locfile-token.h.'>tok_lc_numeric</a>)
+<a id='L324' name='L324'></a> 324         <a href='../S/2245.html#L100' title='Defined at 100 in locale/programs/linereader.h.'>lr_error</a> (<a href='../Y/17927.html' title='Multiple used in 616 places.'>ldfile</a>, <a href='../D/17731.html' title='Multiple defined in 12 places.'>_</a>("\
+<a id='L325' name='L325'></a> 325 %1$s: definition does not end with `END %1$s'"), "LC_NUMERIC");
+<a id='L326' name='L326'></a> 326       <a href='../S/2254.html#L113' title='Defined at 113 in locale/programs/linereader.c.'>lr_ignore_rest</a> (<a href='../Y/17927.html' title='Multiple used in 616 places.'>ldfile</a>, <a href='../Y/21123.html' title='Multiple used in 635 places.'>now</a>-&gt;<a href='../Y/27608.html' title='Multiple used in 312 places.'>tok</a> == <a href='../S/2259.html#L163' title='Defined at 163 in locale/programs/locfile-token.h.'>tok_lc_numeric</a>);
+<a id='L327' name='L327'></a> 327       <strong class='reserved'>return</strong>;
+<a id='L328' name='L328'></a> 328 
+<a id='L329' name='L329'></a> 329     <strong class='reserved'>default</strong>:
+<a id='L330' name='L330'></a> 330     <a href='../Y/13902.html' title='Multiple used in 92 places.'>err_label</a>:
+<a id='L331' name='L331'></a> 331       <a href='../S/2260.html#L40' title='Defined at 40 in locale/programs/locfile.h.'>SYNTAX_ERROR</a> (<a href='../D/17731.html' title='Multiple defined in 12 places.'>_</a>("%s: syntax error"), "LC_NUMERIC");
+<a id='L332' name='L332'></a> 332     <em class='brace'>}</em>
+<a id='L333' name='L333'></a> 333 
+<a id='L334' name='L334'></a> 334       <em class='comment'>/* Prepare for the next round.  */</em>
+<a id='L335' name='L335'></a> 335       <a href='../Y/21123.html' title='Multiple used in 635 places.'>now</a> = <a href='../S/2254.html#L191' title='Defined at 191 in locale/programs/linereader.c.'>lr_token</a> (<a href='../Y/17927.html' title='Multiple used in 616 places.'>ldfile</a>, <a href='../Y/11481.html' title='Multiple used in 472 places.'>charmap</a>, <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a>, <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>, <a href='../Y/28650.html' title='Multiple used in 255 places.'>verbose</a>);
+<a id='L336' name='L336'></a> 336       <a href='../Y/21129.html' title='Multiple used in 229 places.'>nowtok</a> = <a href='../Y/21123.html' title='Multiple used in 635 places.'>now</a>-&gt;<a href='../Y/27608.html' title='Multiple used in 312 places.'>tok</a>;
+<a id='L337' name='L337'></a> 337     <em class='brace'>}</em>
+<a id='L338' name='L338'></a> 338 
+<a id='L339' name='L339'></a> 339   <em class='comment'>/* When we come here we reached the end of the file.  */</em>
+<a id='L340' name='L340'></a> 340   <a href='../S/2245.html#L100' title='Defined at 100 in locale/programs/linereader.h.'>lr_error</a> (<a href='../Y/17927.html' title='Multiple used in 616 places.'>ldfile</a>, <a href='../D/17731.html' title='Multiple defined in 12 places.'>_</a>("%s: premature end of file"), "LC_NUMERIC");
+<a id='L341' name='L341'></a> 341 <em class='brace'>}</em>
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L47'>[^]</a><a href='#L149'>[v]</a><a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

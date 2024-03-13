@@ -1,0 +1,655 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>sysdeps/unix/sysv/linux/tst-ttyname.c</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18977.html'>sysdeps</a>/<a href='../files/19246.html'>unix</a>/<a href='../files/19257.html'>sysv</a>/<a href='../files/19258.html'>linux</a>/tst-ttyname.c</h2>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L53'>[^]</a><a href='#L601'>[v]</a>[top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<h2 class='header'>DEFINITIONS</h2>
+This source file includes following definitions.
+<ol>
+<li><a href='#L53' title='Defined at 53.'>touch</a></li>
+<li><a href='#L59' title='Defined at 59.'>trim_prefix</a></li>
+<li><a href='#L72' title='Defined at 72.'>proc_fd_readlink</a></li>
+<li><a href='#L92' title='Defined at 92.'>run_ttyname</a></li>
+<li><a href='#L102' title='Defined at 102.'>eq_ttyname</a></li>
+<li><a href='#L152' title='Defined at 152.'>run_ttyname_r</a></li>
+<li><a href='#L168' title='Defined at 168.'>eq_ttyname_r</a></li>
+<li><a href='#L211' title='Defined at 211.'>doit</a></li>
+<li><a href='#L234' title='Defined at 234.'>prepare</a></li>
+<li><a href='#L245' title='Defined at 245.'>adjust_file_limit</a></li>
+<li><a href='#L276' title='Defined at 276.'>do_in_chroot_1</a></li>
+<li><a href='#L345' title='Defined at 345.'>do_in_chroot_2</a></li>
+<li><a href='#L453' title='Defined at 453.'>run_chroot_tests</a></li>
+<li><a href='#L601' title='Defined at 601.'>do_test</a></li>
+</ol>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* Copyright (C) 2017-2022 Free Software Foundation, Inc.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'></em>
+<a id='L4' name='L4'></a>   4 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   modify it under the terms of the GNU Lesser General Public License as</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   published by the Free Software Foundation; either version 2.1 of the</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   License, or (at your option) any later version.</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'></em>
+<a id='L9' name='L9'></a>   9 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'></em>
+<a id='L14' name='L14'></a>  14 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   License along with the GNU C Library; see the file COPYING.LIB.  If</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   not, see &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L17' name='L17'></a>  17 
+<a id='L18' name='L18'></a>  18 <em class='sharp'>#include</em> &lt;<a href='../I/109.html'>dirent.h</a>&gt;
+<a id='L19' name='L19'></a>  19 <em class='sharp'>#include</em> &lt;<a href='../I/116.html'>errno.h</a>&gt;
+<a id='L20' name='L20'></a>  20 <em class='sharp'>#include</em> &lt;<a href='../I/117.html'>fcntl.h</a>&gt;
+<a id='L21' name='L21'></a>  21 <em class='sharp'>#include</em> &lt;<a href='18175.html'>limits.h</a>&gt;
+<a id='L22' name='L22'></a>  22 <em class='sharp'>#include</em> &lt;<a href='../I/149.html'>sched.h</a>&gt;
+<a id='L23' name='L23'></a>  23 <em class='sharp'>#include</em> &lt;<a href='../I/1776.html'>stdio.h</a>&gt;
+<a id='L24' name='L24'></a>  24 <em class='sharp'>#include</em> &lt;<a href='../I/1780.html'>stdlib.h</a>&gt;
+<a id='L25' name='L25'></a>  25 <em class='sharp'>#include</em> &lt;<a href='../I/1973.html'>string.h</a>&gt;
+<a id='L26' name='L26'></a>  26 <em class='sharp'>#include</em> &lt;<a href='../I/12483.html'>sys/mount.h</a>&gt;
+<a id='L27' name='L27'></a>  27 <em class='sharp'>#include</em> &lt;<a href='../I/1995.html'>sys/prctl.h</a>&gt;
+<a id='L28' name='L28'></a>  28 <em class='sharp'>#include</em> &lt;<a href='../I/167.html'>sys/stat.h</a>&gt;
+<a id='L29' name='L29'></a>  29 <em class='sharp'>#include</em> &lt;<a href='../I/2025.html'>sys/wait.h</a>&gt;
+<a id='L30' name='L30'></a>  30 <em class='sharp'>#include</em> &lt;<a href='../I/148.html'>sys/resource.h</a>&gt;
+<a id='L31' name='L31'></a>  31 <em class='sharp'>#include</em> &lt;<a href='../I/1819.html'>unistd.h</a>&gt;
+<a id='L32' name='L32'></a>  32 
+<a id='L33' name='L33'></a>  33 <em class='sharp'>#include</em> &lt;<a href='5739.html'>support/check.h</a>&gt;
+<a id='L34' name='L34'></a>  34 <em class='sharp'>#include</em> &lt;<a href='5755.html'>support/namespace.h</a>&gt;
+<a id='L35' name='L35'></a>  35 <em class='sharp'>#include</em> &lt;<a href='5742.html'>support/support.h</a>&gt;
+<a id='L36' name='L36'></a>  36 <em class='sharp'>#include</em> &lt;<a href='5926.html'>support/temp_file.h</a>&gt;
+<a id='L37' name='L37'></a>  37 <em class='sharp'>#include</em> &lt;<a href='5902.html'>support/test-driver.h</a>&gt;
+<a id='L38' name='L38'></a>  38 <em class='sharp'>#include</em> &lt;<a href='5899.html'>support/xunistd.h</a>&gt;
+<a id='L39' name='L39'></a>  39 
+<a id='L40' name='L40'></a>  40 <em class='comment'>/* generic utilities */</em>
+<a id='L41' name='L41'></a>  41 
+<a id='L42' name='L42'></a>  42 <em class='sharp'>#define</em> <a href='../R/9396.html' title='Multiple referred from 103 places.'>VERIFY</a>(<a href='../Y/14216.html' title='Multiple used in 230 places.'>expr</a>)                                                    \
+<a id='L43' name='L43'></a>  43   <strong class='reserved'>do</strong> <em class='brace'>{</em>                                                                  \
+<a id='L44' name='L44'></a>  44     <strong class='reserved'>if</strong> (!(<a href='../Y/14216.html' title='Multiple used in 230 places.'>expr</a>))                                                        \
+<a id='L45' name='L45'></a>  45       <em class='brace'>{</em>                                                                 \
+<a id='L46' name='L46'></a>  46         <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("error: %s:%d: %s: %m\n",                               \
+<a id='L47' name='L47'></a>  47                 <a href='../Y/2931.html' title='Multiple used in 107 places.'>__FILE__</a>, <a href='../Y/3237.html' title='Multiple used in 9441 places.'>__LINE__</a>, #<a href='../Y/14216.html' title='Multiple used in 230 places.'>expr</a>);                             \
+<a id='L48' name='L48'></a>  48         <a href='../S/6681.html#L141' title='Defined at 141 in stdlib/exit.c.'>exit</a> (1);                                                       \
+<a id='L49' name='L49'></a>  49       <em class='brace'>}</em>                                                                 \
+<a id='L50' name='L50'></a>  50   <em class='brace'>}</em> <strong class='reserved'>while</strong> (0)
+<a id='L51' name='L51'></a>  51 
+<a id='L52' name='L52'></a>  52 <strong class='reserved'>static</strong> <strong class='reserved'>void</strong>
+<a id='L53' name='L53'></a>  53 <a href='../R/25938.html' title='Multiple referred from 12 places.'>touch</a> (<strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../Y/22228.html' title='Multiple used in 785 places.'>path</a>, <a href='../D/33576.html' title='Multiple defined in 5 places.'>mode_t</a> <a href='../Y/19494.html' title='Multiple used in 1028 places.'>mode</a>)
+<a id='L54' name='L54'></a>  54 <em class='brace'>{</em>
+<a id='L55' name='L55'></a>  55   <a href='../S/5930.html#L24' title='Defined at 24 in support/xclose.c.'>xclose</a> (<a href='../S/5873.html#L24' title='Defined at 24 in support/xopen.c.'>xopen</a> (<a href='../Y/22228.html' title='Multiple used in 785 places.'>path</a>, <a href='../D/9642.html' title='Multiple defined in 3 places.'>O_WRONLY</a>|<a href='../D/9612.html' title='Multiple defined in 8 places.'>O_CREAT</a>|<a href='../D/9625.html' title='Multiple defined in 8 places.'>O_NOCTTY</a>, <a href='../Y/19494.html' title='Multiple used in 1028 places.'>mode</a>));
+<a id='L56' name='L56'></a>  56 <em class='brace'>}</em>
+<a id='L57' name='L57'></a>  57 
+<a id='L58' name='L58'></a>  58 <strong class='reserved'>static</strong> <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a>
+<a id='L59' name='L59'></a>  59 <a href='../S/10768.html#L77' title='Referred from 77 in sysdeps/unix/sysv/linux/tst-ttyname.c.'>trim_prefix</a> (<strong class='reserved'>char</strong> *<a href='../D/37053.html' title='Multiple defined in 6 places.'>str</a>, <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/26249.html' title='Multiple used in 23 places.'>str_len</a>, <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../Y/22699.html' title='Multiple used in 66 places.'>prefix</a>)
+<a id='L60' name='L60'></a>  60 <em class='brace'>{</em>
+<a id='L61' name='L61'></a>  61   <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/22700.html' title='Multiple used in 42 places.'>prefix_len</a> = <a href='../D/37108.html' title='Multiple defined in 42 places.'>strlen</a> (<a href='../Y/22699.html' title='Multiple used in 66 places.'>prefix</a>);
+<a id='L62' name='L62'></a>  62   <strong class='reserved'>if</strong> (<a href='../Y/26249.html' title='Multiple used in 23 places.'>str_len</a> &gt; <a href='../Y/22700.html' title='Multiple used in 42 places.'>prefix_len</a> &amp;&amp; <a href='../D/33446.html' title='Multiple defined in 22 places.'>memcmp</a> (<a href='../D/37053.html' title='Multiple defined in 6 places.'>str</a>, <a href='../Y/22699.html' title='Multiple used in 66 places.'>prefix</a>, <a href='../Y/22700.html' title='Multiple used in 42 places.'>prefix_len</a>) == 0)
+<a id='L63' name='L63'></a>  63     <em class='brace'>{</em>
+<a id='L64' name='L64'></a>  64       <a href='../D/33456.html' title='Multiple defined in 24 places.'>memmove</a> (<a href='../D/37053.html' title='Multiple defined in 6 places.'>str</a>, <a href='../D/37053.html' title='Multiple defined in 6 places.'>str</a> + <a href='../Y/22700.html' title='Multiple used in 42 places.'>prefix_len</a>, <a href='../Y/26249.html' title='Multiple used in 23 places.'>str_len</a> - <a href='../Y/22700.html' title='Multiple used in 42 places.'>prefix_len</a>);
+<a id='L65' name='L65'></a>  65       <strong class='reserved'>return</strong> <a href='../Y/26249.html' title='Multiple used in 23 places.'>str_len</a> - <a href='../Y/22700.html' title='Multiple used in 42 places.'>prefix_len</a>;
+<a id='L66' name='L66'></a>  66     <em class='brace'>}</em>
+<a id='L67' name='L67'></a>  67   <strong class='reserved'>return</strong> <a href='../Y/26249.html' title='Multiple used in 23 places.'>str_len</a>;
+<a id='L68' name='L68'></a>  68 <em class='brace'>}</em>
+<a id='L69' name='L69'></a>  69 
+<a id='L70' name='L70'></a>  70 <em class='comment'>/* returns a pointer to static storage */</em>
+<a id='L71' name='L71'></a>  71 <strong class='reserved'>static</strong> <strong class='reserved'>char</strong> *
+<a id='L72' name='L72'></a>  72 <a href='../R/23142.html' title='Multiple referred from 3 places.'>proc_fd_readlink</a> (<strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../Y/18246.html' title='Multiple used in 21 places.'>linkname</a>)
+<a id='L73' name='L73'></a>  73 <em class='brace'>{</em>
+<a id='L74' name='L74'></a>  74   <strong class='reserved'>static</strong> <strong class='reserved'>char</strong> <a href='../Y/26794.html' title='Multiple used in 189 places.'>target</a>[<a href='../D/9741.html' title='Multiple defined in 18 places.'>PATH_MAX</a>+1];
+<a id='L75' name='L75'></a>  75   <a href='../D/36972.html' title='Multiple defined in 5 places.'>ssize_t</a> <a href='../Y/26797.html' title='Multiple used in 4 places.'>target_len</a> = <a href='../S/3752.html#L145' title='Defined at 145 in timezone/zic.c.'>readlink</a> (<a href='../Y/18246.html' title='Multiple used in 21 places.'>linkname</a>, <a href='../Y/26794.html' title='Multiple used in 189 places.'>target</a>, <a href='../D/9741.html' title='Multiple defined in 18 places.'>PATH_MAX</a>);
+<a id='L76' name='L76'></a>  76   <a href='../D/17015.html' title='Multiple defined in 4 places.'>VERIFY</a> (<a href='../Y/26797.html' title='Multiple used in 4 places.'>target_len</a> &gt; 0);
+<a id='L77' name='L77'></a>  77   <a href='../Y/26797.html' title='Multiple used in 4 places.'>target_len</a> = <a href='../S/10768.html#L59' title='Defined at 59 in sysdeps/unix/sysv/linux/tst-ttyname.c.'>trim_prefix</a> (<a href='../Y/26794.html' title='Multiple used in 189 places.'>target</a>, <a href='../Y/26797.html' title='Multiple used in 4 places.'>target_len</a>, "(unreachable)");
+<a id='L78' name='L78'></a>  78   <a href='../Y/26794.html' title='Multiple used in 189 places.'>target</a>[<a href='../Y/26797.html' title='Multiple used in 4 places.'>target_len</a>] = '\0';
+<a id='L79' name='L79'></a>  79   <strong class='reserved'>return</strong> <a href='../Y/26794.html' title='Multiple used in 189 places.'>target</a>;
+<a id='L80' name='L80'></a>  80 <em class='brace'>}</em>
+<a id='L81' name='L81'></a>  81 
+<a id='L82' name='L82'></a>  82 <em class='comment'>/* plain ttyname runner */</em>
+<a id='L83' name='L83'></a>  83 
+<a id='L84' name='L84'></a>  84 <strong class='reserved'>struct</strong> <a href='../R/23860.html' title='Multiple referred from 8875 places.'>result</a>
+<a id='L85' name='L85'></a>  85 <em class='brace'>{</em>
+<a id='L86' name='L86'></a>  86   <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../D/33817.html' title='Multiple defined in 21 places.'>name</a>;
+<a id='L87' name='L87'></a>  87   <strong class='reserved'>int</strong> <a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a>;
+<a id='L88' name='L88'></a>  88 <em class='brace'>}</em>;
+<a id='L89' name='L89'></a>  89 
+<a id='L90' name='L90'></a>  90 <em class='comment'>/* strings in result structure are in static storage */</em>
+<a id='L91' name='L91'></a>  91 <strong class='reserved'>static</strong> <strong class='reserved'>struct</strong> <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a>
+<a id='L92' name='L92'></a>  92 <a href='../S/10768.html#L218' title='Referred from 218 in sysdeps/unix/sysv/linux/tst-ttyname.c.'>run_ttyname</a> (<strong class='reserved'>int</strong> <a href='../S/1663.html#L52' title='Defined at 52 in nscd/initgrcache.c.'>fd</a>)
+<a id='L93' name='L93'></a>  93 <em class='brace'>{</em>
+<a id='L94' name='L94'></a>  94   <strong class='reserved'>struct</strong> <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a> <a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a>;
+<a id='L95' name='L95'></a>  95   <a href='../D/30023.html' title='Multiple defined in 13 places.'>errno</a> = 0;
+<a id='L96' name='L96'></a>  96   <a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a>.<a href='../D/33817.html' title='Multiple defined in 21 places.'>name</a> = <a href='../D/38583.html' title='Multiple defined in 4 places.'>ttyname</a> (<a href='../S/1663.html#L52' title='Defined at 52 in nscd/initgrcache.c.'>fd</a>);
+<a id='L97' name='L97'></a>  97   <a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a>.<a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a> = <a href='../D/30023.html' title='Multiple defined in 13 places.'>errno</a>;
+<a id='L98' name='L98'></a>  98   <strong class='reserved'>return</strong> <a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a>;
+<a id='L99' name='L99'></a>  99 <em class='brace'>}</em>
+<a id='L100' name='L100'></a> 100 
+<a id='L101' name='L101'></a> 101 <strong class='reserved'>static</strong> <a href='../S/3749.html#L624' title='Defined at 624 in timezone/private.h.'>bool</a>
+<a id='L102' name='L102'></a> 102 <a href='../S/10768.html#L218' title='Referred from 218 in sysdeps/unix/sysv/linux/tst-ttyname.c.'>eq_ttyname</a> (<strong class='reserved'>struct</strong> <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a> <a href='../Y/9890.html' title='Multiple used in 140 places.'>actual</a>, <strong class='reserved'>struct</strong> <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a> <a href='../Y/14144.html' title='Multiple used in 879 places.'>expected</a>)
+<a id='L103' name='L103'></a> 103 <em class='brace'>{</em>
+<a id='L104' name='L104'></a> 104   <strong class='reserved'>char</strong> *<a href='../Y/9895.html' title='Multiple used in 10 places.'>actual_name</a>, *<a href='../Y/14170.html' title='Multiple used in 28 places.'>expected_name</a>;
+<a id='L105' name='L105'></a> 105 
+<a id='L106' name='L106'></a> 106   <strong class='reserved'>if</strong> ((<a href='../Y/9890.html' title='Multiple used in 140 places.'>actual</a>.<a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a> == <a href='../Y/14144.html' title='Multiple used in 879 places.'>expected</a>.<a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a>)
+<a id='L107' name='L107'></a> 107       &amp;&amp; (!<a href='../Y/9890.html' title='Multiple used in 140 places.'>actual</a>.<a href='../D/33817.html' title='Multiple defined in 21 places.'>name</a> == !<a href='../Y/14144.html' title='Multiple used in 879 places.'>expected</a>.<a href='../D/33817.html' title='Multiple defined in 21 places.'>name</a>)
+<a id='L108' name='L108'></a> 108       &amp;&amp; (<a href='../Y/9890.html' title='Multiple used in 140 places.'>actual</a>.<a href='../D/33817.html' title='Multiple defined in 21 places.'>name</a> ? <a href='../D/37067.html' title='Multiple defined in 17 places.'>strcmp</a> (<a href='../Y/9890.html' title='Multiple used in 140 places.'>actual</a>.<a href='../D/33817.html' title='Multiple defined in 21 places.'>name</a>, <a href='../Y/14144.html' title='Multiple used in 879 places.'>expected</a>.<a href='../D/33817.html' title='Multiple defined in 21 places.'>name</a>) == 0 : <a href='../D/38483.html' title='Multiple defined in 5 places.'>true</a>))
+<a id='L109' name='L109'></a> 109     <em class='brace'>{</em>
+<a id='L110' name='L110'></a> 110       <strong class='reserved'>if</strong> (<a href='../Y/14144.html' title='Multiple used in 879 places.'>expected</a>.<a href='../D/33817.html' title='Multiple defined in 21 places.'>name</a>)
+<a id='L111' name='L111'></a> 111         <a href='../Y/14170.html' title='Multiple used in 28 places.'>expected_name</a> = <a href='../D/39420.html' title='Multiple defined in 2 places.'>xasprintf</a> ("\"%s\"", <a href='../Y/14144.html' title='Multiple used in 879 places.'>expected</a>.<a href='../D/33817.html' title='Multiple defined in 21 places.'>name</a>);
+<a id='L112' name='L112'></a> 112       <strong class='reserved'>else</strong>
+<a id='L113' name='L113'></a> 113     <a href='../Y/14170.html' title='Multiple used in 28 places.'>expected_name</a> = <a href='../D/39634.html' title='Multiple defined in 3 places.'>xstrdup</a> ("NULL");
+<a id='L114' name='L114'></a> 114 
+<a id='L115' name='L115'></a> 115       <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("info:      ttyname: PASS {name=%s, errno=%d}\n",
+<a id='L116' name='L116'></a> 116           <a href='../Y/14170.html' title='Multiple used in 28 places.'>expected_name</a>, <a href='../Y/14144.html' title='Multiple used in 879 places.'>expected</a>.<a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a>);
+<a id='L117' name='L117'></a> 117 
+<a id='L118' name='L118'></a> 118       <a href='../D/30785.html' title='Multiple defined in 5 places.'>free</a> (<a href='../Y/14170.html' title='Multiple used in 28 places.'>expected_name</a>);
+<a id='L119' name='L119'></a> 119       <strong class='reserved'>return</strong> <a href='../D/38483.html' title='Multiple defined in 5 places.'>true</a>;
+<a id='L120' name='L120'></a> 120     <em class='brace'>}</em>
+<a id='L121' name='L121'></a> 121 
+<a id='L122' name='L122'></a> 122   <strong class='reserved'>if</strong> (<a href='../Y/9890.html' title='Multiple used in 140 places.'>actual</a>.<a href='../D/33817.html' title='Multiple defined in 21 places.'>name</a>)
+<a id='L123' name='L123'></a> 123     <a href='../Y/9895.html' title='Multiple used in 10 places.'>actual_name</a> = <a href='../D/39420.html' title='Multiple defined in 2 places.'>xasprintf</a> ("\"%s\"", <a href='../Y/9890.html' title='Multiple used in 140 places.'>actual</a>.<a href='../D/33817.html' title='Multiple defined in 21 places.'>name</a>);
+<a id='L124' name='L124'></a> 124   <strong class='reserved'>else</strong>
+<a id='L125' name='L125'></a> 125     <a href='../Y/9895.html' title='Multiple used in 10 places.'>actual_name</a> = <a href='../D/39634.html' title='Multiple defined in 3 places.'>xstrdup</a> ("NULL");
+<a id='L126' name='L126'></a> 126 
+<a id='L127' name='L127'></a> 127   <strong class='reserved'>if</strong> (<a href='../Y/14144.html' title='Multiple used in 879 places.'>expected</a>.<a href='../D/33817.html' title='Multiple defined in 21 places.'>name</a>)
+<a id='L128' name='L128'></a> 128     <a href='../Y/14170.html' title='Multiple used in 28 places.'>expected_name</a> = <a href='../D/39420.html' title='Multiple defined in 2 places.'>xasprintf</a> ("\"%s\"", <a href='../Y/14144.html' title='Multiple used in 879 places.'>expected</a>.<a href='../D/33817.html' title='Multiple defined in 21 places.'>name</a>);
+<a id='L129' name='L129'></a> 129   <strong class='reserved'>else</strong>
+<a id='L130' name='L130'></a> 130     <a href='../Y/14170.html' title='Multiple used in 28 places.'>expected_name</a> = <a href='../D/39634.html' title='Multiple defined in 3 places.'>xstrdup</a> ("NULL");
+<a id='L131' name='L131'></a> 131 
+<a id='L132' name='L132'></a> 132   <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("error:     ttyname: actual {name=%s, errno=%d} != expected {name=%s, errno=%d}\n",
+<a id='L133' name='L133'></a> 133       <a href='../Y/9895.html' title='Multiple used in 10 places.'>actual_name</a>, <a href='../Y/9890.html' title='Multiple used in 140 places.'>actual</a>.<a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a>,
+<a id='L134' name='L134'></a> 134       <a href='../Y/14170.html' title='Multiple used in 28 places.'>expected_name</a>, <a href='../Y/14144.html' title='Multiple used in 879 places.'>expected</a>.<a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a>);
+<a id='L135' name='L135'></a> 135 
+<a id='L136' name='L136'></a> 136   <a href='../D/30785.html' title='Multiple defined in 5 places.'>free</a> (<a href='../Y/9895.html' title='Multiple used in 10 places.'>actual_name</a>);
+<a id='L137' name='L137'></a> 137   <a href='../D/30785.html' title='Multiple defined in 5 places.'>free</a> (<a href='../Y/14170.html' title='Multiple used in 28 places.'>expected_name</a>);
+<a id='L138' name='L138'></a> 138   <strong class='reserved'>return</strong> <a href='../D/30360.html' title='Multiple defined in 5 places.'>false</a>;
+<a id='L139' name='L139'></a> 139 <em class='brace'>}</em>
+<a id='L140' name='L140'></a> 140 
+<a id='L141' name='L141'></a> 141 <em class='comment'>/* ttyname_r runner */</em>
+<a id='L142' name='L142'></a> 142 
+<a id='L143' name='L143'></a> 143 <strong class='reserved'>struct</strong> <a href='../R/23861.html' title='Multiple referred from 14 places.'>result_r</a>
+<a id='L144' name='L144'></a> 144 <em class='brace'>{</em>
+<a id='L145' name='L145'></a> 145   <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../D/33817.html' title='Multiple defined in 21 places.'>name</a>;
+<a id='L146' name='L146'></a> 146   <strong class='reserved'>int</strong> <a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a>;
+<a id='L147' name='L147'></a> 147   <strong class='reserved'>int</strong> <a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a>;
+<a id='L148' name='L148'></a> 148 <em class='brace'>}</em>;
+<a id='L149' name='L149'></a> 149 
+<a id='L150' name='L150'></a> 150 <em class='comment'>/* strings in result structure are in static storage */</em>
+<a id='L151' name='L151'></a> 151 <strong class='reserved'>static</strong> <strong class='reserved'>struct</strong> <a href='../S/10768.html#L143' title='Defined at 143 in sysdeps/unix/sysv/linux/tst-ttyname.c.'>result_r</a>
+<a id='L152' name='L152'></a> 152 <a href='../S/10768.html#L220' title='Referred from 220 in sysdeps/unix/sysv/linux/tst-ttyname.c.'>run_ttyname_r</a> (<strong class='reserved'>int</strong> <a href='../S/1663.html#L52' title='Defined at 52 in nscd/initgrcache.c.'>fd</a>)
+<a id='L153' name='L153'></a> 153 <em class='brace'>{</em>
+<a id='L154' name='L154'></a> 154   <strong class='reserved'>static</strong> <strong class='reserved'>char</strong> <a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>[<a href='../S/9822.html#L87' title='Defined at 87 in sysdeps/unix/sysv/linux/bits/local_lim.h.'>TTY_NAME_MAX</a>];
+<a id='L155' name='L155'></a> 155 
+<a id='L156' name='L156'></a> 156   <strong class='reserved'>struct</strong> <a href='../S/10768.html#L143' title='Defined at 143 in sysdeps/unix/sysv/linux/tst-ttyname.c.'>result_r</a> <a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a>;
+<a id='L157' name='L157'></a> 157   <a href='../D/30023.html' title='Multiple defined in 13 places.'>errno</a> = 0;
+<a id='L158' name='L158'></a> 158   <a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a>.<a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a> = <a href='../Y/27950.html' title='Multiple used in 14 places.'>ttyname_r</a> (<a href='../S/1663.html#L52' title='Defined at 52 in nscd/initgrcache.c.'>fd</a>, <a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>, <a href='../S/9822.html#L87' title='Defined at 87 in sysdeps/unix/sysv/linux/bits/local_lim.h.'>TTY_NAME_MAX</a>);
+<a id='L159' name='L159'></a> 159   <a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a>.<a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a> = <a href='../D/30023.html' title='Multiple defined in 13 places.'>errno</a>;
+<a id='L160' name='L160'></a> 160   <strong class='reserved'>if</strong> (<a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a>.<a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a> == 0)
+<a id='L161' name='L161'></a> 161     <a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a>.<a href='../D/33817.html' title='Multiple defined in 21 places.'>name</a> = <a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>;
+<a id='L162' name='L162'></a> 162   <strong class='reserved'>else</strong>
+<a id='L163' name='L163'></a> 163     <a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a>.<a href='../D/33817.html' title='Multiple defined in 21 places.'>name</a> = <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>;
+<a id='L164' name='L164'></a> 164   <strong class='reserved'>return</strong> <a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a>;
+<a id='L165' name='L165'></a> 165 <em class='brace'>}</em>
+<a id='L166' name='L166'></a> 166 
+<a id='L167' name='L167'></a> 167 <strong class='reserved'>static</strong> <a href='../S/3749.html#L624' title='Defined at 624 in timezone/private.h.'>bool</a>
+<a id='L168' name='L168'></a> 168 <a href='../S/10768.html#L220' title='Referred from 220 in sysdeps/unix/sysv/linux/tst-ttyname.c.'>eq_ttyname_r</a> (<strong class='reserved'>struct</strong> <a href='../S/10768.html#L143' title='Defined at 143 in sysdeps/unix/sysv/linux/tst-ttyname.c.'>result_r</a> <a href='../Y/9890.html' title='Multiple used in 140 places.'>actual</a>, <strong class='reserved'>struct</strong> <a href='../S/10768.html#L143' title='Defined at 143 in sysdeps/unix/sysv/linux/tst-ttyname.c.'>result_r</a> <a href='../Y/14144.html' title='Multiple used in 879 places.'>expected</a>)
+<a id='L169' name='L169'></a> 169 <em class='brace'>{</em>
+<a id='L170' name='L170'></a> 170   <strong class='reserved'>char</strong> *<a href='../Y/9895.html' title='Multiple used in 10 places.'>actual_name</a>, *<a href='../Y/14170.html' title='Multiple used in 28 places.'>expected_name</a>;
+<a id='L171' name='L171'></a> 171 
+<a id='L172' name='L172'></a> 172   <strong class='reserved'>if</strong> ((<a href='../Y/9890.html' title='Multiple used in 140 places.'>actual</a>.<a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a> == <a href='../Y/14144.html' title='Multiple used in 879 places.'>expected</a>.<a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a>)
+<a id='L173' name='L173'></a> 173       &amp;&amp; (<a href='../Y/9890.html' title='Multiple used in 140 places.'>actual</a>.<a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a> == <a href='../Y/14144.html' title='Multiple used in 879 places.'>expected</a>.<a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a>)
+<a id='L174' name='L174'></a> 174       &amp;&amp; (!<a href='../Y/9890.html' title='Multiple used in 140 places.'>actual</a>.<a href='../D/33817.html' title='Multiple defined in 21 places.'>name</a> == !<a href='../Y/14144.html' title='Multiple used in 879 places.'>expected</a>.<a href='../D/33817.html' title='Multiple defined in 21 places.'>name</a>)
+<a id='L175' name='L175'></a> 175       &amp;&amp; (<a href='../Y/9890.html' title='Multiple used in 140 places.'>actual</a>.<a href='../D/33817.html' title='Multiple defined in 21 places.'>name</a> ? <a href='../D/37067.html' title='Multiple defined in 17 places.'>strcmp</a> (<a href='../Y/9890.html' title='Multiple used in 140 places.'>actual</a>.<a href='../D/33817.html' title='Multiple defined in 21 places.'>name</a>, <a href='../Y/14144.html' title='Multiple used in 879 places.'>expected</a>.<a href='../D/33817.html' title='Multiple defined in 21 places.'>name</a>) == 0 : <a href='../D/38483.html' title='Multiple defined in 5 places.'>true</a>))
+<a id='L176' name='L176'></a> 176     <em class='brace'>{</em>
+<a id='L177' name='L177'></a> 177       <strong class='reserved'>if</strong> (<a href='../Y/14144.html' title='Multiple used in 879 places.'>expected</a>.<a href='../D/33817.html' title='Multiple defined in 21 places.'>name</a>)
+<a id='L178' name='L178'></a> 178         <a href='../Y/14170.html' title='Multiple used in 28 places.'>expected_name</a> = <a href='../D/39420.html' title='Multiple defined in 2 places.'>xasprintf</a> ("\"%s\"", <a href='../Y/14144.html' title='Multiple used in 879 places.'>expected</a>.<a href='../D/33817.html' title='Multiple defined in 21 places.'>name</a>);
+<a id='L179' name='L179'></a> 179       <strong class='reserved'>else</strong>
+<a id='L180' name='L180'></a> 180         <a href='../Y/14170.html' title='Multiple used in 28 places.'>expected_name</a> = <a href='../D/39634.html' title='Multiple defined in 3 places.'>xstrdup</a> ("NULL");
+<a id='L181' name='L181'></a> 181 
+<a id='L182' name='L182'></a> 182       <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("info:      ttyname_r: PASS {name=%s, ret=%d, errno=%d}\n",
+<a id='L183' name='L183'></a> 183               <a href='../Y/14170.html' title='Multiple used in 28 places.'>expected_name</a>, <a href='../Y/14144.html' title='Multiple used in 879 places.'>expected</a>.<a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a>, <a href='../Y/14144.html' title='Multiple used in 879 places.'>expected</a>.<a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a>);
+<a id='L184' name='L184'></a> 184 
+<a id='L185' name='L185'></a> 185       <a href='../D/30785.html' title='Multiple defined in 5 places.'>free</a> (<a href='../Y/14170.html' title='Multiple used in 28 places.'>expected_name</a>);
+<a id='L186' name='L186'></a> 186       <strong class='reserved'>return</strong> <a href='../D/38483.html' title='Multiple defined in 5 places.'>true</a>;
+<a id='L187' name='L187'></a> 187     <em class='brace'>}</em>
+<a id='L188' name='L188'></a> 188 
+<a id='L189' name='L189'></a> 189   <strong class='reserved'>if</strong> (<a href='../Y/9890.html' title='Multiple used in 140 places.'>actual</a>.<a href='../D/33817.html' title='Multiple defined in 21 places.'>name</a>)
+<a id='L190' name='L190'></a> 190     <a href='../Y/9895.html' title='Multiple used in 10 places.'>actual_name</a> = <a href='../D/39420.html' title='Multiple defined in 2 places.'>xasprintf</a> ("\"%s\"", <a href='../Y/9890.html' title='Multiple used in 140 places.'>actual</a>.<a href='../D/33817.html' title='Multiple defined in 21 places.'>name</a>);
+<a id='L191' name='L191'></a> 191   <strong class='reserved'>else</strong>
+<a id='L192' name='L192'></a> 192     <a href='../Y/9895.html' title='Multiple used in 10 places.'>actual_name</a> = <a href='../D/39634.html' title='Multiple defined in 3 places.'>xstrdup</a> ("NULL");
+<a id='L193' name='L193'></a> 193 
+<a id='L194' name='L194'></a> 194   <strong class='reserved'>if</strong> (<a href='../Y/14144.html' title='Multiple used in 879 places.'>expected</a>.<a href='../D/33817.html' title='Multiple defined in 21 places.'>name</a>)
+<a id='L195' name='L195'></a> 195     <a href='../Y/14170.html' title='Multiple used in 28 places.'>expected_name</a> = <a href='../D/39420.html' title='Multiple defined in 2 places.'>xasprintf</a> ("\"%s\"", <a href='../Y/14144.html' title='Multiple used in 879 places.'>expected</a>.<a href='../D/33817.html' title='Multiple defined in 21 places.'>name</a>);
+<a id='L196' name='L196'></a> 196   <strong class='reserved'>else</strong>
+<a id='L197' name='L197'></a> 197     <a href='../Y/14170.html' title='Multiple used in 28 places.'>expected_name</a> = <a href='../D/39634.html' title='Multiple defined in 3 places.'>xstrdup</a> ("NULL");
+<a id='L198' name='L198'></a> 198 
+<a id='L199' name='L199'></a> 199   <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("error:     ttyname_r: actual {name=%s, ret=%d, errno=%d} != expected {name=%s, ret=%d, errno=%d}\n",
+<a id='L200' name='L200'></a> 200       <a href='../Y/9895.html' title='Multiple used in 10 places.'>actual_name</a>, <a href='../Y/9890.html' title='Multiple used in 140 places.'>actual</a>.<a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a>, <a href='../Y/9890.html' title='Multiple used in 140 places.'>actual</a>.<a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a>,
+<a id='L201' name='L201'></a> 201       <a href='../Y/14170.html' title='Multiple used in 28 places.'>expected_name</a>, <a href='../Y/14144.html' title='Multiple used in 879 places.'>expected</a>.<a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a>, <a href='../Y/14144.html' title='Multiple used in 879 places.'>expected</a>.<a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a>);
+<a id='L202' name='L202'></a> 202 
+<a id='L203' name='L203'></a> 203   <a href='../D/30785.html' title='Multiple defined in 5 places.'>free</a> (<a href='../Y/9895.html' title='Multiple used in 10 places.'>actual_name</a>);
+<a id='L204' name='L204'></a> 204   <a href='../D/30785.html' title='Multiple defined in 5 places.'>free</a> (<a href='../Y/14170.html' title='Multiple used in 28 places.'>expected_name</a>);
+<a id='L205' name='L205'></a> 205   <strong class='reserved'>return</strong> <a href='../D/30360.html' title='Multiple defined in 5 places.'>false</a>;
+<a id='L206' name='L206'></a> 206 <em class='brace'>}</em>
+<a id='L207' name='L207'></a> 207 
+<a id='L208' name='L208'></a> 208 <em class='comment'>/* combined runner */</em>
+<a id='L209' name='L209'></a> 209 
+<a id='L210' name='L210'></a> 210 <strong class='reserved'>static</strong> <a href='../S/3749.html#L624' title='Defined at 624 in timezone/private.h.'>bool</a>
+<a id='L211' name='L211'></a> 211 <a href='../R/18857.html' title='Multiple referred from 54 places.'>doit</a> (<strong class='reserved'>int</strong> <a href='../S/1663.html#L52' title='Defined at 52 in nscd/initgrcache.c.'>fd</a>, <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../Y/27063.html' title='Multiple used in 11 places.'>testname</a>, <strong class='reserved'>struct</strong> <a href='../S/10768.html#L143' title='Defined at 143 in sysdeps/unix/sysv/linux/tst-ttyname.c.'>result_r</a> <a href='../Y/14178.html' title='Multiple used in 3 places.'>expected_r</a>)
+<a id='L212' name='L212'></a> 212 <em class='brace'>{</em>
+<a id='L213' name='L213'></a> 213   <strong class='reserved'>struct</strong> <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a> <a href='../Y/14144.html' title='Multiple used in 879 places.'>expected</a> = <em class='brace'>{</em>.<a href='../D/33817.html' title='Multiple defined in 21 places.'>name</a>=<a href='../Y/14178.html' title='Multiple used in 3 places.'>expected_r</a>.<a href='../D/33817.html' title='Multiple defined in 21 places.'>name</a>, .<a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a>=<a href='../Y/14178.html' title='Multiple used in 3 places.'>expected_r</a>.<a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a><em class='brace'>}</em>;
+<a id='L214' name='L214'></a> 214   <a href='../S/3749.html#L624' title='Defined at 624 in timezone/private.h.'>bool</a> <a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a> = <a href='../D/38483.html' title='Multiple defined in 5 places.'>true</a>;
+<a id='L215' name='L215'></a> 215 
+<a id='L216' name='L216'></a> 216   <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("info:    testcase: %s\n", <a href='../Y/27063.html' title='Multiple used in 11 places.'>testname</a>);
+<a id='L217' name='L217'></a> 217 
+<a id='L218' name='L218'></a> 218   <strong class='reserved'>if</strong> (!<a href='../S/10768.html#L102' title='Defined at 102 in sysdeps/unix/sysv/linux/tst-ttyname.c.'>eq_ttyname</a> (<a href='../S/10768.html#L92' title='Defined at 92 in sysdeps/unix/sysv/linux/tst-ttyname.c.'>run_ttyname</a> (<a href='../S/1663.html#L52' title='Defined at 52 in nscd/initgrcache.c.'>fd</a>), <a href='../Y/14144.html' title='Multiple used in 879 places.'>expected</a>))
+<a id='L219' name='L219'></a> 219     <a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a> = <a href='../D/30360.html' title='Multiple defined in 5 places.'>false</a>;
+<a id='L220' name='L220'></a> 220   <strong class='reserved'>if</strong> (!<a href='../S/10768.html#L168' title='Defined at 168 in sysdeps/unix/sysv/linux/tst-ttyname.c.'>eq_ttyname_r</a> (<a href='../S/10768.html#L152' title='Defined at 152 in sysdeps/unix/sysv/linux/tst-ttyname.c.'>run_ttyname_r</a> (<a href='../S/1663.html#L52' title='Defined at 52 in nscd/initgrcache.c.'>fd</a>), <a href='../Y/14178.html' title='Multiple used in 3 places.'>expected_r</a>))
+<a id='L221' name='L221'></a> 221     <a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a> = <a href='../D/30360.html' title='Multiple defined in 5 places.'>false</a>;
+<a id='L222' name='L222'></a> 222 
+<a id='L223' name='L223'></a> 223   <strong class='reserved'>if</strong> (!<a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a>)
+<a id='L224' name='L224'></a> 224     <a href='../S/5807.html#L59' title='Defined at 59 in support/support_record_failure.c.'>support_record_failure</a> ();
+<a id='L225' name='L225'></a> 225 
+<a id='L226' name='L226'></a> 226   <strong class='reserved'>return</strong> <a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a>;
+<a id='L227' name='L227'></a> 227 <em class='brace'>}</em>
+<a id='L228' name='L228'></a> 228 
+<a id='L229' name='L229'></a> 229 <em class='comment'>/* chroot setup */</em>
+<a id='L230' name='L230'></a> 230 
+<a id='L231' name='L231'></a> 231 <strong class='reserved'>static</strong> <strong class='reserved'>char</strong> *<a href='../Y/11577.html' title='Multiple used in 9 places.'>chrootdir</a>;
+<a id='L232' name='L232'></a> 232 
+<a id='L233' name='L233'></a> 233 <strong class='reserved'>static</strong> <strong class='reserved'>void</strong>
+<a id='L234' name='L234'></a> 234 <a href='../R/23020.html' title='Multiple referred from 95 places.'>prepare</a> (<strong class='reserved'>int</strong> <a href='../Y/10354.html' title='Multiple used in 866 places.'>argc</a>, <strong class='reserved'>char</strong> **<a href='../Y/10408.html' title='Multiple used in 1144 places.'>argv</a>)
+<a id='L235' name='L235'></a> 235 <em class='brace'>{</em>
+<a id='L236' name='L236'></a> 236   <a href='../Y/11577.html' title='Multiple used in 9 places.'>chrootdir</a> = <a href='../D/39420.html' title='Multiple defined in 2 places.'>xasprintf</a> ("%s/tst-ttyname-XXXXXX", <a href='../Y/27013.html' title='Multiple used in 76 places.'>test_dir</a>);
+<a id='L237' name='L237'></a> 237   <strong class='reserved'>if</strong> (<a href='../S/3903.html#L27' title='Defined at 27 in misc/mkdtemp.c.'>mkdtemp</a> (<a href='../Y/11577.html' title='Multiple used in 9 places.'>chrootdir</a>) == <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>)
+<a id='L238' name='L238'></a> 238     <a href='../S/5739.html#L40' title='Defined at 40 in support/check.h.'>FAIL_EXIT1</a> ("mkdtemp (\"%s\"): %m", <a href='../Y/11577.html' title='Multiple used in 9 places.'>chrootdir</a>);
+<a id='L239' name='L239'></a> 239   <a href='../S/5785.html#L73' title='Defined at 73 in support/temp_file.c.'>add_temp_file</a> (<a href='../Y/11577.html' title='Multiple used in 9 places.'>chrootdir</a>);
+<a id='L240' name='L240'></a> 240 <em class='brace'>}</em>
+<a id='L241' name='L241'></a> 241 <em class='sharp'>#define</em> <a href='../R/6187.html' title='Multiple referred from 32 places.'>PREPARE</a> <a href='../D/34871.html' title='Multiple defined in 57 places.'>prepare</a>
+<a id='L242' name='L242'></a> 242 
+<a id='L243' name='L243'></a> 243 <em class='comment'>/* Adjust the file limit so that we have a chance to open PTY.  */</em>
+<a id='L244' name='L244'></a> 244 <strong class='reserved'>static</strong> <strong class='reserved'>void</strong>
+<a id='L245' name='L245'></a> 245 <a href='../R/17115.html' title='Multiple referred from 2 places.'>adjust_file_limit</a> (<strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../Y/23122.html' title='Multiple used in 9 places.'>pty</a>)
+<a id='L246' name='L246'></a> 246 <em class='brace'>{</em>
+<a id='L247' name='L247'></a> 247   <strong class='reserved'>int</strong> <a href='../Y/21366.html' title='Multiple used in 340 places.'>number</a> = -1;
+<a id='L248' name='L248'></a> 248   <strong class='reserved'>if</strong> (<a href='../D/36967.html' title='Multiple defined in 3 places.'>sscanf</a> (<a href='../Y/23122.html' title='Multiple used in 9 places.'>pty</a>, "/dev/pts/%d", &amp;<a href='../Y/21366.html' title='Multiple used in 340 places.'>number</a>) != 1 || <a href='../Y/21366.html' title='Multiple used in 340 places.'>number</a> &lt; 0)
+<a id='L249' name='L249'></a> 249     <a href='../S/5739.html#L40' title='Defined at 40 in support/check.h.'>FAIL_EXIT1</a> ("invalid PTY name: \"%s\"", <a href='../Y/23122.html' title='Multiple used in 9 places.'>pty</a>);
+<a id='L250' name='L250'></a> 250 
+<a id='L251' name='L251'></a> 251   <em class='comment'>/* Add a few additional descriptors to cover standard I/O streams</em>
+<a id='L252' name='L252'></a> 252 <em class='comment'>     etc.  */</em>
+<a id='L253' name='L253'></a> 253   <a href='../D/36085.html' title='Multiple defined in 10 places.'>rlim_t</a> <a href='../Y/12693.html' title='Multiple used in 4 places.'>desired_limit</a> = <a href='../Y/21366.html' title='Multiple used in 340 places.'>number</a> + 10;
+<a id='L254' name='L254'></a> 254 
+<a id='L255' name='L255'></a> 255   <strong class='reserved'>struct</strong> <a href='../D/36086.html' title='Multiple defined in 5 places.'>rlimit</a> <a href='../Y/18199.html' title='Multiple used in 58 places.'>lim</a>;
+<a id='L256' name='L256'></a> 256   <strong class='reserved'>if</strong> (<a href='../D/31251.html' title='Multiple defined in 4 places.'>getrlimit</a> (<a href='../D/11389.html' title='Multiple defined in 15 places.'>RLIMIT_NOFILE</a>, &amp;<a href='../Y/18199.html' title='Multiple used in 58 places.'>lim</a>) != 0)
+<a id='L257' name='L257'></a> 257     <a href='../S/5739.html#L40' title='Defined at 40 in support/check.h.'>FAIL_EXIT1</a> ("getrlimit (RLIMIT_NOFILE): %m");
+<a id='L258' name='L258'></a> 258   <strong class='reserved'>if</strong> (<a href='../Y/18199.html' title='Multiple used in 58 places.'>lim</a>.<a href='../Y/24102.html' title='Multiple used in 128 places.'>rlim_cur</a> &lt; <a href='../Y/12693.html' title='Multiple used in 4 places.'>desired_limit</a>)
+<a id='L259' name='L259'></a> 259     <em class='brace'>{</em>
+<a id='L260' name='L260'></a> 260       <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("info: adjusting RLIMIT_NOFILE from %llu to %llu\n",
+<a id='L261' name='L261'></a> 261           (<strong class='reserved'>unsigned</strong> <strong class='reserved'>long</strong> <strong class='reserved'>long</strong> <strong class='reserved'>int</strong>) <a href='../Y/18199.html' title='Multiple used in 58 places.'>lim</a>.<a href='../Y/24102.html' title='Multiple used in 128 places.'>rlim_cur</a>,
+<a id='L262' name='L262'></a> 262           (<strong class='reserved'>unsigned</strong> <strong class='reserved'>long</strong> <strong class='reserved'>long</strong> <strong class='reserved'>int</strong>) <a href='../Y/12693.html' title='Multiple used in 4 places.'>desired_limit</a>);
+<a id='L263' name='L263'></a> 263       <a href='../Y/18199.html' title='Multiple used in 58 places.'>lim</a>.<a href='../Y/24102.html' title='Multiple used in 128 places.'>rlim_cur</a> = <a href='../Y/12693.html' title='Multiple used in 4 places.'>desired_limit</a>;
+<a id='L264' name='L264'></a> 264       <strong class='reserved'>if</strong> (<a href='../D/36583.html' title='Multiple defined in 4 places.'>setrlimit</a> (<a href='../D/11389.html' title='Multiple defined in 15 places.'>RLIMIT_NOFILE</a>, &amp;<a href='../Y/18199.html' title='Multiple used in 58 places.'>lim</a>) != 0)
+<a id='L265' name='L265'></a> 265     <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("warning: setrlimit (RLIMIT_NOFILE) failed: %m\n");
+<a id='L266' name='L266'></a> 266     <em class='brace'>}</em>
+<a id='L267' name='L267'></a> 267 <em class='brace'>}</em>
+<a id='L268' name='L268'></a> 268 
+<a id='L269' name='L269'></a> 269 <em class='comment'>/* These chroot setup functions put the TTY at at "/console" (where it</em>
+<a id='L270' name='L270'></a> 270 <em class='comment'>   won't be found by ttyname), and create "/dev/console" as an</em>
+<a id='L271' name='L271'></a> 271 <em class='comment'>   ordinary file.  This way, it's easier to write test-cases that</em>
+<a id='L272' name='L272'></a> 272 <em class='comment'>   expect ttyname to fail; test-cases that expect it to succeed need</em>
+<a id='L273' name='L273'></a> 273 <em class='comment'>   to explicitly remount it at "/dev/console".  */</em>
+<a id='L274' name='L274'></a> 274 
+<a id='L275' name='L275'></a> 275 <strong class='reserved'>static</strong> <strong class='reserved'>int</strong>
+<a id='L276' name='L276'></a> 276 <a href='../S/10768.html#L605' title='Referred from 605 in sysdeps/unix/sysv/linux/tst-ttyname.c.'>do_in_chroot_1</a> (<strong class='reserved'>int</strong> (*<a href='../D/28550.html' title='Multiple defined in 3 places.'>cb</a>)(<strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *, <strong class='reserved'>int</strong>))
+<a id='L277' name='L277'></a> 277 <em class='brace'>{</em>
+<a id='L278' name='L278'></a> 278   <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("info:  entering chroot 1\n");
+<a id='L279' name='L279'></a> 279 
+<a id='L280' name='L280'></a> 280   <em class='comment'>/* Open the PTS that we'll be testing on.  */</em>
+<a id='L281' name='L281'></a> 281   <strong class='reserved'>int</strong> <a href='../Y/18980.html' title='Multiple used in 19 places.'>master</a>;
+<a id='L282' name='L282'></a> 282   <strong class='reserved'>char</strong> *<a href='../Y/25623.html' title='Multiple used in 29 places.'>slavename</a>;
+<a id='L283' name='L283'></a> 283   <a href='../Y/18980.html' title='Multiple used in 19 places.'>master</a> = <a href='../Y/22569.html' title='Multiple used in 13 places.'>posix_openpt</a> (<a href='../D/9633.html' title='Multiple defined in 3 places.'>O_RDWR</a>|<a href='../D/9625.html' title='Multiple defined in 8 places.'>O_NOCTTY</a>|<a href='../D/9628.html' title='Multiple defined in 8 places.'>O_NONBLOCK</a>);
+<a id='L284' name='L284'></a> 284   <strong class='reserved'>if</strong> (<a href='../Y/18980.html' title='Multiple used in 19 places.'>master</a> &lt; 0)
+<a id='L285' name='L285'></a> 285     <em class='brace'>{</em>
+<a id='L286' name='L286'></a> 286       <strong class='reserved'>if</strong> (<a href='../D/30023.html' title='Multiple defined in 13 places.'>errno</a> == <a href='../D/3617.html' title='Multiple defined in 2 places.'>ENOENT</a>)
+<a id='L287' name='L287'></a> 287     <a href='../S/5739.html#L45' title='Defined at 45 in support/check.h.'>FAIL_UNSUPPORTED</a> ("posix_openpt: %m");
+<a id='L288' name='L288'></a> 288       <strong class='reserved'>else</strong>
+<a id='L289' name='L289'></a> 289     <a href='../S/5739.html#L40' title='Defined at 40 in support/check.h.'>FAIL_EXIT1</a> ("posix_openpt: %m");
+<a id='L290' name='L290'></a> 290     <em class='brace'>}</em>
+<a id='L291' name='L291'></a> 291   <a href='../D/17015.html' title='Multiple defined in 4 places.'>VERIFY</a> ((<a href='../Y/25623.html' title='Multiple used in 29 places.'>slavename</a> = <a href='../D/35190.html' title='Multiple defined in 3 places.'>ptsname</a> (<a href='../Y/18980.html' title='Multiple used in 19 places.'>master</a>)));
+<a id='L292' name='L292'></a> 292   <a href='../D/17015.html' title='Multiple defined in 4 places.'>VERIFY</a> (<a href='../D/38737.html' title='Multiple defined in 3 places.'>unlockpt</a> (<a href='../Y/18980.html' title='Multiple used in 19 places.'>master</a>) == 0);
+<a id='L293' name='L293'></a> 293   <strong class='reserved'>if</strong> (<a href='../D/37116.html' title='Multiple defined in 12 places.'>strncmp</a> (<a href='../Y/25623.html' title='Multiple used in 29 places.'>slavename</a>, "/dev/pts/", 9) != 0)
+<a id='L294' name='L294'></a> 294     <a href='../S/5739.html#L45' title='Defined at 45 in support/check.h.'>FAIL_UNSUPPORTED</a> ("slave pseudo-terminal is not under /dev/pts/: %s",
+<a id='L295' name='L295'></a> 295                       <a href='../Y/25623.html' title='Multiple used in 29 places.'>slavename</a>);
+<a id='L296' name='L296'></a> 296   <a href='../S/10768.html#L245' title='Defined at 245 in sysdeps/unix/sysv/linux/tst-ttyname.c.'>adjust_file_limit</a> (<a href='../Y/25623.html' title='Multiple used in 29 places.'>slavename</a>);
+<a id='L297' name='L297'></a> 297   <strong class='reserved'>int</strong> <a href='../Y/25622.html' title='Multiple used in 19 places.'>slave</a> = <a href='../S/5873.html#L24' title='Defined at 24 in support/xopen.c.'>xopen</a> (<a href='../Y/25623.html' title='Multiple used in 29 places.'>slavename</a>, <a href='../D/9633.html' title='Multiple defined in 3 places.'>O_RDWR</a>, 0);
+<a id='L298' name='L298'></a> 298   <strong class='reserved'>if</strong> (!<a href='../S/10768.html#L211' title='Defined at 211 in sysdeps/unix/sysv/linux/tst-ttyname.c.'>doit</a> (<a href='../Y/25622.html' title='Multiple used in 19 places.'>slave</a>, "basic smoketest",
+<a id='L299' name='L299'></a> 299              (<strong class='reserved'>struct</strong> <a href='../S/10768.html#L143' title='Defined at 143 in sysdeps/unix/sysv/linux/tst-ttyname.c.'>result_r</a>)<em class='brace'>{</em>.<a href='../D/33817.html' title='Multiple defined in 21 places.'>name</a>=<a href='../Y/25623.html' title='Multiple used in 29 places.'>slavename</a>, .<a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a>=0, .<a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a>=0<em class='brace'>}</em>))
+<a id='L300' name='L300'></a> 300     <strong class='reserved'>return</strong> 1;
+<a id='L301' name='L301'></a> 301 
+<a id='L302' name='L302'></a> 302   <a href='../D/34727.html' title='Multiple defined in 11 places.'>pid_t</a> <a href='../Y/22398.html' title='Multiple used in 920 places.'>pid</a> = <a href='../S/5867.html#L26' title='Defined at 26 in support/xfork.c.'>xfork</a> ();
+<a id='L303' name='L303'></a> 303   <strong class='reserved'>if</strong> (<a href='../Y/22398.html' title='Multiple used in 920 places.'>pid</a> == 0)
+<a id='L304' name='L304'></a> 304     <em class='brace'>{</em>
+<a id='L305' name='L305'></a> 305       <a href='../S/5930.html#L24' title='Defined at 24 in support/xclose.c.'>xclose</a> (<a href='../Y/18980.html' title='Multiple used in 19 places.'>master</a>);
+<a id='L306' name='L306'></a> 306 
+<a id='L307' name='L307'></a> 307       <strong class='reserved'>if</strong> (!<a href='../S/5934.html#L28' title='Defined at 28 in support/support_enter_mount_namespace.c.'>support_enter_mount_namespace</a> ())
+<a id='L308' name='L308'></a> 308     <a href='../S/5739.html#L45' title='Defined at 45 in support/check.h.'>FAIL_UNSUPPORTED</a> ("could not enter new mount namespace");
+<a id='L309' name='L309'></a> 309 
+<a id='L310' name='L310'></a> 310       <a href='../D/17015.html' title='Multiple defined in 4 places.'>VERIFY</a> (<a href='../S/5752.html#L53' title='Defined at 53 in support/test-container.c.'>mount</a> ("tmpfs", <a href='../Y/11577.html' title='Multiple used in 9 places.'>chrootdir</a>, "tmpfs", 0, "mode=755") == 0);
+<a id='L311' name='L311'></a> 311       <a href='../D/17015.html' title='Multiple defined in 4 places.'>VERIFY</a> (<a href='../Y/11497.html' title='Multiple used in 45 places.'>chdir</a> (<a href='../Y/11577.html' title='Multiple used in 9 places.'>chrootdir</a>) == 0);
+<a id='L312' name='L312'></a> 312 
+<a id='L313' name='L313'></a> 313       <a href='../S/5836.html#L24' title='Defined at 24 in support/xmkdir.c.'>xmkdir</a> ("proc", 0755);
+<a id='L314' name='L314'></a> 314       <a href='../S/5836.html#L24' title='Defined at 24 in support/xmkdir.c.'>xmkdir</a> ("dev", 0755);
+<a id='L315' name='L315'></a> 315       <a href='../S/5836.html#L24' title='Defined at 24 in support/xmkdir.c.'>xmkdir</a> ("dev/pts", 0755);
+<a id='L316' name='L316'></a> 316 
+<a id='L317' name='L317'></a> 317       <a href='../D/17015.html' title='Multiple defined in 4 places.'>VERIFY</a> (<a href='../S/5752.html#L53' title='Defined at 53 in support/test-container.c.'>mount</a> ("/proc", "proc", <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>, <a href='../D/8278.html' title='Multiple defined in 3 places.'>MS_BIND</a>|<a href='../D/8301.html' title='Multiple defined in 3 places.'>MS_REC</a>, <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>) == 0);
+<a id='L318' name='L318'></a> 318       <a href='../D/17015.html' title='Multiple defined in 4 places.'>VERIFY</a> (<a href='../S/5752.html#L53' title='Defined at 53 in support/test-container.c.'>mount</a> ("devpts", "dev/pts", "devpts",
+<a id='L319' name='L319'></a> 319                      <a href='../D/8293.html' title='Multiple defined in 3 places.'>MS_NOSUID</a>|<a href='../D/8292.html' title='Multiple defined in 3 places.'>MS_NOEXEC</a>,
+<a id='L320' name='L320'></a> 320                      "newinstance,ptmxmode=0666,mode=620") == 0);
+<a id='L321' name='L321'></a> 321       <a href='../D/17015.html' title='Multiple defined in 4 places.'>VERIFY</a> (<a href='../S/3752.html#L146' title='Defined at 146 in timezone/zic.c.'>symlink</a> ("pts/ptmx", "dev/ptmx") == 0);
+<a id='L322' name='L322'></a> 322 
+<a id='L323' name='L323'></a> 323       <a href='../D/38452.html' title='Multiple defined in 2 places.'>touch</a> ("console", 0);
+<a id='L324' name='L324'></a> 324       <a href='../D/38452.html' title='Multiple defined in 2 places.'>touch</a> ("dev/console", 0);
+<a id='L325' name='L325'></a> 325       <a href='../D/17015.html' title='Multiple defined in 4 places.'>VERIFY</a> (<a href='../S/5752.html#L53' title='Defined at 53 in support/test-container.c.'>mount</a> (<a href='../Y/25623.html' title='Multiple used in 29 places.'>slavename</a>, "console", <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>, <a href='../D/8278.html' title='Multiple defined in 3 places.'>MS_BIND</a>, <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>) == 0);
+<a id='L326' name='L326'></a> 326 
+<a id='L327' name='L327'></a> 327       <a href='../S/5757.html#L24' title='Defined at 24 in support/xchroot.c.'>xchroot</a> (".");
+<a id='L328' name='L328'></a> 328 
+<a id='L329' name='L329'></a> 329       <strong class='reserved'>char</strong> *<a href='../Y/18246.html' title='Multiple used in 21 places.'>linkname</a> = <a href='../D/39420.html' title='Multiple defined in 2 places.'>xasprintf</a> ("/proc/self/fd/%d", <a href='../Y/25622.html' title='Multiple used in 19 places.'>slave</a>);
+<a id='L330' name='L330'></a> 330       <strong class='reserved'>char</strong> *<a href='../Y/26794.html' title='Multiple used in 189 places.'>target</a> = <a href='../S/10768.html#L72' title='Defined at 72 in sysdeps/unix/sysv/linux/tst-ttyname.c.'>proc_fd_readlink</a> (<a href='../Y/18246.html' title='Multiple used in 21 places.'>linkname</a>);
+<a id='L331' name='L331'></a> 331       <a href='../D/17015.html' title='Multiple defined in 4 places.'>VERIFY</a> (<a href='../D/37067.html' title='Multiple defined in 17 places.'>strcmp</a> (<a href='../Y/26794.html' title='Multiple used in 189 places.'>target</a>, <a href='../Y/25623.html' title='Multiple used in 29 places.'>slavename</a>) == 0);
+<a id='L332' name='L332'></a> 332       <a href='../D/30785.html' title='Multiple defined in 5 places.'>free</a> (<a href='../Y/18246.html' title='Multiple used in 21 places.'>linkname</a>);
+<a id='L333' name='L333'></a> 333 
+<a id='L334' name='L334'></a> 334       <a href='../D/26871.html' title='Multiple defined in 4 places.'>_exit</a> (<a href='../D/28550.html' title='Multiple defined in 3 places.'>cb</a> (<a href='../Y/25623.html' title='Multiple used in 29 places.'>slavename</a>, <a href='../Y/25622.html' title='Multiple used in 19 places.'>slave</a>));
+<a id='L335' name='L335'></a> 335     <em class='brace'>}</em>
+<a id='L336' name='L336'></a> 336   <strong class='reserved'>int</strong> <a href='../D/37029.html' title='Multiple defined in 7 places.'>status</a>;
+<a id='L337' name='L337'></a> 337   <a href='../S/5850.html#L27' title='Defined at 27 in support/xwaitpid.c.'>xwaitpid</a> (<a href='../Y/22398.html' title='Multiple used in 920 places.'>pid</a>, &amp;<a href='../D/37029.html' title='Multiple defined in 7 places.'>status</a>, 0);
+<a id='L338' name='L338'></a> 338   <a href='../D/17015.html' title='Multiple defined in 4 places.'>VERIFY</a> (<a href='../D/17220.html' title='Multiple defined in 3 places.'>WIFEXITED</a> (<a href='../D/37029.html' title='Multiple defined in 7 places.'>status</a>));
+<a id='L339' name='L339'></a> 339   <a href='../S/5930.html#L24' title='Defined at 24 in support/xclose.c.'>xclose</a> (<a href='../Y/18980.html' title='Multiple used in 19 places.'>master</a>);
+<a id='L340' name='L340'></a> 340   <a href='../S/5930.html#L24' title='Defined at 24 in support/xclose.c.'>xclose</a> (<a href='../Y/25622.html' title='Multiple used in 19 places.'>slave</a>);
+<a id='L341' name='L341'></a> 341   <strong class='reserved'>return</strong> <a href='../D/17208.html' title='Multiple defined in 3 places.'>WEXITSTATUS</a> (<a href='../D/37029.html' title='Multiple defined in 7 places.'>status</a>);
+<a id='L342' name='L342'></a> 342 <em class='brace'>}</em>
+<a id='L343' name='L343'></a> 343 
+<a id='L344' name='L344'></a> 344 <strong class='reserved'>static</strong> <strong class='reserved'>int</strong>
+<a id='L345' name='L345'></a> 345 <a href='../S/10768.html#L609' title='Referred from 609 in sysdeps/unix/sysv/linux/tst-ttyname.c.'>do_in_chroot_2</a> (<strong class='reserved'>int</strong> (*<a href='../D/28550.html' title='Multiple defined in 3 places.'>cb</a>)(<strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *, <strong class='reserved'>int</strong>))
+<a id='L346' name='L346'></a> 346 <em class='brace'>{</em>
+<a id='L347' name='L347'></a> 347   <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("info:  entering chroot 2\n");
+<a id='L348' name='L348'></a> 348 
+<a id='L349' name='L349'></a> 349   <strong class='reserved'>int</strong> <a href='../Y/22403.html' title='Multiple used in 8 places.'>pid_pipe</a>[2];
+<a id='L350' name='L350'></a> 350   <a href='../S/5912.html#L24' title='Defined at 24 in support/xpipe.c.'>xpipe</a> (<a href='../Y/22403.html' title='Multiple used in 8 places.'>pid_pipe</a>);
+<a id='L351' name='L351'></a> 351   <strong class='reserved'>int</strong> <a href='../Y/14079.html' title='Multiple used in 7 places.'>exit_pipe</a>[2];
+<a id='L352' name='L352'></a> 352   <a href='../S/5912.html#L24' title='Defined at 24 in support/xpipe.c.'>xpipe</a> (<a href='../Y/14079.html' title='Multiple used in 7 places.'>exit_pipe</a>);
+<a id='L353' name='L353'></a> 353 
+<a id='L354' name='L354'></a> 354   <em class='comment'>/* Open the PTS that we'll be testing on.  */</em>
+<a id='L355' name='L355'></a> 355   <strong class='reserved'>int</strong> <a href='../Y/18980.html' title='Multiple used in 19 places.'>master</a>;
+<a id='L356' name='L356'></a> 356   <strong class='reserved'>char</strong> *<a href='../Y/25623.html' title='Multiple used in 29 places.'>slavename</a>;
+<a id='L357' name='L357'></a> 357   <a href='../D/17015.html' title='Multiple defined in 4 places.'>VERIFY</a> ((<a href='../Y/18980.html' title='Multiple used in 19 places.'>master</a> = <a href='../Y/22569.html' title='Multiple used in 13 places.'>posix_openpt</a> (<a href='../D/9633.html' title='Multiple defined in 3 places.'>O_RDWR</a>|<a href='../D/9625.html' title='Multiple defined in 8 places.'>O_NOCTTY</a>|<a href='../D/9628.html' title='Multiple defined in 8 places.'>O_NONBLOCK</a>)) &gt;= 0);
+<a id='L358' name='L358'></a> 358   <a href='../D/17015.html' title='Multiple defined in 4 places.'>VERIFY</a> ((<a href='../Y/25623.html' title='Multiple used in 29 places.'>slavename</a> = <a href='../D/35190.html' title='Multiple defined in 3 places.'>ptsname</a> (<a href='../Y/18980.html' title='Multiple used in 19 places.'>master</a>)));
+<a id='L359' name='L359'></a> 359   <a href='../D/17015.html' title='Multiple defined in 4 places.'>VERIFY</a> (<a href='../D/38737.html' title='Multiple defined in 3 places.'>unlockpt</a> (<a href='../Y/18980.html' title='Multiple used in 19 places.'>master</a>) == 0);
+<a id='L360' name='L360'></a> 360   <strong class='reserved'>if</strong> (<a href='../D/37116.html' title='Multiple defined in 12 places.'>strncmp</a> (<a href='../Y/25623.html' title='Multiple used in 29 places.'>slavename</a>, "/dev/pts/", 9) != 0)
+<a id='L361' name='L361'></a> 361     <a href='../S/5739.html#L45' title='Defined at 45 in support/check.h.'>FAIL_UNSUPPORTED</a> ("slave pseudo-terminal is not under /dev/pts/: %s",
+<a id='L362' name='L362'></a> 362                       <a href='../Y/25623.html' title='Multiple used in 29 places.'>slavename</a>);
+<a id='L363' name='L363'></a> 363   <a href='../S/10768.html#L245' title='Defined at 245 in sysdeps/unix/sysv/linux/tst-ttyname.c.'>adjust_file_limit</a> (<a href='../Y/25623.html' title='Multiple used in 29 places.'>slavename</a>);
+<a id='L364' name='L364'></a> 364   <em class='comment'>/* wait until in a new mount ns to open the slave */</em>
+<a id='L365' name='L365'></a> 365 
+<a id='L366' name='L366'></a> 366   <em class='comment'>/* enable `wait`ing on grandchildren */</em>
+<a id='L367' name='L367'></a> 367   <a href='../D/17015.html' title='Multiple defined in 4 places.'>VERIFY</a> (<a href='../Y/22676.html' title='Multiple used in 24 places.'>prctl</a> (PR_SET_CHILD_SUBREAPER, 1) == 0);
+<a id='L368' name='L368'></a> 368 
+<a id='L369' name='L369'></a> 369   <a href='../D/34727.html' title='Multiple defined in 11 places.'>pid_t</a> <a href='../Y/22398.html' title='Multiple used in 920 places.'>pid</a> = <a href='../S/5867.html#L26' title='Defined at 26 in support/xfork.c.'>xfork</a> (); <em class='comment'>/* outer child */</em>
+<a id='L370' name='L370'></a> 370   <strong class='reserved'>if</strong> (<a href='../Y/22398.html' title='Multiple used in 920 places.'>pid</a> == 0)
+<a id='L371' name='L371'></a> 371     <em class='brace'>{</em>
+<a id='L372' name='L372'></a> 372       <a href='../S/5930.html#L24' title='Defined at 24 in support/xclose.c.'>xclose</a> (<a href='../Y/18980.html' title='Multiple used in 19 places.'>master</a>);
+<a id='L373' name='L373'></a> 373       <a href='../S/5930.html#L24' title='Defined at 24 in support/xclose.c.'>xclose</a> (<a href='../Y/22403.html' title='Multiple used in 8 places.'>pid_pipe</a>[0]);
+<a id='L374' name='L374'></a> 374       <a href='../S/5930.html#L24' title='Defined at 24 in support/xclose.c.'>xclose</a> (<a href='../Y/14079.html' title='Multiple used in 7 places.'>exit_pipe</a>[1]);
+<a id='L375' name='L375'></a> 375 
+<a id='L376' name='L376'></a> 376       <strong class='reserved'>if</strong> (!<a href='../S/5934.html#L28' title='Defined at 28 in support/support_enter_mount_namespace.c.'>support_enter_mount_namespace</a> ())
+<a id='L377' name='L377'></a> 377     <a href='../S/5739.html#L45' title='Defined at 45 in support/check.h.'>FAIL_UNSUPPORTED</a> ("could not enter new mount namespace");
+<a id='L378' name='L378'></a> 378 
+<a id='L379' name='L379'></a> 379       <strong class='reserved'>int</strong> <a href='../Y/25622.html' title='Multiple used in 19 places.'>slave</a> = <a href='../S/5873.html#L24' title='Defined at 24 in support/xopen.c.'>xopen</a> (<a href='../Y/25623.html' title='Multiple used in 29 places.'>slavename</a>, <a href='../D/9633.html' title='Multiple defined in 3 places.'>O_RDWR</a>, 0);
+<a id='L380' name='L380'></a> 380       <strong class='reserved'>if</strong> (!<a href='../S/10768.html#L211' title='Defined at 211 in sysdeps/unix/sysv/linux/tst-ttyname.c.'>doit</a> (<a href='../Y/25622.html' title='Multiple used in 19 places.'>slave</a>, "basic smoketest",
+<a id='L381' name='L381'></a> 381                  (<strong class='reserved'>struct</strong> <a href='../S/10768.html#L143' title='Defined at 143 in sysdeps/unix/sysv/linux/tst-ttyname.c.'>result_r</a>)<em class='brace'>{</em>.<a href='../D/33817.html' title='Multiple defined in 21 places.'>name</a>=<a href='../Y/25623.html' title='Multiple used in 29 places.'>slavename</a>, .<a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a>=0, .<a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a>=0<em class='brace'>}</em>))
+<a id='L382' name='L382'></a> 382         <a href='../D/26871.html' title='Multiple defined in 4 places.'>_exit</a> (1);
+<a id='L383' name='L383'></a> 383 
+<a id='L384' name='L384'></a> 384       <a href='../D/17015.html' title='Multiple defined in 4 places.'>VERIFY</a> (<a href='../S/5752.html#L53' title='Defined at 53 in support/test-container.c.'>mount</a> ("tmpfs", <a href='../Y/11577.html' title='Multiple used in 9 places.'>chrootdir</a>, "tmpfs", 0, "mode=755") == 0);
+<a id='L385' name='L385'></a> 385       <a href='../D/17015.html' title='Multiple defined in 4 places.'>VERIFY</a> (<a href='../Y/11497.html' title='Multiple used in 45 places.'>chdir</a> (<a href='../Y/11577.html' title='Multiple used in 9 places.'>chrootdir</a>) == 0);
+<a id='L386' name='L386'></a> 386 
+<a id='L387' name='L387'></a> 387       <a href='../S/5836.html#L24' title='Defined at 24 in support/xmkdir.c.'>xmkdir</a> ("proc", 0755);
+<a id='L388' name='L388'></a> 388       <a href='../S/5836.html#L24' title='Defined at 24 in support/xmkdir.c.'>xmkdir</a> ("dev", 0755);
+<a id='L389' name='L389'></a> 389       <a href='../S/5836.html#L24' title='Defined at 24 in support/xmkdir.c.'>xmkdir</a> ("dev/pts", 0755);
+<a id='L390' name='L390'></a> 390 
+<a id='L391' name='L391'></a> 391       <a href='../D/17015.html' title='Multiple defined in 4 places.'>VERIFY</a> (<a href='../S/5752.html#L53' title='Defined at 53 in support/test-container.c.'>mount</a> ("devpts", "dev/pts", "devpts",
+<a id='L392' name='L392'></a> 392                      <a href='../D/8293.html' title='Multiple defined in 3 places.'>MS_NOSUID</a>|<a href='../D/8292.html' title='Multiple defined in 3 places.'>MS_NOEXEC</a>,
+<a id='L393' name='L393'></a> 393                      "newinstance,ptmxmode=0666,mode=620") == 0);
+<a id='L394' name='L394'></a> 394       <a href='../D/17015.html' title='Multiple defined in 4 places.'>VERIFY</a> (<a href='../S/3752.html#L146' title='Defined at 146 in timezone/zic.c.'>symlink</a> ("pts/ptmx", "dev/ptmx") == 0);
+<a id='L395' name='L395'></a> 395 
+<a id='L396' name='L396'></a> 396       <a href='../D/38452.html' title='Multiple defined in 2 places.'>touch</a> ("console", 0);
+<a id='L397' name='L397'></a> 397       <a href='../D/38452.html' title='Multiple defined in 2 places.'>touch</a> ("dev/console", 0);
+<a id='L398' name='L398'></a> 398       <a href='../D/17015.html' title='Multiple defined in 4 places.'>VERIFY</a> (<a href='../S/5752.html#L53' title='Defined at 53 in support/test-container.c.'>mount</a> (<a href='../Y/25623.html' title='Multiple used in 29 places.'>slavename</a>, "console", <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>, <a href='../D/8278.html' title='Multiple defined in 3 places.'>MS_BIND</a>, <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>) == 0);
+<a id='L399' name='L399'></a> 399 
+<a id='L400' name='L400'></a> 400       <a href='../S/5757.html#L24' title='Defined at 24 in support/xchroot.c.'>xchroot</a> (".");
+<a id='L401' name='L401'></a> 401 
+<a id='L402' name='L402'></a> 402       <strong class='reserved'>if</strong> (<a href='../Y/28337.html' title='Multiple used in 10 places.'>unshare</a> (<a href='../S/9760.html#L55' title='Defined at 55 in sysdeps/unix/sysv/linux/bits/sched.h.'>CLONE_NEWNS</a> | <a href='../S/9760.html#L71' title='Defined at 71 in sysdeps/unix/sysv/linux/bits/sched.h.'>CLONE_NEWPID</a>) &lt; 0)
+<a id='L403' name='L403'></a> 403         <a href='../S/5739.html#L45' title='Defined at 45 in support/check.h.'>FAIL_UNSUPPORTED</a> ("could not enter new PID namespace");
+<a id='L404' name='L404'></a> 404       <a href='../Y/22398.html' title='Multiple used in 920 places.'>pid</a> = <a href='../S/5867.html#L26' title='Defined at 26 in support/xfork.c.'>xfork</a> (); <em class='comment'>/* inner child */</em>
+<a id='L405' name='L405'></a> 405       <strong class='reserved'>if</strong> (<a href='../Y/22398.html' title='Multiple used in 920 places.'>pid</a> == 0)
+<a id='L406' name='L406'></a> 406         <em class='brace'>{</em>
+<a id='L407' name='L407'></a> 407           <a href='../S/5930.html#L24' title='Defined at 24 in support/xclose.c.'>xclose</a> (<a href='../Y/22403.html' title='Multiple used in 8 places.'>pid_pipe</a>[1]);
+<a id='L408' name='L408'></a> 408 
+<a id='L409' name='L409'></a> 409           <em class='comment'>/* wait until the outer child has exited */</em>
+<a id='L410' name='L410'></a> 410           <strong class='reserved'>char</strong> <a href='../D/28364.html' title='Multiple defined in 2 places.'>c</a>;
+<a id='L411' name='L411'></a> 411           <a href='../D/17015.html' title='Multiple defined in 4 places.'>VERIFY</a> (<a href='../S/284.html#L450' title='Defined at 450 in intl/loadmsgcat.c.'>read</a> (<a href='../Y/14079.html' title='Multiple used in 7 places.'>exit_pipe</a>[0], &amp;<a href='../D/28364.html' title='Multiple defined in 2 places.'>c</a>, 1) == 0);
+<a id='L412' name='L412'></a> 412           <a href='../S/5930.html#L24' title='Defined at 24 in support/xclose.c.'>xclose</a> (<a href='../Y/14079.html' title='Multiple used in 7 places.'>exit_pipe</a>[0]);
+<a id='L413' name='L413'></a> 413 
+<a id='L414' name='L414'></a> 414           <a href='../D/17015.html' title='Multiple defined in 4 places.'>VERIFY</a> (<a href='../S/5752.html#L53' title='Defined at 53 in support/test-container.c.'>mount</a> ("proc", "/proc", "proc",
+<a id='L415' name='L415'></a> 415                          <a href='../D/8293.html' title='Multiple defined in 3 places.'>MS_NOSUID</a>|<a href='../D/8292.html' title='Multiple defined in 3 places.'>MS_NOEXEC</a>|<a href='../D/8290.html' title='Multiple defined in 3 places.'>MS_NODEV</a>, <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>) == 0);
+<a id='L416' name='L416'></a> 416 
+<a id='L417' name='L417'></a> 417           <strong class='reserved'>char</strong> *<a href='../Y/18246.html' title='Multiple used in 21 places.'>linkname</a> = <a href='../D/39420.html' title='Multiple defined in 2 places.'>xasprintf</a> ("/proc/self/fd/%d", <a href='../Y/25622.html' title='Multiple used in 19 places.'>slave</a>);
+<a id='L418' name='L418'></a> 418           <strong class='reserved'>char</strong> *<a href='../Y/26794.html' title='Multiple used in 189 places.'>target</a> = <a href='../S/10768.html#L72' title='Defined at 72 in sysdeps/unix/sysv/linux/tst-ttyname.c.'>proc_fd_readlink</a> (<a href='../Y/18246.html' title='Multiple used in 21 places.'>linkname</a>);
+<a id='L419' name='L419'></a> 419           <a href='../D/17015.html' title='Multiple defined in 4 places.'>VERIFY</a> (<a href='../D/37067.html' title='Multiple defined in 17 places.'>strcmp</a> (<a href='../Y/26794.html' title='Multiple used in 189 places.'>target</a>, <a href='../D/37129.html' title='Multiple defined in 19 places.'>strrchr</a> (<a href='../Y/25623.html' title='Multiple used in 29 places.'>slavename</a>, '/')) == 0);
+<a id='L420' name='L420'></a> 420           <a href='../D/30785.html' title='Multiple defined in 5 places.'>free</a> (<a href='../Y/18246.html' title='Multiple used in 21 places.'>linkname</a>);
+<a id='L421' name='L421'></a> 421 
+<a id='L422' name='L422'></a> 422           <a href='../D/26871.html' title='Multiple defined in 4 places.'>_exit</a> (<a href='../D/28550.html' title='Multiple defined in 3 places.'>cb</a> (<a href='../Y/25623.html' title='Multiple used in 29 places.'>slavename</a>, <a href='../Y/25622.html' title='Multiple used in 19 places.'>slave</a>));
+<a id='L423' name='L423'></a> 423         <em class='brace'>}</em>
+<a id='L424' name='L424'></a> 424       <a href='../S/5830.html#L24' title='Defined at 24 in support/xwrite.c.'>xwrite</a> (<a href='../Y/22403.html' title='Multiple used in 8 places.'>pid_pipe</a>[1], &amp;<a href='../Y/22398.html' title='Multiple used in 920 places.'>pid</a>, <strong class='reserved'>sizeof</strong> <a href='../Y/22398.html' title='Multiple used in 920 places.'>pid</a>);
+<a id='L425' name='L425'></a> 425       <a href='../D/26871.html' title='Multiple defined in 4 places.'>_exit</a> (0);
+<a id='L426' name='L426'></a> 426     <em class='brace'>}</em>
+<a id='L427' name='L427'></a> 427   <a href='../S/5930.html#L24' title='Defined at 24 in support/xclose.c.'>xclose</a> (<a href='../Y/22403.html' title='Multiple used in 8 places.'>pid_pipe</a>[1]);
+<a id='L428' name='L428'></a> 428   <a href='../S/5930.html#L24' title='Defined at 24 in support/xclose.c.'>xclose</a> (<a href='../Y/14079.html' title='Multiple used in 7 places.'>exit_pipe</a>[0]);
+<a id='L429' name='L429'></a> 429   <a href='../S/5930.html#L24' title='Defined at 24 in support/xclose.c.'>xclose</a> (<a href='../Y/14079.html' title='Multiple used in 7 places.'>exit_pipe</a>[1]);
+<a id='L430' name='L430'></a> 430 
+<a id='L431' name='L431'></a> 431   <em class='comment'>/* wait for the outer child */</em>
+<a id='L432' name='L432'></a> 432   <strong class='reserved'>int</strong> <a href='../D/37029.html' title='Multiple defined in 7 places.'>status</a>;
+<a id='L433' name='L433'></a> 433   <a href='../S/5850.html#L27' title='Defined at 27 in support/xwaitpid.c.'>xwaitpid</a> (<a href='../Y/22398.html' title='Multiple used in 920 places.'>pid</a>, &amp;<a href='../D/37029.html' title='Multiple defined in 7 places.'>status</a>, 0);
+<a id='L434' name='L434'></a> 434   <a href='../D/17015.html' title='Multiple defined in 4 places.'>VERIFY</a> (<a href='../D/17220.html' title='Multiple defined in 3 places.'>WIFEXITED</a> (<a href='../D/37029.html' title='Multiple defined in 7 places.'>status</a>));
+<a id='L435' name='L435'></a> 435   <strong class='reserved'>int</strong> <a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a> = <a href='../D/17208.html' title='Multiple defined in 3 places.'>WEXITSTATUS</a> (<a href='../D/37029.html' title='Multiple defined in 7 places.'>status</a>);
+<a id='L436' name='L436'></a> 436   <strong class='reserved'>if</strong> (<a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a> != 0)
+<a id='L437' name='L437'></a> 437     <strong class='reserved'>return</strong> <a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a>;
+<a id='L438' name='L438'></a> 438 
+<a id='L439' name='L439'></a> 439   <em class='comment'>/* set 'pid' to the inner child */</em>
+<a id='L440' name='L440'></a> 440   <a href='../D/17015.html' title='Multiple defined in 4 places.'>VERIFY</a> (<a href='../S/284.html#L450' title='Defined at 450 in intl/loadmsgcat.c.'>read</a> (<a href='../Y/22403.html' title='Multiple used in 8 places.'>pid_pipe</a>[0], &amp;<a href='../Y/22398.html' title='Multiple used in 920 places.'>pid</a>, <strong class='reserved'>sizeof</strong> <a href='../Y/22398.html' title='Multiple used in 920 places.'>pid</a>) == <strong class='reserved'>sizeof</strong> <a href='../Y/22398.html' title='Multiple used in 920 places.'>pid</a>);
+<a id='L441' name='L441'></a> 441   <a href='../S/5930.html#L24' title='Defined at 24 in support/xclose.c.'>xclose</a> (<a href='../Y/22403.html' title='Multiple used in 8 places.'>pid_pipe</a>[0]);
+<a id='L442' name='L442'></a> 442 
+<a id='L443' name='L443'></a> 443   <em class='comment'>/* wait for the inner child */</em>
+<a id='L444' name='L444'></a> 444   <a href='../S/5850.html#L27' title='Defined at 27 in support/xwaitpid.c.'>xwaitpid</a> (<a href='../Y/22398.html' title='Multiple used in 920 places.'>pid</a>, &amp;<a href='../D/37029.html' title='Multiple defined in 7 places.'>status</a>, 0);
+<a id='L445' name='L445'></a> 445   <a href='../D/17015.html' title='Multiple defined in 4 places.'>VERIFY</a> (<a href='../D/17220.html' title='Multiple defined in 3 places.'>WIFEXITED</a> (<a href='../D/37029.html' title='Multiple defined in 7 places.'>status</a>));
+<a id='L446' name='L446'></a> 446   <a href='../S/5930.html#L24' title='Defined at 24 in support/xclose.c.'>xclose</a> (<a href='../Y/18980.html' title='Multiple used in 19 places.'>master</a>);
+<a id='L447' name='L447'></a> 447   <strong class='reserved'>return</strong> <a href='../D/17208.html' title='Multiple defined in 3 places.'>WEXITSTATUS</a> (<a href='../D/37029.html' title='Multiple defined in 7 places.'>status</a>);
+<a id='L448' name='L448'></a> 448 <em class='brace'>}</em>
+<a id='L449' name='L449'></a> 449 
+<a id='L450' name='L450'></a> 450 <em class='comment'>/* main test */</em>
+<a id='L451' name='L451'></a> 451 
+<a id='L452' name='L452'></a> 452 <strong class='reserved'>static</strong> <strong class='reserved'>int</strong>
+<a id='L453' name='L453'></a> 453 <a href='../R/23982.html' title='Multiple referred from 2 places.'>run_chroot_tests</a> (<strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../Y/25623.html' title='Multiple used in 29 places.'>slavename</a>, <strong class='reserved'>int</strong> <a href='../Y/25622.html' title='Multiple used in 19 places.'>slave</a>)
+<a id='L454' name='L454'></a> 454 <em class='brace'>{</em>
+<a id='L455' name='L455'></a> 455   <strong class='reserved'>struct</strong> <a href='../D/37012.html' title='Multiple defined in 29 places.'>stat</a> <a href='../Y/25966.html' title='Multiple used in 1069 places.'>st</a>;
+<a id='L456' name='L456'></a> 456   <a href='../S/3749.html#L624' title='Defined at 624 in timezone/private.h.'>bool</a> <a href='../Y/21526.html' title='Multiple used in 253 places.'>ok</a> = <a href='../D/38483.html' title='Multiple defined in 5 places.'>true</a>;
+<a id='L457' name='L457'></a> 457 
+<a id='L458' name='L458'></a> 458   <em class='comment'>/* There are 3 groups of tests here.  The first group fairly</em>
+<a id='L459' name='L459'></a> 459 <em class='comment'>     generically does things known to mess up ttyname, and verifies</em>
+<a id='L460' name='L460'></a> 460 <em class='comment'>     that ttyname copes correctly.  The remaining groups are</em>
+<a id='L461' name='L461'></a> 461 <em class='comment'>     increasingly convoluted, as we target specific parts of ttyname</em>
+<a id='L462' name='L462'></a> 462 <em class='comment'>     to try to confuse.  */</em>
+<a id='L463' name='L463'></a> 463 
+<a id='L464' name='L464'></a> 464   <em class='comment'>/* Basic tests that it doesn't get confused by multiple devpts</em>
+<a id='L465' name='L465'></a> 465 <em class='comment'>     instances.  */</em>
+<a id='L466' name='L466'></a> 466   <em class='brace'>{</em>
+<a id='L467' name='L467'></a> 467     <a href='../D/17015.html' title='Multiple defined in 4 places.'>VERIFY</a> (<a href='../D/37012.html' title='Multiple defined in 29 places.'>stat</a> (<a href='../Y/25623.html' title='Multiple used in 29 places.'>slavename</a>, &amp;<a href='../Y/25966.html' title='Multiple used in 1069 places.'>st</a>) &lt; 0); <em class='comment'>/* sanity check */</em>
+<a id='L468' name='L468'></a> 468     <strong class='reserved'>if</strong> (!<a href='../S/10768.html#L211' title='Defined at 211 in sysdeps/unix/sysv/linux/tst-ttyname.c.'>doit</a> (<a href='../Y/25622.html' title='Multiple used in 19 places.'>slave</a>, "no conflict, no match",
+<a id='L469' name='L469'></a> 469                (<strong class='reserved'>struct</strong> <a href='../S/10768.html#L143' title='Defined at 143 in sysdeps/unix/sysv/linux/tst-ttyname.c.'>result_r</a>)<em class='brace'>{</em>.<a href='../D/33817.html' title='Multiple defined in 21 places.'>name</a>=<a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>, .<a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a>=<a href='../D/3616.html' title='Multiple defined in 2 places.'>ENODEV</a>, .<a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a>=<a href='../D/3616.html' title='Multiple defined in 2 places.'>ENODEV</a><em class='brace'>}</em>))
+<a id='L470' name='L470'></a> 470       <a href='../Y/21526.html' title='Multiple used in 253 places.'>ok</a> = <a href='../D/30360.html' title='Multiple defined in 5 places.'>false</a>;
+<a id='L471' name='L471'></a> 471     <a href='../D/17015.html' title='Multiple defined in 4 places.'>VERIFY</a> (<a href='../S/5752.html#L53' title='Defined at 53 in support/test-container.c.'>mount</a> ("/console", "/dev/console", <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>, <a href='../D/8278.html' title='Multiple defined in 3 places.'>MS_BIND</a>, <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>) == 0);
+<a id='L472' name='L472'></a> 472     <strong class='reserved'>if</strong> (!<a href='../S/10768.html#L211' title='Defined at 211 in sysdeps/unix/sysv/linux/tst-ttyname.c.'>doit</a> (<a href='../Y/25622.html' title='Multiple used in 19 places.'>slave</a>, "no conflict, console",
+<a id='L473' name='L473'></a> 473                (<strong class='reserved'>struct</strong> <a href='../S/10768.html#L143' title='Defined at 143 in sysdeps/unix/sysv/linux/tst-ttyname.c.'>result_r</a>)<em class='brace'>{</em>.<a href='../D/33817.html' title='Multiple defined in 21 places.'>name</a>="/dev/console", .<a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a>=0, .<a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a>=0<em class='brace'>}</em>))
+<a id='L474' name='L474'></a> 474       <a href='../Y/21526.html' title='Multiple used in 253 places.'>ok</a> = <a href='../D/30360.html' title='Multiple defined in 5 places.'>false</a>;
+<a id='L475' name='L475'></a> 475     <a href='../D/17015.html' title='Multiple defined in 4 places.'>VERIFY</a> (<a href='../Y/28269.html' title='Multiple used in 12 places.'>umount</a> ("/dev/console") == 0);
+<a id='L476' name='L476'></a> 476 
+<a id='L477' name='L477'></a> 477     <em class='comment'>/* Keep creating PTYs until we we get a name collision.  */</em>
+<a id='L478' name='L478'></a> 478     <strong class='reserved'>while</strong> (<a href='../D/38483.html' title='Multiple defined in 5 places.'>true</a>)
+<a id='L479' name='L479'></a> 479       <em class='brace'>{</em>
+<a id='L480' name='L480'></a> 480     <strong class='reserved'>if</strong> (<a href='../D/37012.html' title='Multiple defined in 29 places.'>stat</a> (<a href='../Y/25623.html' title='Multiple used in 29 places.'>slavename</a>, &amp;<a href='../Y/25966.html' title='Multiple used in 1069 places.'>st</a>) == 0)
+<a id='L481' name='L481'></a> 481       <strong class='reserved'>break</strong>;
+<a id='L482' name='L482'></a> 482     <strong class='reserved'>if</strong> (<a href='../Y/22569.html' title='Multiple used in 13 places.'>posix_openpt</a> (<a href='../D/9633.html' title='Multiple defined in 3 places.'>O_RDWR</a>|<a href='../D/9625.html' title='Multiple defined in 8 places.'>O_NOCTTY</a>|<a href='../D/9628.html' title='Multiple defined in 8 places.'>O_NONBLOCK</a>) &lt; 0)
+<a id='L483' name='L483'></a> 483       <em class='brace'>{</em>
+<a id='L484' name='L484'></a> 484         <strong class='reserved'>if</strong> (<a href='../D/30023.html' title='Multiple defined in 13 places.'>errno</a> == <a href='../D/3625.html' title='Multiple defined in 2 places.'>ENOSPC</a> || <a href='../D/30023.html' title='Multiple defined in 13 places.'>errno</a> == <a href='../D/3364.html' title='Multiple defined in 2 places.'>EMFILE</a> || <a href='../D/30023.html' title='Multiple defined in 13 places.'>errno</a> == <a href='../D/3613.html' title='Multiple defined in 2 places.'>ENFILE</a>)
+<a id='L485' name='L485'></a> 485           <a href='../S/5739.html#L45' title='Defined at 45 in support/check.h.'>FAIL_UNSUPPORTED</a> ("cannot re-create PTY \"%s\" in chroot: %m"
+<a id='L486' name='L486'></a> 486                 " (consider increasing limits)", <a href='../Y/25623.html' title='Multiple used in 29 places.'>slavename</a>);
+<a id='L487' name='L487'></a> 487         <strong class='reserved'>else</strong>
+<a id='L488' name='L488'></a> 488           <a href='../S/5739.html#L40' title='Defined at 40 in support/check.h.'>FAIL_EXIT1</a> ("cannot re-create PTY \"%s\" chroot: %m", <a href='../Y/25623.html' title='Multiple used in 29 places.'>slavename</a>);
+<a id='L489' name='L489'></a> 489       <em class='brace'>}</em>
+<a id='L490' name='L490'></a> 490       <em class='brace'>}</em>
+<a id='L491' name='L491'></a> 491 
+<a id='L492' name='L492'></a> 492     <strong class='reserved'>if</strong> (!<a href='../S/10768.html#L211' title='Defined at 211 in sysdeps/unix/sysv/linux/tst-ttyname.c.'>doit</a> (<a href='../Y/25622.html' title='Multiple used in 19 places.'>slave</a>, "conflict, no match",
+<a id='L493' name='L493'></a> 493                (<strong class='reserved'>struct</strong> <a href='../S/10768.html#L143' title='Defined at 143 in sysdeps/unix/sysv/linux/tst-ttyname.c.'>result_r</a>)<em class='brace'>{</em>.<a href='../D/33817.html' title='Multiple defined in 21 places.'>name</a>=<a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>, .<a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a>=<a href='../D/3616.html' title='Multiple defined in 2 places.'>ENODEV</a>, .<a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a>=<a href='../D/3616.html' title='Multiple defined in 2 places.'>ENODEV</a><em class='brace'>}</em>))
+<a id='L494' name='L494'></a> 494       <a href='../Y/21526.html' title='Multiple used in 253 places.'>ok</a> = <a href='../D/30360.html' title='Multiple defined in 5 places.'>false</a>;
+<a id='L495' name='L495'></a> 495     <a href='../D/17015.html' title='Multiple defined in 4 places.'>VERIFY</a> (<a href='../S/5752.html#L53' title='Defined at 53 in support/test-container.c.'>mount</a> ("/console", "/dev/console", <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>, <a href='../D/8278.html' title='Multiple defined in 3 places.'>MS_BIND</a>, <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>) == 0);
+<a id='L496' name='L496'></a> 496     <strong class='reserved'>if</strong> (!<a href='../S/10768.html#L211' title='Defined at 211 in sysdeps/unix/sysv/linux/tst-ttyname.c.'>doit</a> (<a href='../Y/25622.html' title='Multiple used in 19 places.'>slave</a>, "conflict, console",
+<a id='L497' name='L497'></a> 497                (<strong class='reserved'>struct</strong> <a href='../S/10768.html#L143' title='Defined at 143 in sysdeps/unix/sysv/linux/tst-ttyname.c.'>result_r</a>)<em class='brace'>{</em>.<a href='../D/33817.html' title='Multiple defined in 21 places.'>name</a>="/dev/console", .<a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a>=0, .<a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a>=0<em class='brace'>}</em>))
+<a id='L498' name='L498'></a> 498       <a href='../Y/21526.html' title='Multiple used in 253 places.'>ok</a> = <a href='../D/30360.html' title='Multiple defined in 5 places.'>false</a>;
+<a id='L499' name='L499'></a> 499     <a href='../D/17015.html' title='Multiple defined in 4 places.'>VERIFY</a> (<a href='../Y/28269.html' title='Multiple used in 12 places.'>umount</a> ("/dev/console") == 0);
+<a id='L500' name='L500'></a> 500   <em class='brace'>}</em>
+<a id='L501' name='L501'></a> 501 
+<a id='L502' name='L502'></a> 502   <em class='comment'>/* The first tests kinda assumed that they hit certain code-paths</em>
+<a id='L503' name='L503'></a> 503 <em class='comment'>     based on assuming that the readlink target is 'slavename', but</em>
+<a id='L504' name='L504'></a> 504 <em class='comment'>     that's not quite always true.  They're still a good preliminary</em>
+<a id='L505' name='L505'></a> 505 <em class='comment'>     sanity check, so keep them, but let's add tests that make sure</em>
+<a id='L506' name='L506'></a> 506 <em class='comment'>     that those code-paths are hit by doing a readlink ourself.  */</em>
+<a id='L507' name='L507'></a> 507   <em class='brace'>{</em>
+<a id='L508' name='L508'></a> 508     <strong class='reserved'>char</strong> *<a href='../Y/18246.html' title='Multiple used in 21 places.'>linkname</a> = <a href='../D/39420.html' title='Multiple defined in 2 places.'>xasprintf</a> ("/proc/self/fd/%d", <a href='../Y/25622.html' title='Multiple used in 19 places.'>slave</a>);
+<a id='L509' name='L509'></a> 509     <strong class='reserved'>char</strong> *<a href='../Y/26794.html' title='Multiple used in 189 places.'>target</a> = <a href='../S/10768.html#L72' title='Defined at 72 in sysdeps/unix/sysv/linux/tst-ttyname.c.'>proc_fd_readlink</a> (<a href='../Y/18246.html' title='Multiple used in 21 places.'>linkname</a>);
+<a id='L510' name='L510'></a> 510     <a href='../D/30785.html' title='Multiple defined in 5 places.'>free</a> (<a href='../Y/18246.html' title='Multiple used in 21 places.'>linkname</a>);
+<a id='L511' name='L511'></a> 511     <em class='comment'>/* Depeding on how we set up the chroot, the kernel may or may not</em>
+<a id='L512' name='L512'></a> 512 <em class='comment'>       trim the leading path to the target (it may give us "/6",</em>
+<a id='L513' name='L513'></a> 513 <em class='comment'>       instead of "/dev/pts/6").  We test it both ways (do_in_chroot_1</em>
+<a id='L514' name='L514'></a> 514 <em class='comment'>       and do_in_chroot_2).  This test group relies on the target</em>
+<a id='L515' name='L515'></a> 515 <em class='comment'>       existing, so guarantee that it does exist by creating it if</em>
+<a id='L516' name='L516'></a> 516 <em class='comment'>       necessary.  */</em>
+<a id='L517' name='L517'></a> 517     <strong class='reserved'>if</strong> (<a href='../D/37012.html' title='Multiple defined in 29 places.'>stat</a> (<a href='../Y/26794.html' title='Multiple used in 189 places.'>target</a>, &amp;<a href='../Y/25966.html' title='Multiple used in 1069 places.'>st</a>) &lt; 0)
+<a id='L518' name='L518'></a> 518       <em class='brace'>{</em>
+<a id='L519' name='L519'></a> 519         <a href='../D/17015.html' title='Multiple defined in 4 places.'>VERIFY</a> (<a href='../D/30023.html' title='Multiple defined in 13 places.'>errno</a> == <a href='../D/3617.html' title='Multiple defined in 2 places.'>ENOENT</a>);
+<a id='L520' name='L520'></a> 520         <a href='../D/38452.html' title='Multiple defined in 2 places.'>touch</a> (<a href='../Y/26794.html' title='Multiple used in 189 places.'>target</a>, 0);
+<a id='L521' name='L521'></a> 521       <em class='brace'>}</em>
+<a id='L522' name='L522'></a> 522 
+<a id='L523' name='L523'></a> 523     <a href='../D/17015.html' title='Multiple defined in 4 places.'>VERIFY</a> (<a href='../S/5752.html#L53' title='Defined at 53 in support/test-container.c.'>mount</a> ("/console", "/dev/console", <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>, <a href='../D/8278.html' title='Multiple defined in 3 places.'>MS_BIND</a>, <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>) == 0);
+<a id='L524' name='L524'></a> 524     <a href='../D/17015.html' title='Multiple defined in 4 places.'>VERIFY</a> (<a href='../S/5752.html#L53' title='Defined at 53 in support/test-container.c.'>mount</a> ("/console", <a href='../Y/26794.html' title='Multiple used in 189 places.'>target</a>, <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>, <a href='../D/8278.html' title='Multiple defined in 3 places.'>MS_BIND</a>, <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>) == 0);
+<a id='L525' name='L525'></a> 525     <strong class='reserved'>if</strong> (!<a href='../S/10768.html#L211' title='Defined at 211 in sysdeps/unix/sysv/linux/tst-ttyname.c.'>doit</a> (<a href='../Y/25622.html' title='Multiple used in 19 places.'>slave</a>, "with readlink target",
+<a id='L526' name='L526'></a> 526                (<strong class='reserved'>struct</strong> <a href='../S/10768.html#L143' title='Defined at 143 in sysdeps/unix/sysv/linux/tst-ttyname.c.'>result_r</a>)<em class='brace'>{</em>.<a href='../D/33817.html' title='Multiple defined in 21 places.'>name</a>=<a href='../Y/26794.html' title='Multiple used in 189 places.'>target</a>, .<a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a>=0, .<a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a>=0<em class='brace'>}</em>))
+<a id='L527' name='L527'></a> 527       <a href='../Y/21526.html' title='Multiple used in 253 places.'>ok</a> = <a href='../D/30360.html' title='Multiple defined in 5 places.'>false</a>;
+<a id='L528' name='L528'></a> 528     <a href='../D/17015.html' title='Multiple defined in 4 places.'>VERIFY</a> (<a href='../Y/28269.html' title='Multiple used in 12 places.'>umount</a> (<a href='../Y/26794.html' title='Multiple used in 189 places.'>target</a>) == 0);
+<a id='L529' name='L529'></a> 529     <a href='../D/17015.html' title='Multiple defined in 4 places.'>VERIFY</a> (<a href='../Y/28269.html' title='Multiple used in 12 places.'>umount</a> ("/dev/console") == 0);
+<a id='L530' name='L530'></a> 530 
+<a id='L531' name='L531'></a> 531     <a href='../D/17015.html' title='Multiple defined in 4 places.'>VERIFY</a> (<a href='../S/5752.html#L53' title='Defined at 53 in support/test-container.c.'>mount</a> ("/console", "/dev/console", <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>, <a href='../D/8278.html' title='Multiple defined in 3 places.'>MS_BIND</a>, <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>) == 0);
+<a id='L532' name='L532'></a> 532     <a href='../D/17015.html' title='Multiple defined in 4 places.'>VERIFY</a> (<a href='../S/5752.html#L53' title='Defined at 53 in support/test-container.c.'>mount</a> (<a href='../Y/25623.html' title='Multiple used in 29 places.'>slavename</a>, <a href='../Y/26794.html' title='Multiple used in 189 places.'>target</a>, <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>, <a href='../D/8278.html' title='Multiple defined in 3 places.'>MS_BIND</a>, <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>) == 0);
+<a id='L533' name='L533'></a> 533     <strong class='reserved'>if</strong> (!<a href='../S/10768.html#L211' title='Defined at 211 in sysdeps/unix/sysv/linux/tst-ttyname.c.'>doit</a> (<a href='../Y/25622.html' title='Multiple used in 19 places.'>slave</a>, "with readlink trap; fallback",
+<a id='L534' name='L534'></a> 534                (<strong class='reserved'>struct</strong> <a href='../S/10768.html#L143' title='Defined at 143 in sysdeps/unix/sysv/linux/tst-ttyname.c.'>result_r</a>)<em class='brace'>{</em>.<a href='../D/33817.html' title='Multiple defined in 21 places.'>name</a>="/dev/console", .<a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a>=0, .<a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a>=0<em class='brace'>}</em>))
+<a id='L535' name='L535'></a> 535       <a href='../Y/21526.html' title='Multiple used in 253 places.'>ok</a> = <a href='../D/30360.html' title='Multiple defined in 5 places.'>false</a>;
+<a id='L536' name='L536'></a> 536     <a href='../D/17015.html' title='Multiple defined in 4 places.'>VERIFY</a> (<a href='../Y/28269.html' title='Multiple used in 12 places.'>umount</a> (<a href='../Y/26794.html' title='Multiple used in 189 places.'>target</a>) == 0);
+<a id='L537' name='L537'></a> 537     <a href='../D/17015.html' title='Multiple defined in 4 places.'>VERIFY</a> (<a href='../Y/28269.html' title='Multiple used in 12 places.'>umount</a> ("/dev/console") == 0);
+<a id='L538' name='L538'></a> 538 
+<a id='L539' name='L539'></a> 539     <a href='../D/17015.html' title='Multiple defined in 4 places.'>VERIFY</a> (<a href='../S/5752.html#L53' title='Defined at 53 in support/test-container.c.'>mount</a> (<a href='../Y/25623.html' title='Multiple used in 29 places.'>slavename</a>, <a href='../Y/26794.html' title='Multiple used in 189 places.'>target</a>, <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>, <a href='../D/8278.html' title='Multiple defined in 3 places.'>MS_BIND</a>, <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>) == 0);
+<a id='L540' name='L540'></a> 540     <strong class='reserved'>if</strong> (!<a href='../S/10768.html#L211' title='Defined at 211 in sysdeps/unix/sysv/linux/tst-ttyname.c.'>doit</a> (<a href='../Y/25622.html' title='Multiple used in 19 places.'>slave</a>, "with readlink trap; no fallback",
+<a id='L541' name='L541'></a> 541                (<strong class='reserved'>struct</strong> <a href='../S/10768.html#L143' title='Defined at 143 in sysdeps/unix/sysv/linux/tst-ttyname.c.'>result_r</a>)<em class='brace'>{</em>.<a href='../D/33817.html' title='Multiple defined in 21 places.'>name</a>=<a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>, .<a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a>=<a href='../D/3616.html' title='Multiple defined in 2 places.'>ENODEV</a>, .<a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a>=<a href='../D/3616.html' title='Multiple defined in 2 places.'>ENODEV</a><em class='brace'>}</em>))
+<a id='L542' name='L542'></a> 542       <a href='../Y/21526.html' title='Multiple used in 253 places.'>ok</a> = <a href='../D/30360.html' title='Multiple defined in 5 places.'>false</a>;
+<a id='L543' name='L543'></a> 543     <a href='../D/17015.html' title='Multiple defined in 4 places.'>VERIFY</a> (<a href='../Y/28269.html' title='Multiple used in 12 places.'>umount</a> (<a href='../Y/26794.html' title='Multiple used in 189 places.'>target</a>) == 0);
+<a id='L544' name='L544'></a> 544   <em class='brace'>}</em>
+<a id='L545' name='L545'></a> 545 
+<a id='L546' name='L546'></a> 546   <em class='comment'>/* This test makes sure that everything still works OK if readdir</em>
+<a id='L547' name='L547'></a> 547 <em class='comment'>     finds a pseudo-match before and/or after the actual match.  Now,</em>
+<a id='L548' name='L548'></a> 548 <em class='comment'>     to do that, we need to control that readdir finds the</em>
+<a id='L549' name='L549'></a> 549 <em class='comment'>     pseudo-matches before and after the actual match; and there's no</em>
+<a id='L550' name='L550'></a> 550 <em class='comment'>     good way to control that order in absence of whitebox testing.</em>
+<a id='L551' name='L551'></a> 551 <em class='comment'>     So, just create 3 files, then use opendir/readdir to see what</em>
+<a id='L552' name='L552'></a> 552 <em class='comment'>     order they are in, and assign meaning based on that order, not by</em>
+<a id='L553' name='L553'></a> 553 <em class='comment'>     name; assigning the first to be a pseudo-match, the second to be</em>
+<a id='L554' name='L554'></a> 554 <em class='comment'>     the actual match, and the third to be a pseudo-match.  This</em>
+<a id='L555' name='L555'></a> 555 <em class='comment'>     assumes that (on tmpfs) ordering within the directory is stable</em>
+<a id='L556' name='L556'></a> 556 <em class='comment'>     in the absence of modification, which seems reasonably safe.  */</em>
+<a id='L557' name='L557'></a> 557   <em class='brace'>{</em>
+<a id='L558' name='L558'></a> 558     <em class='comment'>/* since we're testing the fallback search, disable the readlink</em>
+<a id='L559' name='L559'></a> 559 <em class='comment'>       happy-path */</em>
+<a id='L560' name='L560'></a> 560     <a href='../D/17015.html' title='Multiple defined in 4 places.'>VERIFY</a> (<a href='../Y/28270.html' title='Multiple used in 6 places.'>umount2</a> ("/proc", <a href='../D/8121.html' title='Multiple defined in 3 places.'>MNT_DETACH</a>) == 0);
+<a id='L561' name='L561'></a> 561 
+<a id='L562' name='L562'></a> 562     <a href='../D/38452.html' title='Multiple defined in 2 places.'>touch</a> ("/dev/console1", 0);
+<a id='L563' name='L563'></a> 563     <a href='../D/38452.html' title='Multiple defined in 2 places.'>touch</a> ("/dev/console2", 0);
+<a id='L564' name='L564'></a> 564     <a href='../D/38452.html' title='Multiple defined in 2 places.'>touch</a> ("/dev/console3", 0);
+<a id='L565' name='L565'></a> 565 
+<a id='L566' name='L566'></a> 566     <strong class='reserved'>char</strong> *<a href='../D/28364.html' title='Multiple defined in 2 places.'>c</a>[3];
+<a id='L567' name='L567'></a> 567     <strong class='reserved'>int</strong> <a href='../Y/11582.html' title='Multiple used in 4 places.'>ci</a> = 0;
+<a id='L568' name='L568'></a> 568     <a href='../D/2070.html' title='Multiple defined in 2 places.'>DIR</a> *<a href='../Y/12831.html' title='Multiple used in 39 places.'>dirstream</a> = <a href='../D/34538.html' title='Multiple defined in 4 places.'>opendir</a> ("/dev");
+<a id='L569' name='L569'></a> 569     <a href='../D/17015.html' title='Multiple defined in 4 places.'>VERIFY</a> (<a href='../Y/12831.html' title='Multiple used in 39 places.'>dirstream</a> != <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>);
+<a id='L570' name='L570'></a> 570     <strong class='reserved'>struct</strong> <a href='../D/29474.html' title='Multiple defined in 10 places.'>dirent</a> *<a href='../D/29259.html' title='Multiple defined in 3 places.'>d</a>;
+<a id='L571' name='L571'></a> 571     <strong class='reserved'>while</strong> ((<a href='../D/29259.html' title='Multiple defined in 3 places.'>d</a> = <a href='../D/35601.html' title='Multiple defined in 5 places.'>readdir</a> (<a href='../Y/12831.html' title='Multiple used in 39 places.'>dirstream</a>)) != <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a> &amp;&amp; <a href='../Y/11582.html' title='Multiple used in 4 places.'>ci</a> &lt; 3)
+<a id='L572' name='L572'></a> 572       <em class='brace'>{</em>
+<a id='L573' name='L573'></a> 573         <strong class='reserved'>if</strong> (<a href='../D/37067.html' title='Multiple defined in 17 places.'>strcmp</a> (<a href='../D/29259.html' title='Multiple defined in 3 places.'>d</a>-&gt;<a href='../Y/12425.html' title='Multiple used in 253 places.'>d_name</a>, "console1")
+<a id='L574' name='L574'></a> 574             &amp;&amp; <a href='../D/37067.html' title='Multiple defined in 17 places.'>strcmp</a> (<a href='../D/29259.html' title='Multiple defined in 3 places.'>d</a>-&gt;<a href='../Y/12425.html' title='Multiple used in 253 places.'>d_name</a>, "console2")
+<a id='L575' name='L575'></a> 575             &amp;&amp; <a href='../D/37067.html' title='Multiple defined in 17 places.'>strcmp</a> (<a href='../D/29259.html' title='Multiple defined in 3 places.'>d</a>-&gt;<a href='../Y/12425.html' title='Multiple used in 253 places.'>d_name</a>, "console3") )
+<a id='L576' name='L576'></a> 576           <strong class='reserved'>continue</strong>;
+<a id='L577' name='L577'></a> 577         <a href='../D/28364.html' title='Multiple defined in 2 places.'>c</a>[<a href='../Y/11582.html' title='Multiple used in 4 places.'>ci</a>++] = <a href='../D/39420.html' title='Multiple defined in 2 places.'>xasprintf</a> ("/dev/%s", <a href='../D/29259.html' title='Multiple defined in 3 places.'>d</a>-&gt;<a href='../Y/12425.html' title='Multiple used in 253 places.'>d_name</a>);
+<a id='L578' name='L578'></a> 578       <em class='brace'>}</em>
+<a id='L579' name='L579'></a> 579     <a href='../D/17015.html' title='Multiple defined in 4 places.'>VERIFY</a> (<a href='../Y/11582.html' title='Multiple used in 4 places.'>ci</a> == 3);
+<a id='L580' name='L580'></a> 580     <a href='../D/17015.html' title='Multiple defined in 4 places.'>VERIFY</a> (<a href='../D/28955.html' title='Multiple defined in 4 places.'>closedir</a> (<a href='../Y/12831.html' title='Multiple used in 39 places.'>dirstream</a>) == 0);
+<a id='L581' name='L581'></a> 581 
+<a id='L582' name='L582'></a> 582     <a href='../D/17015.html' title='Multiple defined in 4 places.'>VERIFY</a> (<a href='../S/5752.html#L53' title='Defined at 53 in support/test-container.c.'>mount</a> (<a href='../Y/25623.html' title='Multiple used in 29 places.'>slavename</a>, <a href='../D/28364.html' title='Multiple defined in 2 places.'>c</a>[0], <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>, <a href='../D/8278.html' title='Multiple defined in 3 places.'>MS_BIND</a>, <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>) == 0);
+<a id='L583' name='L583'></a> 583     <a href='../D/17015.html' title='Multiple defined in 4 places.'>VERIFY</a> (<a href='../S/5752.html#L53' title='Defined at 53 in support/test-container.c.'>mount</a> ("/console", <a href='../D/28364.html' title='Multiple defined in 2 places.'>c</a>[1], <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>, <a href='../D/8278.html' title='Multiple defined in 3 places.'>MS_BIND</a>, <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>) == 0);
+<a id='L584' name='L584'></a> 584     <a href='../D/17015.html' title='Multiple defined in 4 places.'>VERIFY</a> (<a href='../S/5752.html#L53' title='Defined at 53 in support/test-container.c.'>mount</a> (<a href='../Y/25623.html' title='Multiple used in 29 places.'>slavename</a>, <a href='../D/28364.html' title='Multiple defined in 2 places.'>c</a>[2], <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>, <a href='../D/8278.html' title='Multiple defined in 3 places.'>MS_BIND</a>, <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>) == 0);
+<a id='L585' name='L585'></a> 585     <a href='../D/17015.html' title='Multiple defined in 4 places.'>VERIFY</a> (<a href='../Y/28270.html' title='Multiple used in 6 places.'>umount2</a> ("/dev/pts", <a href='../D/8121.html' title='Multiple defined in 3 places.'>MNT_DETACH</a>) == 0);
+<a id='L586' name='L586'></a> 586     <strong class='reserved'>if</strong> (!<a href='../S/10768.html#L211' title='Defined at 211 in sysdeps/unix/sysv/linux/tst-ttyname.c.'>doit</a> (<a href='../Y/25622.html' title='Multiple used in 19 places.'>slave</a>, "with search-path trap",
+<a id='L587' name='L587'></a> 587                (<strong class='reserved'>struct</strong> <a href='../S/10768.html#L143' title='Defined at 143 in sysdeps/unix/sysv/linux/tst-ttyname.c.'>result_r</a>)<em class='brace'>{</em>.<a href='../D/33817.html' title='Multiple defined in 21 places.'>name</a>=<a href='../D/28364.html' title='Multiple defined in 2 places.'>c</a>[1], .<a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a>=0, .<a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a>=0<em class='brace'>}</em>))
+<a id='L588' name='L588'></a> 588       <a href='../Y/21526.html' title='Multiple used in 253 places.'>ok</a> = <a href='../D/30360.html' title='Multiple defined in 5 places.'>false</a>;
+<a id='L589' name='L589'></a> 589     <strong class='reserved'>for</strong> (<strong class='reserved'>int</strong> <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> = 0; <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> &lt; 3; <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>++)
+<a id='L590' name='L590'></a> 590       <em class='brace'>{</em>
+<a id='L591' name='L591'></a> 591         <a href='../D/17015.html' title='Multiple defined in 4 places.'>VERIFY</a> (<a href='../Y/28269.html' title='Multiple used in 12 places.'>umount</a> (<a href='../D/28364.html' title='Multiple defined in 2 places.'>c</a>[<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>]) == 0);
+<a id='L592' name='L592'></a> 592         <a href='../D/17015.html' title='Multiple defined in 4 places.'>VERIFY</a> (<a href='../Y/28309.html' title='Multiple used in 125 places.'>unlink</a> (<a href='../D/28364.html' title='Multiple defined in 2 places.'>c</a>[<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>]) == 0);
+<a id='L593' name='L593'></a> 593         <a href='../D/30785.html' title='Multiple defined in 5 places.'>free</a> (<a href='../D/28364.html' title='Multiple defined in 2 places.'>c</a>[<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>]);
+<a id='L594' name='L594'></a> 594       <em class='brace'>}</em>
+<a id='L595' name='L595'></a> 595   <em class='brace'>}</em>
+<a id='L596' name='L596'></a> 596 
+<a id='L597' name='L597'></a> 597   <strong class='reserved'>return</strong> <a href='../Y/21526.html' title='Multiple used in 253 places.'>ok</a> ? 0 : 1;
+<a id='L598' name='L598'></a> 598 <em class='brace'>}</em>
+<a id='L599' name='L599'></a> 599 
+<a id='L600' name='L600'></a> 600 <strong class='reserved'>static</strong> <strong class='reserved'>int</strong>
+<a id='L601' name='L601'></a> 601 <a href='../R/18782.html' title='Multiple referred from 1850 places.'>do_test</a> (<strong class='reserved'>void</strong>)
+<a id='L602' name='L602'></a> 602 <em class='brace'>{</em>
+<a id='L603' name='L603'></a> 603   <a href='../S/5879.html#L82' title='Defined at 82 in support/support_become_root.c.'>support_become_root</a> ();
+<a id='L604' name='L604'></a> 604 
+<a id='L605' name='L605'></a> 605   <strong class='reserved'>int</strong> <a href='../Y/23968.html' title='Multiple used in 9 places.'>ret1</a> = <a href='../S/10768.html#L276' title='Defined at 276 in sysdeps/unix/sysv/linux/tst-ttyname.c.'>do_in_chroot_1</a> (<a href='../S/10768.html#L453' title='Defined at 453 in sysdeps/unix/sysv/linux/tst-ttyname.c.'>run_chroot_tests</a>);
+<a id='L606' name='L606'></a> 606   <strong class='reserved'>if</strong> (<a href='../Y/23968.html' title='Multiple used in 9 places.'>ret1</a> == <a href='../S/5902.html#L47' title='Defined at 47 in support/test-driver.h.'>EXIT_UNSUPPORTED</a>)
+<a id='L607' name='L607'></a> 607     <strong class='reserved'>return</strong> <a href='../Y/23968.html' title='Multiple used in 9 places.'>ret1</a>;
+<a id='L608' name='L608'></a> 608 
+<a id='L609' name='L609'></a> 609   <strong class='reserved'>int</strong> <a href='../Y/23969.html' title='Multiple used in 12 places.'>ret2</a> = <a href='../S/10768.html#L345' title='Defined at 345 in sysdeps/unix/sysv/linux/tst-ttyname.c.'>do_in_chroot_2</a> (<a href='../S/10768.html#L453' title='Defined at 453 in sysdeps/unix/sysv/linux/tst-ttyname.c.'>run_chroot_tests</a>);
+<a id='L610' name='L610'></a> 610   <strong class='reserved'>if</strong> (<a href='../Y/23969.html' title='Multiple used in 12 places.'>ret2</a> == <a href='../S/5902.html#L47' title='Defined at 47 in support/test-driver.h.'>EXIT_UNSUPPORTED</a>)
+<a id='L611' name='L611'></a> 611     <strong class='reserved'>return</strong> <a href='../Y/23969.html' title='Multiple used in 12 places.'>ret2</a>;
+<a id='L612' name='L612'></a> 612 
+<a id='L613' name='L613'></a> 613   <strong class='reserved'>return</strong>  <a href='../Y/23968.html' title='Multiple used in 9 places.'>ret1</a> | <a href='../Y/23969.html' title='Multiple used in 12 places.'>ret2</a>;
+<a id='L614' name='L614'></a> 614 <em class='brace'>}</em>
+<a id='L615' name='L615'></a> 615 
+<a id='L616' name='L616'></a> 616 <em class='sharp'>#include</em> &lt;support/test-driver.c&gt;
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L53'>[^]</a><a href='#L601'>[v]</a><a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

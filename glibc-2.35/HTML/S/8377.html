@@ -1,0 +1,154 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>sysdeps/posix/profil.c</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18977.html'>sysdeps</a>/<a href='../files/19148.html'>posix</a>/profil.c</h2>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L40'>[^]</a><a href='#L65'>[v]</a>[top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<h2 class='header'>DEFINITIONS</h2>
+This source file includes following definitions.
+<ol>
+<li><a href='#L40' title='Defined at 40.'>profil_count</a></li>
+<li><a href='#L65' title='Defined at 65.'>__profil</a></li>
+</ol>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* Low-level statistical profiling support function.  Mostly POSIX.1 version.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   Copyright (C) 1996-2022 Free Software Foundation, Inc.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'></em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'></em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'></em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   License along with the GNU C Library; if not, see</em>
+<a id='L17' name='L17'></a>  17 <em class='comment'>   &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L18' name='L18'></a>  18 
+<a id='L19' name='L19'></a>  19 <em class='sharp'>#include</em> &lt;<a href='../I/1786.html'>sys/types.h</a>&gt;
+<a id='L20' name='L20'></a>  20 <em class='sharp'>#include</em> &lt;<a href='../I/1819.html'>unistd.h</a>&gt;
+<a id='L21' name='L21'></a>  21 <em class='sharp'>#include</em> &lt;<a href='../I/116.html'>errno.h</a>&gt;
+<a id='L22' name='L22'></a>  22 <em class='sharp'>#include</em> &lt;<a href='../I/1264.html'>signal.h</a>&gt;
+<a id='L23' name='L23'></a>  23 <em class='sharp'>#include</em> &lt;<a href='../I/176.html'>sys/time.h</a>&gt;
+<a id='L24' name='L24'></a>  24 <em class='sharp'>#include</em> &lt;<a href='../I/1969.html'>stdint.h</a>&gt;
+<a id='L25' name='L25'></a>  25 <em class='sharp'>#include</em> &lt;<a href='18154.html'>libc-internal.h</a>&gt;
+<a id='L26' name='L26'></a>  26 <em class='sharp'>#include</em> &lt;<a href='../I/6581.html'>sigsetops.h</a>&gt;
+<a id='L27' name='L27'></a>  27 
+<a id='L28' name='L28'></a>  28 <em class='sharp'>#ifndef</em> <a href='../D/14193.html' title='Multiple defined in 7 places.'>SIGPROF</a>
+<a id='L29' name='L29'></a>  29 
+<a id='L30' name='L30'></a>  30 <em class='sharp'>#include</em> &lt;gmon/profil.c&gt;
+<a id='L31' name='L31'></a>  31 
+<a id='L32' name='L32'></a>  32 <em class='sharp'>#else</em>
+<a id='L33' name='L33'></a>  33 
+<a id='L34' name='L34'></a>  34 <strong class='reserved'>static</strong> <a href='../D/38635.html' title='Multiple defined in 2 places.'>u_short</a> *<a href='../Y/24571.html' title='Multiple used in 12 places.'>samples</a>;
+<a id='L35' name='L35'></a>  35 <strong class='reserved'>static</strong> <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/21207.html' title='Multiple used in 14 places.'>nsamples</a>;
+<a id='L36' name='L36'></a>  36 <strong class='reserved'>static</strong> <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/22292.html' title='Multiple used in 8 places.'>pc_offset</a>;
+<a id='L37' name='L37'></a>  37 <strong class='reserved'>static</strong> <a href='../D/38628.html' title='Multiple defined in 2 places.'>u_int</a> <a href='../Y/22296.html' title='Multiple used in 4 places.'>pc_scale</a>;
+<a id='L38' name='L38'></a>  38 
+<a id='L39' name='L39'></a>  39 <strong class='reserved'>static</strong> <strong class='reserved'>inline</strong> <strong class='reserved'>void</strong>
+<a id='L40' name='L40'></a>  40 <a href='../R/23181.html' title='Multiple referred from 10 places.'>profil_count</a> (<a href='../D/38692.html' title='Multiple defined in 2 places.'>uintptr_t</a> <a href='../Y/22283.html' title='Multiple used in 188 places.'>pc</a>)
+<a id='L41' name='L41'></a>  41 <em class='brace'>{</em>
+<a id='L42' name='L42'></a>  42   <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> = (<a href='../Y/22283.html' title='Multiple used in 188 places.'>pc</a> - <a href='../Y/22292.html' title='Multiple used in 8 places.'>pc_offset</a>) / 2;
+<a id='L43' name='L43'></a>  43 
+<a id='L44' name='L44'></a>  44   <strong class='reserved'>if</strong> (<strong class='reserved'>sizeof</strong> (<strong class='reserved'>unsigned</strong> <strong class='reserved'>long</strong> <strong class='reserved'>long</strong> <strong class='reserved'>int</strong>) &gt; <strong class='reserved'>sizeof</strong> (<a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a>))
+<a id='L45' name='L45'></a>  45     <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> = (<strong class='reserved'>unsigned</strong> <strong class='reserved'>long</strong> <strong class='reserved'>long</strong> <strong class='reserved'>int</strong>) <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> * <a href='../Y/22296.html' title='Multiple used in 4 places.'>pc_scale</a> / 65536;
+<a id='L46' name='L46'></a>  46   <strong class='reserved'>else</strong>
+<a id='L47' name='L47'></a>  47     <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> = <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> / 65536 * <a href='../Y/22296.html' title='Multiple used in 4 places.'>pc_scale</a> + <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> % 65536 * <a href='../Y/22296.html' title='Multiple used in 4 places.'>pc_scale</a> / 65536;
+<a id='L48' name='L48'></a>  48 
+<a id='L49' name='L49'></a>  49   <strong class='reserved'>if</strong> (<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> &lt; <a href='../Y/21207.html' title='Multiple used in 14 places.'>nsamples</a>)
+<a id='L50' name='L50'></a>  50     ++<a href='../Y/24571.html' title='Multiple used in 12 places.'>samples</a>[<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>];
+<a id='L51' name='L51'></a>  51 <em class='brace'>}</em>
+<a id='L52' name='L52'></a>  52 
+<a id='L53' name='L53'></a>  53 <em class='comment'>/* Get the machine-dependent definition of `__profil_counter', the signal</em>
+<a id='L54' name='L54'></a>  54 <em class='comment'>   handler for SIGPROF.  It calls `profil_count' (above) with the PC of the</em>
+<a id='L55' name='L55'></a>  55 <em class='comment'>   interrupted code.  */</em>
+<a id='L56' name='L56'></a>  56 <em class='sharp'>#include</em> "<a href='../I/6569.html'>profil-counter.h</a>"
+<a id='L57' name='L57'></a>  57 
+<a id='L58' name='L58'></a>  58 <em class='comment'>/* Enable statistical profiling, writing samples of the PC into at most</em>
+<a id='L59' name='L59'></a>  59 <em class='comment'>   SIZE bytes of SAMPLE_BUFFER; every processor clock tick while profiling</em>
+<a id='L60' name='L60'></a>  60 <em class='comment'>   is enabled, the system examines the user PC and increments</em>
+<a id='L61' name='L61'></a>  61 <em class='comment'>   SAMPLE_BUFFER[((PC - OFFSET) / 2) * SCALE / 65536].  If SCALE is zero,</em>
+<a id='L62' name='L62'></a>  62 <em class='comment'>   disable profiling.  Returns zero on success, -1 on error.  */</em>
+<a id='L63' name='L63'></a>  63 
+<a id='L64' name='L64'></a>  64 <strong class='reserved'>int</strong>
+<a id='L65' name='L65'></a>  65 <a href='../R/15453.html' title='Multiple referred from 10 places.'>__profil</a> (<a href='../D/38635.html' title='Multiple defined in 2 places.'>u_short</a> *<a href='../Y/24566.html' title='Multiple used in 9 places.'>sample_buffer</a>, <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../D/36819.html' title='Multiple defined in 18 places.'>size</a>, <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../S/13710.html#L51' title='Defined at 51 in sysdeps/aarch64/strncmp.S.'>offset</a>, <a href='../D/38628.html' title='Multiple defined in 2 places.'>u_int</a> <a href='../Y/24771.html' title='Multiple used in 112 places.'>scale</a>)
+<a id='L66' name='L66'></a>  66 <em class='brace'>{</em>
+<a id='L67' name='L67'></a>  67   <strong class='reserved'>struct</strong> <a href='../D/36719.html' title='Multiple defined in 9 places.'>sigaction</a> <a href='../Y/9862.html' title='Multiple used in 218 places.'>act</a>;
+<a id='L68' name='L68'></a>  68   <strong class='reserved'>struct</strong> <a href='../S/4039.html#L130' title='Defined at 130 in time/sys/time.h.'>itimerval</a> <a href='../Y/27325.html' title='Multiple used in 166 places.'>timer</a>;
+<a id='L69' name='L69'></a>  69 <em class='sharp'>#if</em> !<a href='../D/6753.html' title='Multiple defined in 3 places.'>IS_IN</a> (<a href='../Y/24331.html' title='Multiple used in 113 places.'>rtld</a>)
+<a id='L70' name='L70'></a>  70   <strong class='reserved'>static</strong> <strong class='reserved'>struct</strong> <a href='../D/36719.html' title='Multiple defined in 9 places.'>sigaction</a> <a href='../Y/21441.html' title='Multiple used in 29 places.'>oact</a>;
+<a id='L71' name='L71'></a>  71   <strong class='reserved'>static</strong> <strong class='reserved'>struct</strong> <a href='../S/4039.html#L130' title='Defined at 130 in time/sys/time.h.'>itimerval</a> <a href='../Y/21909.html' title='Multiple used in 7 places.'>otimer</a>;
+<a id='L72' name='L72'></a>  72 <em class='sharp'># define</em> <a href='../S/8377.html#L117' title='Referred from 117 in sysdeps/posix/profil.c.'>oact_ptr</a> &amp;<a href='../Y/21441.html' title='Multiple used in 29 places.'>oact</a>
+<a id='L73' name='L73'></a>  73 <em class='sharp'># define</em> <a href='../S/8377.html#L123' title='Referred from 123 in sysdeps/posix/profil.c.'>otimer_ptr</a> &amp;<a href='../Y/21909.html' title='Multiple used in 7 places.'>otimer</a>
+<a id='L74' name='L74'></a>  74 
+<a id='L75' name='L75'></a>  75   <strong class='reserved'>if</strong> (<a href='../Y/24566.html' title='Multiple used in 9 places.'>sample_buffer</a> == <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>)
+<a id='L76' name='L76'></a>  76     <em class='brace'>{</em>
+<a id='L77' name='L77'></a>  77       <em class='comment'>/* Disable profiling.  */</em>
+<a id='L78' name='L78'></a>  78       <strong class='reserved'>if</strong> (<a href='../Y/24571.html' title='Multiple used in 12 places.'>samples</a> == <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>)
+<a id='L79' name='L79'></a>  79     <em class='comment'>/* Wasn't turned on.  */</em>
+<a id='L80' name='L80'></a>  80     <strong class='reserved'>return</strong> 0;
+<a id='L81' name='L81'></a>  81 
+<a id='L82' name='L82'></a>  82       <strong class='reserved'>if</strong> (<a href='../D/25968.html' title='Multiple defined in 2 places.'>__setitimer</a> (<a href='../S/4039.html#L124' title='Defined at 124 in time/sys/time.h.'>ITIMER_PROF</a>, &amp;<a href='../Y/21909.html' title='Multiple used in 7 places.'>otimer</a>, <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>) &lt; 0)
+<a id='L83' name='L83'></a>  83     <strong class='reserved'>return</strong> -1;
+<a id='L84' name='L84'></a>  84       <a href='../Y/24571.html' title='Multiple used in 12 places.'>samples</a> = <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>;
+<a id='L85' name='L85'></a>  85       <strong class='reserved'>return</strong> <a href='../S/70.html#L25' title='Defined at 25 in signal/sigaction.c.'>__sigaction</a> (<a href='../D/14193.html' title='Multiple defined in 7 places.'>SIGPROF</a>, &amp;<a href='../Y/21441.html' title='Multiple used in 29 places.'>oact</a>, <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>);
+<a id='L86' name='L86'></a>  86     <em class='brace'>}</em>
+<a id='L87' name='L87'></a>  87 
+<a id='L88' name='L88'></a>  88  <strong class='reserved'>if</strong> (<a href='../Y/24571.html' title='Multiple used in 12 places.'>samples</a>)
+<a id='L89' name='L89'></a>  89     <em class='brace'>{</em>
+<a id='L90' name='L90'></a>  90       <em class='comment'>/* Was already turned on.  Restore old timer and signal handler</em>
+<a id='L91' name='L91'></a>  91 <em class='comment'>     first.  */</em>
+<a id='L92' name='L92'></a>  92       <strong class='reserved'>if</strong> (<a href='../D/25968.html' title='Multiple defined in 2 places.'>__setitimer</a> (<a href='../S/4039.html#L124' title='Defined at 124 in time/sys/time.h.'>ITIMER_PROF</a>, &amp;<a href='../Y/21909.html' title='Multiple used in 7 places.'>otimer</a>, <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>) &lt; 0
+<a id='L93' name='L93'></a>  93       || <a href='../S/70.html#L25' title='Defined at 25 in signal/sigaction.c.'>__sigaction</a> (<a href='../D/14193.html' title='Multiple defined in 7 places.'>SIGPROF</a>, &amp;<a href='../Y/21441.html' title='Multiple used in 29 places.'>oact</a>, <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>) &lt; 0)
+<a id='L94' name='L94'></a>  94     <strong class='reserved'>return</strong> -1;
+<a id='L95' name='L95'></a>  95     <em class='brace'>}</em>
+<a id='L96' name='L96'></a>  96 <em class='sharp'>#else</em>
+<a id='L97' name='L97'></a>  97  <em class='comment'>/* In ld.so profiling should never be disabled once it runs.  */</em>
+<a id='L98' name='L98'></a>  98  <em class='comment'>//assert (sample_buffer != NULL);</em>
+<a id='L99' name='L99'></a>  99 <em class='sharp'># define</em> <a href='../S/8377.html#L117' title='Referred from 117 in sysdeps/posix/profil.c.'>oact_ptr</a> <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>
+<a id='L100' name='L100'></a> 100 <em class='sharp'># define</em> <a href='../S/8377.html#L123' title='Referred from 123 in sysdeps/posix/profil.c.'>otimer_ptr</a> <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>
+<a id='L101' name='L101'></a> 101 <em class='sharp'>#endif</em>
+<a id='L102' name='L102'></a> 102 
+<a id='L103' name='L103'></a> 103   <a href='../Y/24571.html' title='Multiple used in 12 places.'>samples</a> = <a href='../Y/24566.html' title='Multiple used in 9 places.'>sample_buffer</a>;
+<a id='L104' name='L104'></a> 104   <a href='../Y/21207.html' title='Multiple used in 14 places.'>nsamples</a> = <a href='../D/36819.html' title='Multiple defined in 18 places.'>size</a> / <strong class='reserved'>sizeof</strong> *<a href='../Y/24571.html' title='Multiple used in 12 places.'>samples</a>;
+<a id='L105' name='L105'></a> 105   <a href='../Y/22292.html' title='Multiple used in 8 places.'>pc_offset</a> = <a href='../S/13710.html#L51' title='Defined at 51 in sysdeps/aarch64/strncmp.S.'>offset</a>;
+<a id='L106' name='L106'></a> 106   <a href='../Y/22296.html' title='Multiple used in 4 places.'>pc_scale</a> = <a href='../Y/24771.html' title='Multiple used in 112 places.'>scale</a>;
+<a id='L107' name='L107'></a> 107 
+<a id='L108' name='L108'></a> 108 <em class='sharp'>#ifdef</em> <a href='../D/13542.html' title='Multiple defined in 8 places.'>SA_SIGINFO</a>
+<a id='L109' name='L109'></a> 109   <a href='../Y/9862.html' title='Multiple used in 218 places.'>act</a>.<a href='../D/36337.html' title='Multiple defined in 9 places.'>sa_sigaction</a> = <a href='../D/25449.html' title='Multiple defined in 7 places.'>__profil_counter</a>;
+<a id='L110' name='L110'></a> 110   <a href='../Y/9862.html' title='Multiple used in 218 places.'>act</a>.<a href='../Y/24546.html' title='Multiple used in 124 places.'>sa_flags</a> = <a href='../D/13542.html' title='Multiple defined in 8 places.'>SA_SIGINFO</a>;
+<a id='L111' name='L111'></a> 111 <em class='sharp'>#else</em>
+<a id='L112' name='L112'></a> 112   <a href='../Y/9862.html' title='Multiple used in 218 places.'>act</a>.<a href='../D/36336.html' title='Multiple defined in 9 places.'>sa_handler</a> = <a href='../D/25449.html' title='Multiple defined in 7 places.'>__profil_counter</a>;
+<a id='L113' name='L113'></a> 113   <a href='../Y/9862.html' title='Multiple used in 218 places.'>act</a>.<a href='../Y/24546.html' title='Multiple used in 124 places.'>sa_flags</a> = 0;
+<a id='L114' name='L114'></a> 114 <em class='sharp'>#endif</em>
+<a id='L115' name='L115'></a> 115   <a href='../Y/9862.html' title='Multiple used in 218 places.'>act</a>.<a href='../Y/24546.html' title='Multiple used in 124 places.'>sa_flags</a> |= <a href='../D/13540.html' title='Multiple defined in 8 places.'>SA_RESTART</a>;
+<a id='L116' name='L116'></a> 116   <a href='../D/26026.html' title='Multiple defined in 2 places.'>__sigfillset</a> (&amp;<a href='../Y/9862.html' title='Multiple used in 218 places.'>act</a>.<a href='../Y/24548.html' title='Multiple used in 95 places.'>sa_mask</a>);
+<a id='L117' name='L117'></a> 117   <strong class='reserved'>if</strong> (<a href='../S/70.html#L25' title='Defined at 25 in signal/sigaction.c.'>__sigaction</a> (<a href='../D/14193.html' title='Multiple defined in 7 places.'>SIGPROF</a>, &amp;<a href='../Y/9862.html' title='Multiple used in 218 places.'>act</a>, <a href='../D/34428.html' title='Multiple defined in 2 places.'>oact_ptr</a>) &lt; 0)
+<a id='L118' name='L118'></a> 118     <strong class='reserved'>return</strong> -1;
+<a id='L119' name='L119'></a> 119 
+<a id='L120' name='L120'></a> 120   <a href='../Y/27325.html' title='Multiple used in 166 places.'>timer</a>.<a href='../Y/17295.html' title='Multiple used in 134 places.'>it_value</a>.<a href='../Y/27976.html' title='Multiple used in 803 places.'>tv_sec</a> = 0;
+<a id='L121' name='L121'></a> 121   <a href='../Y/27325.html' title='Multiple used in 166 places.'>timer</a>.<a href='../Y/17295.html' title='Multiple used in 134 places.'>it_value</a>.<a href='../Y/27978.html' title='Multiple used in 191 places.'>tv_usec</a> = 1000000 / <a href='../D/25451.html' title='Multiple defined in 3 places.'>__profile_frequency</a> ();
+<a id='L122' name='L122'></a> 122   <a href='../Y/27325.html' title='Multiple used in 166 places.'>timer</a>.<a href='../Y/17293.html' title='Multiple used in 108 places.'>it_interval</a> = <a href='../Y/27325.html' title='Multiple used in 166 places.'>timer</a>.<a href='../Y/17295.html' title='Multiple used in 134 places.'>it_value</a>;
+<a id='L123' name='L123'></a> 123   <strong class='reserved'>return</strong> <a href='../D/25968.html' title='Multiple defined in 2 places.'>__setitimer</a> (<a href='../S/4039.html#L124' title='Defined at 124 in time/sys/time.h.'>ITIMER_PROF</a>, &amp;<a href='../Y/27325.html' title='Multiple used in 166 places.'>timer</a>, <a href='../D/34566.html' title='Multiple defined in 2 places.'>otimer_ptr</a>);
+<a id='L124' name='L124'></a> 124 <em class='brace'>}</em>
+<a id='L125' name='L125'></a> 125 <a href='../D/39088.html' title='Multiple defined in 375 places.'>weak_alias</a> (<a href='../D/25448.html' title='Multiple defined in 2 places.'>__profil</a>, <a href='../Y/22835.html' title='Multiple used in 5 places.'>profil</a>)
+<a id='L126' name='L126'></a> 126 
+<a id='L127' name='L127'></a> 127 <em class='sharp'>#endif</em>
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L40'>[^]</a><a href='#L65'>[v]</a><a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

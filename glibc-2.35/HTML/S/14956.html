@@ -1,0 +1,104 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>sysdeps/x86_64/fpu/e_scalbl.S</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18977.html'>sysdeps</a>/<a href='../files/19391.html'>x86_64</a>/<a href='../files/19392.html'>fpu</a>/e_scalbl.S</h2>
+<em class='comment'>/* [&lt;][&gt;][^][v][top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/*</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'> * Public domain.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'> */</em>
+<a id='L4' name='L4'></a>   4 
+<a id='L5' name='L5'></a>   5 <em class='sharp'>#include</em> &lt;<a href='../I/3122.html'>machine/asm.h</a>&gt;
+<a id='L6' name='L6'></a>   6 <em class='sharp'>#include</em> &lt;<a href='9438.html'>libm-alias-finite.h</a>&gt;
+<a id='L7' name='L7'></a>   7 
+<a id='L8' name='L8'></a>   8     .section .rodata
+<a id='L9' name='L9'></a>   9 
+<a id='L10' name='L10'></a>  10     .align ALIGNARG(4)
+<a id='L11' name='L11'></a>  11     .type zero_nan,@object
+<a id='L12' name='L12'></a>  12 zero_nan:
+<a id='L13' name='L13'></a>  13     .double 0.0
+<a id='L14' name='L14'></a>  14 nan:    .byte 0, 0, 0, 0, 0, 0, 0xff, 0x7f
+<a id='L15' name='L15'></a>  15     .byte 0, 0, 0, 0, 0, 0, 0, 0x80
+<a id='L16' name='L16'></a>  16     .byte 0, 0, 0, 0, 0, 0, 0xff, 0x7f
+<a id='L17' name='L17'></a>  17     ASM_SIZE_DIRECTIVE(zero_nan)
+<a id='L18' name='L18'></a>  18 
+<a id='L19' name='L19'></a>  19 
+<a id='L20' name='L20'></a>  20 <em class='sharp'>#ifdef</em> <a href='../Y/1408.html' title='Multiple used in 370 places.'>PIC</a>
+<a id='L21' name='L21'></a>  21 <em class='sharp'># define</em> <a href='../R/4975.html' title='Multiple referred from 20 places.'>MO</a>(op) op##(%rip)
+<a id='L22' name='L22'></a>  22 <em class='sharp'>#else</em>
+<a id='L23' name='L23'></a>  23 <em class='sharp'># define</em> <a href='../R/4975.html' title='Multiple referred from 20 places.'>MO</a>(op) op
+<a id='L24' name='L24'></a>  24 <em class='sharp'>#endif</em>
+<a id='L25' name='L25'></a>  25 
+<a id='L26' name='L26'></a>  26     .text
+<a id='L27' name='L27'></a>  27 <a href='../D/3651.html' title='Multiple defined in 54 places.'>ENTRY</a>(<a href='../R/14460.html' title='Multiple referred from 2 places.'>__ieee754_scalbl</a>)
+<a id='L28' name='L28'></a>  28     fldt    24(%rsp)
+<a id='L29' name='L29'></a>  29     fxam
+<a id='L30' name='L30'></a>  30     fnstsw
+<a id='L31' name='L31'></a>  31     fldt    8(%rsp)
+<a id='L32' name='L32'></a>  32     andl    $0x4700, %eax
+<a id='L33' name='L33'></a>  33     cmpl    $0x0700, %eax
+<a id='L34' name='L34'></a>  34     je  1f
+<a id='L35' name='L35'></a>  35     andl    $0x4500, %eax
+<a id='L36' name='L36'></a>  36     cmpl    $0x0100, %eax
+<a id='L37' name='L37'></a>  37     je  2f
+<a id='L38' name='L38'></a>  38     fxam
+<a id='L39' name='L39'></a>  39     fnstsw
+<a id='L40' name='L40'></a>  40     andl    $0x4500, %eax
+<a id='L41' name='L41'></a>  41     cmpl    $0x0100, %eax
+<a id='L42' name='L42'></a>  42     je  2f
+<a id='L43' name='L43'></a>  43     fld %st(1)
+<a id='L44' name='L44'></a>  44     frndint
+<a id='L45' name='L45'></a>  45     fcomip  %st(2), %st
+<a id='L46' name='L46'></a>  46     jne 4f
+<a id='L47' name='L47'></a>  47     fscale
+<a id='L48' name='L48'></a>  48     fstp    %st(1)
+<a id='L49' name='L49'></a>  49     ret
+<a id='L50' name='L50'></a>  50 
+<a id='L51' name='L51'></a>  51     <em class='comment'>/* y is -inf */</em>
+<a id='L52' name='L52'></a>  52 1:  fxam
+<a id='L53' name='L53'></a>  53     fnstsw
+<a id='L54' name='L54'></a>  54     movl    16(%rsp), %edx
+<a id='L55' name='L55'></a>  55     shrl    $5, %eax
+<a id='L56' name='L56'></a>  56     fstp    %st
+<a id='L57' name='L57'></a>  57     fstp    %st
+<a id='L58' name='L58'></a>  58     andl    $0x8000, %edx
+<a id='L59' name='L59'></a>  59     andl    $0x0228, %eax
+<a id='L60' name='L60'></a>  60     cmpl    $0x0028, %eax
+<a id='L61' name='L61'></a>  61     je  4f
+<a id='L62' name='L62'></a>  62     andl    $8, %eax
+<a id='L63' name='L63'></a>  63     shrl    $11, %edx
+<a id='L64' name='L64'></a>  64     addl    %edx, %eax
+<a id='L65' name='L65'></a>  65 <em class='sharp'>#ifdef</em> <a href='../Y/1408.html' title='Multiple used in 370 places.'>PIC</a>
+<a id='L66' name='L66'></a>  66     lea zero_nan(%rip),%rdx
+<a id='L67' name='L67'></a>  67     fldl    (%rdx,%rax,1)
+<a id='L68' name='L68'></a>  68 <em class='sharp'>#else</em>
+<a id='L69' name='L69'></a>  69     fldl    zero_nan(%rax, 1)
+<a id='L70' name='L70'></a>  70 <em class='sharp'>#endif</em>
+<a id='L71' name='L71'></a>  71     ret
+<a id='L72' name='L72'></a>  72 
+<a id='L73' name='L73'></a>  73     <em class='comment'>/* The result is NaN; raise an exception for sNaN arguments.  */</em>
+<a id='L74' name='L74'></a>  74 2:  faddp
+<a id='L75' name='L75'></a>  75     ret
+<a id='L76' name='L76'></a>  76 
+<a id='L77' name='L77'></a>  77     <em class='comment'>/* Return NaN and raise the invalid exception.  */</em>
+<a id='L78' name='L78'></a>  78 4:  fstp    %st
+<a id='L79' name='L79'></a>  79     fstp    %st
+<a id='L80' name='L80'></a>  80     fldz
+<a id='L81' name='L81'></a>  81     fdiv    %st
+<a id='L82' name='L82'></a>  82     ret
+<a id='L83' name='L83'></a>  83 END(__ieee754_scalbl)
+<a id='L84' name='L84'></a>  84 libm_alias_finite (__ieee754_scalbl, __scalbl)
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;][^][v]<a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

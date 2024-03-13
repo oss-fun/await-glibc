@@ -1,0 +1,90 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>sysdeps/mach/hurd/ifreq.c</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18977.html'>sysdeps</a>/<a href='../files/19091.html'>mach</a>/<a href='../files/19095.html'>hurd</a>/ifreq.c</h2>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L26'>[^]</a>[v][top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<h2 class='header'>DEFINITIONS</h2>
+This source file includes following definitions.
+<ol>
+<li><a href='#L26' title='Defined at 26.'>__ifreq</a></li>
+</ol>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* Fetch the host's network interface list.  Hurd version.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   Copyright (C) 2002-2022 Free Software Foundation, Inc.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'></em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'></em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'></em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   License along with the GNU C Library; if not, see</em>
+<a id='L17' name='L17'></a>  17 <em class='comment'>   &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L18' name='L18'></a>  18 
+<a id='L19' name='L19'></a>  19 <em class='sharp'>#include</em> &lt;<a href='../I/1869.html'>ifreq.h</a>&gt;
+<a id='L20' name='L20'></a>  20 <em class='sharp'>#include</em> &lt;<a href='../I/1257.html'>hurd.h</a>&gt;
+<a id='L21' name='L21'></a>  21 <em class='sharp'>#include</em> &lt;hurd/pfinet.h&gt;
+<a id='L22' name='L22'></a>  22 <em class='sharp'>#include</em> &lt;<a href='../I/140.html'>sys/mman.h</a>&gt;
+<a id='L23' name='L23'></a>  23 
+<a id='L24' name='L24'></a>  24 
+<a id='L25' name='L25'></a>  25 <strong class='reserved'>void</strong>
+<a id='L26' name='L26'></a>  26 <a href='../R/14481.html' title='Multiple referred from 3 places.'>__ifreq</a> (<strong class='reserved'>struct</strong> <a href='../S/8509.html#L126' title='Defined at 126 in sysdeps/gnu/net/if.h.'>ifreq</a> **<a href='../Y/16580.html' title='Multiple used in 27 places.'>ifreqs</a>, <strong class='reserved'>int</strong> *<a href='../Y/21336.html' title='Multiple used in 21 places.'>num_ifs</a>, <strong class='reserved'>int</strong> <a href='../Y/25708.html' title='Multiple used in 17 places.'>sockfd</a>)
+<a id='L27' name='L27'></a>  27 <em class='brace'>{</em>
+<a id='L28' name='L28'></a>  28   <a href='../Y/14572.html' title='Multiple used in 192 places.'>file_t</a> <a href='../Y/25033.html' title='Multiple used in 105 places.'>server</a>;
+<a id='L29' name='L29'></a>  29 
+<a id='L30' name='L30'></a>  30   <a href='../Y/25033.html' title='Multiple used in 105 places.'>server</a> = <a href='../S/2116.html#L46' title='Defined at 46 in hurd/hurdsock.c.'>_hurd_socket_server</a> (<a href='../D/9830.html' title='Multiple defined in 3 places.'>PF_INET</a>, 0);
+<a id='L31' name='L31'></a>  31   <strong class='reserved'>if</strong> (<a href='../Y/25033.html' title='Multiple used in 105 places.'>server</a> == <a href='../Y/1165.html' title='Multiple used in 414 places.'>MACH_PORT_NULL</a>)
+<a id='L32' name='L32'></a>  32     <em class='brace'>{</em>
+<a id='L33' name='L33'></a>  33     <a href='../S/1663.html#L112' title='Defined at 112 in nscd/initgrcache.c.'>out</a>:
+<a id='L34' name='L34'></a>  34       *<a href='../Y/21336.html' title='Multiple used in 21 places.'>num_ifs</a> = 0;
+<a id='L35' name='L35'></a>  35       *<a href='../Y/16580.html' title='Multiple used in 27 places.'>ifreqs</a> = <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>;
+<a id='L36' name='L36'></a>  36     <em class='brace'>}</em>
+<a id='L37' name='L37'></a>  37   <strong class='reserved'>else</strong>
+<a id='L38' name='L38'></a>  38     <em class='brace'>{</em>
+<a id='L39' name='L39'></a>  39       <strong class='reserved'>char</strong> *<a href='../D/29309.html' title='Multiple defined in 3 places.'>data</a> = <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>;
+<a id='L40' name='L40'></a>  40       <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../D/32598.html' title='Multiple defined in 10 places.'>len</a> = 0;
+<a id='L41' name='L41'></a>  41       <a href='../D/30030.html' title='Multiple defined in 4 places.'>error_t</a> <a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a> = <a href='../Y/6495.html' title='Multiple used in 5 places.'>__pfinet_siocgifconf</a> (<a href='../Y/25033.html' title='Multiple used in 105 places.'>server</a>, -1, &amp;<a href='../D/29309.html' title='Multiple defined in 3 places.'>data</a>, &amp;<a href='../D/32598.html' title='Multiple defined in 10 places.'>len</a>);
+<a id='L42' name='L42'></a>  42       <strong class='reserved'>if</strong> (<a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a> == <a href='../Y/1188.html' title='Multiple used in 10 places.'>MACH_SEND_INVALID_DEST</a> || <a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a> == <a href='../Y/1231.html' title='Multiple used in 8 places.'>MIG_SERVER_DIED</a>)
+<a id='L43' name='L43'></a>  43     <em class='brace'>{</em>
+<a id='L44' name='L44'></a>  44       <em class='comment'>/* On the first use of the socket server during the operation,</em>
+<a id='L45' name='L45'></a>  45 <em class='comment'>         allow for the old server port dying.  */</em>
+<a id='L46' name='L46'></a>  46       <a href='../Y/25033.html' title='Multiple used in 105 places.'>server</a> = <a href='../S/2116.html#L46' title='Defined at 46 in hurd/hurdsock.c.'>_hurd_socket_server</a> (<a href='../D/9830.html' title='Multiple defined in 3 places.'>PF_INET</a>, 1);
+<a id='L47' name='L47'></a>  47       <strong class='reserved'>if</strong> (<a href='../Y/25033.html' title='Multiple used in 105 places.'>server</a> == <a href='../Y/1165.html' title='Multiple used in 414 places.'>MACH_PORT_NULL</a>)
+<a id='L48' name='L48'></a>  48         <strong class='reserved'>goto</strong> <a href='../S/1663.html#L112' title='Defined at 112 in nscd/initgrcache.c.'>out</a>;
+<a id='L49' name='L49'></a>  49       <a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a> = <a href='../Y/6495.html' title='Multiple used in 5 places.'>__pfinet_siocgifconf</a> (<a href='../Y/25033.html' title='Multiple used in 105 places.'>server</a>, -1, (<a href='../S/299.html#L27' title='Defined at 27 in intl/tst-gettext2.c.'>data_t</a> *) <a href='../Y/16580.html' title='Multiple used in 27 places.'>ifreqs</a>, &amp;<a href='../D/32598.html' title='Multiple defined in 10 places.'>len</a>);
+<a id='L50' name='L50'></a>  50     <em class='brace'>}</em>
+<a id='L51' name='L51'></a>  51       <strong class='reserved'>if</strong> (<a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a>)
+<a id='L52' name='L52'></a>  52     <strong class='reserved'>goto</strong> <a href='../S/1663.html#L112' title='Defined at 112 in nscd/initgrcache.c.'>out</a>;
+<a id='L53' name='L53'></a>  53 
+<a id='L54' name='L54'></a>  54       <strong class='reserved'>if</strong> (<a href='../D/32598.html' title='Multiple defined in 10 places.'>len</a> % <strong class='reserved'>sizeof</strong> (<strong class='reserved'>struct</strong> <a href='../S/8509.html#L126' title='Defined at 126 in sysdeps/gnu/net/if.h.'>ifreq</a>) != 0)
+<a id='L55' name='L55'></a>  55     <em class='brace'>{</em>
+<a id='L56' name='L56'></a>  56       <a href='../D/25045.html' title='Multiple defined in 2 places.'>__munmap</a> (<a href='../D/29309.html' title='Multiple defined in 3 places.'>data</a>, <a href='../D/32598.html' title='Multiple defined in 10 places.'>len</a>);
+<a id='L57' name='L57'></a>  57       <a href='../D/30023.html' title='Multiple defined in 13 places.'>errno</a> = <a href='../D/3143.html' title='Multiple defined in 2 places.'>EGRATUITOUS</a>;
+<a id='L58' name='L58'></a>  58       <strong class='reserved'>goto</strong> <a href='../S/1663.html#L112' title='Defined at 112 in nscd/initgrcache.c.'>out</a>;
+<a id='L59' name='L59'></a>  59     <em class='brace'>}</em>
+<a id='L60' name='L60'></a>  60       *<a href='../Y/21336.html' title='Multiple used in 21 places.'>num_ifs</a> = <a href='../D/32598.html' title='Multiple defined in 10 places.'>len</a> / <strong class='reserved'>sizeof</strong> (<strong class='reserved'>struct</strong> <a href='../S/8509.html#L126' title='Defined at 126 in sysdeps/gnu/net/if.h.'>ifreq</a>);
+<a id='L61' name='L61'></a>  61       *<a href='../Y/16580.html' title='Multiple used in 27 places.'>ifreqs</a> = (<strong class='reserved'>struct</strong> <a href='../S/8509.html#L126' title='Defined at 126 in sysdeps/gnu/net/if.h.'>ifreq</a> *) <a href='../D/29309.html' title='Multiple defined in 3 places.'>data</a>;
+<a id='L62' name='L62'></a>  62     <em class='brace'>}</em>
+<a id='L63' name='L63'></a>  63 
+<a id='L64' name='L64'></a>  64 <em class='brace'>}</em>
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;][^]<a href='#L26'>[v]</a><a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

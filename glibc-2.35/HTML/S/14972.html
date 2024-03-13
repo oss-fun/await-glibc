@@ -1,0 +1,265 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>sysdeps/x86_64/fpu/multiarch/svml_d_atan2_core_sse4.S</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18977.html'>sysdeps</a>/<a href='../files/19391.html'>x86_64</a>/<a href='../files/19392.html'>fpu</a>/<a href='../files/19393.html'>multiarch</a>/svml_d_atan2_core_sse4.S</h2>
+<em class='comment'>/* [&lt;][&gt;][^][v][top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* Function atan vectorized with SSE4.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   Copyright (C) 2021-2022 Free Software Foundation, Inc.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'></em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'></em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'></em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   License along with the GNU C Library; if not, see</em>
+<a id='L17' name='L17'></a>  17 <em class='comment'>   https://www.gnu.org/licenses/.  */</em>
+<a id='L18' name='L18'></a>  18 
+<a id='L19' name='L19'></a>  19 <em class='comment'>/*</em>
+<a id='L20' name='L20'></a>  20 <em class='comment'> * ALGORITHM DESCRIPTION:</em>
+<a id='L21' name='L21'></a>  21 <em class='comment'> *</em>
+<a id='L22' name='L22'></a>  22 <em class='comment'> *      For    0.0    &lt;= x &lt;=  7.0/16.0: atan(x) = atan(0.0) + atan(s), where s=(x-0.0)/(1.0+0.0*x)</em>
+<a id='L23' name='L23'></a>  23 <em class='comment'> *      For  7.0/16.0 &lt;= x &lt;= 11.0/16.0: atan(x) = atan(0.5) + atan(s), where s=(x-0.5)/(1.0+0.5*x)</em>
+<a id='L24' name='L24'></a>  24 <em class='comment'> *      For 11.0/16.0 &lt;= x &lt;= 19.0/16.0: atan(x) = atan(1.0) + atan(s), where s=(x-1.0)/(1.0+1.0*x)</em>
+<a id='L25' name='L25'></a>  25 <em class='comment'> *      For 19.0/16.0 &lt;= x &lt;= 39.0/16.0: atan(x) = atan(1.5) + atan(s), where s=(x-1.5)/(1.0+1.5*x)</em>
+<a id='L26' name='L26'></a>  26 <em class='comment'> *      For 39.0/16.0 &lt;= x &lt;=    inf   : atan(x) = atan(inf) + atan(s), where s=-1.0/x</em>
+<a id='L27' name='L27'></a>  27 <em class='comment'> *      Where atan(s) ~= s+s^3*Poly11(s^2) on interval |s|&lt;7.0/0.16.</em>
+<a id='L28' name='L28'></a>  28 <em class='comment'> *</em>
+<a id='L29' name='L29'></a>  29 <em class='comment'> */</em>
+<a id='L30' name='L30'></a>  30 
+<a id='L31' name='L31'></a>  31 <em class='comment'>/* Offsets for data table __svml_datan_data_internal_avx512</em>
+<a id='L32' name='L32'></a>  32 <em class='comment'> */</em>
+<a id='L33' name='L33'></a>  33 <em class='sharp'>#define</em> AbsMask                         0
+<a id='L34' name='L34'></a>  34 <em class='sharp'>#define</em> Shifter                         16
+<a id='L35' name='L35'></a>  35 <em class='sharp'>#define</em> MaxThreshold                    32
+<a id='L36' name='L36'></a>  36 <em class='sharp'>#define</em> MOne                            48
+<a id='L37' name='L37'></a>  37 <em class='sharp'>#define</em> One                             64
+<a id='L38' name='L38'></a>  38 <em class='sharp'>#define</em> LargeX                          80
+<a id='L39' name='L39'></a>  39 <em class='sharp'>#define</em> <a href='../R/9915.html' title='Multiple referred from 17 places.'>Zero</a>                            96
+<a id='L40' name='L40'></a>  40 <em class='sharp'>#define</em> Tbl_H                           112
+<a id='L41' name='L41'></a>  41 <em class='sharp'>#define</em> Tbl_L                           368
+<a id='L42' name='L42'></a>  42 <em class='sharp'>#define</em> dIndexMed                       624
+<a id='L43' name='L43'></a>  43 <em class='sharp'>#define</em> Pi2                             640
+<a id='L44' name='L44'></a>  44 <em class='sharp'>#define</em> Pi2_low                         656
+<a id='L45' name='L45'></a>  45 <em class='sharp'>#define</em> coeff                           672
+<a id='L46' name='L46'></a>  46 
+<a id='L47' name='L47'></a>  47 <em class='sharp'>#include</em> &lt;<a href='../I/5967.html'>sysdep.h</a>&gt;
+<a id='L48' name='L48'></a>  48 
+<a id='L49' name='L49'></a>  49         .text
+<a id='L50' name='L50'></a>  50     .section .text.sse4,"ax",@progbits
+<a id='L51' name='L51'></a>  51 <a href='../D/3651.html' title='Multiple defined in 54 places.'>ENTRY</a>(_ZGVbN2v_atan_sse4)
+<a id='L52' name='L52'></a>  52         lea       Tbl_H+128+__svml_datan_data_internal_avx512(%rip), %rcx
+<a id='L53' name='L53'></a>  53         movups    __svml_datan_data_internal_avx512(%rip), %xmm4
+<a id='L54' name='L54'></a>  54         movups    Shifter+__svml_datan_data_internal_avx512(%rip), %xmm3
+<a id='L55' name='L55'></a>  55         andps     %xmm0, %xmm4
+<a id='L56' name='L56'></a>  56         movaps    %xmm3, %xmm12
+<a id='L57' name='L57'></a>  57         movaps    %xmm4, %xmm5
+<a id='L58' name='L58'></a>  58         addpd     %xmm4, %xmm12
+<a id='L59' name='L59'></a>  59         movaps    %xmm12, %xmm7
+<a id='L60' name='L60'></a>  60 
+<a id='L61' name='L61'></a>  61 <em class='comment'>/*</em>
+<a id='L62' name='L62'></a>  62 <em class='comment'> * table lookup sequence</em>
+<a id='L63' name='L63'></a>  63 <em class='comment'> * VPERMUTE not available</em>
+<a id='L64' name='L64'></a>  64 <em class='comment'> */</em>
+<a id='L65' name='L65'></a>  65         movaps    %xmm12, %xmm10
+<a id='L66' name='L66'></a>  66         subpd     %xmm3, %xmm7
+<a id='L67' name='L67'></a>  67         subpd     %xmm7, %xmm5
+<a id='L68' name='L68'></a>  68         mulpd     %xmm4, %xmm7
+<a id='L69' name='L69'></a>  69         movups    MaxThreshold+__svml_datan_data_internal_avx512(%rip), %xmm2
+<a id='L70' name='L70'></a>  70         psllq     $3, %xmm10
+<a id='L71' name='L71'></a>  71 
+<a id='L72' name='L72'></a>  72 <em class='comment'>/* saturate X range */</em>
+<a id='L73' name='L73'></a>  73         movups    LargeX+__svml_datan_data_internal_avx512(%rip), %xmm8
+<a id='L74' name='L74'></a>  74         pxor      %xmm4, %xmm0
+<a id='L75' name='L75'></a>  75         cmplepd   %xmm4, %xmm2
+<a id='L76' name='L76'></a>  76         addpd     One+__svml_datan_data_internal_avx512(%rip), %xmm7
+<a id='L77' name='L77'></a>  77         minpd     %xmm4, %xmm8
+<a id='L78' name='L78'></a>  78         movups    MOne+__svml_datan_data_internal_avx512(%rip), %xmm6
+<a id='L79' name='L79'></a>  79         movaps    %xmm2, %xmm1
+<a id='L80' name='L80'></a>  80         movaps    %xmm2, %xmm9
+<a id='L81' name='L81'></a>  81         andnps    %xmm5, %xmm1
+<a id='L82' name='L82'></a>  82         andps     %xmm2, %xmm6
+<a id='L83' name='L83'></a>  83         andnps    %xmm7, %xmm9
+<a id='L84' name='L84'></a>  84         andps     %xmm2, %xmm8
+<a id='L85' name='L85'></a>  85         orps      %xmm6, %xmm1
+<a id='L86' name='L86'></a>  86         orps      %xmm8, %xmm9
+<a id='L87' name='L87'></a>  87 
+<a id='L88' name='L88'></a>  88 <em class='comment'>/* R+Rl = DiffX/Y */</em>
+<a id='L89' name='L89'></a>  89         divpd     %xmm9, %xmm1
+<a id='L90' name='L90'></a>  90         pand      .FLT_11(%rip), %xmm10
+<a id='L91' name='L91'></a>  91 
+<a id='L92' name='L92'></a>  92 <em class='comment'>/* set table value to Pi/2 for large X */</em>
+<a id='L93' name='L93'></a>  93         movups    Pi2+__svml_datan_data_internal_avx512(%rip), %xmm4
+<a id='L94' name='L94'></a>  94         movd      %xmm10, %eax
+<a id='L95' name='L95'></a>  95         andps     %xmm2, %xmm4
+<a id='L96' name='L96'></a>  96         pshufd    $2, %xmm10, %xmm11
+<a id='L97' name='L97'></a>  97         movaps    %xmm2, %xmm10
+<a id='L98' name='L98'></a>  98 
+<a id='L99' name='L99'></a>  99 <em class='comment'>/* polynomial evaluation */</em>
+<a id='L100' name='L100'></a> 100         movaps    %xmm1, %xmm2
+<a id='L101' name='L101'></a> 101         mulpd     %xmm1, %xmm2
+<a id='L102' name='L102'></a> 102         movd      %xmm11, %edx
+<a id='L103' name='L103'></a> 103         movups    coeff+__svml_datan_data_internal_avx512(%rip), %xmm5
+<a id='L104' name='L104'></a> 104         movaps    %xmm2, %xmm7
+<a id='L105' name='L105'></a> 105         movups    coeff+32+__svml_datan_data_internal_avx512(%rip), %xmm6
+<a id='L106' name='L106'></a> 106         movaps    %xmm2, %xmm9
+<a id='L107' name='L107'></a> 107         mulpd     %xmm2, %xmm5
+<a id='L108' name='L108'></a> 108         mulpd     %xmm2, %xmm7
+<a id='L109' name='L109'></a> 109         addpd     coeff+16+__svml_datan_data_internal_avx512(%rip), %xmm5
+<a id='L110' name='L110'></a> 110         mulpd     %xmm2, %xmm6
+<a id='L111' name='L111'></a> 111         mulpd     %xmm7, %xmm5
+<a id='L112' name='L112'></a> 112         addpd     coeff+48+__svml_datan_data_internal_avx512(%rip), %xmm6
+<a id='L113' name='L113'></a> 113         mulpd     %xmm1, %xmm9
+<a id='L114' name='L114'></a> 114         addpd     %xmm5, %xmm6
+<a id='L115' name='L115'></a> 115         movups    coeff+64+__svml_datan_data_internal_avx512(%rip), %xmm8
+<a id='L116' name='L116'></a> 116         mulpd     %xmm2, %xmm8
+<a id='L117' name='L117'></a> 117         mulpd     %xmm6, %xmm7
+<a id='L118' name='L118'></a> 118         addpd     coeff+80+__svml_datan_data_internal_avx512(%rip), %xmm8
+<a id='L119' name='L119'></a> 119         addpd     %xmm7, %xmm8
+<a id='L120' name='L120'></a> 120         mulpd     %xmm8, %xmm9
+<a id='L121' name='L121'></a> 121         movups    dIndexMed+__svml_datan_data_internal_avx512(%rip), %xmm14
+<a id='L122' name='L122'></a> 122         cmplepd   %xmm12, %xmm14
+<a id='L123' name='L123'></a> 123         addpd     %xmm9, %xmm1
+<a id='L124' name='L124'></a> 124         movslq    %eax, %rax
+<a id='L125' name='L125'></a> 125         movaps    %xmm14, %xmm3
+<a id='L126' name='L126'></a> 126         movslq    %edx, %rdx
+<a id='L127' name='L127'></a> 127         movsd     -128(%rax,%rcx), %xmm13
+<a id='L128' name='L128'></a> 128         movsd     (%rcx,%rax), %xmm15
+<a id='L129' name='L129'></a> 129         movhpd    -128(%rdx,%rcx), %xmm13
+<a id='L130' name='L130'></a> 130         movhpd    (%rcx,%rdx), %xmm15
+<a id='L131' name='L131'></a> 131         andnps    %xmm13, %xmm3
+<a id='L132' name='L132'></a> 132         andps     %xmm14, %xmm15
+<a id='L133' name='L133'></a> 133         orps      %xmm15, %xmm3
+<a id='L134' name='L134'></a> 134         andnps    %xmm3, %xmm10
+<a id='L135' name='L135'></a> 135         orps      %xmm4, %xmm10
+<a id='L136' name='L136'></a> 136         addpd     %xmm1, %xmm10
+<a id='L137' name='L137'></a> 137         pxor      %xmm10, %xmm0
+<a id='L138' name='L138'></a> 138         ret
+<a id='L139' name='L139'></a> 139 
+<a id='L140' name='L140'></a> 140 END(_ZGVbN2v_atan_sse4)
+<a id='L141' name='L141'></a> 141 
+<a id='L142' name='L142'></a> 142         .section .rodata, "a"
+<a id='L143' name='L143'></a> 143         .align 16
+<a id='L144' name='L144'></a> 144 
+<a id='L145' name='L145'></a> 145 <em class='sharp'>#ifdef</em> <a href='../Y/7927.html' title='Multiple used in 3 places.'>__svml_datan_data_internal_avx512_typedef</a>
+<a id='L146' name='L146'></a> 146 typedef unsigned int VUINT32;
+<a id='L147' name='L147'></a> 147 typedef struct <em class='brace'>{</em>
+<a id='L148' name='L148'></a> 148         __declspec(align(16)) VUINT32 AbsMask[2][2];
+<a id='L149' name='L149'></a> 149         __declspec(align(16)) VUINT32 Shifter[2][2];
+<a id='L150' name='L150'></a> 150         __declspec(align(16)) VUINT32 MaxThreshold[2][2];
+<a id='L151' name='L151'></a> 151         __declspec(align(16)) VUINT32 MOne[2][2];
+<a id='L152' name='L152'></a> 152         __declspec(align(16)) VUINT32 One[2][2];
+<a id='L153' name='L153'></a> 153         __declspec(align(16)) VUINT32 LargeX[2][2];
+<a id='L154' name='L154'></a> 154         __declspec(align(16)) VUINT32 Zero[2][2];
+<a id='L155' name='L155'></a> 155         __declspec(align(16)) VUINT32 Tbl_H[32][2];
+<a id='L156' name='L156'></a> 156         __declspec(align(16)) VUINT32 Tbl_L[32][2];
+<a id='L157' name='L157'></a> 157         __declspec(align(16)) VUINT32 dIndexMed[2][2];
+<a id='L158' name='L158'></a> 158         __declspec(align(16)) VUINT32 Pi2[2][2];
+<a id='L159' name='L159'></a> 159         __declspec(align(16)) VUINT32 Pi2_low[2][2];
+<a id='L160' name='L160'></a> 160         __declspec(align(16)) VUINT32 coeff[6][2][2];
+<a id='L161' name='L161'></a> 161     <em class='brace'>}</em> __svml_datan_data_internal_avx512;
+<a id='L162' name='L162'></a> 162 <em class='sharp'>#endif</em>
+<a id='L163' name='L163'></a> 163 __svml_datan_data_internal_avx512:
+<a id='L164' name='L164'></a> 164         <em class='comment'>/*== AbsMask ==*/</em>
+<a id='L165' name='L165'></a> 165         .quad 0x7fffffffffffffff, 0x7fffffffffffffff
+<a id='L166' name='L166'></a> 166         <em class='comment'>/*== Shifter ==*/</em>
+<a id='L167' name='L167'></a> 167         .align 16
+<a id='L168' name='L168'></a> 168         .quad 0x4318000000000000, 0x4318000000000000
+<a id='L169' name='L169'></a> 169         <em class='comment'>/*== MaxThreshold ==*/</em>
+<a id='L170' name='L170'></a> 170         .align 16
+<a id='L171' name='L171'></a> 171         .quad 0x401f800000000000, 0x401f800000000000
+<a id='L172' name='L172'></a> 172         <em class='comment'>/*== MOne ==*/</em>
+<a id='L173' name='L173'></a> 173         .align 16
+<a id='L174' name='L174'></a> 174         .quad 0xbff0000000000000, 0xbff0000000000000
+<a id='L175' name='L175'></a> 175         <em class='comment'>/*== One ==*/</em>
+<a id='L176' name='L176'></a> 176         .align 16
+<a id='L177' name='L177'></a> 177         .quad 0x3ff0000000000000, 0x3ff0000000000000
+<a id='L178' name='L178'></a> 178         <em class='comment'>/*== LargeX ==*/</em>
+<a id='L179' name='L179'></a> 179         .align 16
+<a id='L180' name='L180'></a> 180         .quad 0x47f0000000000000, 0x47f0000000000000
+<a id='L181' name='L181'></a> 181         <em class='comment'>/*== Zero ==*/</em>
+<a id='L182' name='L182'></a> 182         .align 16
+<a id='L183' name='L183'></a> 183         .quad 0x0000000000000000, 0x0000000000000000
+<a id='L184' name='L184'></a> 184         <em class='comment'>/*== Tbl_H ==*/</em>
+<a id='L185' name='L185'></a> 185         .align 16
+<a id='L186' name='L186'></a> 186         .quad 0x0000000000000000, 0x3fcf5b75f92c80dd
+<a id='L187' name='L187'></a> 187         .quad 0x3fddac670561bb4f, 0x3fe4978fa3269ee1
+<a id='L188' name='L188'></a> 188         .quad 0x3fe921fb54442d18, 0x3fecac7c57846f9e
+<a id='L189' name='L189'></a> 189         .quad 0x3fef730bd281f69b, 0x3ff0d38f2c5ba09f
+<a id='L190' name='L190'></a> 190         .quad 0x3ff1b6e192ebbe44, 0x3ff270ef55a53a25
+<a id='L191' name='L191'></a> 191         .quad 0x3ff30b6d796a4da8, 0x3ff38d6a6ce13353
+<a id='L192' name='L192'></a> 192         .quad 0x3ff3fc176b7a8560, 0x3ff45b54837351a0
+<a id='L193' name='L193'></a> 193         .quad 0x3ff4ae10fc6589a5, 0x3ff4f68dea672617
+<a id='L194' name='L194'></a> 194         .quad 0x3ff5368c951e9cfd, 0x3ff56f6f33a3e6a7
+<a id='L195' name='L195'></a> 195         .quad 0x3ff5a25052114e60, 0x3ff5d013c41adabd
+<a id='L196' name='L196'></a> 196         .quad 0x3ff5f97315254857, 0x3ff61f06c6a92b89
+<a id='L197' name='L197'></a> 197         .quad 0x3ff6414d44094c7c, 0x3ff660b02c736a06
+<a id='L198' name='L198'></a> 198         .quad 0x3ff67d8863bc99bd, 0x3ff698213a9d5053
+<a id='L199' name='L199'></a> 199         .quad 0x3ff6b0bae830c070, 0x3ff6c78c7edeb195
+<a id='L200' name='L200'></a> 200         .quad 0x3ff6dcc57bb565fd, 0x3ff6f08f07435fec
+<a id='L201' name='L201'></a> 201         .quad 0x3ff7030cf9403197, 0x3ff7145eac2088a4
+<a id='L202' name='L202'></a> 202         <em class='comment'>/*== Tbl_L ==*/</em>
+<a id='L203' name='L203'></a> 203         .align 16
+<a id='L204' name='L204'></a> 204         .quad 0x0000000000000000, 0x3c68ab6e3cf7afbd
+<a id='L205' name='L205'></a> 205         .quad 0x3c7a2b7f222f65e2, 0x3c72419a87f2a458
+<a id='L206' name='L206'></a> 206         .quad 0x3c81a62633145c07, 0x3c80dae13ad18a6b
+<a id='L207' name='L207'></a> 207         .quad 0x3c7007887af0cbbd, 0xbc9bd0dc231bfd70
+<a id='L208' name='L208'></a> 208         .quad 0x3c9b1b466a88828e, 0xbc9a66b1af5f84fb
+<a id='L209' name='L209'></a> 209         .quad 0x3c96254cb03bb199, 0xbc812c77e8a80f5c
+<a id='L210' name='L210'></a> 210         .quad 0xbc4441a3bd3f1084, 0x3c79e4a72eedacc4
+<a id='L211' name='L211'></a> 211         .quad 0xbc93b03e8a27f555, 0x3c9934f9f2b0020e
+<a id='L212' name='L212'></a> 212         .quad 0xbc996f47948a99f1, 0xbc7df6edd6f1ec3b
+<a id='L213' name='L213'></a> 213         .quad 0x3c78c2d0c89de218, 0x3c9f82bba194dd5d
+<a id='L214' name='L214'></a> 214         .quad 0xbc831151a43b51ca, 0xbc8487d50bceb1a5
+<a id='L215' name='L215'></a> 215         .quad 0xbc9c5f60a65c7397, 0xbc7acb6afb332a0f
+<a id='L216' name='L216'></a> 216         .quad 0xbc99b7bd2e1e8c9c, 0xbc9b9839085189e3
+<a id='L217' name='L217'></a> 217         .quad 0xbc97d1ab82ffb70b, 0x3c99239ad620ffe2
+<a id='L218' name='L218'></a> 218         .quad 0xbc929c86447928e7, 0xbc8957a7170df016
+<a id='L219' name='L219'></a> 219         .quad 0xbc7cbe1896221608, 0xbc9fda5797b32a0b
+<a id='L220' name='L220'></a> 220         <em class='comment'>/*== dIndexMed ==*/</em>
+<a id='L221' name='L221'></a> 221         .align 16
+<a id='L222' name='L222'></a> 222         .quad 0x4318000000000010, 0x4318000000000010
+<a id='L223' name='L223'></a> 223         <em class='comment'>/*== Pi2 ==*/</em>
+<a id='L224' name='L224'></a> 224         .align 16
+<a id='L225' name='L225'></a> 225         .quad 0x3ff921fb54442d18, 0x3ff921fb54442d18
+<a id='L226' name='L226'></a> 226         <em class='comment'>/*== Pi2_low ==*/</em>
+<a id='L227' name='L227'></a> 227         .align 16
+<a id='L228' name='L228'></a> 228         .quad 0x3c91a62633145c07, 0x3c91a62633145c07
+<a id='L229' name='L229'></a> 229         <em class='comment'>/*== coeff6 ==*/</em>
+<a id='L230' name='L230'></a> 230         .align 16
+<a id='L231' name='L231'></a> 231         .quad 0x3fb2e9b9f5c4fe97, 0x3fb2e9b9f5c4fe97
+<a id='L232' name='L232'></a> 232         .quad 0xbfb74257c46790cc, 0xbfb74257c46790cc
+<a id='L233' name='L233'></a> 233         .quad 0x3fbc71bfeff916a0, 0x3fbc71bfeff916a0
+<a id='L234' name='L234'></a> 234         .quad 0xbfc249248eef04da, 0xbfc249248eef04da
+<a id='L235' name='L235'></a> 235         .quad 0x3fc999999998741e, 0x3fc999999998741e
+<a id='L236' name='L236'></a> 236         .quad 0xbfd555555555554d, 0xbfd555555555554d
+<a id='L237' name='L237'></a> 237         .align 16
+<a id='L238' name='L238'></a> 238         .type   __svml_datan_data_internal_avx512,@object
+<a id='L239' name='L239'></a> 239         .size   __svml_datan_data_internal_avx512,.-__svml_datan_data_internal_avx512
+<a id='L240' name='L240'></a> 240         .align 16
+<a id='L241' name='L241'></a> 241 
+<a id='L242' name='L242'></a> 242 .FLT_11:
+<a id='L243' name='L243'></a> 243         .long   0x00000078,0x00000000,0x00000078,0x00000000
+<a id='L244' name='L244'></a> 244         .type   .FLT_11,@object
+<a id='L245' name='L245'></a> 245         .size   .FLT_11,16
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;][^][v]<a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

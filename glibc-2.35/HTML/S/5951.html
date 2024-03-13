@@ -1,0 +1,133 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>support/tst-support-process_state.c</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18976.html'>support</a>/tst-support-process_state.c</h2>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L35'>[^]</a><a href='#L54'>[v]</a>[top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<h2 class='header'>DEFINITIONS</h2>
+This source file includes following definitions.
+<ol>
+<li><a href='#L35' title='Defined at 35.'>sigusr1_handler</a></li>
+<li><a href='#L40' title='Defined at 40.'>test_child</a></li>
+<li><a href='#L54' title='Defined at 54.'>do_test</a></li>
+</ol>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* Wait for process state tests.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   Copyright (C) 2020-2022 Free Software Foundation, Inc.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'></em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'></em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'></em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   License along with the GNU C Library; if not, see</em>
+<a id='L17' name='L17'></a>  17 <em class='comment'>   &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L18' name='L18'></a>  18 
+<a id='L19' name='L19'></a>  19 <em class='sharp'>#include</em> &lt;<a href='../I/1776.html'>stdio.h</a>&gt;
+<a id='L20' name='L20'></a>  20 <em class='sharp'>#include</em> &lt;<a href='../I/2025.html'>sys/wait.h</a>&gt;
+<a id='L21' name='L21'></a>  21 <em class='sharp'>#include</em> &lt;<a href='../I/1819.html'>unistd.h</a>&gt;
+<a id='L22' name='L22'></a>  22 <em class='sharp'>#include</em> &lt;<a href='../I/116.html'>errno.h</a>&gt;
+<a id='L23' name='L23'></a>  23 
+<a id='L24' name='L24'></a>  24 <em class='sharp'>#include</em> &lt;<a href='5902.html'>support/test-driver.h</a>&gt;
+<a id='L25' name='L25'></a>  25 <em class='sharp'>#include</em> &lt;<a href='5928.html'>support/process_state.h</a>&gt;
+<a id='L26' name='L26'></a>  26 <em class='sharp'>#include</em> &lt;<a href='5739.html'>support/check.h</a>&gt;
+<a id='L27' name='L27'></a>  27 <em class='sharp'>#include</em> &lt;<a href='5820.html'>support/xsignal.h</a>&gt;
+<a id='L28' name='L28'></a>  28 <em class='sharp'>#include</em> &lt;<a href='5899.html'>support/xunistd.h</a>&gt;
+<a id='L29' name='L29'></a>  29 
+<a id='L30' name='L30'></a>  30 <em class='sharp'>#ifndef</em> <a href='../D/17207.html' title='Multiple defined in 6 places.'>WEXITED</a>
+<a id='L31' name='L31'></a>  31 <em class='sharp'># define</em> <a href='../R/9533.html' title='Multiple referred from 12 places.'>WEXITED</a>    0
+<a id='L32' name='L32'></a>  32 <em class='sharp'>#endif</em>
+<a id='L33' name='L33'></a>  33 
+<a id='L34' name='L34'></a>  34 <strong class='reserved'>static</strong> <strong class='reserved'>void</strong>
+<a id='L35' name='L35'></a>  35 <a href='../R/24465.html' title='Multiple referred from 8 places.'>sigusr1_handler</a> (<strong class='reserved'>int</strong> <a href='../Y/25430.html' title='Multiple used in 204 places.'>signo</a>)
+<a id='L36' name='L36'></a>  36 <em class='brace'>{</em>
+<a id='L37' name='L37'></a>  37 <em class='brace'>}</em>
+<a id='L38' name='L38'></a>  38 
+<a id='L39' name='L39'></a>  39 <strong class='reserved'>static</strong> <strong class='reserved'>void</strong>
+<a id='L40' name='L40'></a>  40 <a href='../R/25215.html' title='Multiple referred from 6 places.'>test_child</a> (<strong class='reserved'>void</strong>)
+<a id='L41' name='L41'></a>  41 <em class='brace'>{</em>
+<a id='L42' name='L42'></a>  42   <a href='../S/5869.html#L23' title='Defined at 23 in support/xsignal.c.'>xsignal</a> (<a href='../D/14211.html' title='Multiple defined in 7 places.'>SIGUSR1</a>, <a href='../D/36777.html' title='Multiple defined in 7 places.'>sigusr1_handler</a>);
+<a id='L43' name='L43'></a>  43 
+<a id='L44' name='L44'></a>  44   <a href='../D/35435.html' title='Multiple defined in 3 places.'>raise</a> (<a href='../D/14202.html' title='Multiple defined in 7 places.'>SIGSTOP</a>);
+<a id='L45' name='L45'></a>  45 
+<a id='L46' name='L46'></a>  46   <a href='../S/5739.html#L101' title='Defined at 101 in support/check.h.'>TEST_COMPARE</a> (<a href='../S/1145.html#L26' title='Defined at 26 in posix/pause.c.'>pause</a> (), -1);
+<a id='L47' name='L47'></a>  47   <a href='../S/5739.html#L101' title='Defined at 101 in support/check.h.'>TEST_COMPARE</a> (<a href='../D/30023.html' title='Multiple defined in 13 places.'>errno</a>, <a href='../D/3155.html' title='Multiple defined in 2 places.'>EINTR</a>);
+<a id='L48' name='L48'></a>  48 
+<a id='L49' name='L49'></a>  49   <strong class='reserved'>while</strong> (1)
+<a id='L50' name='L50'></a>  50     <strong class='reserved'>asm</strong> ("");
+<a id='L51' name='L51'></a>  51 <em class='brace'>}</em>
+<a id='L52' name='L52'></a>  52 
+<a id='L53' name='L53'></a>  53 <strong class='reserved'>static</strong> <strong class='reserved'>int</strong>
+<a id='L54' name='L54'></a>  54 <a href='../R/18782.html' title='Multiple referred from 1850 places.'>do_test</a> (<strong class='reserved'>void</strong>)
+<a id='L55' name='L55'></a>  55 <em class='brace'>{</em>
+<a id='L56' name='L56'></a>  56   <a href='../D/34727.html' title='Multiple defined in 11 places.'>pid_t</a> <a href='../Y/22398.html' title='Multiple used in 920 places.'>pid</a> = <a href='../S/5867.html#L26' title='Defined at 26 in support/xfork.c.'>xfork</a> ();
+<a id='L57' name='L57'></a>  57   <strong class='reserved'>if</strong> (<a href='../Y/22398.html' title='Multiple used in 920 places.'>pid</a> == 0)
+<a id='L58' name='L58'></a>  58     <em class='brace'>{</em>
+<a id='L59' name='L59'></a>  59       <a href='../D/37617.html' title='Multiple defined in 5 places.'>test_child</a> ();
+<a id='L60' name='L60'></a>  60       <a href='../D/26871.html' title='Multiple defined in 4 places.'>_exit</a> (127);
+<a id='L61' name='L61'></a>  61     <em class='brace'>}</em>
+<a id='L62' name='L62'></a>  62 
+<a id='L63' name='L63'></a>  63   <em class='comment'>/* Adding process_state_tracing_stop ('t') allows the test to work under</em>
+<a id='L64' name='L64'></a>  64 <em class='comment'>     trace programs such as ptrace.  */</em>
+<a id='L65' name='L65'></a>  65   <strong class='reserved'>enum</strong> <a href='../S/5928.html#L24' title='Defined at 24 in support/process_state.h.'>support_process_state</a> <a href='../Y/26228.html' title='Multiple used in 8 places.'>stop_state</a> = <a href='../S/5928.html#L29' title='Defined at 29 in support/process_state.h.'>support_process_state_stopped</a>
+<a id='L66' name='L66'></a>  66                     | <a href='../S/5928.html#L30' title='Defined at 30 in support/process_state.h.'>support_process_state_tracing_stop</a>;
+<a id='L67' name='L67'></a>  67 
+<a id='L68' name='L68'></a>  68   <strong class='reserved'>if</strong> (<a href='../Y/27048.html' title='Multiple used in 128 places.'>test_verbose</a>)
+<a id='L69' name='L69'></a>  69     <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("info: waiting pid %d, state_stopped/state_tracing_stop\n",
+<a id='L70' name='L70'></a>  70         (<strong class='reserved'>int</strong>) <a href='../Y/22398.html' title='Multiple used in 920 places.'>pid</a>);
+<a id='L71' name='L71'></a>  71   <a href='../S/5940.html#L30' title='Defined at 30 in support/support_process_state.c.'>support_process_state_wait</a> (<a href='../Y/22398.html' title='Multiple used in 920 places.'>pid</a>, <a href='../Y/26228.html' title='Multiple used in 8 places.'>stop_state</a>);
+<a id='L72' name='L72'></a>  72 
+<a id='L73' name='L73'></a>  73   <strong class='reserved'>if</strong> (<a href='../Y/17525.html' title='Multiple used in 101 places.'>kill</a> (<a href='../Y/22398.html' title='Multiple used in 920 places.'>pid</a>, <a href='../D/14130.html' title='Multiple defined in 7 places.'>SIGCONT</a>) != 0)
+<a id='L74' name='L74'></a>  74     <a href='../S/5739.html#L29' title='Defined at 29 in support/check.h.'>FAIL_RET</a> ("kill (%d, SIGCONT): %m\n", <a href='../Y/22398.html' title='Multiple used in 920 places.'>pid</a>);
+<a id='L75' name='L75'></a>  75 
+<a id='L76' name='L76'></a>  76   <strong class='reserved'>if</strong> (<a href='../Y/27048.html' title='Multiple used in 128 places.'>test_verbose</a>)
+<a id='L77' name='L77'></a>  77     <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("info: waiting pid %d, state_sleeping\n", (<strong class='reserved'>int</strong>) <a href='../Y/22398.html' title='Multiple used in 920 places.'>pid</a>);
+<a id='L78' name='L78'></a>  78   <a href='../S/5940.html#L30' title='Defined at 30 in support/support_process_state.c.'>support_process_state_wait</a> (<a href='../Y/22398.html' title='Multiple used in 920 places.'>pid</a>, <a href='../S/5928.html#L27' title='Defined at 27 in support/process_state.h.'>support_process_state_sleeping</a>);
+<a id='L79' name='L79'></a>  79 
+<a id='L80' name='L80'></a>  80   <strong class='reserved'>if</strong> (<a href='../Y/17525.html' title='Multiple used in 101 places.'>kill</a> (<a href='../Y/22398.html' title='Multiple used in 920 places.'>pid</a>, <a href='../D/14211.html' title='Multiple defined in 7 places.'>SIGUSR1</a>) != 0)
+<a id='L81' name='L81'></a>  81     <a href='../S/5739.html#L29' title='Defined at 29 in support/check.h.'>FAIL_RET</a> ("kill (%d, SIGUSR1): %m\n", <a href='../Y/22398.html' title='Multiple used in 920 places.'>pid</a>);
+<a id='L82' name='L82'></a>  82 
+<a id='L83' name='L83'></a>  83   <strong class='reserved'>if</strong> (<a href='../Y/27048.html' title='Multiple used in 128 places.'>test_verbose</a>)
+<a id='L84' name='L84'></a>  84     <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("info: waiting pid %d, state_running\n", (<strong class='reserved'>int</strong>) <a href='../Y/22398.html' title='Multiple used in 920 places.'>pid</a>);
+<a id='L85' name='L85'></a>  85   <a href='../S/5940.html#L30' title='Defined at 30 in support/support_process_state.c.'>support_process_state_wait</a> (<a href='../Y/22398.html' title='Multiple used in 920 places.'>pid</a>, <a href='../S/5928.html#L26' title='Defined at 26 in support/process_state.h.'>support_process_state_running</a>);
+<a id='L86' name='L86'></a>  86 
+<a id='L87' name='L87'></a>  87   <strong class='reserved'>if</strong> (<a href='../Y/17525.html' title='Multiple used in 101 places.'>kill</a> (<a href='../Y/22398.html' title='Multiple used in 920 places.'>pid</a>, <a href='../S/183.html#L59' title='Defined at 59 in bits/signum-generic.h.'>SIGKILL</a>) != 0)
+<a id='L88' name='L88'></a>  88     <a href='../S/5739.html#L29' title='Defined at 29 in support/check.h.'>FAIL_RET</a> ("kill (%d, SIGKILL): %m\n", <a href='../Y/22398.html' title='Multiple used in 920 places.'>pid</a>);
+<a id='L89' name='L89'></a>  89 
+<a id='L90' name='L90'></a>  90   <strong class='reserved'>if</strong> (<a href='../Y/27048.html' title='Multiple used in 128 places.'>test_verbose</a>)
+<a id='L91' name='L91'></a>  91     <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("info: waiting pid %d, state_zombie\n", (<strong class='reserved'>int</strong>) <a href='../Y/22398.html' title='Multiple used in 920 places.'>pid</a>);
+<a id='L92' name='L92'></a>  92   <a href='../S/5940.html#L30' title='Defined at 30 in support/support_process_state.c.'>support_process_state_wait</a> (<a href='../Y/22398.html' title='Multiple used in 920 places.'>pid</a>, <a href='../S/5928.html#L32' title='Defined at 32 in support/process_state.h.'>support_process_state_zombie</a>);
+<a id='L93' name='L93'></a>  93 
+<a id='L94' name='L94'></a>  94   <a href='../S/188.html#L19' title='Defined at 19 in bits/types/siginfo_t.h.'>siginfo_t</a> <a href='../Y/16784.html' title='Multiple used in 728 places.'>info</a>;
+<a id='L95' name='L95'></a>  95   <strong class='reserved'>int</strong> <a href='../Y/23316.html' title='Multiple used in 3267 places.'>r</a> = <a href='../Y/28828.html' title='Multiple used in 20 places.'>waitid</a> (<a href='../S/1063.html#L77' title='Defined at 77 in posix/sys/wait.h.'>P_PID</a>, <a href='../Y/22398.html' title='Multiple used in 920 places.'>pid</a>, &amp;<a href='../Y/16784.html' title='Multiple used in 728 places.'>info</a>, <a href='../D/17207.html' title='Multiple defined in 6 places.'>WEXITED</a>);
+<a id='L96' name='L96'></a>  96   <a href='../S/5739.html#L101' title='Defined at 101 in support/check.h.'>TEST_COMPARE</a> (<a href='../Y/23316.html' title='Multiple used in 3267 places.'>r</a>, 0);
+<a id='L97' name='L97'></a>  97   <a href='../S/5739.html#L101' title='Defined at 101 in support/check.h.'>TEST_COMPARE</a> (<a href='../Y/16784.html' title='Multiple used in 728 places.'>info</a>.<a href='../Y/25350.html' title='Multiple used in 53 places.'>si_signo</a>, <a href='../D/14128.html' title='Multiple defined in 7 places.'>SIGCHLD</a>);
+<a id='L98' name='L98'></a>  98   <a href='../S/5739.html#L101' title='Defined at 101 in support/check.h.'>TEST_COMPARE</a> (<a href='../Y/16784.html' title='Multiple used in 728 places.'>info</a>.<a href='../Y/25341.html' title='Multiple used in 41 places.'>si_code</a>, <a href='../D/1284.html' title='Multiple defined in 6 places.'>CLD_KILLED</a>);
+<a id='L99' name='L99'></a>  99   <a href='../S/5739.html#L101' title='Defined at 101 in support/check.h.'>TEST_COMPARE</a> (<a href='../Y/16784.html' title='Multiple used in 728 places.'>info</a>.<a href='../S/9798.html#L132' title='Defined at 132 in sysdeps/unix/sysv/linux/bits/types/siginfo_t.h.'>si_status</a>, <a href='../S/183.html#L59' title='Defined at 59 in bits/signum-generic.h.'>SIGKILL</a>);
+<a id='L100' name='L100'></a> 100   <a href='../S/5739.html#L101' title='Defined at 101 in support/check.h.'>TEST_COMPARE</a> (<a href='../Y/16784.html' title='Multiple used in 728 places.'>info</a>.<a href='../S/9798.html#L128' title='Defined at 128 in sysdeps/unix/sysv/linux/bits/types/siginfo_t.h.'>si_pid</a>, <a href='../Y/22398.html' title='Multiple used in 920 places.'>pid</a>);
+<a id='L101' name='L101'></a> 101 
+<a id='L102' name='L102'></a> 102   <strong class='reserved'>return</strong> 0;
+<a id='L103' name='L103'></a> 103 <em class='brace'>}</em>
+<a id='L104' name='L104'></a> 104 
+<a id='L105' name='L105'></a> 105 <em class='sharp'>#include</em> &lt;support/test-driver.c&gt;
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L35'>[^]</a><a href='#L54'>[v]</a><a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

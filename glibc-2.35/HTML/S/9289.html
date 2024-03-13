@@ -1,0 +1,280 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>sysdeps/ieee754/ldbl-128/e_expl.c</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18977.html'>sysdeps</a>/<a href='../files/19058.html'>ieee754</a>/<a href='../files/19062.html'>ldbl-128</a>/e_expl.c</h2>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L136'>[^]</a>[v][top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<h2 class='header'>DEFINITIONS</h2>
+This source file includes following definitions.
+<ol>
+<li><a href='#L136' title='Defined at 136.'>__ieee754_expl</a></li>
+</ol>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* Quad-precision floating point e^x.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   Copyright (C) 1999-2022 Free Software Foundation, Inc.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'></em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'></em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'></em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   License along with the GNU C Library; if not, see</em>
+<a id='L17' name='L17'></a>  17 <em class='comment'>   &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L18' name='L18'></a>  18 
+<a id='L19' name='L19'></a>  19 <em class='comment'>/* The basic design here is from</em>
+<a id='L20' name='L20'></a>  20 <em class='comment'>   Abraham Ziv, "Fast Evaluation of Elementary Mathematical Functions with</em>
+<a id='L21' name='L21'></a>  21 <em class='comment'>   Correctly Rounded Last Bit", ACM Trans. Math. Soft., 17 (3), September 1991,</em>
+<a id='L22' name='L22'></a>  22 <em class='comment'>   pp. 410-423.</em>
+<a id='L23' name='L23'></a>  23 <em class='comment'></em>
+<a id='L24' name='L24'></a>  24 <em class='comment'>   We work with number pairs where the first number is the high part and</em>
+<a id='L25' name='L25'></a>  25 <em class='comment'>   the second one is the low part. Arithmetic with the high part numbers must</em>
+<a id='L26' name='L26'></a>  26 <em class='comment'>   be exact, without any roundoff errors.</em>
+<a id='L27' name='L27'></a>  27 <em class='comment'></em>
+<a id='L28' name='L28'></a>  28 <em class='comment'>   The input value, X, is written as</em>
+<a id='L29' name='L29'></a>  29 <em class='comment'>   X = n * ln(2)_0 + arg1[t1]_0 + arg2[t2]_0 + x</em>
+<a id='L30' name='L30'></a>  30 <em class='comment'>       - n * ln(2)_1 + arg1[t1]_1 + arg2[t2]_1 + xl</em>
+<a id='L31' name='L31'></a>  31 <em class='comment'></em>
+<a id='L32' name='L32'></a>  32 <em class='comment'>   where:</em>
+<a id='L33' name='L33'></a>  33 <em class='comment'>   - n is an integer, 16384 &gt;= n &gt;= -16495;</em>
+<a id='L34' name='L34'></a>  34 <em class='comment'>   - ln(2)_0 is the first 93 bits of ln(2), and |ln(2)_0-ln(2)-ln(2)_1| &lt; 2^-205</em>
+<a id='L35' name='L35'></a>  35 <em class='comment'>   - t1 is an integer, 89 &gt;= t1 &gt;= -89</em>
+<a id='L36' name='L36'></a>  36 <em class='comment'>   - t2 is an integer, 65 &gt;= t2 &gt;= -65</em>
+<a id='L37' name='L37'></a>  37 <em class='comment'>   - |arg1[t1]-t1/256.0| &lt; 2^-53</em>
+<a id='L38' name='L38'></a>  38 <em class='comment'>   - |arg2[t2]-t2/32768.0| &lt; 2^-53</em>
+<a id='L39' name='L39'></a>  39 <em class='comment'>   - x + xl is whatever is left, |x + xl| &lt; 2^-16 + 2^-53</em>
+<a id='L40' name='L40'></a>  40 <em class='comment'></em>
+<a id='L41' name='L41'></a>  41 <em class='comment'>   Then e^x is approximated as</em>
+<a id='L42' name='L42'></a>  42 <em class='comment'></em>
+<a id='L43' name='L43'></a>  43 <em class='comment'>   e^x = 2^n_1 ( 2^n_0 e^(arg1[t1]_0 + arg1[t1]_1) e^(arg2[t2]_0 + arg2[t2]_1)</em>
+<a id='L44' name='L44'></a>  44 <em class='comment'>           + 2^n_0 e^(arg1[t1]_0 + arg1[t1]_1) e^(arg2[t2]_0 + arg2[t2]_1)</em>
+<a id='L45' name='L45'></a>  45 <em class='comment'>         * p (x + xl + n * ln(2)_1))</em>
+<a id='L46' name='L46'></a>  46 <em class='comment'>   where:</em>
+<a id='L47' name='L47'></a>  47 <em class='comment'>   - p(x) is a polynomial approximating e(x)-1</em>
+<a id='L48' name='L48'></a>  48 <em class='comment'>   - e^(arg1[t1]_0 + arg1[t1]_1) is obtained from a table</em>
+<a id='L49' name='L49'></a>  49 <em class='comment'>   - e^(arg2[t2]_0 + arg2[t2]_1) likewise</em>
+<a id='L50' name='L50'></a>  50 <em class='comment'>   - n_1 + n_0 = n, so that |n_0| &lt; -LDBL_MIN_EXP-1.</em>
+<a id='L51' name='L51'></a>  51 <em class='comment'></em>
+<a id='L52' name='L52'></a>  52 <em class='comment'>   If it happens that n_1 == 0 (this is the usual case), that multiplication</em>
+<a id='L53' name='L53'></a>  53 <em class='comment'>   is omitted.</em>
+<a id='L54' name='L54'></a>  54 <em class='comment'>   */</em>
+<a id='L55' name='L55'></a>  55 
+<a id='L56' name='L56'></a>  56 <em class='sharp'>#ifndef</em> <a href='../D/18596.html' title='Multiple defined in 61 places.'>_GNU_SOURCE</a>
+<a id='L57' name='L57'></a>  57 <em class='sharp'>#define</em> <a href='../R/10572.html' title='Multiple referred from 35 places.'>_GNU_SOURCE</a>
+<a id='L58' name='L58'></a>  58 <em class='sharp'>#endif</em>
+<a id='L59' name='L59'></a>  59 <em class='sharp'>#include</em> &lt;<a href='18104.html'>float.h</a>&gt;
+<a id='L60' name='L60'></a>  60 <em class='sharp'>#include</em> &lt;<a href='../I/7709.html'>ieee754.h</a>&gt;
+<a id='L61' name='L61'></a>  61 <em class='sharp'>#include</em> &lt;<a href='../I/1890.html'>math.h</a>&gt;
+<a id='L62' name='L62'></a>  62 <em class='sharp'>#include</em> &lt;<a href='../I/118.html'>fenv.h</a>&gt;
+<a id='L63' name='L63'></a>  63 <em class='sharp'>#include</em> &lt;<a href='../I/1873.html'>inttypes.h</a>&gt;
+<a id='L64' name='L64'></a>  64 <em class='sharp'>#include</em> &lt;<a href='../I/5881.html'>math-barriers.h</a>&gt;
+<a id='L65' name='L65'></a>  65 <em class='sharp'>#include</em> &lt;<a href='../I/5892.html'>math_private.h</a>&gt;
+<a id='L66' name='L66'></a>  66 <em class='sharp'>#include</em> &lt;<a href='3493.html'>math-underflow.h</a>&gt;
+<a id='L67' name='L67'></a>  67 <em class='sharp'>#include</em> &lt;<a href='../I/1780.html'>stdlib.h</a>&gt;
+<a id='L68' name='L68'></a>  68 <em class='sharp'>#include</em> "<a href='../I/8190.html'>t_expl.h</a>"
+<a id='L69' name='L69'></a>  69 <em class='sharp'>#include</em> &lt;<a href='9438.html'>libm-alias-finite.h</a>&gt;
+<a id='L70' name='L70'></a>  70 
+<a id='L71' name='L71'></a>  71 <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <a href='../D/18523.html' title='Multiple defined in 13 places.'>_Float128</a> <a href='../D/1028.html' title='Multiple defined in 23 places.'>C</a>[] = <em class='brace'>{</em>
+<a id='L72' name='L72'></a>  72 <em class='comment'>/* Smallest integer x for which e^x overflows.  */</em>
+<a id='L73' name='L73'></a>  73 <em class='sharp'>#define</em> <a href='../R/20325.html' title='Multiple referred from 4 places.'>himark</a> <a href='../D/1028.html' title='Multiple defined in 23 places.'>C</a>[0]
+<a id='L74' name='L74'></a>  74  <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(11356.523406294143949491931077970765),
+<a id='L75' name='L75'></a>  75 
+<a id='L76' name='L76'></a>  76 <em class='comment'>/* Largest integer x for which e^x underflows.  */</em>
+<a id='L77' name='L77'></a>  77 <em class='sharp'>#define</em> <a href='../R/21531.html' title='Multiple referred from 2 places.'>lomark</a> <a href='../D/1028.html' title='Multiple defined in 23 places.'>C</a>[1]
+<a id='L78' name='L78'></a>  78 <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-11433.4627433362978788372438434526231),
+<a id='L79' name='L79'></a>  79 
+<a id='L80' name='L80'></a>  80 <em class='comment'>/* 3x2^96 */</em>
+<a id='L81' name='L81'></a>  81 <em class='sharp'>#define</em> <a href='../R/8728.html' title='Multiple referred from 2 places.'>THREEp96</a> <a href='../D/1028.html' title='Multiple defined in 23 places.'>C</a>[2]
+<a id='L82' name='L82'></a>  82  <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(59421121885698253195157962752.0),
+<a id='L83' name='L83'></a>  83 
+<a id='L84' name='L84'></a>  84 <em class='comment'>/* 3x2^103 */</em>
+<a id='L85' name='L85'></a>  85 <em class='sharp'>#define</em> <a href='../R/8726.html' title='Multiple referred from 2 places.'>THREEp103</a> <a href='../D/1028.html' title='Multiple defined in 23 places.'>C</a>[3]
+<a id='L86' name='L86'></a>  86  <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(30423614405477505635920876929024.0),
+<a id='L87' name='L87'></a>  87 
+<a id='L88' name='L88'></a>  88 <em class='comment'>/* 3x2^111 */</em>
+<a id='L89' name='L89'></a>  89 <em class='sharp'>#define</em> <a href='../R/8727.html' title='Multiple referred from 2 places.'>THREEp111</a> <a href='../D/1028.html' title='Multiple defined in 23 places.'>C</a>[4]
+<a id='L90' name='L90'></a>  90  <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(7788445287802241442795744493830144.0),
+<a id='L91' name='L91'></a>  91 
+<a id='L92' name='L92'></a>  92 <em class='comment'>/* 1/ln(2) */</em>
+<a id='L93' name='L93'></a>  93 <em class='sharp'>#define</em> <a href='../R/5098.html' title='Multiple referred from 2 places.'>M_1_LN2</a> <a href='../D/1028.html' title='Multiple defined in 23 places.'>C</a>[5]
+<a id='L94' name='L94'></a>  94  <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(1.44269504088896340735992468100189204),
+<a id='L95' name='L95'></a>  95 
+<a id='L96' name='L96'></a>  96 <em class='comment'>/* first 93 bits of ln(2) */</em>
+<a id='L97' name='L97'></a>  97 <em class='sharp'>#define</em> <a href='../R/5133.html' title='Multiple referred from 2 places.'>M_LN2_0</a> <a href='../D/1028.html' title='Multiple defined in 23 places.'>C</a>[6]
+<a id='L98' name='L98'></a>  98  <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0.693147180559945309417232121457981864),
+<a id='L99' name='L99'></a>  99 
+<a id='L100' name='L100'></a> 100 <em class='comment'>/* ln2_0 - ln(2) */</em>
+<a id='L101' name='L101'></a> 101 <em class='sharp'>#define</em> <a href='../R/5134.html' title='Multiple referred from 2 places.'>M_LN2_1</a> <a href='../D/1028.html' title='Multiple defined in 23 places.'>C</a>[7]
+<a id='L102' name='L102'></a> 102 <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-1.94704509238074995158795957333327386E-31),
+<a id='L103' name='L103'></a> 103 
+<a id='L104' name='L104'></a> 104 <em class='comment'>/* very small number */</em>
+<a id='L105' name='L105'></a> 105 <em class='sharp'>#define</em> <a href='../R/8759.html' title='Multiple referred from 2 places.'>TINY</a> <a href='../D/1028.html' title='Multiple defined in 23 places.'>C</a>[8]
+<a id='L106' name='L106'></a> 106  <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(1.0e-4900),
+<a id='L107' name='L107'></a> 107 
+<a id='L108' name='L108'></a> 108 <em class='comment'>/* 2^16383 */</em>
+<a id='L109' name='L109'></a> 109 <em class='sharp'>#define</em> <a href='../S/9289.html#L252' title='Referred from 252 in sysdeps/ieee754/ldbl-128/e_expl.c.'>TWO16383</a> <a href='../D/1028.html' title='Multiple defined in 23 places.'>C</a>[9]
+<a id='L110' name='L110'></a> 110  <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(5.94865747678615882542879663314003565E+4931),
+<a id='L111' name='L111'></a> 111 
+<a id='L112' name='L112'></a> 112 <em class='comment'>/* 256 */</em>
+<a id='L113' name='L113'></a> 113 <em class='sharp'>#define</em> <a href='../R/8980.html' title='Multiple referred from 2 places.'>TWO8</a> <a href='../D/1028.html' title='Multiple defined in 23 places.'>C</a>[10]
+<a id='L114' name='L114'></a> 114  256,
+<a id='L115' name='L115'></a> 115 
+<a id='L116' name='L116'></a> 116 <em class='comment'>/* 32768 */</em>
+<a id='L117' name='L117'></a> 117 <em class='sharp'>#define</em> <a href='../R/8977.html' title='Multiple referred from 2 places.'>TWO15</a> <a href='../D/1028.html' title='Multiple defined in 23 places.'>C</a>[11]
+<a id='L118' name='L118'></a> 118  32768,
+<a id='L119' name='L119'></a> 119 
+<a id='L120' name='L120'></a> 120 <em class='comment'>/* Chebyshev polynom coefficients for (exp(x)-1)/x */</em>
+<a id='L121' name='L121'></a> 121 <em class='sharp'>#define</em> <a href='../R/5894.html' title='Multiple referred from 26 places.'>P1</a> <a href='../D/1028.html' title='Multiple defined in 23 places.'>C</a>[12]
+<a id='L122' name='L122'></a> 122 <em class='sharp'>#define</em> <a href='../R/5895.html' title='Multiple referred from 21 places.'>P2</a> <a href='../D/1028.html' title='Multiple defined in 23 places.'>C</a>[13]
+<a id='L123' name='L123'></a> 123 <em class='sharp'>#define</em> <a href='../R/5896.html' title='Multiple referred from 25 places.'>P3</a> <a href='../D/1028.html' title='Multiple defined in 23 places.'>C</a>[14]
+<a id='L124' name='L124'></a> 124 <em class='sharp'>#define</em> <a href='../R/5897.html' title='Multiple referred from 26 places.'>P4</a> <a href='../D/1028.html' title='Multiple defined in 23 places.'>C</a>[15]
+<a id='L125' name='L125'></a> 125 <em class='sharp'>#define</em> <a href='../R/5898.html' title='Multiple referred from 19 places.'>P5</a> <a href='../D/1028.html' title='Multiple defined in 23 places.'>C</a>[16]
+<a id='L126' name='L126'></a> 126 <em class='sharp'>#define</em> <a href='../R/5899.html' title='Multiple referred from 14 places.'>P6</a> <a href='../D/1028.html' title='Multiple defined in 23 places.'>C</a>[17]
+<a id='L127' name='L127'></a> 127  <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0.5),
+<a id='L128' name='L128'></a> 128  <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(1.66666666666666666666666666666666683E-01),
+<a id='L129' name='L129'></a> 129  <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(4.16666666666666666666654902320001674E-02),
+<a id='L130' name='L130'></a> 130  <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(8.33333333333333333333314659767198461E-03),
+<a id='L131' name='L131'></a> 131  <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(1.38888888889899438565058018857254025E-03),
+<a id='L132' name='L132'></a> 132  <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(1.98412698413981650382436541785404286E-04),
+<a id='L133' name='L133'></a> 133 <em class='brace'>}</em>;
+<a id='L134' name='L134'></a> 134 
+<a id='L135' name='L135'></a> 135 <a href='../D/18523.html' title='Multiple defined in 13 places.'>_Float128</a>
+<a id='L136' name='L136'></a> 136 <a href='../R/14424.html' title='Multiple referred from 49 places.'>__ieee754_expl</a> (<a href='../D/18523.html' title='Multiple defined in 13 places.'>_Float128</a> <a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a>)
+<a id='L137' name='L137'></a> 137 <em class='brace'>{</em>
+<a id='L138' name='L138'></a> 138   <em class='comment'>/* Check for usual case.  */</em>
+<a id='L139' name='L139'></a> 139   <strong class='reserved'>if</strong> (<a href='../D/32339.html' title='Multiple defined in 2 places.'>isless</a> (<a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a>, <a href='../D/31521.html' title='Multiple defined in 2 places.'>himark</a>) &amp;&amp; <a href='../D/32333.html' title='Multiple defined in 2 places.'>isgreater</a> (<a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a>, <a href='../D/33156.html' title='Multiple defined in 2 places.'>lomark</a>))
+<a id='L140' name='L140'></a> 140     <em class='brace'>{</em>
+<a id='L141' name='L141'></a> 141       <strong class='reserved'>int</strong> <a href='../Y/27980.html' title='Multiple used in 10 places.'>tval1</a>, <a href='../Y/27981.html' title='Multiple used in 10 places.'>tval2</a>, <a href='../Y/28332.html' title='Multiple used in 12 places.'>unsafe</a>, <a href='../Y/20123.html' title='Multiple used in 12 places.'>n_i</a>;
+<a id='L142' name='L142'></a> 142       <a href='../D/18523.html' title='Multiple defined in 13 places.'>_Float128</a> <a href='../Y/29237.html' title='Multiple used in 7 places.'>x22</a>, <a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>, <a href='../S/4165.html#L39' title='Defined at 39 in wcsmbs/tst-mbrtowc2.c.'>t</a>, <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a>, <a href='../Y/29441.html' title='Multiple used in 169 places.'>xl</a>;
+<a id='L143' name='L143'></a> 143       <strong class='reserved'>union</strong> <a href='../D/31678.html' title='Multiple defined in 9 places.'>ieee854_long_double</a> <a href='../Y/14022.html' title='Multiple used in 17 places.'>ex2_u</a>, <a href='../Y/24774.html' title='Multiple used in 8 places.'>scale_u</a>;
+<a id='L144' name='L144'></a> 144       <a href='../D/30434.html' title='Multiple defined in 20 places.'>fenv_t</a> <a href='../Y/21648.html' title='Multiple used in 3 places.'>oldenv</a>;
+<a id='L145' name='L145'></a> 145 
+<a id='L146' name='L146'></a> 146       <a href='../S/18179.html#L89' title='Defined at 89 in include/fenv.h.'>feholdexcept</a> (&amp;<a href='../Y/21648.html' title='Multiple used in 3 places.'>oldenv</a>);
+<a id='L147' name='L147'></a> 147 <em class='sharp'>#ifdef</em> <a href='../D/4159.html' title='Multiple defined in 23 places.'>FE_TONEAREST</a>
+<a id='L148' name='L148'></a> 148       <a href='../D/30447.html' title='Multiple defined in 2 places.'>fesetround</a> (<a href='../D/4159.html' title='Multiple defined in 23 places.'>FE_TONEAREST</a>);
+<a id='L149' name='L149'></a> 149 <em class='sharp'>#endif</em>
+<a id='L150' name='L150'></a> 150 
+<a id='L151' name='L151'></a> 151       <em class='comment'>/* Calculate n.  */</em>
+<a id='L152' name='L152'></a> 152       <a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a> = <a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a> * <a href='../D/8419.html' title='Multiple defined in 2 places.'>M_1_LN2</a> + <a href='../D/15925.html' title='Multiple defined in 2 places.'>THREEp111</a>;
+<a id='L153' name='L153'></a> 153       <a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a> -= <a href='../D/15925.html' title='Multiple defined in 2 places.'>THREEp111</a>;
+<a id='L154' name='L154'></a> 154       <a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a> = <a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a> - <a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a> * <a href='../D/8492.html' title='Multiple defined in 2 places.'>M_LN2_0</a>;
+<a id='L155' name='L155'></a> 155       <a href='../Y/29441.html' title='Multiple used in 169 places.'>xl</a> = <a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a> * <a href='../D/8493.html' title='Multiple defined in 2 places.'>M_LN2_1</a>;
+<a id='L156' name='L156'></a> 156 
+<a id='L157' name='L157'></a> 157       <em class='comment'>/* Calculate t/256.  */</em>
+<a id='L158' name='L158'></a> 158       <a href='../S/4165.html#L39' title='Defined at 39 in wcsmbs/tst-mbrtowc2.c.'>t</a> = <a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a> + <a href='../D/15924.html' title='Multiple defined in 2 places.'>THREEp103</a>;
+<a id='L159' name='L159'></a> 159       <a href='../S/4165.html#L39' title='Defined at 39 in wcsmbs/tst-mbrtowc2.c.'>t</a> -= <a href='../D/15924.html' title='Multiple defined in 2 places.'>THREEp103</a>;
+<a id='L160' name='L160'></a> 160 
+<a id='L161' name='L161'></a> 161       <em class='comment'>/* Compute tval1 = t.  */</em>
+<a id='L162' name='L162'></a> 162       <a href='../Y/27980.html' title='Multiple used in 10 places.'>tval1</a> = (<strong class='reserved'>int</strong>) (<a href='../S/4165.html#L39' title='Defined at 39 in wcsmbs/tst-mbrtowc2.c.'>t</a> * <a href='../D/16336.html' title='Multiple defined in 2 places.'>TWO8</a>);
+<a id='L163' name='L163'></a> 163 
+<a id='L164' name='L164'></a> 164       <a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a> -= <a href='../S/9415.html#L381' title='Defined at 381 in sysdeps/ieee754/float128/float128_private.h.'>__expl_table</a>[<a href='../D/16415.html' title='Multiple defined in 2 places.'>T_EXPL_ARG1</a>+2*<a href='../Y/27980.html' title='Multiple used in 10 places.'>tval1</a>];
+<a id='L165' name='L165'></a> 165       <a href='../Y/29441.html' title='Multiple used in 169 places.'>xl</a> -= <a href='../S/9415.html#L381' title='Defined at 381 in sysdeps/ieee754/float128/float128_private.h.'>__expl_table</a>[<a href='../D/16415.html' title='Multiple defined in 2 places.'>T_EXPL_ARG1</a>+2*<a href='../Y/27980.html' title='Multiple used in 10 places.'>tval1</a>+1];
+<a id='L166' name='L166'></a> 166 
+<a id='L167' name='L167'></a> 167       <em class='comment'>/* Calculate t/32768.  */</em>
+<a id='L168' name='L168'></a> 168       <a href='../S/4165.html#L39' title='Defined at 39 in wcsmbs/tst-mbrtowc2.c.'>t</a> = <a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a> + <a href='../D/15926.html' title='Multiple defined in 2 places.'>THREEp96</a>;
+<a id='L169' name='L169'></a> 169       <a href='../S/4165.html#L39' title='Defined at 39 in wcsmbs/tst-mbrtowc2.c.'>t</a> -= <a href='../D/15926.html' title='Multiple defined in 2 places.'>THREEp96</a>;
+<a id='L170' name='L170'></a> 170 
+<a id='L171' name='L171'></a> 171       <em class='comment'>/* Compute tval2 = t.  */</em>
+<a id='L172' name='L172'></a> 172       <a href='../Y/27981.html' title='Multiple used in 10 places.'>tval2</a> = (<strong class='reserved'>int</strong>) (<a href='../S/4165.html#L39' title='Defined at 39 in wcsmbs/tst-mbrtowc2.c.'>t</a> * <a href='../D/16333.html' title='Multiple defined in 2 places.'>TWO15</a>);
+<a id='L173' name='L173'></a> 173 
+<a id='L174' name='L174'></a> 174       <a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a> -= <a href='../S/9415.html#L381' title='Defined at 381 in sysdeps/ieee754/float128/float128_private.h.'>__expl_table</a>[<a href='../D/16416.html' title='Multiple defined in 2 places.'>T_EXPL_ARG2</a>+2*<a href='../Y/27981.html' title='Multiple used in 10 places.'>tval2</a>];
+<a id='L175' name='L175'></a> 175       <a href='../Y/29441.html' title='Multiple used in 169 places.'>xl</a> -= <a href='../S/9415.html#L381' title='Defined at 381 in sysdeps/ieee754/float128/float128_private.h.'>__expl_table</a>[<a href='../D/16416.html' title='Multiple defined in 2 places.'>T_EXPL_ARG2</a>+2*<a href='../Y/27981.html' title='Multiple used in 10 places.'>tval2</a>+1];
+<a id='L176' name='L176'></a> 176 
+<a id='L177' name='L177'></a> 177       <a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a> = <a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a> + <a href='../Y/29441.html' title='Multiple used in 169 places.'>xl</a>;
+<a id='L178' name='L178'></a> 178 
+<a id='L179' name='L179'></a> 179       <em class='comment'>/* Compute ex2 = 2^n_0 e^(argtable[tval1]) e^(argtable[tval2]).  */</em>
+<a id='L180' name='L180'></a> 180       <a href='../Y/14022.html' title='Multiple used in 17 places.'>ex2_u</a>.<a href='../D/29259.html' title='Multiple defined in 3 places.'>d</a> = <a href='../S/9415.html#L381' title='Defined at 381 in sysdeps/ieee754/float128/float128_private.h.'>__expl_table</a>[<a href='../D/16417.html' title='Multiple defined in 2 places.'>T_EXPL_RES1</a> + <a href='../Y/27980.html' title='Multiple used in 10 places.'>tval1</a>]
+<a id='L181' name='L181'></a> 181         * <a href='../S/9415.html#L381' title='Defined at 381 in sysdeps/ieee754/float128/float128_private.h.'>__expl_table</a>[<a href='../D/16418.html' title='Multiple defined in 2 places.'>T_EXPL_RES2</a> + <a href='../Y/27981.html' title='Multiple used in 10 places.'>tval2</a>];
+<a id='L182' name='L182'></a> 182       <a href='../Y/20123.html' title='Multiple used in 12 places.'>n_i</a> = (<strong class='reserved'>int</strong>)<a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>;
+<a id='L183' name='L183'></a> 183       <em class='comment'>/* 'unsafe' is 1 iff n_1 != 0.  */</em>
+<a id='L184' name='L184'></a> 184       <a href='../Y/28332.html' title='Multiple used in 12 places.'>unsafe</a> = <a href='../D/27443.html' title='Multiple defined in 2 places.'>abs</a>(<a href='../Y/20123.html' title='Multiple used in 12 places.'>n_i</a>) &gt;= 15000;
+<a id='L185' name='L185'></a> 185       <a href='../Y/14022.html' title='Multiple used in 17 places.'>ex2_u</a>.<a href='../Y/16509.html' title='Multiple used in 540 places.'>ieee</a>.<a href='../Y/14211.html' title='Multiple used in 773 places.'>exponent</a> += <a href='../Y/20123.html' title='Multiple used in 12 places.'>n_i</a> &gt;&gt; <a href='../Y/28332.html' title='Multiple used in 12 places.'>unsafe</a>;
+<a id='L186' name='L186'></a> 186 
+<a id='L187' name='L187'></a> 187       <em class='comment'>/* Compute scale = 2^n_1.  */</em>
+<a id='L188' name='L188'></a> 188       <a href='../Y/24774.html' title='Multiple used in 8 places.'>scale_u</a>.<a href='../D/29259.html' title='Multiple defined in 3 places.'>d</a> = 1;
+<a id='L189' name='L189'></a> 189       <a href='../Y/24774.html' title='Multiple used in 8 places.'>scale_u</a>.<a href='../Y/16509.html' title='Multiple used in 540 places.'>ieee</a>.<a href='../Y/14211.html' title='Multiple used in 773 places.'>exponent</a> += <a href='../Y/20123.html' title='Multiple used in 12 places.'>n_i</a> - (<a href='../Y/20123.html' title='Multiple used in 12 places.'>n_i</a> &gt;&gt; <a href='../Y/28332.html' title='Multiple used in 12 places.'>unsafe</a>);
+<a id='L190' name='L190'></a> 190 
+<a id='L191' name='L191'></a> 191       <em class='comment'>/* Approximate e^x2 - 1, using a seventh-degree polynomial,</em>
+<a id='L192' name='L192'></a> 192 <em class='comment'>     with maximum error in [-2^-16-2^-53,2^-16+2^-53]</em>
+<a id='L193' name='L193'></a> 193 <em class='comment'>     less than 4.8e-39.  */</em>
+<a id='L194' name='L194'></a> 194       <a href='../Y/29237.html' title='Multiple used in 7 places.'>x22</a> = <a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a> + <a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a>*<a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a>*(<a href='../D/9655.html' title='Multiple defined in 3 places.'>P1</a>+<a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a>*(<a href='../D/9656.html' title='Multiple defined in 3 places.'>P2</a>+<a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a>*(<a href='../D/9657.html' title='Multiple defined in 3 places.'>P3</a>+<a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a>*(<a href='../D/9658.html' title='Multiple defined in 3 places.'>P4</a>+<a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a>*(<a href='../D/9659.html' title='Multiple defined in 3 places.'>P5</a>+<a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a>*<a href='../D/9660.html' title='Multiple defined in 3 places.'>P6</a>)))));
+<a id='L195' name='L195'></a> 195       <a href='../D/33352.html' title='Multiple defined in 8 places.'>math_force_eval</a> (<a href='../Y/29237.html' title='Multiple used in 7 places.'>x22</a>);
+<a id='L196' name='L196'></a> 196 
+<a id='L197' name='L197'></a> 197       <em class='comment'>/* Return result.  */</em>
+<a id='L198' name='L198'></a> 198       <a href='../S/18179.html#L101' title='Defined at 101 in include/fenv.h.'>fesetenv</a> (&amp;<a href='../Y/21648.html' title='Multiple used in 3 places.'>oldenv</a>);
+<a id='L199' name='L199'></a> 199 
+<a id='L200' name='L200'></a> 200       <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a> = <a href='../Y/29237.html' title='Multiple used in 7 places.'>x22</a> * <a href='../Y/14022.html' title='Multiple used in 17 places.'>ex2_u</a>.<a href='../D/29259.html' title='Multiple defined in 3 places.'>d</a> + <a href='../Y/14022.html' title='Multiple used in 17 places.'>ex2_u</a>.<a href='../D/29259.html' title='Multiple defined in 3 places.'>d</a>;
+<a id='L201' name='L201'></a> 201 
+<a id='L202' name='L202'></a> 202       <em class='comment'>/* Now we can test whether the result is ultimate or if we are unsure.</em>
+<a id='L203' name='L203'></a> 203 <em class='comment'>     In the later case we should probably call a mpn based routine to give</em>
+<a id='L204' name='L204'></a> 204 <em class='comment'>     the ultimate result.</em>
+<a id='L205' name='L205'></a> 205 <em class='comment'>     Empirically, this routine is already ultimate in about 99.9986% of</em>
+<a id='L206' name='L206'></a> 206 <em class='comment'>     cases, the test below for the round to nearest case will be false</em>
+<a id='L207' name='L207'></a> 207 <em class='comment'>     in ~ 99.9963% of cases.</em>
+<a id='L208' name='L208'></a> 208 <em class='comment'>     Without proc2 routine maximum error which has been seen is</em>
+<a id='L209' name='L209'></a> 209 <em class='comment'>     0.5000262 ulp.</em>
+<a id='L210' name='L210'></a> 210 <em class='comment'></em>
+<a id='L211' name='L211'></a> 211 <em class='comment'>      union ieee854_long_double ex3_u;</em>
+<a id='L212' name='L212'></a> 212 <em class='comment'></em>
+<a id='L213' name='L213'></a> 213 <em class='comment'>      #ifdef FE_TONEAREST</em>
+<a id='L214' name='L214'></a> 214 <em class='comment'>        fesetround (FE_TONEAREST);</em>
+<a id='L215' name='L215'></a> 215 <em class='comment'>      #endif</em>
+<a id='L216' name='L216'></a> 216 <em class='comment'>      ex3_u.d = (result - ex2_u.d) - x22 * ex2_u.d;</em>
+<a id='L217' name='L217'></a> 217 <em class='comment'>      ex2_u.d = result;</em>
+<a id='L218' name='L218'></a> 218 <em class='comment'>      ex3_u.ieee.exponent += LDBL_MANT_DIG + 15 + IEEE854_LONG_DOUBLE_BIAS</em>
+<a id='L219' name='L219'></a> 219 <em class='comment'>                 - ex2_u.ieee.exponent;</em>
+<a id='L220' name='L220'></a> 220 <em class='comment'>      n_i = abs (ex3_u.d);</em>
+<a id='L221' name='L221'></a> 221 <em class='comment'>      n_i = (n_i + 1) / 2;</em>
+<a id='L222' name='L222'></a> 222 <em class='comment'>      fesetenv (&amp;oldenv);</em>
+<a id='L223' name='L223'></a> 223 <em class='comment'>      #ifdef FE_TONEAREST</em>
+<a id='L224' name='L224'></a> 224 <em class='comment'>      if (fegetround () == FE_TONEAREST)</em>
+<a id='L225' name='L225'></a> 225 <em class='comment'>        n_i -= 0x4000;</em>
+<a id='L226' name='L226'></a> 226 <em class='comment'>      #endif</em>
+<a id='L227' name='L227'></a> 227 <em class='comment'>      if (!n_i) {</em>
+<a id='L228' name='L228'></a> 228 <em class='comment'>        return __ieee754_expl_proc2 (origx);</em>
+<a id='L229' name='L229'></a> 229 <em class='comment'>      }</em>
+<a id='L230' name='L230'></a> 230 <em class='comment'>       */</em>
+<a id='L231' name='L231'></a> 231       <strong class='reserved'>if</strong> (!<a href='../Y/28332.html' title='Multiple used in 12 places.'>unsafe</a>)
+<a id='L232' name='L232'></a> 232     <strong class='reserved'>return</strong> <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a>;
+<a id='L233' name='L233'></a> 233       <strong class='reserved'>else</strong>
+<a id='L234' name='L234'></a> 234     <em class='brace'>{</em>
+<a id='L235' name='L235'></a> 235       <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a> *= <a href='../Y/24774.html' title='Multiple used in 8 places.'>scale_u</a>.<a href='../D/29259.html' title='Multiple defined in 3 places.'>d</a>;
+<a id='L236' name='L236'></a> 236       <a href='../S/3493.html#L55' title='Defined at 55 in math/math-underflow.h.'>math_check_force_underflow_nonneg</a> (<a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a>);
+<a id='L237' name='L237'></a> 237       <strong class='reserved'>return</strong> <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a>;
+<a id='L238' name='L238'></a> 238     <em class='brace'>}</em>
+<a id='L239' name='L239'></a> 239     <em class='brace'>}</em>
+<a id='L240' name='L240'></a> 240   <em class='comment'>/* Exceptional cases:  */</em>
+<a id='L241' name='L241'></a> 241   <strong class='reserved'>else</strong> <strong class='reserved'>if</strong> (<a href='../D/32339.html' title='Multiple defined in 2 places.'>isless</a> (<a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a>, <a href='../D/31521.html' title='Multiple defined in 2 places.'>himark</a>))
+<a id='L242' name='L242'></a> 242     <em class='brace'>{</em>
+<a id='L243' name='L243'></a> 243       <strong class='reserved'>if</strong> (<a href='../D/32335.html' title='Multiple defined in 3 places.'>isinf</a> (<a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a>))
+<a id='L244' name='L244'></a> 244     <em class='comment'>/* e^-inf == 0, with no error.  */</em>
+<a id='L245' name='L245'></a> 245     <strong class='reserved'>return</strong> 0;
+<a id='L246' name='L246'></a> 246       <strong class='reserved'>else</strong>
+<a id='L247' name='L247'></a> 247     <em class='comment'>/* Underflow */</em>
+<a id='L248' name='L248'></a> 248     <strong class='reserved'>return</strong> <a href='../D/15971.html' title='Multiple defined in 2 places.'>TINY</a> * <a href='../D/15971.html' title='Multiple defined in 2 places.'>TINY</a>;
+<a id='L249' name='L249'></a> 249     <em class='brace'>}</em>
+<a id='L250' name='L250'></a> 250   <strong class='reserved'>else</strong>
+<a id='L251' name='L251'></a> 251     <em class='comment'>/* Return x, if x is a NaN or Inf; or overflow, otherwise.  */</em>
+<a id='L252' name='L252'></a> 252     <strong class='reserved'>return</strong> <a href='../S/9289.html#L109' title='Defined at 109 in sysdeps/ieee754/ldbl-128/e_expl.c.'>TWO16383</a>*<a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a>;
+<a id='L253' name='L253'></a> 253 <em class='brace'>}</em>
+<a id='L254' name='L254'></a> 254 <a href='../D/32834.html' title='Multiple defined in 12 places.'>libm_alias_finite</a> (<a href='../D/24308.html' title='Multiple defined in 2 places.'>__ieee754_expl</a>, <a href='../D/23763.html' title='Multiple defined in 3 places.'>__expl</a>)
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;][^]<a href='#L136'>[v]</a><a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

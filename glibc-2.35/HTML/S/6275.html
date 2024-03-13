@@ -1,0 +1,337 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>resolv/base64.c</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18942.html'>resolv</a>/base64.c</h2>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L127'>[^]</a><a href='#L185'>[v]</a>[top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<h2 class='header'>DEFINITIONS</h2>
+This source file includes following definitions.
+<ol>
+<li><a href='#L127' title='Defined at 127.'>b64_ntop</a></li>
+<li><a href='#L185' title='Defined at 185.'>libresolv_hidden_def</a></li>
+</ol>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/*</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'> * Copyright (c) 1996-1999 by Internet Software Consortium.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'> *</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'> * Permission to use, copy, modify, and distribute this software for any</em>
+<a id='L5' name='L5'></a>   5 <em class='comment'> * purpose with or without fee is hereby granted, provided that the above</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'> * copyright notice and this permission notice appear in all copies.</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'> *</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'> * THE SOFTWARE IS PROVIDED "AS IS" AND INTERNET SOFTWARE CONSORTIUM DISCLAIMS</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'> * ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES</em>
+<a id='L10' name='L10'></a>  10 <em class='comment'> * OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL INTERNET SOFTWARE</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'> * CONSORTIUM BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'> * DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'> * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'> * ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS</em>
+<a id='L15' name='L15'></a>  15 <em class='comment'> * SOFTWARE.</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'> */</em>
+<a id='L17' name='L17'></a>  17 
+<a id='L18' name='L18'></a>  18 <em class='comment'>/*</em>
+<a id='L19' name='L19'></a>  19 <em class='comment'> * Portions Copyright (c) 1995 by International Business Machines, Inc.</em>
+<a id='L20' name='L20'></a>  20 <em class='comment'> *</em>
+<a id='L21' name='L21'></a>  21 <em class='comment'> * International Business Machines, Inc. (hereinafter called IBM) grants</em>
+<a id='L22' name='L22'></a>  22 <em class='comment'> * permission under its copyrights to use, copy, modify, and distribute this</em>
+<a id='L23' name='L23'></a>  23 <em class='comment'> * Software with or without fee, provided that the above copyright notice and</em>
+<a id='L24' name='L24'></a>  24 <em class='comment'> * all paragraphs of this notice appear in all copies, and that the name of IBM</em>
+<a id='L25' name='L25'></a>  25 <em class='comment'> * not be used in connection with the marketing of any product incorporating</em>
+<a id='L26' name='L26'></a>  26 <em class='comment'> * the Software or modifications thereof, without specific, written prior</em>
+<a id='L27' name='L27'></a>  27 <em class='comment'> * permission.</em>
+<a id='L28' name='L28'></a>  28 <em class='comment'> *</em>
+<a id='L29' name='L29'></a>  29 <em class='comment'> * To the extent it has a right to do so, IBM grants an immunity from suit</em>
+<a id='L30' name='L30'></a>  30 <em class='comment'> * under its patents, if any, for the use, sale or manufacture of products to</em>
+<a id='L31' name='L31'></a>  31 <em class='comment'> * the extent that such products are used for performing Domain Name System</em>
+<a id='L32' name='L32'></a>  32 <em class='comment'> * dynamic updates in TCP/IP networks by means of the Software.  No immunity is</em>
+<a id='L33' name='L33'></a>  33 <em class='comment'> * granted for any product per se or for any other function of any product.</em>
+<a id='L34' name='L34'></a>  34 <em class='comment'> *</em>
+<a id='L35' name='L35'></a>  35 <em class='comment'> * THE SOFTWARE IS PROVIDED "AS IS", AND IBM DISCLAIMS ALL WARRANTIES,</em>
+<a id='L36' name='L36'></a>  36 <em class='comment'> * INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A</em>
+<a id='L37' name='L37'></a>  37 <em class='comment'> * PARTICULAR PURPOSE.  IN NO EVENT SHALL IBM BE LIABLE FOR ANY SPECIAL,</em>
+<a id='L38' name='L38'></a>  38 <em class='comment'> * DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER ARISING</em>
+<a id='L39' name='L39'></a>  39 <em class='comment'> * OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE, EVEN</em>
+<a id='L40' name='L40'></a>  40 <em class='comment'> * IF IBM IS APPRISED OF THE POSSIBILITY OF SUCH DAMAGES.</em>
+<a id='L41' name='L41'></a>  41 <em class='comment'> */</em>
+<a id='L42' name='L42'></a>  42 
+<a id='L43' name='L43'></a>  43 <em class='sharp'>#include</em> &lt;<a href='../I/1786.html'>sys/types.h</a>&gt;
+<a id='L44' name='L44'></a>  44 <em class='sharp'>#include</em> &lt;<a href='../I/144.html'>sys/param.h</a>&gt;
+<a id='L45' name='L45'></a>  45 <em class='sharp'>#include</em> &lt;<a href='../I/165.html'>sys/socket.h</a>&gt;
+<a id='L46' name='L46'></a>  46 
+<a id='L47' name='L47'></a>  47 <em class='sharp'>#include</em> &lt;<a href='../I/125.html'>netinet/in.h</a>&gt;
+<a id='L48' name='L48'></a>  48 <em class='sharp'>#include</em> &lt;<a href='../I/1735.html'>arpa/inet.h</a>&gt;
+<a id='L49' name='L49'></a>  49 <em class='sharp'>#include</em> &lt;<a href='../I/1736.html'>arpa/nameser.h</a>&gt;
+<a id='L50' name='L50'></a>  50 
+<a id='L51' name='L51'></a>  51 <em class='sharp'>#include</em> &lt;<a href='../I/252.html'>ctype.h</a>&gt;
+<a id='L52' name='L52'></a>  52 <em class='sharp'>#include</em> &lt;<a href='../I/1927.html'>resolv.h</a>&gt;
+<a id='L53' name='L53'></a>  53 <em class='sharp'>#include</em> &lt;<a href='../I/1776.html'>stdio.h</a>&gt;
+<a id='L54' name='L54'></a>  54 <em class='sharp'>#include</em> &lt;<a href='../I/1780.html'>stdlib.h</a>&gt;
+<a id='L55' name='L55'></a>  55 <em class='sharp'>#include</em> &lt;<a href='../I/1973.html'>string.h</a>&gt;
+<a id='L56' name='L56'></a>  56 
+<a id='L57' name='L57'></a>  57 <em class='sharp'>#define</em> <a href='../R/457.html' title='Multiple referred from 7 places.'>Assert</a>(Cond) <strong class='reserved'>if</strong> (!(Cond)) <a href='../S/13885.html#L752' title='Defined at 752 in sysdeps/mach/hurd/dl-sysdep.c.'>abort</a>()
+<a id='L58' name='L58'></a>  58 
+<a id='L59' name='L59'></a>  59 <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> <a href='../Y/142.html' title='Multiple used in 15 places.'>Base64</a>[] =
+<a id='L60' name='L60'></a>  60     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+<a id='L61' name='L61'></a>  61 <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> <a href='../Y/1480.html' title='Multiple used in 6 places.'>Pad64</a> = '=';
+<a id='L62' name='L62'></a>  62 
+<a id='L63' name='L63'></a>  63 <em class='comment'>/* (From RFC1521 and draft-ietf-dnssec-secext-03.txt)</em>
+<a id='L64' name='L64'></a>  64 <em class='comment'>   The following encoding technique is taken from RFC 1521 by Borenstein</em>
+<a id='L65' name='L65'></a>  65 <em class='comment'>   and Freed.  It is reproduced here in a slightly edited form for</em>
+<a id='L66' name='L66'></a>  66 <em class='comment'>   convenience.</em>
+<a id='L67' name='L67'></a>  67 <em class='comment'></em>
+<a id='L68' name='L68'></a>  68 <em class='comment'>   A 65-character subset of US-ASCII is used, enabling 6 bits to be</em>
+<a id='L69' name='L69'></a>  69 <em class='comment'>   represented per printable character. (The extra 65th character, "=",</em>
+<a id='L70' name='L70'></a>  70 <em class='comment'>   is used to signify a special processing function.)</em>
+<a id='L71' name='L71'></a>  71 <em class='comment'></em>
+<a id='L72' name='L72'></a>  72 <em class='comment'>   The encoding process represents 24-bit groups of input bits as output</em>
+<a id='L73' name='L73'></a>  73 <em class='comment'>   strings of 4 encoded characters. Proceeding from left to right, a</em>
+<a id='L74' name='L74'></a>  74 <em class='comment'>   24-bit input group is formed by concatenating 3 8-bit input groups.</em>
+<a id='L75' name='L75'></a>  75 <em class='comment'>   These 24 bits are then treated as 4 concatenated 6-bit groups, each</em>
+<a id='L76' name='L76'></a>  76 <em class='comment'>   of which is translated into a single digit in the base64 alphabet.</em>
+<a id='L77' name='L77'></a>  77 <em class='comment'></em>
+<a id='L78' name='L78'></a>  78 <em class='comment'>   Each 6-bit group is used as an index into an array of 64 printable</em>
+<a id='L79' name='L79'></a>  79 <em class='comment'>   characters. The character referenced by the index is placed in the</em>
+<a id='L80' name='L80'></a>  80 <em class='comment'>   output string.</em>
+<a id='L81' name='L81'></a>  81 <em class='comment'></em>
+<a id='L82' name='L82'></a>  82 <em class='comment'>                         Table 1: The Base64 Alphabet</em>
+<a id='L83' name='L83'></a>  83 <em class='comment'></em>
+<a id='L84' name='L84'></a>  84 <em class='comment'>      Value Encoding  Value Encoding  Value Encoding  Value Encoding</em>
+<a id='L85' name='L85'></a>  85 <em class='comment'>          0 A            17 R            34 i            51 z</em>
+<a id='L86' name='L86'></a>  86 <em class='comment'>          1 B            18 S            35 j            52 0</em>
+<a id='L87' name='L87'></a>  87 <em class='comment'>          2 C            19 T            36 k            53 1</em>
+<a id='L88' name='L88'></a>  88 <em class='comment'>          3 D            20 U            37 l            54 2</em>
+<a id='L89' name='L89'></a>  89 <em class='comment'>          4 E            21 V            38 m            55 3</em>
+<a id='L90' name='L90'></a>  90 <em class='comment'>          5 F            22 W            39 n            56 4</em>
+<a id='L91' name='L91'></a>  91 <em class='comment'>          6 G            23 X            40 o            57 5</em>
+<a id='L92' name='L92'></a>  92 <em class='comment'>          7 H            24 Y            41 p            58 6</em>
+<a id='L93' name='L93'></a>  93 <em class='comment'>          8 I            25 Z            42 q            59 7</em>
+<a id='L94' name='L94'></a>  94 <em class='comment'>          9 J            26 a            43 r            60 8</em>
+<a id='L95' name='L95'></a>  95 <em class='comment'>         10 K            27 b            44 s            61 9</em>
+<a id='L96' name='L96'></a>  96 <em class='comment'>         11 L            28 c            45 t            62 +</em>
+<a id='L97' name='L97'></a>  97 <em class='comment'>         12 M            29 d            46 u            63 /</em>
+<a id='L98' name='L98'></a>  98 <em class='comment'>         13 N            30 e            47 v</em>
+<a id='L99' name='L99'></a>  99 <em class='comment'>         14 O            31 f            48 w         (pad) =</em>
+<a id='L100' name='L100'></a> 100 <em class='comment'>         15 P            32 g            49 x</em>
+<a id='L101' name='L101'></a> 101 <em class='comment'>         16 Q            33 h            50 y</em>
+<a id='L102' name='L102'></a> 102 <em class='comment'></em>
+<a id='L103' name='L103'></a> 103 <em class='comment'>   Special processing is performed if fewer than 24 bits are available</em>
+<a id='L104' name='L104'></a> 104 <em class='comment'>   at the end of the data being encoded.  A full encoding quantum is</em>
+<a id='L105' name='L105'></a> 105 <em class='comment'>   always completed at the end of a quantity.  When fewer than 24 input</em>
+<a id='L106' name='L106'></a> 106 <em class='comment'>   bits are available in an input group, zero bits are added (on the</em>
+<a id='L107' name='L107'></a> 107 <em class='comment'>   right) to form an integral number of 6-bit groups.  Padding at the</em>
+<a id='L108' name='L108'></a> 108 <em class='comment'>   end of the data is performed using the '=' character.</em>
+<a id='L109' name='L109'></a> 109 <em class='comment'></em>
+<a id='L110' name='L110'></a> 110 <em class='comment'>   Since all base64 input is an integral number of octets, only the</em>
+<a id='L111' name='L111'></a> 111 <em class='comment'>         -------------------------------------------------</em>
+<a id='L112' name='L112'></a> 112 <em class='comment'>   following cases can arise:</em>
+<a id='L113' name='L113'></a> 113 <em class='comment'></em>
+<a id='L114' name='L114'></a> 114 <em class='comment'>       (1) the final quantum of encoding input is an integral</em>
+<a id='L115' name='L115'></a> 115 <em class='comment'>           multiple of 24 bits; here, the final unit of encoded</em>
+<a id='L116' name='L116'></a> 116 <em class='comment'>       output will be an integral multiple of 4 characters</em>
+<a id='L117' name='L117'></a> 117 <em class='comment'>       with no "=" padding,</em>
+<a id='L118' name='L118'></a> 118 <em class='comment'>       (2) the final quantum of encoding input is exactly 8 bits;</em>
+<a id='L119' name='L119'></a> 119 <em class='comment'>           here, the final unit of encoded output will be two</em>
+<a id='L120' name='L120'></a> 120 <em class='comment'>       characters followed by two "=" padding characters, or</em>
+<a id='L121' name='L121'></a> 121 <em class='comment'>       (3) the final quantum of encoding input is exactly 16 bits;</em>
+<a id='L122' name='L122'></a> 122 <em class='comment'>           here, the final unit of encoded output will be three</em>
+<a id='L123' name='L123'></a> 123 <em class='comment'>       characters followed by one "=" padding character.</em>
+<a id='L124' name='L124'></a> 124 <em class='comment'>   */</em>
+<a id='L125' name='L125'></a> 125 
+<a id='L126' name='L126'></a> 126 <strong class='reserved'>int</strong>
+<a id='L127' name='L127'></a> 127 <a href='../R/17504.html' title='Multiple referred from 3 places.'>b64_ntop</a>(<a href='../D/38627.html' title='Multiple defined in 2 places.'>u_char</a> <strong class='reserved'>const</strong> *<a href='../D/36956.html' title='Multiple defined in 26 places.'>src</a>, <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/25880.html' title='Multiple used in 6 places.'>srclength</a>, <strong class='reserved'>char</strong> *<a href='../Y/26794.html' title='Multiple used in 189 places.'>target</a>, <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/26809.html' title='Multiple used in 9 places.'>targsize</a>) <em class='brace'>{</em>
+<a id='L128' name='L128'></a> 128     <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/12483.html' title='Multiple used in 15 places.'>datalength</a> = 0;
+<a id='L129' name='L129'></a> 129     <a href='../D/38627.html' title='Multiple defined in 2 places.'>u_char</a> <a href='../S/879.html#L43' title='Defined at 43 in gshadow/tst-fgetsgent_r.c.'>input</a>[3];
+<a id='L130' name='L130'></a> 130     <a href='../D/38627.html' title='Multiple defined in 2 places.'>u_char</a> <a href='../Y/21998.html' title='Multiple used in 138 places.'>output</a>[4];
+<a id='L131' name='L131'></a> 131     <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>;
+<a id='L132' name='L132'></a> 132 
+<a id='L133' name='L133'></a> 133     <strong class='reserved'>while</strong> (2 &lt; <a href='../Y/25880.html' title='Multiple used in 6 places.'>srclength</a>) <em class='brace'>{</em>
+<a id='L134' name='L134'></a> 134         <a href='../S/879.html#L43' title='Defined at 43 in gshadow/tst-fgetsgent_r.c.'>input</a>[0] = *<a href='../D/36956.html' title='Multiple defined in 26 places.'>src</a>++;
+<a id='L135' name='L135'></a> 135         <a href='../S/879.html#L43' title='Defined at 43 in gshadow/tst-fgetsgent_r.c.'>input</a>[1] = *<a href='../D/36956.html' title='Multiple defined in 26 places.'>src</a>++;
+<a id='L136' name='L136'></a> 136         <a href='../S/879.html#L43' title='Defined at 43 in gshadow/tst-fgetsgent_r.c.'>input</a>[2] = *<a href='../D/36956.html' title='Multiple defined in 26 places.'>src</a>++;
+<a id='L137' name='L137'></a> 137         <a href='../Y/25880.html' title='Multiple used in 6 places.'>srclength</a> -= 3;
+<a id='L138' name='L138'></a> 138 
+<a id='L139' name='L139'></a> 139         <a href='../Y/21998.html' title='Multiple used in 138 places.'>output</a>[0] = <a href='../S/879.html#L43' title='Defined at 43 in gshadow/tst-fgetsgent_r.c.'>input</a>[0] &gt;&gt; 2;
+<a id='L140' name='L140'></a> 140         <a href='../Y/21998.html' title='Multiple used in 138 places.'>output</a>[1] = ((<a href='../S/879.html#L43' title='Defined at 43 in gshadow/tst-fgetsgent_r.c.'>input</a>[0] &amp; 0x03) &lt;&lt; 4) + (<a href='../S/879.html#L43' title='Defined at 43 in gshadow/tst-fgetsgent_r.c.'>input</a>[1] &gt;&gt; 4);
+<a id='L141' name='L141'></a> 141         <a href='../Y/21998.html' title='Multiple used in 138 places.'>output</a>[2] = ((<a href='../S/879.html#L43' title='Defined at 43 in gshadow/tst-fgetsgent_r.c.'>input</a>[1] &amp; 0x0f) &lt;&lt; 2) + (<a href='../S/879.html#L43' title='Defined at 43 in gshadow/tst-fgetsgent_r.c.'>input</a>[2] &gt;&gt; 6);
+<a id='L142' name='L142'></a> 142         <a href='../Y/21998.html' title='Multiple used in 138 places.'>output</a>[3] = <a href='../S/879.html#L43' title='Defined at 43 in gshadow/tst-fgetsgent_r.c.'>input</a>[2] &amp; 0x3f;
+<a id='L143' name='L143'></a> 143         <a href='../S/6275.html#L57' title='Defined at 57 in resolv/base64.c.'>Assert</a>(<a href='../Y/21998.html' title='Multiple used in 138 places.'>output</a>[0] &lt; 64);
+<a id='L144' name='L144'></a> 144         <a href='../S/6275.html#L57' title='Defined at 57 in resolv/base64.c.'>Assert</a>(<a href='../Y/21998.html' title='Multiple used in 138 places.'>output</a>[1] &lt; 64);
+<a id='L145' name='L145'></a> 145         <a href='../S/6275.html#L57' title='Defined at 57 in resolv/base64.c.'>Assert</a>(<a href='../Y/21998.html' title='Multiple used in 138 places.'>output</a>[2] &lt; 64);
+<a id='L146' name='L146'></a> 146         <a href='../S/6275.html#L57' title='Defined at 57 in resolv/base64.c.'>Assert</a>(<a href='../Y/21998.html' title='Multiple used in 138 places.'>output</a>[3] &lt; 64);
+<a id='L147' name='L147'></a> 147 
+<a id='L148' name='L148'></a> 148         <strong class='reserved'>if</strong> (<a href='../Y/12483.html' title='Multiple used in 15 places.'>datalength</a> + 4 &gt; <a href='../Y/26809.html' title='Multiple used in 9 places.'>targsize</a>)
+<a id='L149' name='L149'></a> 149             <strong class='reserved'>return</strong> (-1);
+<a id='L150' name='L150'></a> 150         <a href='../Y/26794.html' title='Multiple used in 189 places.'>target</a>[<a href='../Y/12483.html' title='Multiple used in 15 places.'>datalength</a>++] = <a href='../Y/142.html' title='Multiple used in 15 places.'>Base64</a>[<a href='../Y/21998.html' title='Multiple used in 138 places.'>output</a>[0]];
+<a id='L151' name='L151'></a> 151         <a href='../Y/26794.html' title='Multiple used in 189 places.'>target</a>[<a href='../Y/12483.html' title='Multiple used in 15 places.'>datalength</a>++] = <a href='../Y/142.html' title='Multiple used in 15 places.'>Base64</a>[<a href='../Y/21998.html' title='Multiple used in 138 places.'>output</a>[1]];
+<a id='L152' name='L152'></a> 152         <a href='../Y/26794.html' title='Multiple used in 189 places.'>target</a>[<a href='../Y/12483.html' title='Multiple used in 15 places.'>datalength</a>++] = <a href='../Y/142.html' title='Multiple used in 15 places.'>Base64</a>[<a href='../Y/21998.html' title='Multiple used in 138 places.'>output</a>[2]];
+<a id='L153' name='L153'></a> 153         <a href='../Y/26794.html' title='Multiple used in 189 places.'>target</a>[<a href='../Y/12483.html' title='Multiple used in 15 places.'>datalength</a>++] = <a href='../Y/142.html' title='Multiple used in 15 places.'>Base64</a>[<a href='../Y/21998.html' title='Multiple used in 138 places.'>output</a>[3]];
+<a id='L154' name='L154'></a> 154     <em class='brace'>}</em>
+<a id='L155' name='L155'></a> 155 
+<a id='L156' name='L156'></a> 156     <em class='comment'>/* Now we worry about padding. */</em>
+<a id='L157' name='L157'></a> 157     <strong class='reserved'>if</strong> (0 != <a href='../Y/25880.html' title='Multiple used in 6 places.'>srclength</a>) <em class='brace'>{</em>
+<a id='L158' name='L158'></a> 158         <em class='comment'>/* Get what's left. */</em>
+<a id='L159' name='L159'></a> 159         <a href='../S/879.html#L43' title='Defined at 43 in gshadow/tst-fgetsgent_r.c.'>input</a>[0] = <a href='../S/879.html#L43' title='Defined at 43 in gshadow/tst-fgetsgent_r.c.'>input</a>[1] = <a href='../S/879.html#L43' title='Defined at 43 in gshadow/tst-fgetsgent_r.c.'>input</a>[2] = '\0';
+<a id='L160' name='L160'></a> 160         <strong class='reserved'>for</strong> (<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> = 0; <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> &lt; <a href='../Y/25880.html' title='Multiple used in 6 places.'>srclength</a>; <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>++)
+<a id='L161' name='L161'></a> 161             <a href='../S/879.html#L43' title='Defined at 43 in gshadow/tst-fgetsgent_r.c.'>input</a>[<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>] = *<a href='../D/36956.html' title='Multiple defined in 26 places.'>src</a>++;
+<a id='L162' name='L162'></a> 162 
+<a id='L163' name='L163'></a> 163         <a href='../Y/21998.html' title='Multiple used in 138 places.'>output</a>[0] = <a href='../S/879.html#L43' title='Defined at 43 in gshadow/tst-fgetsgent_r.c.'>input</a>[0] &gt;&gt; 2;
+<a id='L164' name='L164'></a> 164         <a href='../Y/21998.html' title='Multiple used in 138 places.'>output</a>[1] = ((<a href='../S/879.html#L43' title='Defined at 43 in gshadow/tst-fgetsgent_r.c.'>input</a>[0] &amp; 0x03) &lt;&lt; 4) + (<a href='../S/879.html#L43' title='Defined at 43 in gshadow/tst-fgetsgent_r.c.'>input</a>[1] &gt;&gt; 4);
+<a id='L165' name='L165'></a> 165         <a href='../Y/21998.html' title='Multiple used in 138 places.'>output</a>[2] = ((<a href='../S/879.html#L43' title='Defined at 43 in gshadow/tst-fgetsgent_r.c.'>input</a>[1] &amp; 0x0f) &lt;&lt; 2) + (<a href='../S/879.html#L43' title='Defined at 43 in gshadow/tst-fgetsgent_r.c.'>input</a>[2] &gt;&gt; 6);
+<a id='L166' name='L166'></a> 166         <a href='../S/6275.html#L57' title='Defined at 57 in resolv/base64.c.'>Assert</a>(<a href='../Y/21998.html' title='Multiple used in 138 places.'>output</a>[0] &lt; 64);
+<a id='L167' name='L167'></a> 167         <a href='../S/6275.html#L57' title='Defined at 57 in resolv/base64.c.'>Assert</a>(<a href='../Y/21998.html' title='Multiple used in 138 places.'>output</a>[1] &lt; 64);
+<a id='L168' name='L168'></a> 168         <a href='../S/6275.html#L57' title='Defined at 57 in resolv/base64.c.'>Assert</a>(<a href='../Y/21998.html' title='Multiple used in 138 places.'>output</a>[2] &lt; 64);
+<a id='L169' name='L169'></a> 169 
+<a id='L170' name='L170'></a> 170         <strong class='reserved'>if</strong> (<a href='../Y/12483.html' title='Multiple used in 15 places.'>datalength</a> + 4 &gt; <a href='../Y/26809.html' title='Multiple used in 9 places.'>targsize</a>)
+<a id='L171' name='L171'></a> 171             <strong class='reserved'>return</strong> (-1);
+<a id='L172' name='L172'></a> 172         <a href='../Y/26794.html' title='Multiple used in 189 places.'>target</a>[<a href='../Y/12483.html' title='Multiple used in 15 places.'>datalength</a>++] = <a href='../Y/142.html' title='Multiple used in 15 places.'>Base64</a>[<a href='../Y/21998.html' title='Multiple used in 138 places.'>output</a>[0]];
+<a id='L173' name='L173'></a> 173         <a href='../Y/26794.html' title='Multiple used in 189 places.'>target</a>[<a href='../Y/12483.html' title='Multiple used in 15 places.'>datalength</a>++] = <a href='../Y/142.html' title='Multiple used in 15 places.'>Base64</a>[<a href='../Y/21998.html' title='Multiple used in 138 places.'>output</a>[1]];
+<a id='L174' name='L174'></a> 174         <strong class='reserved'>if</strong> (<a href='../Y/25880.html' title='Multiple used in 6 places.'>srclength</a> == 1)
+<a id='L175' name='L175'></a> 175             <a href='../Y/26794.html' title='Multiple used in 189 places.'>target</a>[<a href='../Y/12483.html' title='Multiple used in 15 places.'>datalength</a>++] = <a href='../Y/1480.html' title='Multiple used in 6 places.'>Pad64</a>;
+<a id='L176' name='L176'></a> 176         <strong class='reserved'>else</strong>
+<a id='L177' name='L177'></a> 177             <a href='../Y/26794.html' title='Multiple used in 189 places.'>target</a>[<a href='../Y/12483.html' title='Multiple used in 15 places.'>datalength</a>++] = <a href='../Y/142.html' title='Multiple used in 15 places.'>Base64</a>[<a href='../Y/21998.html' title='Multiple used in 138 places.'>output</a>[2]];
+<a id='L178' name='L178'></a> 178         <a href='../Y/26794.html' title='Multiple used in 189 places.'>target</a>[<a href='../Y/12483.html' title='Multiple used in 15 places.'>datalength</a>++] = <a href='../Y/1480.html' title='Multiple used in 6 places.'>Pad64</a>;
+<a id='L179' name='L179'></a> 179     <em class='brace'>}</em>
+<a id='L180' name='L180'></a> 180     <strong class='reserved'>if</strong> (<a href='../Y/12483.html' title='Multiple used in 15 places.'>datalength</a> &gt;= <a href='../Y/26809.html' title='Multiple used in 9 places.'>targsize</a>)
+<a id='L181' name='L181'></a> 181         <strong class='reserved'>return</strong> (-1);
+<a id='L182' name='L182'></a> 182     <a href='../Y/26794.html' title='Multiple used in 189 places.'>target</a>[<a href='../Y/12483.html' title='Multiple used in 15 places.'>datalength</a>] = '\0';  <em class='comment'>/* Returned value doesn't count \0. */</em>
+<a id='L183' name='L183'></a> 183     <strong class='reserved'>return</strong> (<a href='../Y/12483.html' title='Multiple used in 15 places.'>datalength</a>);
+<a id='L184' name='L184'></a> 184 <em class='brace'>}</em>
+<a id='L185' name='L185'></a> 185 <a href='../R/21326.html' title='Multiple referred from 2 places.'>libresolv_hidden_def</a> (<a href='../D/28029.html' title='Multiple defined in 2 places.'>b64_ntop</a>)
+<a id='L186' name='L186'></a> 186 
+<a id='L187' name='L187'></a> 187 <em class='comment'>/* skips all whitespace anywhere.</em>
+<a id='L188' name='L188'></a> 188 <em class='comment'>   converts characters, four at a time, starting at (or after)</em>
+<a id='L189' name='L189'></a> 189 <em class='comment'>   src from base - 64 numbers into three 8 bit bytes in the target area.</em>
+<a id='L190' name='L190'></a> 190 <em class='comment'>   it returns the number of data bytes stored at the target, or -1 on error.</em>
+<a id='L191' name='L191'></a> 191 <em class='comment'> */</em>
+<a id='L192' name='L192'></a> 192 
+<a id='L193' name='L193'></a> 193 <strong class='reserved'>int</strong>
+<a id='L194' name='L194'></a> 194 <a href='../S/6355.html#L207' title='Defined at 207 in resolv/resolv.h.'>b64_pton</a> (<strong class='reserved'>char</strong> <strong class='reserved'>const</strong> *<a href='../D/36956.html' title='Multiple defined in 26 places.'>src</a>, <a href='../D/38627.html' title='Multiple defined in 2 places.'>u_char</a> *<a href='../Y/26794.html' title='Multiple used in 189 places.'>target</a>, <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/26809.html' title='Multiple used in 9 places.'>targsize</a>)
+<a id='L195' name='L195'></a> 195 <em class='brace'>{</em>
+<a id='L196' name='L196'></a> 196     <strong class='reserved'>int</strong> <a href='../Y/26810.html' title='Multiple used in 17 places.'>tarindex</a>, <a href='../S/735.html#L29' title='Defined at 29 in iconvdata/tst-loading.c.'>state</a>, <a href='../D/28608.html' title='Multiple defined in 4 places.'>ch</a>;
+<a id='L197' name='L197'></a> 197     <strong class='reserved'>char</strong> *<a href='../D/34790.html' title='Multiple defined in 3 places.'>pos</a>;
+<a id='L198' name='L198'></a> 198 
+<a id='L199' name='L199'></a> 199     <a href='../S/735.html#L29' title='Defined at 29 in iconvdata/tst-loading.c.'>state</a> = 0;
+<a id='L200' name='L200'></a> 200     <a href='../Y/26810.html' title='Multiple used in 17 places.'>tarindex</a> = 0;
+<a id='L201' name='L201'></a> 201 
+<a id='L202' name='L202'></a> 202     <strong class='reserved'>while</strong> ((<a href='../D/28608.html' title='Multiple defined in 4 places.'>ch</a> = *<a href='../D/36956.html' title='Multiple defined in 26 places.'>src</a>++) != '\0') <em class='brace'>{</em>
+<a id='L203' name='L203'></a> 203         <strong class='reserved'>if</strong> (<a href='../D/32363.html' title='Multiple defined in 3 places.'>isspace</a>(<a href='../D/28608.html' title='Multiple defined in 4 places.'>ch</a>))    <em class='comment'>/* Skip whitespace anywhere. */</em>
+<a id='L204' name='L204'></a> 204             <strong class='reserved'>continue</strong>;
+<a id='L205' name='L205'></a> 205 
+<a id='L206' name='L206'></a> 206         <strong class='reserved'>if</strong> (<a href='../D/28608.html' title='Multiple defined in 4 places.'>ch</a> == <a href='../Y/1480.html' title='Multiple used in 6 places.'>Pad64</a>)
+<a id='L207' name='L207'></a> 207             <strong class='reserved'>break</strong>;
+<a id='L208' name='L208'></a> 208 
+<a id='L209' name='L209'></a> 209         <a href='../D/34790.html' title='Multiple defined in 3 places.'>pos</a> = <a href='../D/37065.html' title='Multiple defined in 30 places.'>strchr</a>(<a href='../Y/142.html' title='Multiple used in 15 places.'>Base64</a>, <a href='../D/28608.html' title='Multiple defined in 4 places.'>ch</a>);
+<a id='L210' name='L210'></a> 210         <strong class='reserved'>if</strong> (<a href='../D/34790.html' title='Multiple defined in 3 places.'>pos</a> == 0)       <em class='comment'>/* A non-base64 character. */</em>
+<a id='L211' name='L211'></a> 211             <strong class='reserved'>return</strong> (-1);
+<a id='L212' name='L212'></a> 212 
+<a id='L213' name='L213'></a> 213         <strong class='reserved'>switch</strong> (<a href='../S/735.html#L29' title='Defined at 29 in iconvdata/tst-loading.c.'>state</a>) <em class='brace'>{</em>
+<a id='L214' name='L214'></a> 214         <strong class='reserved'>case</strong> 0:
+<a id='L215' name='L215'></a> 215             <strong class='reserved'>if</strong> (<a href='../Y/26794.html' title='Multiple used in 189 places.'>target</a>) <em class='brace'>{</em>
+<a id='L216' name='L216'></a> 216                 <strong class='reserved'>if</strong> ((<a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a>)<a href='../Y/26810.html' title='Multiple used in 17 places.'>tarindex</a> &gt;= <a href='../Y/26809.html' title='Multiple used in 9 places.'>targsize</a>)
+<a id='L217' name='L217'></a> 217                     <strong class='reserved'>return</strong> (-1);
+<a id='L218' name='L218'></a> 218                 <a href='../Y/26794.html' title='Multiple used in 189 places.'>target</a>[<a href='../Y/26810.html' title='Multiple used in 17 places.'>tarindex</a>] = (<a href='../D/34790.html' title='Multiple defined in 3 places.'>pos</a> - <a href='../Y/142.html' title='Multiple used in 15 places.'>Base64</a>) &lt;&lt; 2;
+<a id='L219' name='L219'></a> 219             <em class='brace'>}</em>
+<a id='L220' name='L220'></a> 220             <a href='../S/735.html#L29' title='Defined at 29 in iconvdata/tst-loading.c.'>state</a> = 1;
+<a id='L221' name='L221'></a> 221             <strong class='reserved'>break</strong>;
+<a id='L222' name='L222'></a> 222         <strong class='reserved'>case</strong> 1:
+<a id='L223' name='L223'></a> 223             <strong class='reserved'>if</strong> (<a href='../Y/26794.html' title='Multiple used in 189 places.'>target</a>) <em class='brace'>{</em>
+<a id='L224' name='L224'></a> 224                 <strong class='reserved'>if</strong> ((<a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a>)<a href='../Y/26810.html' title='Multiple used in 17 places.'>tarindex</a> + 1 &gt;= <a href='../Y/26809.html' title='Multiple used in 9 places.'>targsize</a>)
+<a id='L225' name='L225'></a> 225                     <strong class='reserved'>return</strong> (-1);
+<a id='L226' name='L226'></a> 226                 <a href='../Y/26794.html' title='Multiple used in 189 places.'>target</a>[<a href='../Y/26810.html' title='Multiple used in 17 places.'>tarindex</a>]   |=  (<a href='../D/34790.html' title='Multiple defined in 3 places.'>pos</a> - <a href='../Y/142.html' title='Multiple used in 15 places.'>Base64</a>) &gt;&gt; 4;
+<a id='L227' name='L227'></a> 227                 <a href='../Y/26794.html' title='Multiple used in 189 places.'>target</a>[<a href='../Y/26810.html' title='Multiple used in 17 places.'>tarindex</a>+1]  = ((<a href='../D/34790.html' title='Multiple defined in 3 places.'>pos</a> - <a href='../Y/142.html' title='Multiple used in 15 places.'>Base64</a>) &amp; 0x0f)
+<a id='L228' name='L228'></a> 228                             &lt;&lt; 4 ;
+<a id='L229' name='L229'></a> 229             <em class='brace'>}</em>
+<a id='L230' name='L230'></a> 230             <a href='../Y/26810.html' title='Multiple used in 17 places.'>tarindex</a>++;
+<a id='L231' name='L231'></a> 231             <a href='../S/735.html#L29' title='Defined at 29 in iconvdata/tst-loading.c.'>state</a> = 2;
+<a id='L232' name='L232'></a> 232             <strong class='reserved'>break</strong>;
+<a id='L233' name='L233'></a> 233         <strong class='reserved'>case</strong> 2:
+<a id='L234' name='L234'></a> 234             <strong class='reserved'>if</strong> (<a href='../Y/26794.html' title='Multiple used in 189 places.'>target</a>) <em class='brace'>{</em>
+<a id='L235' name='L235'></a> 235                 <strong class='reserved'>if</strong> ((<a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a>)<a href='../Y/26810.html' title='Multiple used in 17 places.'>tarindex</a> + 1 &gt;= <a href='../Y/26809.html' title='Multiple used in 9 places.'>targsize</a>)
+<a id='L236' name='L236'></a> 236                     <strong class='reserved'>return</strong> (-1);
+<a id='L237' name='L237'></a> 237                 <a href='../Y/26794.html' title='Multiple used in 189 places.'>target</a>[<a href='../Y/26810.html' title='Multiple used in 17 places.'>tarindex</a>]   |=  (<a href='../D/34790.html' title='Multiple defined in 3 places.'>pos</a> - <a href='../Y/142.html' title='Multiple used in 15 places.'>Base64</a>) &gt;&gt; 2;
+<a id='L238' name='L238'></a> 238                 <a href='../Y/26794.html' title='Multiple used in 189 places.'>target</a>[<a href='../Y/26810.html' title='Multiple used in 17 places.'>tarindex</a>+1]  = ((<a href='../D/34790.html' title='Multiple defined in 3 places.'>pos</a> - <a href='../Y/142.html' title='Multiple used in 15 places.'>Base64</a>) &amp; 0x03)
+<a id='L239' name='L239'></a> 239                             &lt;&lt; 6;
+<a id='L240' name='L240'></a> 240             <em class='brace'>}</em>
+<a id='L241' name='L241'></a> 241             <a href='../Y/26810.html' title='Multiple used in 17 places.'>tarindex</a>++;
+<a id='L242' name='L242'></a> 242             <a href='../S/735.html#L29' title='Defined at 29 in iconvdata/tst-loading.c.'>state</a> = 3;
+<a id='L243' name='L243'></a> 243             <strong class='reserved'>break</strong>;
+<a id='L244' name='L244'></a> 244         <strong class='reserved'>case</strong> 3:
+<a id='L245' name='L245'></a> 245             <strong class='reserved'>if</strong> (<a href='../Y/26794.html' title='Multiple used in 189 places.'>target</a>) <em class='brace'>{</em>
+<a id='L246' name='L246'></a> 246                 <strong class='reserved'>if</strong> ((<a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a>)<a href='../Y/26810.html' title='Multiple used in 17 places.'>tarindex</a> &gt;= <a href='../Y/26809.html' title='Multiple used in 9 places.'>targsize</a>)
+<a id='L247' name='L247'></a> 247                     <strong class='reserved'>return</strong> (-1);
+<a id='L248' name='L248'></a> 248                 <a href='../Y/26794.html' title='Multiple used in 189 places.'>target</a>[<a href='../Y/26810.html' title='Multiple used in 17 places.'>tarindex</a>] |= (<a href='../D/34790.html' title='Multiple defined in 3 places.'>pos</a> - <a href='../Y/142.html' title='Multiple used in 15 places.'>Base64</a>);
+<a id='L249' name='L249'></a> 249             <em class='brace'>}</em>
+<a id='L250' name='L250'></a> 250             <a href='../Y/26810.html' title='Multiple used in 17 places.'>tarindex</a>++;
+<a id='L251' name='L251'></a> 251             <a href='../S/735.html#L29' title='Defined at 29 in iconvdata/tst-loading.c.'>state</a> = 0;
+<a id='L252' name='L252'></a> 252             <strong class='reserved'>break</strong>;
+<a id='L253' name='L253'></a> 253         <strong class='reserved'>default</strong>:
+<a id='L254' name='L254'></a> 254             <a href='../S/13885.html#L752' title='Defined at 752 in sysdeps/mach/hurd/dl-sysdep.c.'>abort</a>();
+<a id='L255' name='L255'></a> 255         <em class='brace'>}</em>
+<a id='L256' name='L256'></a> 256     <em class='brace'>}</em>
+<a id='L257' name='L257'></a> 257 
+<a id='L258' name='L258'></a> 258     <em class='comment'>/*</em>
+<a id='L259' name='L259'></a> 259 <em class='comment'>     * We are done decoding Base-64 chars.  Let's see if we ended</em>
+<a id='L260' name='L260'></a> 260 <em class='comment'>     * on a byte boundary, and/or with erroneous trailing characters.</em>
+<a id='L261' name='L261'></a> 261 <em class='comment'>     */</em>
+<a id='L262' name='L262'></a> 262 
+<a id='L263' name='L263'></a> 263     <strong class='reserved'>if</strong> (<a href='../D/28608.html' title='Multiple defined in 4 places.'>ch</a> == <a href='../Y/1480.html' title='Multiple used in 6 places.'>Pad64</a>) <em class='brace'>{</em>      <em class='comment'>/* We got a pad char. */</em>
+<a id='L264' name='L264'></a> 264         <a href='../D/28608.html' title='Multiple defined in 4 places.'>ch</a> = *<a href='../D/36956.html' title='Multiple defined in 26 places.'>src</a>++;        <em class='comment'>/* Skip it, get next. */</em>
+<a id='L265' name='L265'></a> 265         <strong class='reserved'>switch</strong> (<a href='../S/735.html#L29' title='Defined at 29 in iconvdata/tst-loading.c.'>state</a>) <em class='brace'>{</em>
+<a id='L266' name='L266'></a> 266         <strong class='reserved'>case</strong> 0:     <em class='comment'>/* Invalid = in first position */</em>
+<a id='L267' name='L267'></a> 267         <strong class='reserved'>case</strong> 1:     <em class='comment'>/* Invalid = in second position */</em>
+<a id='L268' name='L268'></a> 268             <strong class='reserved'>return</strong> (-1);
+<a id='L269' name='L269'></a> 269 
+<a id='L270' name='L270'></a> 270         <strong class='reserved'>case</strong> 2:     <em class='comment'>/* Valid, means one byte of info */</em>
+<a id='L271' name='L271'></a> 271             <em class='comment'>/* Skip any number of spaces. */</em>
+<a id='L272' name='L272'></a> 272             <strong class='reserved'>for</strong> ((<strong class='reserved'>void</strong>)<a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>; <a href='../D/28608.html' title='Multiple defined in 4 places.'>ch</a> != '\0'; <a href='../D/28608.html' title='Multiple defined in 4 places.'>ch</a> = *<a href='../D/36956.html' title='Multiple defined in 26 places.'>src</a>++)
+<a id='L273' name='L273'></a> 273                 <strong class='reserved'>if</strong> (!<a href='../D/32363.html' title='Multiple defined in 3 places.'>isspace</a>(<a href='../D/28608.html' title='Multiple defined in 4 places.'>ch</a>))
+<a id='L274' name='L274'></a> 274                     <strong class='reserved'>break</strong>;
+<a id='L275' name='L275'></a> 275             <em class='comment'>/* Make sure there is another trailing = sign. */</em>
+<a id='L276' name='L276'></a> 276             <strong class='reserved'>if</strong> (<a href='../D/28608.html' title='Multiple defined in 4 places.'>ch</a> != <a href='../Y/1480.html' title='Multiple used in 6 places.'>Pad64</a>)
+<a id='L277' name='L277'></a> 277                 <strong class='reserved'>return</strong> (-1);
+<a id='L278' name='L278'></a> 278             <a href='../D/28608.html' title='Multiple defined in 4 places.'>ch</a> = *<a href='../D/36956.html' title='Multiple defined in 26 places.'>src</a>++;        <em class='comment'>/* Skip the = */</em>
+<a id='L279' name='L279'></a> 279             <em class='comment'>/* Fall through to "single trailing =" case. */</em>
+<a id='L280' name='L280'></a> 280             <em class='comment'>/* FALLTHROUGH */</em>
+<a id='L281' name='L281'></a> 281 
+<a id='L282' name='L282'></a> 282         <strong class='reserved'>case</strong> 3:     <em class='comment'>/* Valid, means two bytes of info */</em>
+<a id='L283' name='L283'></a> 283             <em class='comment'>/*</em>
+<a id='L284' name='L284'></a> 284 <em class='comment'>             * We know this char is an =.  Is there anything but</em>
+<a id='L285' name='L285'></a> 285 <em class='comment'>             * whitespace after it?</em>
+<a id='L286' name='L286'></a> 286 <em class='comment'>             */</em>
+<a id='L287' name='L287'></a> 287             <strong class='reserved'>for</strong> ((<strong class='reserved'>void</strong>)<a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>; <a href='../D/28608.html' title='Multiple defined in 4 places.'>ch</a> != '\0'; <a href='../D/28608.html' title='Multiple defined in 4 places.'>ch</a> = *<a href='../D/36956.html' title='Multiple defined in 26 places.'>src</a>++)
+<a id='L288' name='L288'></a> 288                 <strong class='reserved'>if</strong> (!<a href='../D/32363.html' title='Multiple defined in 3 places.'>isspace</a>(<a href='../D/28608.html' title='Multiple defined in 4 places.'>ch</a>))
+<a id='L289' name='L289'></a> 289                     <strong class='reserved'>return</strong> (-1);
+<a id='L290' name='L290'></a> 290 
+<a id='L291' name='L291'></a> 291             <em class='comment'>/*</em>
+<a id='L292' name='L292'></a> 292 <em class='comment'>             * Now make sure for cases 2 and 3 that the "extra"</em>
+<a id='L293' name='L293'></a> 293 <em class='comment'>             * bits that slopped past the last full byte were</em>
+<a id='L294' name='L294'></a> 294 <em class='comment'>             * zeros.  If we don't check them, they become a</em>
+<a id='L295' name='L295'></a> 295 <em class='comment'>             * subliminal channel.</em>
+<a id='L296' name='L296'></a> 296 <em class='comment'>             */</em>
+<a id='L297' name='L297'></a> 297             <strong class='reserved'>if</strong> (<a href='../Y/26794.html' title='Multiple used in 189 places.'>target</a> &amp;&amp; <a href='../Y/26794.html' title='Multiple used in 189 places.'>target</a>[<a href='../Y/26810.html' title='Multiple used in 17 places.'>tarindex</a>] != 0)
+<a id='L298' name='L298'></a> 298                 <strong class='reserved'>return</strong> (-1);
+<a id='L299' name='L299'></a> 299         <em class='brace'>}</em>
+<a id='L300' name='L300'></a> 300     <em class='brace'>}</em> <strong class='reserved'>else</strong> <em class='brace'>{</em>
+<a id='L301' name='L301'></a> 301         <em class='comment'>/*</em>
+<a id='L302' name='L302'></a> 302 <em class='comment'>         * We ended by seeing the end of the string.  Make sure we</em>
+<a id='L303' name='L303'></a> 303 <em class='comment'>         * have no partial bytes lying around.</em>
+<a id='L304' name='L304'></a> 304 <em class='comment'>         */</em>
+<a id='L305' name='L305'></a> 305         <strong class='reserved'>if</strong> (<a href='../S/735.html#L29' title='Defined at 29 in iconvdata/tst-loading.c.'>state</a> != 0)
+<a id='L306' name='L306'></a> 306             <strong class='reserved'>return</strong> (-1);
+<a id='L307' name='L307'></a> 307     <em class='brace'>}</em>
+<a id='L308' name='L308'></a> 308 
+<a id='L309' name='L309'></a> 309     <strong class='reserved'>return</strong> (<a href='../Y/26810.html' title='Multiple used in 17 places.'>tarindex</a>);
+<a id='L310' name='L310'></a> 310 <em class='brace'>}</em>
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L127'>[^]</a><a href='#L185'>[v]</a><a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

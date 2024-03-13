@@ -1,0 +1,210 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>sysdeps/powerpc/powerpc32/strlen.S</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18977.html'>sysdeps</a>/<a href='../files/19149.html'>powerpc</a>/<a href='../files/19157.html'>powerpc32</a>/strlen.S</h2>
+<em class='comment'>/* [&lt;][&gt;][^][v][top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* Optimized strlen implementation for PowerPC.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   Copyright (C) 1997-2022 Free Software Foundation, Inc.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'></em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'></em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'></em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   License along with the GNU C Library; if not, see</em>
+<a id='L17' name='L17'></a>  17 <em class='comment'>   &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L18' name='L18'></a>  18 
+<a id='L19' name='L19'></a>  19 <em class='sharp'>#include</em> &lt;<a href='../I/5967.html'>sysdep.h</a>&gt;
+<a id='L20' name='L20'></a>  20 
+<a id='L21' name='L21'></a>  21 <em class='comment'>/* The algorithm here uses the following techniques:</em>
+<a id='L22' name='L22'></a>  22 <em class='comment'></em>
+<a id='L23' name='L23'></a>  23 <em class='comment'>   1) Given a word 'x', we can test to see if it contains any 0 bytes</em>
+<a id='L24' name='L24'></a>  24 <em class='comment'>      by subtracting 0x01010101, and seeing if any of the high bits of each</em>
+<a id='L25' name='L25'></a>  25 <em class='comment'>      byte changed from 0 to 1. This works because the least significant</em>
+<a id='L26' name='L26'></a>  26 <em class='comment'>      0 byte must have had no incoming carry (otherwise it's not the least</em>
+<a id='L27' name='L27'></a>  27 <em class='comment'>      significant), so it is 0x00 - 0x01 == 0xff. For all other</em>
+<a id='L28' name='L28'></a>  28 <em class='comment'>      byte values, either they have the high bit set initially, or when</em>
+<a id='L29' name='L29'></a>  29 <em class='comment'>      1 is subtracted you get a value in the range 0x00-0x7f, none of which</em>
+<a id='L30' name='L30'></a>  30 <em class='comment'>      have their high bit set. The expression here is</em>
+<a id='L31' name='L31'></a>  31 <em class='comment'>      (x + 0xfefefeff) &amp; ~(x | 0x7f7f7f7f), which gives 0x00000000 when</em>
+<a id='L32' name='L32'></a>  32 <em class='comment'>      there were no 0x00 bytes in the word.  You get 0x80 in bytes that</em>
+<a id='L33' name='L33'></a>  33 <em class='comment'>      match, but possibly false 0x80 matches in the next more significant</em>
+<a id='L34' name='L34'></a>  34 <em class='comment'>      byte to a true match due to carries.  For little-endian this is</em>
+<a id='L35' name='L35'></a>  35 <em class='comment'>      of no consequence since the least significant match is the one</em>
+<a id='L36' name='L36'></a>  36 <em class='comment'>      we're interested in, but big-endian needs method 2 to find which</em>
+<a id='L37' name='L37'></a>  37 <em class='comment'>      byte matches.</em>
+<a id='L38' name='L38'></a>  38 <em class='comment'></em>
+<a id='L39' name='L39'></a>  39 <em class='comment'>   2) Given a word 'x', we can test to see _which_ byte was zero by</em>
+<a id='L40' name='L40'></a>  40 <em class='comment'>      calculating ~(((x &amp; 0x7f7f7f7f) + 0x7f7f7f7f) | x | 0x7f7f7f7f).</em>
+<a id='L41' name='L41'></a>  41 <em class='comment'>      This produces 0x80 in each byte that was zero, and 0x00 in all</em>
+<a id='L42' name='L42'></a>  42 <em class='comment'>      the other bytes. The '| 0x7f7f7f7f' clears the low 7 bits in each</em>
+<a id='L43' name='L43'></a>  43 <em class='comment'>      byte, and the '| x' part ensures that bytes with the high bit set</em>
+<a id='L44' name='L44'></a>  44 <em class='comment'>      produce 0x00. The addition will carry into the high bit of each byte</em>
+<a id='L45' name='L45'></a>  45 <em class='comment'>      iff that byte had one of its low 7 bits set. We can then just see</em>
+<a id='L46' name='L46'></a>  46 <em class='comment'>      which was the most significant bit set and divide by 8 to find how</em>
+<a id='L47' name='L47'></a>  47 <em class='comment'>      many to add to the index.</em>
+<a id='L48' name='L48'></a>  48 <em class='comment'>      This is from the book 'The PowerPC Compiler Writer's Guide',</em>
+<a id='L49' name='L49'></a>  49 <em class='comment'>      by Steve Hoxey, Faraydon Karim, Bill Hay and Hank Warren.</em>
+<a id='L50' name='L50'></a>  50 <em class='comment'></em>
+<a id='L51' name='L51'></a>  51 <em class='comment'>   We deal with strings not aligned to a word boundary by taking the</em>
+<a id='L52' name='L52'></a>  52 <em class='comment'>   first word and ensuring that bytes not part of the string</em>
+<a id='L53' name='L53'></a>  53 <em class='comment'>   are treated as nonzero. To allow for memory latency, we unroll the</em>
+<a id='L54' name='L54'></a>  54 <em class='comment'>   loop a few times, being careful to ensure that we do not read ahead</em>
+<a id='L55' name='L55'></a>  55 <em class='comment'>   across cache line boundaries.</em>
+<a id='L56' name='L56'></a>  56 <em class='comment'></em>
+<a id='L57' name='L57'></a>  57 <em class='comment'>   Questions to answer:</em>
+<a id='L58' name='L58'></a>  58 <em class='comment'>   1) How long are strings passed to strlen? If they're often really long,</em>
+<a id='L59' name='L59'></a>  59 <em class='comment'>   we should probably use cache management instructions and/or unroll the</em>
+<a id='L60' name='L60'></a>  60 <em class='comment'>   loop more. If they're often quite short, it might be better to use</em>
+<a id='L61' name='L61'></a>  61 <em class='comment'>   fact (2) in the inner loop than have to recalculate it.</em>
+<a id='L62' name='L62'></a>  62 <em class='comment'>   2) How popular are bytes with the high bit set? If they are very rare,</em>
+<a id='L63' name='L63'></a>  63 <em class='comment'>   on some processors it might be useful to use the simpler expression</em>
+<a id='L64' name='L64'></a>  64 <em class='comment'>   ~((x - 0x01010101) | 0x7f7f7f7f) (that is, on processors with only one</em>
+<a id='L65' name='L65'></a>  65 <em class='comment'>   ALU), but this fails when any character has its high bit set.  */</em>
+<a id='L66' name='L66'></a>  66 
+<a id='L67' name='L67'></a>  67 <em class='comment'>/* Some notes on register usage: Under the SVR4 ABI, we can use registers</em>
+<a id='L68' name='L68'></a>  68 <em class='comment'>   0 and 3 through 12 (so long as we don't call any procedures) without</em>
+<a id='L69' name='L69'></a>  69 <em class='comment'>   saving them. We can also use registers 14 through 31 if we save them.</em>
+<a id='L70' name='L70'></a>  70 <em class='comment'>   We can't use r1 (it's the stack pointer), r2 nor r13 because the user</em>
+<a id='L71' name='L71'></a>  71 <em class='comment'>   program may expect them to hold their usual value if we get sent</em>
+<a id='L72' name='L72'></a>  72 <em class='comment'>   a signal. Integer parameters are passed in r3 through r10.</em>
+<a id='L73' name='L73'></a>  73 <em class='comment'>   We can use condition registers cr0, cr1, cr5, cr6, and cr7 without saving</em>
+<a id='L74' name='L74'></a>  74 <em class='comment'>   them, the others we must save.  */</em>
+<a id='L75' name='L75'></a>  75 
+<a id='L76' name='L76'></a>  76 <em class='comment'>/* int [r3] strlen (char *s [r3])  */</em>
+<a id='L77' name='L77'></a>  77 
+<a id='L78' name='L78'></a>  78 <a href='../D/3651.html' title='Multiple defined in 54 places.'>ENTRY</a> (<a href='../R/24758.html' title='Multiple referred from 1288 places.'>strlen</a>)
+<a id='L79' name='L79'></a>  79 
+<a id='L80' name='L80'></a>  80 <em class='sharp'>#define</em> rTMP4   r0
+<a id='L81' name='L81'></a>  81 <em class='sharp'>#define</em> rRTN    r3  <em class='comment'>/* incoming STR arg, outgoing result */</em>
+<a id='L82' name='L82'></a>  82 <em class='sharp'>#define</em> rSTR    r4  <em class='comment'>/* current string position */</em>
+<a id='L83' name='L83'></a>  83 <em class='sharp'>#define</em> rPADN   r5  <em class='comment'>/* number of padding bits we prepend to the</em>
+<a id='L84' name='L84'></a>  84 <em class='comment'>               string to make it start at a word boundary */</em>
+<a id='L85' name='L85'></a>  85 <em class='sharp'>#define</em> rFEFE   r6  <em class='comment'>/* constant 0xfefefeff (-0x01010101) */</em>
+<a id='L86' name='L86'></a>  86 <em class='sharp'>#define</em> r7F7F   r7  <em class='comment'>/* constant 0x7f7f7f7f */</em>
+<a id='L87' name='L87'></a>  87 <em class='sharp'>#define</em> rWORD1  r8  <em class='comment'>/* current string word */</em>
+<a id='L88' name='L88'></a>  88 <em class='sharp'>#define</em> rWORD2  r9  <em class='comment'>/* next string word */</em>
+<a id='L89' name='L89'></a>  89 <em class='sharp'>#define</em> rMASK   r9  <em class='comment'>/* mask for first string word */</em>
+<a id='L90' name='L90'></a>  90 <em class='sharp'>#define</em> rTMP1   r10
+<a id='L91' name='L91'></a>  91 <em class='sharp'>#define</em> rTMP2   r11
+<a id='L92' name='L92'></a>  92 <em class='sharp'>#define</em> rTMP3   r12
+<a id='L93' name='L93'></a>  93 
+<a id='L94' name='L94'></a>  94 
+<a id='L95' name='L95'></a>  95     clrrwi  rSTR, rRTN, 2
+<a id='L96' name='L96'></a>  96     lis r7F7F, 0x7f7f
+<a id='L97' name='L97'></a>  97     rlwinm  rPADN, rRTN, 3, 27, 28
+<a id='L98' name='L98'></a>  98     lwz rWORD1, 0(rSTR)
+<a id='L99' name='L99'></a>  99     li  rMASK, -1
+<a id='L100' name='L100'></a> 100     addi    r7F7F, r7F7F, 0x7f7f
+<a id='L101' name='L101'></a> 101 <em class='comment'>/* We use method (2) on the first two words, because rFEFE isn't</em>
+<a id='L102' name='L102'></a> 102 <em class='comment'>   required which reduces setup overhead.  Also gives a faster return</em>
+<a id='L103' name='L103'></a> 103 <em class='comment'>   for small strings on big-endian due to needing to recalculate with</em>
+<a id='L104' name='L104'></a> 104 <em class='comment'>   method (2) anyway.  */</em>
+<a id='L105' name='L105'></a> 105 <em class='sharp'>#ifdef</em> <a href='../Y/3238.html' title='Multiple used in 570 places.'>__LITTLE_ENDIAN__</a>
+<a id='L106' name='L106'></a> 106     slw rMASK, rMASK, rPADN
+<a id='L107' name='L107'></a> 107 <em class='sharp'>#else</em>
+<a id='L108' name='L108'></a> 108     srw rMASK, rMASK, rPADN
+<a id='L109' name='L109'></a> 109 <em class='sharp'>#endif</em>
+<a id='L110' name='L110'></a> 110     and rTMP1, r7F7F, rWORD1
+<a id='L111' name='L111'></a> 111     or  rTMP2, r7F7F, rWORD1
+<a id='L112' name='L112'></a> 112     add rTMP1, rTMP1, r7F7F
+<a id='L113' name='L113'></a> 113     nor rTMP3, rTMP2, rTMP1
+<a id='L114' name='L114'></a> 114     and.    rTMP3, rTMP3, rMASK
+<a id='L115' name='L115'></a> 115     mtcrf   0x01, rRTN
+<a id='L116' name='L116'></a> 116     bne L(done0)
+<a id='L117' name='L117'></a> 117     lis rFEFE, -0x101
+<a id='L118' name='L118'></a> 118     addi    rFEFE, rFEFE, -0x101
+<a id='L119' name='L119'></a> 119 <em class='comment'>/* Are we now aligned to a doubleword boundary?  */</em>
+<a id='L120' name='L120'></a> 120     bt  29, L(loop)
+<a id='L121' name='L121'></a> 121 
+<a id='L122' name='L122'></a> 122 <em class='comment'>/* Handle second word of pair.  */</em>
+<a id='L123' name='L123'></a> 123 <em class='comment'>/* Perhaps use method (1) here for little-endian, saving one instruction?  */</em>
+<a id='L124' name='L124'></a> 124     lwzu    rWORD1, 4(rSTR)
+<a id='L125' name='L125'></a> 125     and rTMP1, r7F7F, rWORD1
+<a id='L126' name='L126'></a> 126     or  rTMP2, r7F7F, rWORD1
+<a id='L127' name='L127'></a> 127     add rTMP1, rTMP1, r7F7F
+<a id='L128' name='L128'></a> 128     nor.    rTMP3, rTMP2, rTMP1
+<a id='L129' name='L129'></a> 129     bne L(done0)
+<a id='L130' name='L130'></a> 130 
+<a id='L131' name='L131'></a> 131 <em class='comment'>/* The loop.  */</em>
+<a id='L132' name='L132'></a> 132 
+<a id='L133' name='L133'></a> 133 L(loop):
+<a id='L134' name='L134'></a> 134     lwz rWORD1, 4(rSTR)
+<a id='L135' name='L135'></a> 135     lwzu    rWORD2, 8(rSTR)
+<a id='L136' name='L136'></a> 136     add rTMP1, rFEFE, rWORD1
+<a id='L137' name='L137'></a> 137     nor rTMP2, r7F7F, rWORD1
+<a id='L138' name='L138'></a> 138     and.    rTMP1, rTMP1, rTMP2
+<a id='L139' name='L139'></a> 139     add rTMP3, rFEFE, rWORD2
+<a id='L140' name='L140'></a> 140     nor rTMP4, r7F7F, rWORD2
+<a id='L141' name='L141'></a> 141     bne L(done1)
+<a id='L142' name='L142'></a> 142     and.    rTMP3, rTMP3, rTMP4
+<a id='L143' name='L143'></a> 143     beq L(loop)
+<a id='L144' name='L144'></a> 144 
+<a id='L145' name='L145'></a> 145 <em class='sharp'>#ifndef</em> <a href='../Y/3238.html' title='Multiple used in 570 places.'>__LITTLE_ENDIAN__</a>
+<a id='L146' name='L146'></a> 146     and rTMP1, r7F7F, rWORD2
+<a id='L147' name='L147'></a> 147     add rTMP1, rTMP1, r7F7F
+<a id='L148' name='L148'></a> 148     andc    rTMP3, rTMP4, rTMP1
+<a id='L149' name='L149'></a> 149     b   L(done0)
+<a id='L150' name='L150'></a> 150 
+<a id='L151' name='L151'></a> 151 L(done1):
+<a id='L152' name='L152'></a> 152     and rTMP1, r7F7F, rWORD1
+<a id='L153' name='L153'></a> 153     subi    rSTR, rSTR, 4
+<a id='L154' name='L154'></a> 154     add rTMP1, rTMP1, r7F7F
+<a id='L155' name='L155'></a> 155     andc    rTMP3, rTMP2, rTMP1
+<a id='L156' name='L156'></a> 156 
+<a id='L157' name='L157'></a> 157 <em class='comment'>/* When we get to here, rSTR points to the first word in the string that</em>
+<a id='L158' name='L158'></a> 158 <em class='comment'>   contains a zero byte, and rTMP3 has 0x80 for bytes that are zero,</em>
+<a id='L159' name='L159'></a> 159 <em class='comment'>   and 0x00 otherwise.  */</em>
+<a id='L160' name='L160'></a> 160 L(done0):
+<a id='L161' name='L161'></a> 161     cntlzw  rTMP3, rTMP3
+<a id='L162' name='L162'></a> 162     subf    rTMP1, rRTN, rSTR
+<a id='L163' name='L163'></a> 163     srwi    rTMP3, rTMP3, 3
+<a id='L164' name='L164'></a> 164     add rRTN, rTMP1, rTMP3
+<a id='L165' name='L165'></a> 165     blr
+<a id='L166' name='L166'></a> 166 <em class='sharp'>#else</em>
+<a id='L167' name='L167'></a> 167 
+<a id='L168' name='L168'></a> 168 L(done0):
+<a id='L169' name='L169'></a> 169     addi    rTMP1, rTMP3, -1    <em class='comment'>/* Form a mask from trailing zeros.  */</em>
+<a id='L170' name='L170'></a> 170     andc    rTMP1, rTMP1, rTMP3
+<a id='L171' name='L171'></a> 171     cntlzw  rTMP1, rTMP1        <em class='comment'>/* Count bits not in the mask.  */</em>
+<a id='L172' name='L172'></a> 172     subf    rTMP3, rRTN, rSTR
+<a id='L173' name='L173'></a> 173     subfic  rTMP1, rTMP1, 32-7
+<a id='L174' name='L174'></a> 174     srwi    rTMP1, rTMP1, 3
+<a id='L175' name='L175'></a> 175     add rRTN, rTMP1, rTMP3
+<a id='L176' name='L176'></a> 176     blr
+<a id='L177' name='L177'></a> 177 
+<a id='L178' name='L178'></a> 178 L(done1):
+<a id='L179' name='L179'></a> 179     addi    rTMP3, rTMP1, -1
+<a id='L180' name='L180'></a> 180     andc    rTMP3, rTMP3, rTMP1
+<a id='L181' name='L181'></a> 181     cntlzw  rTMP3, rTMP3
+<a id='L182' name='L182'></a> 182     subf    rTMP1, rRTN, rSTR
+<a id='L183' name='L183'></a> 183     subfic  rTMP3, rTMP3, 32-7-32
+<a id='L184' name='L184'></a> 184     srawi   rTMP3, rTMP3, 3
+<a id='L185' name='L185'></a> 185     add rRTN, rTMP1, rTMP3
+<a id='L186' name='L186'></a> 186     blr
+<a id='L187' name='L187'></a> 187 <em class='sharp'>#endif</em>
+<a id='L188' name='L188'></a> 188 
+<a id='L189' name='L189'></a> 189 END (strlen)
+<a id='L190' name='L190'></a> 190 libc_hidden_builtin_def (strlen)
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;][^][v]<a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

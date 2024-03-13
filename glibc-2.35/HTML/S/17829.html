@@ -1,0 +1,480 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>sysdeps/nptl/thread_db.h</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18977.html'>sysdeps</a>/<a href='../files/19141.html'>nptl</a>/thread_db.h</h2>
+<em class='comment'>/* [&lt;][&gt;][^][v][top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<h2 class='header'><a href='../J/9749.html' title='Multiple included from 2 places.'>INCLUDED FROM</a></h2>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* thread_db.h -- interface to libthread_db.so library for debugging -lpthread</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   Copyright (C) 1999-2022 Free Software Foundation, Inc.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'></em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'></em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'></em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   License along with the GNU C Library; if not, see</em>
+<a id='L17' name='L17'></a>  17 <em class='comment'>   &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L18' name='L18'></a>  18 
+<a id='L19' name='L19'></a>  19 <em class='sharp'>#ifndef</em> <a href='../S/17829.html#L20' title='Defined at 20 in sysdeps/nptl/thread_db.h.'>_THREAD_DB_H</a>
+<a id='L20' name='L20'></a>  20 <em class='sharp'>#define</em> <a href='../S/17829.html#L19' title='Referred from 19 in sysdeps/nptl/thread_db.h.'>_THREAD_DB_H</a>    1
+<a id='L21' name='L21'></a>  21 
+<a id='L22' name='L22'></a>  22 <em class='comment'>/* This is the debugger interface for the NPTL library.  It is</em>
+<a id='L23' name='L23'></a>  23 <em class='comment'>   modelled closely after the interface with same names in Solaris</em>
+<a id='L24' name='L24'></a>  24 <em class='comment'>   with the goal to share the same code in the debugger.  */</em>
+<a id='L25' name='L25'></a>  25 <em class='sharp'>#include</em> &lt;<a href='../I/1919.html'>pthread.h</a>&gt;
+<a id='L26' name='L26'></a>  26 <em class='sharp'>#include</em> &lt;<a href='../I/1969.html'>stdint.h</a>&gt;
+<a id='L27' name='L27'></a>  27 <em class='sharp'>#include</em> &lt;<a href='../I/1786.html'>sys/types.h</a>&gt;
+<a id='L28' name='L28'></a>  28 <em class='sharp'>#include</em> &lt;<a href='../I/9746.html'>sys/procfs.h</a>&gt;
+<a id='L29' name='L29'></a>  29 
+<a id='L30' name='L30'></a>  30 
+<a id='L31' name='L31'></a>  31 <em class='comment'>/* Error codes of the library.  */</em>
+<a id='L32' name='L32'></a>  32 <strong class='reserved'>typedef</strong> <strong class='reserved'>enum</strong>
+<a id='L33' name='L33'></a>  33 <em class='brace'>{</em>
+<a id='L34' name='L34'></a>  34   <a href='../R/8528.html' title='Multiple referred from 159 places.'>TD_OK</a>,      <em class='comment'>/* No error.  */</em>
+<a id='L35' name='L35'></a>  35   <a href='../R/8515.html' title='Multiple referred from 32 places.'>TD_ERR</a>,     <em class='comment'>/* No further specified error.  */</em>
+<a id='L36' name='L36'></a>  36   <a href='../R/8524.html' title='Multiple referred from 4 places.'>TD_NOTHR</a>,   <em class='comment'>/* No matching thread found.  */</em>
+<a id='L37' name='L37'></a>  37   TD_NOSV,    <em class='comment'>/* No matching synchronization handle found.  */</em>
+<a id='L38' name='L38'></a>  38   TD_NOLWP,   <em class='comment'>/* No matching light-weighted process found.  */</em>
+<a id='L39' name='L39'></a>  39   TD_BADPH,   <em class='comment'>/* Invalid process handle.  */</em>
+<a id='L40' name='L40'></a>  40   TD_BADTH,   <em class='comment'>/* Invalid thread handle.  */</em>
+<a id='L41' name='L41'></a>  41   TD_BADSH,   <em class='comment'>/* Invalid synchronization handle.  */</em>
+<a id='L42' name='L42'></a>  42   <a href='../R/8511.html' title='Multiple referred from 15 places.'>TD_BADTA</a>,   <em class='comment'>/* Invalid thread agent.  */</em>
+<a id='L43' name='L43'></a>  43   <a href='../R/8510.html' title='Multiple referred from 2 places.'>TD_BADKEY</a>,      <em class='comment'>/* Invalid key.  */</em>
+<a id='L44' name='L44'></a>  44   <a href='../R/8523.html' title='Multiple referred from 2 places.'>TD_NOMSG</a>,   <em class='comment'>/* No event available.  */</em>
+<a id='L45' name='L45'></a>  45   TD_NOFPREGS,    <em class='comment'>/* No floating-point register content available.  */</em>
+<a id='L46' name='L46'></a>  46   <a href='../S/18850.html#L42' title='Referred from 42 in nptl_db/td_ta_new.c.'>TD_NOLIBTHREAD</a>, <em class='comment'>/* Application not linked with thread library.  */</em>
+<a id='L47' name='L47'></a>  47   <a href='../R/8521.html' title='Multiple referred from 5 places.'>TD_NOEVENT</a>,     <em class='comment'>/* Requested event is not supported.  */</em>
+<a id='L48' name='L48'></a>  48   <a href='../R/8520.html' title='Multiple referred from 16 places.'>TD_NOCAPAB</a>,     <em class='comment'>/* Capability not available.  */</em>
+<a id='L49' name='L49'></a>  49   <a href='../R/8513.html' title='Multiple referred from 19 places.'>TD_DBERR</a>,   <em class='comment'>/* Internal debug library error.  */</em>
+<a id='L50' name='L50'></a>  50   <a href='../R/8519.html' title='Multiple referred from 10 places.'>TD_NOAPLIC</a>,     <em class='comment'>/* Operation is not applicable.  */</em>
+<a id='L51' name='L51'></a>  51   <a href='../R/8526.html' title='Multiple referred from 2 places.'>TD_NOTSD</a>,   <em class='comment'>/* No thread-specific data available.  */</em>
+<a id='L52' name='L52'></a>  52   <a href='../S/18850.html#L53' title='Referred from 53 in nptl_db/td_ta_new.c.'>TD_MALLOC</a>,      <em class='comment'>/* Out of memory.  */</em>
+<a id='L53' name='L53'></a>  53   TD_PARTIALREG,  <em class='comment'>/* Not entire register set was read or written.  */</em>
+<a id='L54' name='L54'></a>  54   <a href='../R/8527.html' title='Multiple referred from 3 places.'>TD_NOXREGS</a>,     <em class='comment'>/* X register set not available for given thread.  */</em>
+<a id='L55' name='L55'></a>  55   <a href='../R/8536.html' title='Multiple referred from 3 places.'>TD_TLSDEFER</a>,    <em class='comment'>/* Thread has not yet allocated TLS for given module.  */</em>
+<a id='L56' name='L56'></a>  56   TD_NOTALLOC = <a href='../S/17829.html#L55' title='Defined at 55 in sysdeps/nptl/thread_db.h.'>TD_TLSDEFER</a>,
+<a id='L57' name='L57'></a>  57   <a href='../S/18850.html#L48' title='Referred from 48 in nptl_db/td_ta_new.c.'>TD_VERSION</a>,     <em class='comment'>/* Version if libpthread and libthread_db do not match.  */</em>
+<a id='L58' name='L58'></a>  58   <a href='../S/18814.html#L129' title='Referred from 129 in nptl_db/td_thr_tlsbase.c.'>TD_NOTLS</a>    <em class='comment'>/* There is no TLS segment in the given module.  */</em>
+<a id='L59' name='L59'></a>  59 <em class='brace'>}</em> <a href='../R/25119.html' title='Multiple referred from 131 places.'>td_err_e</a>;
+<a id='L60' name='L60'></a>  60 
+<a id='L61' name='L61'></a>  61 
+<a id='L62' name='L62'></a>  62 <em class='comment'>/* Possible thread states.  TD_THR_ANY_STATE is a pseudo-state used to</em>
+<a id='L63' name='L63'></a>  63 <em class='comment'>   select threads regardless of state in td_ta_thr_iter().  */</em>
+<a id='L64' name='L64'></a>  64 <strong class='reserved'>typedef</strong> <strong class='reserved'>enum</strong>
+<a id='L65' name='L65'></a>  65 <em class='brace'>{</em>
+<a id='L66' name='L66'></a>  66   <a href='../S/18816.html#L33' title='Referred from 33 in nptl_db/td_ta_thr_iter.c.'>TD_THR_ANY_STATE</a>,
+<a id='L67' name='L67'></a>  67   <a href='../S/18846.html#L104' title='Referred from 104 in nptl_db/td_thr_get_info.c.'>TD_THR_UNKNOWN</a>,
+<a id='L68' name='L68'></a>  68   TD_THR_STOPPED,
+<a id='L69' name='L69'></a>  69   TD_THR_RUN,
+<a id='L70' name='L70'></a>  70   <a href='../S/18846.html#L100' title='Referred from 100 in nptl_db/td_thr_get_info.c.'>TD_THR_ACTIVE</a>,
+<a id='L71' name='L71'></a>  71   <a href='../S/18846.html#L102' title='Referred from 102 in nptl_db/td_thr_get_info.c.'>TD_THR_ZOMBIE</a>,
+<a id='L72' name='L72'></a>  72   TD_THR_SLEEP,
+<a id='L73' name='L73'></a>  73   TD_THR_STOPPED_ASLEEP
+<a id='L74' name='L74'></a>  74 <em class='brace'>}</em> <a href='../R/25167.html' title='Multiple referred from 4 places.'>td_thr_state_e</a>;
+<a id='L75' name='L75'></a>  75 
+<a id='L76' name='L76'></a>  76 <em class='comment'>/* Thread type: user or system.  TD_THR_ANY_TYPE is a pseudo-type used</em>
+<a id='L77' name='L77'></a>  77 <em class='comment'>   to select threads regardless of type in td_ta_thr_iter().  */</em>
+<a id='L78' name='L78'></a>  78 <strong class='reserved'>typedef</strong> <strong class='reserved'>enum</strong>
+<a id='L79' name='L79'></a>  79 <em class='brace'>{</em>
+<a id='L80' name='L80'></a>  80   TD_THR_ANY_TYPE,
+<a id='L81' name='L81'></a>  81   <a href='../S/18846.html#L96' title='Referred from 96 in nptl_db/td_thr_get_info.c.'>TD_THR_USER</a>,
+<a id='L82' name='L82'></a>  82   TD_THR_SYSTEM
+<a id='L83' name='L83'></a>  83 <em class='brace'>}</em> <a href='../S/17829.html#L274' title='Referred from 274 in sysdeps/nptl/thread_db.h.'>td_thr_type_e</a>;
+<a id='L84' name='L84'></a>  84 
+<a id='L85' name='L85'></a>  85 
+<a id='L86' name='L86'></a>  86 <em class='comment'>/* Types of the debugging library.  */</em>
+<a id='L87' name='L87'></a>  87 
+<a id='L88' name='L88'></a>  88 <em class='comment'>/* Handle for a process.  This type is opaque.  */</em>
+<a id='L89' name='L89'></a>  89 <strong class='reserved'>typedef</strong> <strong class='reserved'>struct</strong> <a href='../S/18811.html#L81' title='Defined at 81 in nptl_db/thread_dbP.h.'>td_thragent</a> <a href='../R/25174.html' title='Multiple referred from 72 places.'>td_thragent_t</a>;
+<a id='L90' name='L90'></a>  90 
+<a id='L91' name='L91'></a>  91 <em class='comment'>/* The actual thread handle type.  This is also opaque.  */</em>
+<a id='L92' name='L92'></a>  92 <strong class='reserved'>typedef</strong> <strong class='reserved'>struct</strong> td_thrhandle
+<a id='L93' name='L93'></a>  93 <em class='brace'>{</em>
+<a id='L94' name='L94'></a>  94   <a href='../S/17829.html#L89' title='Defined at 89 in sysdeps/nptl/thread_db.h.'>td_thragent_t</a> *<a href='../Y/27101.html' title='Multiple used in 85 places.'>th_ta_p</a>;
+<a id='L95' name='L95'></a>  95   <a href='../D/35063.html' title='Multiple defined in 2 places.'>psaddr_t</a> <a href='../Y/27105.html' title='Multiple used in 36 places.'>th_unique</a>;
+<a id='L96' name='L96'></a>  96 <em class='brace'>}</em> <a href='../R/25175.html' title='Multiple referred from 55 places.'>td_thrhandle_t</a>;
+<a id='L97' name='L97'></a>  97 
+<a id='L98' name='L98'></a>  98 
+<a id='L99' name='L99'></a>  99 <em class='comment'>/* Forward declaration of a type defined by and for the dynamic linker.  */</em>
+<a id='L100' name='L100'></a> 100 <strong class='reserved'>struct</strong> <a href='../D/32945.html' title='Multiple defined in 4 places.'>link_map</a>;
+<a id='L101' name='L101'></a> 101 
+<a id='L102' name='L102'></a> 102 
+<a id='L103' name='L103'></a> 103 <em class='comment'>/* Flags for `td_ta_thr_iter'.  */</em>
+<a id='L104' name='L104'></a> 104 <em class='sharp'>#define</em> TD_THR_ANY_USER_FLAGS   0xffffffff
+<a id='L105' name='L105'></a> 105 <em class='sharp'>#define</em> TD_THR_LOWEST_PRIORITY  -20
+<a id='L106' name='L106'></a> 106 <em class='sharp'>#define</em> TD_SIGNO_MASK       <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>
+<a id='L107' name='L107'></a> 107 
+<a id='L108' name='L108'></a> 108 
+<a id='L109' name='L109'></a> 109 <em class='sharp'>#define</em> <a href='../R/8516.html' title='Multiple referred from 14 places.'>TD_EVENTSIZE</a>    2
+<a id='L110' name='L110'></a> 110 <em class='sharp'>#define</em> <a href='../R/606.html' title='Multiple referred from 2 places.'>BT_UISHIFT</a>  5 <em class='comment'>/* log base 2 of BT_NBIPUI, to extract word index */</em>
+<a id='L111' name='L111'></a> 111 <em class='sharp'>#define</em> <a href='../S/17829.html#L112' title='Referred from 112 in sysdeps/nptl/thread_db.h.'>BT_NBIPUI</a>   (1 &lt;&lt; <a href='../S/17829.html#L110' title='Defined at 110 in sysdeps/nptl/thread_db.h.'>BT_UISHIFT</a>)       <em class='comment'>/* n bits per unsigned int */</em>
+<a id='L112' name='L112'></a> 112 <em class='sharp'>#define</em> <a href='../S/17829.html#L122' title='Referred from 122 in sysdeps/nptl/thread_db.h.'>BT_UIMASK</a>   (<a href='../S/17829.html#L111' title='Defined at 111 in sysdeps/nptl/thread_db.h.'>BT_NBIPUI</a> - 1)         <em class='comment'>/* to extract bit index */</em>
+<a id='L113' name='L113'></a> 113 
+<a id='L114' name='L114'></a> 114 <em class='comment'>/* Bitmask of enabled events. */</em>
+<a id='L115' name='L115'></a> 115 <strong class='reserved'>typedef</strong> <strong class='reserved'>struct</strong> td_thr_events
+<a id='L116' name='L116'></a> 116 <em class='brace'>{</em>
+<a id='L117' name='L117'></a> 117   <a href='../S/223.html#L26' title='Defined at 26 in bits/stdint-uintn.h.'>uint32_t</a> <a href='../Y/14007.html' title='Multiple used in 31 places.'>event_bits</a>[<a href='../S/17829.html#L109' title='Defined at 109 in sysdeps/nptl/thread_db.h.'>TD_EVENTSIZE</a>];
+<a id='L118' name='L118'></a> 118 <em class='brace'>}</em> <a href='../R/25153.html' title='Multiple referred from 27 places.'>td_thr_events_t</a>;
+<a id='L119' name='L119'></a> 119 
+<a id='L120' name='L120'></a> 120 <em class='comment'>/* Event set manipulation macros. */</em>
+<a id='L121' name='L121'></a> 121 <em class='sharp'>#define</em> <a href='../R/16163.html' title='Multiple referred from 5 places.'>__td_eventmask</a>(<a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>) \
+<a id='L122' name='L122'></a> 122   (<a href='../S/6759.html#L260' title='Defined at 260 in stdlib/stdint.h.'>UINT32_C</a> (1) &lt;&lt; (((<a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>) - 1) &amp; <a href='../S/17829.html#L112' title='Defined at 112 in sysdeps/nptl/thread_db.h.'>BT_UIMASK</a>))
+<a id='L123' name='L123'></a> 123 <em class='sharp'>#define</em> <a href='../R/16164.html' title='Multiple referred from 5 places.'>__td_eventword</a>(<a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>) \
+<a id='L124' name='L124'></a> 124   ((<a href='../S/6759.html#L260' title='Defined at 260 in stdlib/stdint.h.'>UINT32_C</a> ((<a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>) - 1)) &gt;&gt; <a href='../S/17829.html#L110' title='Defined at 110 in sysdeps/nptl/thread_db.h.'>BT_UISHIFT</a>)
+<a id='L125' name='L125'></a> 125 
+<a id='L126' name='L126'></a> 126 <em class='sharp'>#define</em> td_event_emptyset(<a href='../Y/25148.html' title='Multiple used in 69 places.'>setp</a>) \
+<a id='L127' name='L127'></a> 127   <strong class='reserved'>do</strong> <em class='brace'>{</em>                                        \
+<a id='L128' name='L128'></a> 128     <strong class='reserved'>int</strong> <a href='../Y/4974.html' title='Multiple used in 51 places.'>__i</a>;                                      \
+<a id='L129' name='L129'></a> 129     <strong class='reserved'>for</strong> (<a href='../Y/4974.html' title='Multiple used in 51 places.'>__i</a> = <a href='../S/17829.html#L109' title='Defined at 109 in sysdeps/nptl/thread_db.h.'>TD_EVENTSIZE</a>; <a href='../Y/4974.html' title='Multiple used in 51 places.'>__i</a> &gt; 0; --<a href='../Y/4974.html' title='Multiple used in 51 places.'>__i</a>)                      \
+<a id='L130' name='L130'></a> 130       (<a href='../Y/25148.html' title='Multiple used in 69 places.'>setp</a>)-&gt;<a href='../Y/14007.html' title='Multiple used in 31 places.'>event_bits</a>[<a href='../Y/4974.html' title='Multiple used in 51 places.'>__i</a> - 1] = 0;                        \
+<a id='L131' name='L131'></a> 131   <em class='brace'>}</em> <strong class='reserved'>while</strong> (0)
+<a id='L132' name='L132'></a> 132 
+<a id='L133' name='L133'></a> 133 <em class='sharp'>#define</em> td_event_fillset(<a href='../Y/25148.html' title='Multiple used in 69 places.'>setp</a>) \
+<a id='L134' name='L134'></a> 134   <strong class='reserved'>do</strong> <em class='brace'>{</em>                                        \
+<a id='L135' name='L135'></a> 135     <strong class='reserved'>int</strong> <a href='../Y/4974.html' title='Multiple used in 51 places.'>__i</a>;                                      \
+<a id='L136' name='L136'></a> 136     <strong class='reserved'>for</strong> (<a href='../Y/4974.html' title='Multiple used in 51 places.'>__i</a> = <a href='../S/17829.html#L109' title='Defined at 109 in sysdeps/nptl/thread_db.h.'>TD_EVENTSIZE</a>; <a href='../Y/4974.html' title='Multiple used in 51 places.'>__i</a> &gt; 0; --<a href='../Y/4974.html' title='Multiple used in 51 places.'>__i</a>)                      \
+<a id='L137' name='L137'></a> 137       (<a href='../Y/25148.html' title='Multiple used in 69 places.'>setp</a>)-&gt;<a href='../Y/14007.html' title='Multiple used in 31 places.'>event_bits</a>[<a href='../Y/4974.html' title='Multiple used in 51 places.'>__i</a> - 1] = <a href='../S/6759.html#L260' title='Defined at 260 in stdlib/stdint.h.'>UINT32_C</a> (0xffffffff);            \
+<a id='L138' name='L138'></a> 138   <em class='brace'>}</em> <strong class='reserved'>while</strong> (0)
+<a id='L139' name='L139'></a> 139 
+<a id='L140' name='L140'></a> 140 <em class='sharp'>#define</em> td_event_addset(<a href='../Y/25148.html' title='Multiple used in 69 places.'>setp</a>, <a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>) \
+<a id='L141' name='L141'></a> 141   (((<a href='../Y/25148.html' title='Multiple used in 69 places.'>setp</a>)-&gt;<a href='../Y/14007.html' title='Multiple used in 31 places.'>event_bits</a>[<a href='../S/17829.html#L123' title='Defined at 123 in sysdeps/nptl/thread_db.h.'>__td_eventword</a> (<a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>)]) |= <a href='../S/17829.html#L121' title='Defined at 121 in sysdeps/nptl/thread_db.h.'>__td_eventmask</a> (<a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>))
+<a id='L142' name='L142'></a> 142 <em class='sharp'>#define</em> td_event_delset(<a href='../Y/25148.html' title='Multiple used in 69 places.'>setp</a>, <a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>) \
+<a id='L143' name='L143'></a> 143   (((<a href='../Y/25148.html' title='Multiple used in 69 places.'>setp</a>)-&gt;<a href='../Y/14007.html' title='Multiple used in 31 places.'>event_bits</a>[<a href='../S/17829.html#L123' title='Defined at 123 in sysdeps/nptl/thread_db.h.'>__td_eventword</a> (<a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>)]) &amp;= ~<a href='../S/17829.html#L121' title='Defined at 121 in sysdeps/nptl/thread_db.h.'>__td_eventmask</a> (<a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>))
+<a id='L144' name='L144'></a> 144 <em class='sharp'>#define</em> td_eventismember(<a href='../Y/25148.html' title='Multiple used in 69 places.'>setp</a>, <a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>) \
+<a id='L145' name='L145'></a> 145   (<a href='../S/17829.html#L121' title='Defined at 121 in sysdeps/nptl/thread_db.h.'>__td_eventmask</a> (<a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>) &amp; ((<a href='../Y/25148.html' title='Multiple used in 69 places.'>setp</a>)-&gt;<a href='../Y/14007.html' title='Multiple used in 31 places.'>event_bits</a>[<a href='../S/17829.html#L123' title='Defined at 123 in sysdeps/nptl/thread_db.h.'>__td_eventword</a> (<a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>)]))
+<a id='L146' name='L146'></a> 146 <em class='sharp'>#if</em> <a href='../S/17829.html#L109' title='Defined at 109 in sysdeps/nptl/thread_db.h.'>TD_EVENTSIZE</a> == 2
+<a id='L147' name='L147'></a> 147 <em class='sharp'># define</em> td_eventisempty(<a href='../Y/25148.html' title='Multiple used in 69 places.'>setp</a>) \
+<a id='L148' name='L148'></a> 148   (!((<a href='../Y/25148.html' title='Multiple used in 69 places.'>setp</a>)-&gt;<a href='../Y/14007.html' title='Multiple used in 31 places.'>event_bits</a>[0]) &amp;&amp; !((<a href='../Y/25148.html' title='Multiple used in 69 places.'>setp</a>)-&gt;<a href='../Y/14007.html' title='Multiple used in 31 places.'>event_bits</a>[1]))
+<a id='L149' name='L149'></a> 149 <em class='sharp'>#else</em>
+<a id='L150' name='L150'></a> 150 <em class='sharp'># error</em> "td_eventisempty must be changed to match TD_EVENTSIZE"
+<a id='L151' name='L151'></a> 151 <em class='sharp'>#endif</em>
+<a id='L152' name='L152'></a> 152 
+<a id='L153' name='L153'></a> 153 <em class='comment'>/* Events reportable by the thread implementation.  */</em>
+<a id='L154' name='L154'></a> 154 <strong class='reserved'>typedef</strong> <strong class='reserved'>enum</strong>
+<a id='L155' name='L155'></a> 155 <em class='brace'>{</em>
+<a id='L156' name='L156'></a> 156   <a href='../S/17829.html#L157' title='Referred from 157 in sysdeps/nptl/thread_db.h.'>TD_ALL_EVENTS</a>,         <em class='comment'>/* Pseudo-event number.  */</em>
+<a id='L157' name='L157'></a> 157   <a href='../R/8517.html' title='Multiple referred from 2 places.'>TD_EVENT_NONE</a> = <a href='../S/17829.html#L156' title='Defined at 156 in sysdeps/nptl/thread_db.h.'>TD_ALL_EVENTS</a>, <em class='comment'>/* Depends on context.  */</em>
+<a id='L158' name='L158'></a> 158   <a href='../S/17829.html#L172' title='Referred from 172 in sysdeps/nptl/thread_db.h.'>TD_READY</a>,          <em class='comment'>/* Is executable now. */</em>
+<a id='L159' name='L159'></a> 159   TD_SLEEP,          <em class='comment'>/* Blocked in a synchronization obj.  */</em>
+<a id='L160' name='L160'></a> 160   TD_SWITCHTO,           <em class='comment'>/* Now assigned to a process.  */</em>
+<a id='L161' name='L161'></a> 161   TD_SWITCHFROM,         <em class='comment'>/* Not anymore assigned to a process.  */</em>
+<a id='L162' name='L162'></a> 162   TD_LOCK_TRY,           <em class='comment'>/* Trying to get an unavailable lock.  */</em>
+<a id='L163' name='L163'></a> 163   TD_CATCHSIG,           <em class='comment'>/* Signal posted to the thread.  */</em>
+<a id='L164' name='L164'></a> 164   TD_IDLE,           <em class='comment'>/* Process getting idle.  */</em>
+<a id='L165' name='L165'></a> 165   <a href='../R/8512.html' title='Multiple referred from 4 places.'>TD_CREATE</a>,             <em class='comment'>/* New thread created.  */</em>
+<a id='L166' name='L166'></a> 166   <a href='../R/8514.html' title='Multiple referred from 4 places.'>TD_DEATH</a>,          <em class='comment'>/* Thread terminated.  */</em>
+<a id='L167' name='L167'></a> 167   TD_PREEMPT,            <em class='comment'>/* Preempted.  */</em>
+<a id='L168' name='L168'></a> 168   TD_PRI_INHERIT,        <em class='comment'>/* Inherited elevated priority.  */</em>
+<a id='L169' name='L169'></a> 169   TD_REAP,           <em class='comment'>/* Reaped.  */</em>
+<a id='L170' name='L170'></a> 170   TD_CONCURRENCY,        <em class='comment'>/* Number of processes changing.  */</em>
+<a id='L171' name='L171'></a> 171   <a href='../S/17829.html#L173' title='Referred from 173 in sysdeps/nptl/thread_db.h.'>TD_TIMEOUT</a>,            <em class='comment'>/* Conditional variable wait timed out.  */</em>
+<a id='L172' name='L172'></a> 172   TD_MIN_EVENT_NUM = <a href='../S/17829.html#L158' title='Defined at 158 in sysdeps/nptl/thread_db.h.'>TD_READY</a>,
+<a id='L173' name='L173'></a> 173   TD_MAX_EVENT_NUM = <a href='../S/17829.html#L171' title='Defined at 171 in sysdeps/nptl/thread_db.h.'>TD_TIMEOUT</a>,
+<a id='L174' name='L174'></a> 174   TD_EVENTS_ENABLE = 31     <em class='comment'>/* Event reporting enabled.  */</em>
+<a id='L175' name='L175'></a> 175 <em class='brace'>}</em> <a href='../R/25120.html' title='Multiple referred from 4 places.'>td_event_e</a>;
+<a id='L176' name='L176'></a> 176 
+<a id='L177' name='L177'></a> 177 <em class='comment'>/* Values representing the different ways events are reported.  */</em>
+<a id='L178' name='L178'></a> 178 <strong class='reserved'>typedef</strong> <strong class='reserved'>enum</strong>
+<a id='L179' name='L179'></a> 179 <em class='brace'>{</em>
+<a id='L180' name='L180'></a> 180   <a href='../S/18823.html#L54' title='Referred from 54 in nptl_db/td_ta_event_addr.c.'>NOTIFY_BPT</a>,           <em class='comment'>/* User must insert breakpoint at u.bptaddr. */</em>
+<a id='L181' name='L181'></a> 181   NOTIFY_AUTOBPT,       <em class='comment'>/* Breakpoint at u.bptaddr is automatically</em>
+<a id='L182' name='L182'></a> 182 <em class='comment'>                   inserted.  */</em>
+<a id='L183' name='L183'></a> 183   NOTIFY_SYSCALL        <em class='comment'>/* System call u.syscallno will be invoked.  */</em>
+<a id='L184' name='L184'></a> 184 <em class='brace'>}</em> <a href='../S/17829.html#L189' title='Referred from 189 in sysdeps/nptl/thread_db.h.'>td_notify_e</a>;
+<a id='L185' name='L185'></a> 185 
+<a id='L186' name='L186'></a> 186 <em class='comment'>/* Description how event type is reported.  */</em>
+<a id='L187' name='L187'></a> 187 <strong class='reserved'>typedef</strong> <strong class='reserved'>struct</strong> td_notify
+<a id='L188' name='L188'></a> 188 <em class='brace'>{</em>
+<a id='L189' name='L189'></a> 189   <a href='../S/17829.html#L184' title='Defined at 184 in sysdeps/nptl/thread_db.h.'>td_notify_e</a> <a href='../D/38608.html' title='Multiple defined in 6 places.'>type</a>;     <em class='comment'>/* Way the event is reported.  */</em>
+<a id='L190' name='L190'></a> 190   <strong class='reserved'>union</strong>
+<a id='L191' name='L191'></a> 191   <em class='brace'>{</em>
+<a id='L192' name='L192'></a> 192     <a href='../D/35063.html' title='Multiple defined in 2 places.'>psaddr_t</a> <a href='../Y/10989.html' title='Multiple used in 2 places.'>bptaddr</a>;       <em class='comment'>/* Address of breakpoint.  */</em>
+<a id='L193' name='L193'></a> 193     <strong class='reserved'>int</strong> syscallno;      <em class='comment'>/* Number of system call used.  */</em>
+<a id='L194' name='L194'></a> 194   <em class='brace'>}</em> <a href='../S/9112.html#L29' title='Defined at 29 in sysdeps/ieee754/ldbl-128ibm/test-fmodrem-ldbl-128ibm.c.'>u</a>;
+<a id='L195' name='L195'></a> 195 <em class='brace'>}</em> <a href='../R/25129.html' title='Multiple referred from 2 places.'>td_notify_t</a>;
+<a id='L196' name='L196'></a> 196 
+<a id='L197' name='L197'></a> 197 <em class='comment'>/* Structure used to report event.  */</em>
+<a id='L198' name='L198'></a> 198 <strong class='reserved'>typedef</strong> <strong class='reserved'>struct</strong> td_event_msg
+<a id='L199' name='L199'></a> 199 <em class='brace'>{</em>
+<a id='L200' name='L200'></a> 200   <a href='../S/17829.html#L175' title='Defined at 175 in sysdeps/nptl/thread_db.h.'>td_event_e</a> <a href='../Y/14006.html' title='Multiple used in 49 places.'>event</a>;     <em class='comment'>/* Event type being reported.  */</em>
+<a id='L201' name='L201'></a> 201   <strong class='reserved'>const</strong> <a href='../S/17829.html#L96' title='Defined at 96 in sysdeps/nptl/thread_db.h.'>td_thrhandle_t</a> *<a href='../Y/27097.html' title='Multiple used in 3 places.'>th_p</a>;   <em class='comment'>/* Thread reporting the event.  */</em>
+<a id='L202' name='L202'></a> 202   <strong class='reserved'>union</strong>
+<a id='L203' name='L203'></a> 203   <em class='brace'>{</em>
+<a id='L204' name='L204'></a> 204 <em class='sharp'># if</em> 0
+<a id='L205' name='L205'></a> 205     td_synchandle_t *<a href='../D/36637.html' title='Multiple defined in 6 places.'>sh</a>;    <em class='comment'>/* Handle of synchronization object.  */</em>
+<a id='L206' name='L206'></a> 206 <em class='sharp'>#endif</em>
+<a id='L207' name='L207'></a> 207     <a href='../D/38692.html' title='Multiple defined in 2 places.'>uintptr_t</a> <a href='../D/29309.html' title='Multiple defined in 3 places.'>data</a>;     <em class='comment'>/* Event specific data.  */</em>
+<a id='L208' name='L208'></a> 208   <em class='brace'>}</em> <a href='../S/2176.html#L54' title='Defined at 54 in hurd/intr-msg.c.'>msg</a>;
+<a id='L209' name='L209'></a> 209 <em class='brace'>}</em> <a href='../R/25121.html' title='Multiple referred from 4 places.'>td_event_msg_t</a>;
+<a id='L210' name='L210'></a> 210 
+<a id='L211' name='L211'></a> 211 <em class='comment'>/* Structure containing event data available in each thread structure.  */</em>
+<a id='L212' name='L212'></a> 212 <strong class='reserved'>typedef</strong> <strong class='reserved'>struct</strong>
+<a id='L213' name='L213'></a> 213 <em class='brace'>{</em>
+<a id='L214' name='L214'></a> 214   <a href='../S/17829.html#L118' title='Defined at 118 in sysdeps/nptl/thread_db.h.'>td_thr_events_t</a> <a href='../Y/14011.html' title='Multiple used in 21 places.'>eventmask</a>;    <em class='comment'>/* Mask of enabled events.  */</em>
+<a id='L215' name='L215'></a> 215   <a href='../S/17829.html#L175' title='Defined at 175 in sysdeps/nptl/thread_db.h.'>td_event_e</a> <a href='../Y/14012.html' title='Multiple used in 12 places.'>eventnum</a>;      <em class='comment'>/* Number of last event.  */</em>
+<a id='L216' name='L216'></a> 216   <strong class='reserved'>void</strong> *<a href='../Y/14009.html' title='Multiple used in 10 places.'>eventdata</a>;      <em class='comment'>/* Data associated with event.  */</em>
+<a id='L217' name='L217'></a> 217 <em class='brace'>}</em> <a href='../R/25122.html' title='Multiple referred from 9 places.'>td_eventbuf_t</a>;
+<a id='L218' name='L218'></a> 218 
+<a id='L219' name='L219'></a> 219 
+<a id='L220' name='L220'></a> 220 <em class='comment'>/* Gathered statistics about the process.  */</em>
+<a id='L221' name='L221'></a> 221 <strong class='reserved'>typedef</strong> <strong class='reserved'>struct</strong> td_ta_stats
+<a id='L222' name='L222'></a> 222 <em class='brace'>{</em>
+<a id='L223' name='L223'></a> 223   <strong class='reserved'>int</strong> <a href='../Y/21296.html' title='Multiple used in 72 places.'>nthreads</a>;             <em class='comment'>/* Total number of threads in use.  */</em>
+<a id='L224' name='L224'></a> 224   <strong class='reserved'>int</strong> r_concurrency;        <em class='comment'>/* Concurrency level requested by user.  */</em>
+<a id='L225' name='L225'></a> 225   <strong class='reserved'>int</strong> nrunnable_num;        <em class='comment'>/* Average runnable threads, numerator.  */</em>
+<a id='L226' name='L226'></a> 226   <strong class='reserved'>int</strong> nrunnable_den;        <em class='comment'>/* Average runnable threads, denominator.  */</em>
+<a id='L227' name='L227'></a> 227   <strong class='reserved'>int</strong> a_concurrency_num;    <em class='comment'>/* Achieved concurrency level, numerator.  */</em>
+<a id='L228' name='L228'></a> 228   <strong class='reserved'>int</strong> a_concurrency_den;    <em class='comment'>/* Achieved concurrency level, denominator.  */</em>
+<a id='L229' name='L229'></a> 229   <strong class='reserved'>int</strong> nlwps_num;        <em class='comment'>/* Average number of processes in use,</em>
+<a id='L230' name='L230'></a> 230 <em class='comment'>                   numerator.  */</em>
+<a id='L231' name='L231'></a> 231   <strong class='reserved'>int</strong> nlwps_den;        <em class='comment'>/* Average number of processes in use,</em>
+<a id='L232' name='L232'></a> 232 <em class='comment'>                   denominator.  */</em>
+<a id='L233' name='L233'></a> 233   <strong class='reserved'>int</strong> nidle_num;        <em class='comment'>/* Average number of idling processes,</em>
+<a id='L234' name='L234'></a> 234 <em class='comment'>                   numerator.  */</em>
+<a id='L235' name='L235'></a> 235   <strong class='reserved'>int</strong> nidle_den;        <em class='comment'>/* Average number of idling processes,</em>
+<a id='L236' name='L236'></a> 236 <em class='comment'>                   denominator.  */</em>
+<a id='L237' name='L237'></a> 237 <em class='brace'>}</em> <a href='../R/25145.html' title='Multiple referred from 2 places.'>td_ta_stats_t</a>;
+<a id='L238' name='L238'></a> 238 
+<a id='L239' name='L239'></a> 239 
+<a id='L240' name='L240'></a> 240 <em class='comment'>/* Since Sun's library is based on Solaris threads we have to define a few</em>
+<a id='L241' name='L241'></a> 241 <em class='comment'>   types to map them to POSIX threads.  */</em>
+<a id='L242' name='L242'></a> 242 <strong class='reserved'>typedef</strong> <a href='../D/35174.html' title='Multiple defined in 2 places.'>pthread_t</a> <a href='../R/25592.html' title='Multiple referred from 47 places.'>thread_t</a>;
+<a id='L243' name='L243'></a> 243 <strong class='reserved'>typedef</strong> <a href='../D/35127.html' title='Multiple defined in 2 places.'>pthread_key_t</a> <a href='../R/25581.html' title='Multiple referred from 4 places.'>thread_key_t</a>;
+<a id='L244' name='L244'></a> 244 
+<a id='L245' name='L245'></a> 245 
+<a id='L246' name='L246'></a> 246 <em class='comment'>/* Callback for iteration over threads.  */</em>
+<a id='L247' name='L247'></a> 247 <strong class='reserved'>typedef</strong> <strong class='reserved'>int</strong> <a href='../R/25159.html' title='Multiple referred from 3 places.'>td_thr_iter_f</a> (<strong class='reserved'>const</strong> <a href='../S/17829.html#L96' title='Defined at 96 in sysdeps/nptl/thread_db.h.'>td_thrhandle_t</a> *, <strong class='reserved'>void</strong> *);
+<a id='L248' name='L248'></a> 248 
+<a id='L249' name='L249'></a> 249 <em class='comment'>/* Callback for iteration over thread local data.  */</em>
+<a id='L250' name='L250'></a> 250 <strong class='reserved'>typedef</strong> <strong class='reserved'>int</strong> <a href='../R/25124.html' title='Multiple referred from 2 places.'>td_key_iter_f</a> (<a href='../S/17829.html#L243' title='Defined at 243 in sysdeps/nptl/thread_db.h.'>thread_key_t</a>, <strong class='reserved'>void</strong> (*) (<strong class='reserved'>void</strong> *), <strong class='reserved'>void</strong> *);
+<a id='L251' name='L251'></a> 251 
+<a id='L252' name='L252'></a> 252 
+<a id='L253' name='L253'></a> 253 
+<a id='L254' name='L254'></a> 254 <em class='comment'>/* Forward declaration.  This has to be defined by the user.  */</em>
+<a id='L255' name='L255'></a> 255 <strong class='reserved'>struct</strong> <a href='../Y/22918.html' title='Multiple used in 24 places.'>ps_prochandle</a>;
+<a id='L256' name='L256'></a> 256 
+<a id='L257' name='L257'></a> 257 
+<a id='L258' name='L258'></a> 258 <em class='comment'>/* Information about the thread.  */</em>
+<a id='L259' name='L259'></a> 259 <strong class='reserved'>typedef</strong> <strong class='reserved'>struct</strong> td_thrinfo
+<a id='L260' name='L260'></a> 260 <em class='brace'>{</em>
+<a id='L261' name='L261'></a> 261   <a href='../S/17829.html#L89' title='Defined at 89 in sysdeps/nptl/thread_db.h.'>td_thragent_t</a> *<a href='../Y/27271.html' title='Multiple used in 2 places.'>ti_ta_p</a>;       <em class='comment'>/* Process handle.  */</em>
+<a id='L262' name='L262'></a> 262   <strong class='reserved'>unsigned</strong> <strong class='reserved'>int</strong> <a href='../Y/27276.html' title='Multiple used in 2 places.'>ti_user_flags</a>;       <em class='comment'>/* Unused.  */</em>
+<a id='L263' name='L263'></a> 263   <a href='../S/17829.html#L242' title='Defined at 242 in sysdeps/nptl/thread_db.h.'>thread_t</a> <a href='../Y/27272.html' title='Multiple used in 2 places.'>ti_tid</a>;          <em class='comment'>/* Thread ID returned by</em>
+<a id='L264' name='L264'></a> 264 <em class='comment'>                       pthread_create().  */</em>
+<a id='L265' name='L265'></a> 265   <strong class='reserved'>char</strong> *<a href='../Y/27273.html' title='Multiple used in 2 places.'>ti_tls</a>;             <em class='comment'>/* Pointer to thread-local data.  */</em>
+<a id='L266' name='L266'></a> 266   <a href='../D/35063.html' title='Multiple defined in 2 places.'>psaddr_t</a> <a href='../Y/27267.html' title='Multiple used in 2 places.'>ti_startfunc</a>;        <em class='comment'>/* Start function passed to</em>
+<a id='L267' name='L267'></a> 267 <em class='comment'>                       pthread_create().  */</em>
+<a id='L268' name='L268'></a> 268   <a href='../D/35063.html' title='Multiple defined in 2 places.'>psaddr_t</a> ti_stkbase;          <em class='comment'>/* Base of thread's stack.  */</em>
+<a id='L269' name='L269'></a> 269   <strong class='reserved'>long</strong> <strong class='reserved'>int</strong> ti_stksize;          <em class='comment'>/* Size of thread's stack.  */</em>
+<a id='L270' name='L270'></a> 270   <a href='../D/35063.html' title='Multiple defined in 2 places.'>psaddr_t</a> ti_ro_area;          <em class='comment'>/* Unused.  */</em>
+<a id='L271' name='L271'></a> 271   <strong class='reserved'>int</strong> ti_ro_size;           <em class='comment'>/* Unused.  */</em>
+<a id='L272' name='L272'></a> 272   <a href='../S/17829.html#L74' title='Defined at 74 in sysdeps/nptl/thread_db.h.'>td_thr_state_e</a> <a href='../Y/27268.html' title='Multiple used in 4 places.'>ti_state</a>;      <em class='comment'>/* Thread state.  */</em>
+<a id='L273' name='L273'></a> 273   <strong class='reserved'>unsigned</strong> <strong class='reserved'>char</strong> ti_db_suspended;    <em class='comment'>/* Nonzero if suspended by debugger. */</em>
+<a id='L274' name='L274'></a> 274   <a href='../S/17829.html#L83' title='Defined at 83 in sysdeps/nptl/thread_db.h.'>td_thr_type_e</a> <a href='../Y/27275.html' title='Multiple used in 2 places.'>ti_type</a>;        <em class='comment'>/* Type of the thread (system vs</em>
+<a id='L275' name='L275'></a> 275 <em class='comment'>                       user thread).  */</em>
+<a id='L276' name='L276'></a> 276   <a href='../D/32203.html' title='Multiple defined in 3 places.'>intptr_t</a> ti_pc;           <em class='comment'>/* Unused.  */</em>
+<a id='L277' name='L277'></a> 277   <a href='../D/32203.html' title='Multiple defined in 3 places.'>intptr_t</a> ti_sp;           <em class='comment'>/* Unused.  */</em>
+<a id='L278' name='L278'></a> 278   <strong class='reserved'>short</strong> <strong class='reserved'>int</strong> ti_flags;           <em class='comment'>/* Unused.  */</em>
+<a id='L279' name='L279'></a> 279   <strong class='reserved'>int</strong> <a href='../Y/27261.html' title='Multiple used in 7 places.'>ti_pri</a>;               <em class='comment'>/* Thread priority.  */</em>
+<a id='L280' name='L280'></a> 280   <a href='../D/33229.html' title='Multiple defined in 2 places.'>lwpid_t</a> <a href='../Y/27254.html' title='Multiple used in 2 places.'>ti_lid</a>;           <em class='comment'>/* Kernel PID for this thread.  */</em>
+<a id='L281' name='L281'></a> 281   <a href='../S/28.html#L7' title='Defined at 7 in signal/bits/types/sigset_t.h.'>sigset_t</a> ti_sigmask;          <em class='comment'>/* Signal mask.  */</em>
+<a id='L282' name='L282'></a> 282   <strong class='reserved'>unsigned</strong> <strong class='reserved'>char</strong> <a href='../Y/27274.html' title='Multiple used in 2 places.'>ti_traceme</a>;     <em class='comment'>/* Nonzero if event reporting</em>
+<a id='L283' name='L283'></a> 283 <em class='comment'>                       enabled.  */</em>
+<a id='L284' name='L284'></a> 284   <strong class='reserved'>unsigned</strong> <strong class='reserved'>char</strong> ti_preemptflag;     <em class='comment'>/* Unused.  */</em>
+<a id='L285' name='L285'></a> 285   <strong class='reserved'>unsigned</strong> <strong class='reserved'>char</strong> ti_pirecflag;       <em class='comment'>/* Unused.  */</em>
+<a id='L286' name='L286'></a> 286   <a href='../S/28.html#L7' title='Defined at 7 in signal/bits/types/sigset_t.h.'>sigset_t</a> ti_pending;          <em class='comment'>/* Set of pending signals.  */</em>
+<a id='L287' name='L287'></a> 287   <a href='../S/17829.html#L118' title='Defined at 118 in sysdeps/nptl/thread_db.h.'>td_thr_events_t</a> <a href='../Y/27252.html' title='Multiple used in 4 places.'>ti_events</a>;        <em class='comment'>/* Set of enabled events.  */</em>
+<a id='L288' name='L288'></a> 288 <em class='brace'>}</em> <a href='../R/25176.html' title='Multiple referred from 3 places.'>td_thrinfo_t</a>;
+<a id='L289' name='L289'></a> 289 
+<a id='L290' name='L290'></a> 290 
+<a id='L291' name='L291'></a> 291 
+<a id='L292' name='L292'></a> 292 <em class='comment'>/* Prototypes for exported library functions.  */</em>
+<a id='L293' name='L293'></a> 293 
+<a id='L294' name='L294'></a> 294 <em class='comment'>/* Initialize the thread debug support library.  */</em>
+<a id='L295' name='L295'></a> 295 <strong class='reserved'>extern</strong> <a href='../S/17829.html#L59' title='Defined at 59 in sysdeps/nptl/thread_db.h.'>td_err_e</a> <a href='../S/18812.html#L25' title='Defined at 25 in nptl_db/td_init.c.'>td_init</a> (<strong class='reserved'>void</strong>);
+<a id='L296' name='L296'></a> 296 
+<a id='L297' name='L297'></a> 297 <em class='comment'>/* Historical relict.  Should not be used anymore.  */</em>
+<a id='L298' name='L298'></a> 298 <strong class='reserved'>extern</strong> <a href='../S/17829.html#L59' title='Defined at 59 in sysdeps/nptl/thread_db.h.'>td_err_e</a> <a href='../S/18851.html#L23' title='Defined at 23 in nptl_db/td_log.c.'>td_log</a> (<strong class='reserved'>void</strong>);
+<a id='L299' name='L299'></a> 299 
+<a id='L300' name='L300'></a> 300 <em class='comment'>/* Return list of symbols the library can request.  */</em>
+<a id='L301' name='L301'></a> 301 <strong class='reserved'>extern</strong> <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> **<a href='../S/18845.html#L35' title='Defined at 35 in nptl_db/td_symbol_list.c.'>td_symbol_list</a> (<strong class='reserved'>void</strong>);
+<a id='L302' name='L302'></a> 302 
+<a id='L303' name='L303'></a> 303 <em class='comment'>/* Generate new thread debug library handle for process PS.  */</em>
+<a id='L304' name='L304'></a> 304 <strong class='reserved'>extern</strong> <a href='../S/17829.html#L59' title='Defined at 59 in sysdeps/nptl/thread_db.h.'>td_err_e</a> <a href='../S/18850.html#L33' title='Defined at 33 in nptl_db/td_ta_new.c.'>td_ta_new</a> (<strong class='reserved'>struct</strong> <a href='../Y/22918.html' title='Multiple used in 24 places.'>ps_prochandle</a> *<a href='../Y/6627.html' title='Multiple used in 44 places.'>__ps</a>, <a href='../S/17829.html#L89' title='Defined at 89 in sysdeps/nptl/thread_db.h.'>td_thragent_t</a> **<a href='../Y/8037.html' title='Multiple used in 16 places.'>__ta</a>);
+<a id='L305' name='L305'></a> 305 
+<a id='L306' name='L306'></a> 306 <em class='comment'>/* Free resources allocated for TA.  */</em>
+<a id='L307' name='L307'></a> 307 <strong class='reserved'>extern</strong> <a href='../S/17829.html#L59' title='Defined at 59 in sysdeps/nptl/thread_db.h.'>td_err_e</a> <a href='../S/18815.html#L25' title='Defined at 25 in nptl_db/td_ta_delete.c.'>td_ta_delete</a> (<a href='../S/17829.html#L89' title='Defined at 89 in sysdeps/nptl/thread_db.h.'>td_thragent_t</a> *<a href='../Y/8037.html' title='Multiple used in 16 places.'>__ta</a>);
+<a id='L308' name='L308'></a> 308 
+<a id='L309' name='L309'></a> 309 <em class='comment'>/* Get number of currently running threads in process associated with TA.  */</em>
+<a id='L310' name='L310'></a> 310 <strong class='reserved'>extern</strong> <a href='../S/17829.html#L59' title='Defined at 59 in sysdeps/nptl/thread_db.h.'>td_err_e</a> <a href='../S/18807.html#L22' title='Defined at 22 in nptl_db/td_ta_get_nthreads.c.'>td_ta_get_nthreads</a> (<strong class='reserved'>const</strong> <a href='../S/17829.html#L89' title='Defined at 89 in sysdeps/nptl/thread_db.h.'>td_thragent_t</a> *<a href='../Y/8037.html' title='Multiple used in 16 places.'>__ta</a>, <strong class='reserved'>int</strong> *<a href='../Y/6200.html' title='Multiple used in 2 places.'>__np</a>);
+<a id='L311' name='L311'></a> 311 
+<a id='L312' name='L312'></a> 312 <em class='comment'>/* Return process handle passed in `td_ta_new' for process associated with</em>
+<a id='L313' name='L313'></a> 313 <em class='comment'>   TA.  */</em>
+<a id='L314' name='L314'></a> 314 <strong class='reserved'>extern</strong> <a href='../S/17829.html#L59' title='Defined at 59 in sysdeps/nptl/thread_db.h.'>td_err_e</a> <a href='../S/18828.html#L23' title='Defined at 23 in nptl_db/td_ta_get_ph.c.'>td_ta_get_ph</a> (<strong class='reserved'>const</strong> <a href='../S/17829.html#L89' title='Defined at 89 in sysdeps/nptl/thread_db.h.'>td_thragent_t</a> *<a href='../Y/8037.html' title='Multiple used in 16 places.'>__ta</a>,
+<a id='L315' name='L315'></a> 315                   <strong class='reserved'>struct</strong> <a href='../Y/22918.html' title='Multiple used in 24 places.'>ps_prochandle</a> **__ph);
+<a id='L316' name='L316'></a> 316 
+<a id='L317' name='L317'></a> 317 <em class='comment'>/* Map thread library handle PT to thread debug library handle for process</em>
+<a id='L318' name='L318'></a> 318 <em class='comment'>   associated with TA and store result in *TH.  */</em>
+<a id='L319' name='L319'></a> 319 <strong class='reserved'>extern</strong> <a href='../S/17829.html#L59' title='Defined at 59 in sysdeps/nptl/thread_db.h.'>td_err_e</a> <a href='../S/18829.html#L23' title='Defined at 23 in nptl_db/td_ta_map_id2thr.c.'>td_ta_map_id2thr</a> (<strong class='reserved'>const</strong> <a href='../S/17829.html#L89' title='Defined at 89 in sysdeps/nptl/thread_db.h.'>td_thragent_t</a> *<a href='../Y/8037.html' title='Multiple used in 16 places.'>__ta</a>, <a href='../D/35174.html' title='Multiple defined in 2 places.'>pthread_t</a> __pt,
+<a id='L320' name='L320'></a> 320                   <a href='../S/17829.html#L96' title='Defined at 96 in sysdeps/nptl/thread_db.h.'>td_thrhandle_t</a> *<a href='../Y/8093.html' title='Multiple used in 37 places.'>__th</a>);
+<a id='L321' name='L321'></a> 321 
+<a id='L322' name='L322'></a> 322 <em class='comment'>/* Map process ID LWPID to thread debug library handle for process</em>
+<a id='L323' name='L323'></a> 323 <em class='comment'>   associated with TA and store result in *TH.  */</em>
+<a id='L324' name='L324'></a> 324 <strong class='reserved'>extern</strong> <a href='../S/17829.html#L59' title='Defined at 59 in sysdeps/nptl/thread_db.h.'>td_err_e</a> <a href='../S/18842.html#L172' title='Defined at 172 in nptl_db/td_ta_map_lwp2thr.c.'>td_ta_map_lwp2thr</a> (<strong class='reserved'>const</strong> <a href='../S/17829.html#L89' title='Defined at 89 in sysdeps/nptl/thread_db.h.'>td_thragent_t</a> *<a href='../Y/8037.html' title='Multiple used in 16 places.'>__ta</a>, <a href='../D/33229.html' title='Multiple defined in 2 places.'>lwpid_t</a> __lwpid,
+<a id='L325' name='L325'></a> 325                    <a href='../S/17829.html#L96' title='Defined at 96 in sysdeps/nptl/thread_db.h.'>td_thrhandle_t</a> *<a href='../Y/8093.html' title='Multiple used in 37 places.'>__th</a>);
+<a id='L326' name='L326'></a> 326 
+<a id='L327' name='L327'></a> 327 
+<a id='L328' name='L328'></a> 328 <em class='comment'>/* Call for each thread in a process associated with TA the callback function</em>
+<a id='L329' name='L329'></a> 329 <em class='comment'>   CALLBACK.  */</em>
+<a id='L330' name='L330'></a> 330 <strong class='reserved'>extern</strong> <a href='../S/17829.html#L59' title='Defined at 59 in sysdeps/nptl/thread_db.h.'>td_err_e</a> <a href='../S/18816.html#L114' title='Defined at 114 in nptl_db/td_ta_thr_iter.c.'>td_ta_thr_iter</a> (<strong class='reserved'>const</strong> <a href='../S/17829.html#L89' title='Defined at 89 in sysdeps/nptl/thread_db.h.'>td_thragent_t</a> *<a href='../Y/8037.html' title='Multiple used in 16 places.'>__ta</a>,
+<a id='L331' name='L331'></a> 331                 <a href='../S/17829.html#L247' title='Defined at 247 in sysdeps/nptl/thread_db.h.'>td_thr_iter_f</a> *<a href='../Y/3905.html' title='Multiple used in 3 places.'>__callback</a>, <strong class='reserved'>void</strong> *__cbdata_p,
+<a id='L332' name='L332'></a> 332                 <a href='../S/17829.html#L74' title='Defined at 74 in sysdeps/nptl/thread_db.h.'>td_thr_state_e</a> <a href='../Y/7587.html' title='Multiple used in 29 places.'>__state</a>, <strong class='reserved'>int</strong> __ti_pri,
+<a id='L333' name='L333'></a> 333                 <a href='../S/28.html#L7' title='Defined at 7 in signal/bits/types/sigset_t.h.'>sigset_t</a> *__ti_sigmask_p,
+<a id='L334' name='L334'></a> 334                 <strong class='reserved'>unsigned</strong> <strong class='reserved'>int</strong> __ti_user_flags);
+<a id='L335' name='L335'></a> 335 
+<a id='L336' name='L336'></a> 336 <em class='comment'>/* Call for each defined thread local data entry the callback function KI.  */</em>
+<a id='L337' name='L337'></a> 337 <strong class='reserved'>extern</strong> <a href='../S/17829.html#L59' title='Defined at 59 in sysdeps/nptl/thread_db.h.'>td_err_e</a> <a href='../S/18820.html#L24' title='Defined at 24 in nptl_db/td_ta_tsd_iter.c.'>td_ta_tsd_iter</a> (<strong class='reserved'>const</strong> <a href='../S/17829.html#L89' title='Defined at 89 in sysdeps/nptl/thread_db.h.'>td_thragent_t</a> *<a href='../Y/8037.html' title='Multiple used in 16 places.'>__ta</a>, <a href='../S/17829.html#L250' title='Defined at 250 in sysdeps/nptl/thread_db.h.'>td_key_iter_f</a> *__ki,
+<a id='L338' name='L338'></a> 338                 <strong class='reserved'>void</strong> *<a href='../Y/6445.html' title='Multiple used in 35 places.'>__p</a>);
+<a id='L339' name='L339'></a> 339 
+<a id='L340' name='L340'></a> 340 
+<a id='L341' name='L341'></a> 341 <em class='comment'>/* Get event address for EVENT.  */</em>
+<a id='L342' name='L342'></a> 342 <strong class='reserved'>extern</strong> <a href='../S/17829.html#L59' title='Defined at 59 in sysdeps/nptl/thread_db.h.'>td_err_e</a> <a href='../S/18823.html#L23' title='Defined at 23 in nptl_db/td_ta_event_addr.c.'>td_ta_event_addr</a> (<strong class='reserved'>const</strong> <a href='../S/17829.html#L89' title='Defined at 89 in sysdeps/nptl/thread_db.h.'>td_thragent_t</a> *<a href='../Y/8037.html' title='Multiple used in 16 places.'>__ta</a>,
+<a id='L343' name='L343'></a> 343                   <a href='../S/17829.html#L175' title='Defined at 175 in sysdeps/nptl/thread_db.h.'>td_event_e</a> <a href='../Y/4354.html' title='Multiple used in 7 places.'>__event</a>, <a href='../S/17829.html#L195' title='Defined at 195 in sysdeps/nptl/thread_db.h.'>td_notify_t</a> *<a href='../Y/6684.html' title='Multiple used in 80 places.'>__ptr</a>);
+<a id='L344' name='L344'></a> 344 
+<a id='L345' name='L345'></a> 345 <em class='comment'>/* Enable EVENT in global mask.  */</em>
+<a id='L346' name='L346'></a> 346 <strong class='reserved'>extern</strong> <a href='../S/17829.html#L59' title='Defined at 59 in sysdeps/nptl/thread_db.h.'>td_err_e</a> <a href='../S/18843.html#L24' title='Defined at 24 in nptl_db/td_ta_set_event.c.'>td_ta_set_event</a> (<strong class='reserved'>const</strong> <a href='../S/17829.html#L89' title='Defined at 89 in sysdeps/nptl/thread_db.h.'>td_thragent_t</a> *<a href='../Y/8037.html' title='Multiple used in 16 places.'>__ta</a>,
+<a id='L347' name='L347'></a> 347                  <a href='../S/17829.html#L118' title='Defined at 118 in sysdeps/nptl/thread_db.h.'>td_thr_events_t</a> *<a href='../Y/4354.html' title='Multiple used in 7 places.'>__event</a>);
+<a id='L348' name='L348'></a> 348 
+<a id='L349' name='L349'></a> 349 <em class='comment'>/* Disable EVENT in global mask.  */</em>
+<a id='L350' name='L350'></a> 350 <strong class='reserved'>extern</strong> <a href='../S/17829.html#L59' title='Defined at 59 in sysdeps/nptl/thread_db.h.'>td_err_e</a> <a href='../S/18836.html#L24' title='Defined at 24 in nptl_db/td_ta_clear_event.c.'>td_ta_clear_event</a> (<strong class='reserved'>const</strong> <a href='../S/17829.html#L89' title='Defined at 89 in sysdeps/nptl/thread_db.h.'>td_thragent_t</a> *<a href='../Y/8037.html' title='Multiple used in 16 places.'>__ta</a>,
+<a id='L351' name='L351'></a> 351                    <a href='../S/17829.html#L118' title='Defined at 118 in sysdeps/nptl/thread_db.h.'>td_thr_events_t</a> *<a href='../Y/4354.html' title='Multiple used in 7 places.'>__event</a>);
+<a id='L352' name='L352'></a> 352 
+<a id='L353' name='L353'></a> 353 <em class='comment'>/* Return information about last event.  */</em>
+<a id='L354' name='L354'></a> 354 <strong class='reserved'>extern</strong> <a href='../S/17829.html#L59' title='Defined at 59 in sysdeps/nptl/thread_db.h.'>td_err_e</a> <a href='../S/18813.html#L26' title='Defined at 26 in nptl_db/td_ta_event_getmsg.c.'>td_ta_event_getmsg</a> (<strong class='reserved'>const</strong> <a href='../S/17829.html#L89' title='Defined at 89 in sysdeps/nptl/thread_db.h.'>td_thragent_t</a> *<a href='../Y/8037.html' title='Multiple used in 16 places.'>__ta</a>,
+<a id='L355' name='L355'></a> 355                     <a href='../S/17829.html#L209' title='Defined at 209 in sysdeps/nptl/thread_db.h.'>td_event_msg_t</a> *<a href='../Y/5979.html' title='Multiple used in 11 places.'>__msg</a>);
+<a id='L356' name='L356'></a> 356 
+<a id='L357' name='L357'></a> 357 
+<a id='L358' name='L358'></a> 358 <em class='comment'>/* Set suggested concurrency level for process associated with TA.  */</em>
+<a id='L359' name='L359'></a> 359 <strong class='reserved'>extern</strong> <a href='../S/17829.html#L59' title='Defined at 59 in sysdeps/nptl/thread_db.h.'>td_err_e</a> <a href='../S/18826.html#L23' title='Defined at 23 in nptl_db/td_ta_setconcurrency.c.'>td_ta_setconcurrency</a> (<strong class='reserved'>const</strong> <a href='../S/17829.html#L89' title='Defined at 89 in sysdeps/nptl/thread_db.h.'>td_thragent_t</a> *<a href='../Y/8037.html' title='Multiple used in 16 places.'>__ta</a>, <strong class='reserved'>int</strong> <a href='../Y/5327.html' title='Multiple used in 16 places.'>__level</a>);
+<a id='L360' name='L360'></a> 360 
+<a id='L361' name='L361'></a> 361 
+<a id='L362' name='L362'></a> 362 <em class='comment'>/* Enable collecting statistics for process associated with TA.  */</em>
+<a id='L363' name='L363'></a> 363 <strong class='reserved'>extern</strong> <a href='../S/17829.html#L59' title='Defined at 59 in sysdeps/nptl/thread_db.h.'>td_err_e</a> <a href='../S/18825.html#L23' title='Defined at 23 in nptl_db/td_ta_enable_stats.c.'>td_ta_enable_stats</a> (<strong class='reserved'>const</strong> <a href='../S/17829.html#L89' title='Defined at 89 in sysdeps/nptl/thread_db.h.'>td_thragent_t</a> *<a href='../Y/8037.html' title='Multiple used in 16 places.'>__ta</a>, <strong class='reserved'>int</strong> __enable);
+<a id='L364' name='L364'></a> 364 
+<a id='L365' name='L365'></a> 365 <em class='comment'>/* Reset statistics.  */</em>
+<a id='L366' name='L366'></a> 366 <strong class='reserved'>extern</strong> <a href='../S/17829.html#L59' title='Defined at 59 in sysdeps/nptl/thread_db.h.'>td_err_e</a> <a href='../S/18849.html#L23' title='Defined at 23 in nptl_db/td_ta_reset_stats.c.'>td_ta_reset_stats</a> (<strong class='reserved'>const</strong> <a href='../S/17829.html#L89' title='Defined at 89 in sysdeps/nptl/thread_db.h.'>td_thragent_t</a> *<a href='../Y/8037.html' title='Multiple used in 16 places.'>__ta</a>);
+<a id='L367' name='L367'></a> 367 
+<a id='L368' name='L368'></a> 368 <em class='comment'>/* Retrieve statistics from process associated with TA.  */</em>
+<a id='L369' name='L369'></a> 369 <strong class='reserved'>extern</strong> <a href='../S/17829.html#L59' title='Defined at 59 in sysdeps/nptl/thread_db.h.'>td_err_e</a> <a href='../S/18830.html#L23' title='Defined at 23 in nptl_db/td_ta_get_stats.c.'>td_ta_get_stats</a> (<strong class='reserved'>const</strong> <a href='../S/17829.html#L89' title='Defined at 89 in sysdeps/nptl/thread_db.h.'>td_thragent_t</a> *<a href='../Y/8037.html' title='Multiple used in 16 places.'>__ta</a>,
+<a id='L370' name='L370'></a> 370                  <a href='../S/17829.html#L237' title='Defined at 237 in sysdeps/nptl/thread_db.h.'>td_ta_stats_t</a> *__statsp);
+<a id='L371' name='L371'></a> 371 
+<a id='L372' name='L372'></a> 372 
+<a id='L373' name='L373'></a> 373 <em class='comment'>/* Validate that TH is a thread handle.  */</em>
+<a id='L374' name='L374'></a> 374 <strong class='reserved'>extern</strong> <a href='../S/17829.html#L59' title='Defined at 59 in sysdeps/nptl/thread_db.h.'>td_err_e</a> <a href='../S/18809.html#L90' title='Defined at 90 in nptl_db/td_thr_validate.c.'>td_thr_validate</a> (<strong class='reserved'>const</strong> <a href='../S/17829.html#L96' title='Defined at 96 in sysdeps/nptl/thread_db.h.'>td_thrhandle_t</a> *<a href='../Y/8093.html' title='Multiple used in 37 places.'>__th</a>);
+<a id='L375' name='L375'></a> 375 
+<a id='L376' name='L376'></a> 376 <em class='comment'>/* Return information about thread TH.  */</em>
+<a id='L377' name='L377'></a> 377 <strong class='reserved'>extern</strong> <a href='../S/17829.html#L59' title='Defined at 59 in sysdeps/nptl/thread_db.h.'>td_err_e</a> <a href='../S/18846.html#L26' title='Defined at 26 in nptl_db/td_thr_get_info.c.'>td_thr_get_info</a> (<strong class='reserved'>const</strong> <a href='../S/17829.html#L96' title='Defined at 96 in sysdeps/nptl/thread_db.h.'>td_thrhandle_t</a> *<a href='../Y/8093.html' title='Multiple used in 37 places.'>__th</a>,
+<a id='L378' name='L378'></a> 378                  <a href='../S/17829.html#L288' title='Defined at 288 in sysdeps/nptl/thread_db.h.'>td_thrinfo_t</a> *<a href='../Y/5142.html' title='Multiple used in 2 places.'>__infop</a>);
+<a id='L379' name='L379'></a> 379 
+<a id='L380' name='L380'></a> 380 <em class='comment'>/* Retrieve floating-point register contents of process running thread TH.  */</em>
+<a id='L381' name='L381'></a> 381 <strong class='reserved'>extern</strong> <a href='../S/17829.html#L59' title='Defined at 59 in sysdeps/nptl/thread_db.h.'>td_err_e</a> <a href='../S/18844.html#L23' title='Defined at 23 in nptl_db/td_thr_getfpregs.c.'>td_thr_getfpregs</a> (<strong class='reserved'>const</strong> <a href='../S/17829.html#L96' title='Defined at 96 in sysdeps/nptl/thread_db.h.'>td_thrhandle_t</a> *<a href='../Y/8093.html' title='Multiple used in 37 places.'>__th</a>,
+<a id='L382' name='L382'></a> 382                   <a href='../D/34883.html' title='Multiple defined in 2 places.'>prfpregset_t</a> *__regset);
+<a id='L383' name='L383'></a> 383 
+<a id='L384' name='L384'></a> 384 <em class='comment'>/* Retrieve general register contents of process running thread TH.  */</em>
+<a id='L385' name='L385'></a> 385 <strong class='reserved'>extern</strong> <a href='../S/17829.html#L59' title='Defined at 59 in sysdeps/nptl/thread_db.h.'>td_err_e</a> <a href='../S/18827.html#L23' title='Defined at 23 in nptl_db/td_thr_getgregs.c.'>td_thr_getgregs</a> (<strong class='reserved'>const</strong> <a href='../S/17829.html#L96' title='Defined at 96 in sysdeps/nptl/thread_db.h.'>td_thrhandle_t</a> *<a href='../Y/8093.html' title='Multiple used in 37 places.'>__th</a>,
+<a id='L386' name='L386'></a> 386                  <a href='../D/34885.html' title='Multiple defined in 2 places.'>prgregset_t</a> <a href='../Y/4806.html' title='Multiple used in 30 places.'>__gregs</a>);
+<a id='L387' name='L387'></a> 387 
+<a id='L388' name='L388'></a> 388 <em class='comment'>/* Retrieve extended register contents of process running thread TH.  */</em>
+<a id='L389' name='L389'></a> 389 <strong class='reserved'>extern</strong> <a href='../S/17829.html#L59' title='Defined at 59 in sysdeps/nptl/thread_db.h.'>td_err_e</a> <a href='../S/18817.html#L23' title='Defined at 23 in nptl_db/td_thr_getxregs.c.'>td_thr_getxregs</a> (<strong class='reserved'>const</strong> <a href='../S/17829.html#L96' title='Defined at 96 in sysdeps/nptl/thread_db.h.'>td_thrhandle_t</a> *<a href='../Y/8093.html' title='Multiple used in 37 places.'>__th</a>, <strong class='reserved'>void</strong> *__xregs);
+<a id='L390' name='L390'></a> 390 
+<a id='L391' name='L391'></a> 391 <em class='comment'>/* Get size of extended register set of process running thread TH.  */</em>
+<a id='L392' name='L392'></a> 392 <strong class='reserved'>extern</strong> <a href='../S/17829.html#L59' title='Defined at 59 in sysdeps/nptl/thread_db.h.'>td_err_e</a> <a href='../S/18824.html#L23' title='Defined at 23 in nptl_db/td_thr_getxregsize.c.'>td_thr_getxregsize</a> (<strong class='reserved'>const</strong> <a href='../S/17829.html#L96' title='Defined at 96 in sysdeps/nptl/thread_db.h.'>td_thrhandle_t</a> *<a href='../Y/8093.html' title='Multiple used in 37 places.'>__th</a>, <strong class='reserved'>int</strong> *<a href='../Y/7484.html' title='Multiple used in 3 places.'>__sizep</a>);
+<a id='L393' name='L393'></a> 393 
+<a id='L394' name='L394'></a> 394 <em class='comment'>/* Set floating-point register contents of process running thread TH.  */</em>
+<a id='L395' name='L395'></a> 395 <strong class='reserved'>extern</strong> <a href='../S/17829.html#L59' title='Defined at 59 in sysdeps/nptl/thread_db.h.'>td_err_e</a> <a href='../S/18838.html#L23' title='Defined at 23 in nptl_db/td_thr_setfpregs.c.'>td_thr_setfpregs</a> (<strong class='reserved'>const</strong> <a href='../S/17829.html#L96' title='Defined at 96 in sysdeps/nptl/thread_db.h.'>td_thrhandle_t</a> *<a href='../Y/8093.html' title='Multiple used in 37 places.'>__th</a>,
+<a id='L396' name='L396'></a> 396                   <strong class='reserved'>const</strong> <a href='../D/34883.html' title='Multiple defined in 2 places.'>prfpregset_t</a> *<a href='../Y/4561.html' title='Multiple used in 55 places.'>__fpregs</a>);
+<a id='L397' name='L397'></a> 397 
+<a id='L398' name='L398'></a> 398 <em class='comment'>/* Set general register contents of process running thread TH.  */</em>
+<a id='L399' name='L399'></a> 399 <strong class='reserved'>extern</strong> <a href='../S/17829.html#L59' title='Defined at 59 in sysdeps/nptl/thread_db.h.'>td_err_e</a> <a href='../S/18832.html#L23' title='Defined at 23 in nptl_db/td_thr_setgregs.c.'>td_thr_setgregs</a> (<strong class='reserved'>const</strong> <a href='../S/17829.html#L96' title='Defined at 96 in sysdeps/nptl/thread_db.h.'>td_thrhandle_t</a> *<a href='../Y/8093.html' title='Multiple used in 37 places.'>__th</a>,
+<a id='L400' name='L400'></a> 400                  <a href='../D/34885.html' title='Multiple defined in 2 places.'>prgregset_t</a> <a href='../Y/4806.html' title='Multiple used in 30 places.'>__gregs</a>);
+<a id='L401' name='L401'></a> 401 
+<a id='L402' name='L402'></a> 402 <em class='comment'>/* Set extended register contents of process running thread TH.  */</em>
+<a id='L403' name='L403'></a> 403 <strong class='reserved'>extern</strong> <a href='../S/17829.html#L59' title='Defined at 59 in sysdeps/nptl/thread_db.h.'>td_err_e</a> <a href='../S/18806.html#L23' title='Defined at 23 in nptl_db/td_thr_setxregs.c.'>td_thr_setxregs</a> (<strong class='reserved'>const</strong> <a href='../S/17829.html#L96' title='Defined at 96 in sysdeps/nptl/thread_db.h.'>td_thrhandle_t</a> *<a href='../Y/8093.html' title='Multiple used in 37 places.'>__th</a>,
+<a id='L404' name='L404'></a> 404                  <strong class='reserved'>const</strong> <strong class='reserved'>void</strong> *<a href='../Y/3457.html' title='Multiple used in 98 places.'>__addr</a>);
+<a id='L405' name='L405'></a> 405 
+<a id='L406' name='L406'></a> 406 
+<a id='L407' name='L407'></a> 407 <em class='comment'>/* Get address of the given module's TLS storage area for the given thread.  */</em>
+<a id='L408' name='L408'></a> 408 <strong class='reserved'>extern</strong> <a href='../S/17829.html#L59' title='Defined at 59 in sysdeps/nptl/thread_db.h.'>td_err_e</a> <a href='../S/18814.html#L121' title='Defined at 121 in nptl_db/td_thr_tlsbase.c.'>td_thr_tlsbase</a> (<strong class='reserved'>const</strong> <a href='../S/17829.html#L96' title='Defined at 96 in sysdeps/nptl/thread_db.h.'>td_thrhandle_t</a> *<a href='../Y/8093.html' title='Multiple used in 37 places.'>__th</a>,
+<a id='L409' name='L409'></a> 409                 <strong class='reserved'>unsigned</strong> <strong class='reserved'>long</strong> <strong class='reserved'>int</strong> __modid,
+<a id='L410' name='L410'></a> 410                 <a href='../D/35063.html' title='Multiple defined in 2 places.'>psaddr_t</a> *<a href='../Y/3675.html' title='Multiple used in 49 places.'>__base</a>);
+<a id='L411' name='L411'></a> 411 
+<a id='L412' name='L412'></a> 412 <em class='comment'>/* Get address of thread local variable.  */</em>
+<a id='L413' name='L413'></a> 413 <strong class='reserved'>extern</strong> <a href='../S/17829.html#L59' title='Defined at 59 in sysdeps/nptl/thread_db.h.'>td_err_e</a> <a href='../S/18841.html#L23' title='Defined at 23 in nptl_db/td_thr_tls_get_addr.c.'>td_thr_tls_get_addr</a> (<strong class='reserved'>const</strong> <a href='../S/17829.html#L96' title='Defined at 96 in sysdeps/nptl/thread_db.h.'>td_thrhandle_t</a> *<a href='../Y/8093.html' title='Multiple used in 37 places.'>__th</a>,
+<a id='L414' name='L414'></a> 414                      <a href='../D/35063.html' title='Multiple defined in 2 places.'>psaddr_t</a> __map_address, <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/6299.html' title='Multiple used in 92 places.'>__offset</a>,
+<a id='L415' name='L415'></a> 415                      <a href='../D/35063.html' title='Multiple defined in 2 places.'>psaddr_t</a> *<a href='../Y/3463.html' title='Multiple used in 6 places.'>__address</a>);
+<a id='L416' name='L416'></a> 416 
+<a id='L417' name='L417'></a> 417 
+<a id='L418' name='L418'></a> 418 <em class='comment'>/* Enable reporting for EVENT for thread TH.  */</em>
+<a id='L419' name='L419'></a> 419 <strong class='reserved'>extern</strong> <a href='../S/17829.html#L59' title='Defined at 59 in sysdeps/nptl/thread_db.h.'>td_err_e</a> <a href='../S/18819.html#L23' title='Defined at 23 in nptl_db/td_thr_event_enable.c.'>td_thr_event_enable</a> (<strong class='reserved'>const</strong> <a href='../S/17829.html#L96' title='Defined at 96 in sysdeps/nptl/thread_db.h.'>td_thrhandle_t</a> *<a href='../Y/8093.html' title='Multiple used in 37 places.'>__th</a>, <strong class='reserved'>int</strong> <a href='../Y/4354.html' title='Multiple used in 7 places.'>__event</a>);
+<a id='L420' name='L420'></a> 420 
+<a id='L421' name='L421'></a> 421 <em class='comment'>/* Enable EVENT for thread TH.  */</em>
+<a id='L422' name='L422'></a> 422 <strong class='reserved'>extern</strong> <a href='../S/17829.html#L59' title='Defined at 59 in sysdeps/nptl/thread_db.h.'>td_err_e</a> <a href='../S/18808.html#L26' title='Defined at 26 in nptl_db/td_thr_set_event.c.'>td_thr_set_event</a> (<strong class='reserved'>const</strong> <a href='../S/17829.html#L96' title='Defined at 96 in sysdeps/nptl/thread_db.h.'>td_thrhandle_t</a> *<a href='../Y/8093.html' title='Multiple used in 37 places.'>__th</a>,
+<a id='L423' name='L423'></a> 423                   <a href='../S/17829.html#L118' title='Defined at 118 in sysdeps/nptl/thread_db.h.'>td_thr_events_t</a> *<a href='../Y/4354.html' title='Multiple used in 7 places.'>__event</a>);
+<a id='L424' name='L424'></a> 424 
+<a id='L425' name='L425'></a> 425 <em class='comment'>/* Disable EVENT for thread TH.  */</em>
+<a id='L426' name='L426'></a> 426 <strong class='reserved'>extern</strong> <a href='../S/17829.html#L59' title='Defined at 59 in sysdeps/nptl/thread_db.h.'>td_err_e</a> <a href='../S/18839.html#L26' title='Defined at 26 in nptl_db/td_thr_clear_event.c.'>td_thr_clear_event</a> (<strong class='reserved'>const</strong> <a href='../S/17829.html#L96' title='Defined at 96 in sysdeps/nptl/thread_db.h.'>td_thrhandle_t</a> *<a href='../Y/8093.html' title='Multiple used in 37 places.'>__th</a>,
+<a id='L427' name='L427'></a> 427                     <a href='../S/17829.html#L118' title='Defined at 118 in sysdeps/nptl/thread_db.h.'>td_thr_events_t</a> *<a href='../Y/4354.html' title='Multiple used in 7 places.'>__event</a>);
+<a id='L428' name='L428'></a> 428 
+<a id='L429' name='L429'></a> 429 <em class='comment'>/* Get event message for thread TH.  */</em>
+<a id='L430' name='L430'></a> 430 <strong class='reserved'>extern</strong> <a href='../S/17829.html#L59' title='Defined at 59 in sysdeps/nptl/thread_db.h.'>td_err_e</a> <a href='../S/18853.html#L24' title='Defined at 24 in nptl_db/td_thr_event_getmsg.c.'>td_thr_event_getmsg</a> (<strong class='reserved'>const</strong> <a href='../S/17829.html#L96' title='Defined at 96 in sysdeps/nptl/thread_db.h.'>td_thrhandle_t</a> *<a href='../Y/8093.html' title='Multiple used in 37 places.'>__th</a>,
+<a id='L431' name='L431'></a> 431                      <a href='../S/17829.html#L209' title='Defined at 209 in sysdeps/nptl/thread_db.h.'>td_event_msg_t</a> *<a href='../Y/5979.html' title='Multiple used in 11 places.'>__msg</a>);
+<a id='L432' name='L432'></a> 432 
+<a id='L433' name='L433'></a> 433 
+<a id='L434' name='L434'></a> 434 <em class='comment'>/* Set priority of thread TH.  */</em>
+<a id='L435' name='L435'></a> 435 <strong class='reserved'>extern</strong> <a href='../S/17829.html#L59' title='Defined at 59 in sysdeps/nptl/thread_db.h.'>td_err_e</a> <a href='../S/18837.html#L23' title='Defined at 23 in nptl_db/td_thr_setprio.c.'>td_thr_setprio</a> (<strong class='reserved'>const</strong> <a href='../S/17829.html#L96' title='Defined at 96 in sysdeps/nptl/thread_db.h.'>td_thrhandle_t</a> *<a href='../Y/8093.html' title='Multiple used in 37 places.'>__th</a>, <strong class='reserved'>int</strong> <a href='../Y/6572.html' title='Multiple used in 6 places.'>__prio</a>);
+<a id='L436' name='L436'></a> 436 
+<a id='L437' name='L437'></a> 437 
+<a id='L438' name='L438'></a> 438 <em class='comment'>/* Set pending signals for thread TH.  */</em>
+<a id='L439' name='L439'></a> 439 <strong class='reserved'>extern</strong> <a href='../S/17829.html#L59' title='Defined at 59 in sysdeps/nptl/thread_db.h.'>td_err_e</a> <a href='../S/18818.html#L23' title='Defined at 23 in nptl_db/td_thr_setsigpending.c.'>td_thr_setsigpending</a> (<strong class='reserved'>const</strong> <a href='../S/17829.html#L96' title='Defined at 96 in sysdeps/nptl/thread_db.h.'>td_thrhandle_t</a> *<a href='../Y/8093.html' title='Multiple used in 37 places.'>__th</a>,
+<a id='L440' name='L440'></a> 440                       <strong class='reserved'>unsigned</strong> <strong class='reserved'>char</strong> <a href='../Y/6016.html' title='Multiple used in 299 places.'>__n</a>, <strong class='reserved'>const</strong> <a href='../S/28.html#L7' title='Defined at 7 in signal/bits/types/sigset_t.h.'>sigset_t</a> *<a href='../Y/7560.html' title='Multiple used in 20 places.'>__ss</a>);
+<a id='L441' name='L441'></a> 441 
+<a id='L442' name='L442'></a> 442 <em class='comment'>/* Set signal mask for thread TH.  */</em>
+<a id='L443' name='L443'></a> 443 <strong class='reserved'>extern</strong> <a href='../S/17829.html#L59' title='Defined at 59 in sysdeps/nptl/thread_db.h.'>td_err_e</a> <a href='../S/18848.html#L23' title='Defined at 23 in nptl_db/td_thr_sigsetmask.c.'>td_thr_sigsetmask</a> (<strong class='reserved'>const</strong> <a href='../S/17829.html#L96' title='Defined at 96 in sysdeps/nptl/thread_db.h.'>td_thrhandle_t</a> *<a href='../Y/8093.html' title='Multiple used in 37 places.'>__th</a>,
+<a id='L444' name='L444'></a> 444                    <strong class='reserved'>const</strong> <a href='../S/28.html#L7' title='Defined at 7 in signal/bits/types/sigset_t.h.'>sigset_t</a> *<a href='../Y/7560.html' title='Multiple used in 20 places.'>__ss</a>);
+<a id='L445' name='L445'></a> 445 
+<a id='L446' name='L446'></a> 446 
+<a id='L447' name='L447'></a> 447 <em class='comment'>/* Return thread local data associated with key TK in thread TH.  */</em>
+<a id='L448' name='L448'></a> 448 <strong class='reserved'>extern</strong> <a href='../S/17829.html#L59' title='Defined at 59 in sysdeps/nptl/thread_db.h.'>td_err_e</a> <a href='../S/18840.html#L24' title='Defined at 24 in nptl_db/td_thr_tsd.c.'>td_thr_tsd</a> (<strong class='reserved'>const</strong> <a href='../S/17829.html#L96' title='Defined at 96 in sysdeps/nptl/thread_db.h.'>td_thrhandle_t</a> *<a href='../Y/8093.html' title='Multiple used in 37 places.'>__th</a>,
+<a id='L449' name='L449'></a> 449                 <strong class='reserved'>const</strong> <a href='../S/17829.html#L243' title='Defined at 243 in sysdeps/nptl/thread_db.h.'>thread_key_t</a> __tk, <strong class='reserved'>void</strong> **<a href='../Y/4155.html' title='Multiple used in 633 places.'>__data</a>);
+<a id='L450' name='L450'></a> 450 
+<a id='L451' name='L451'></a> 451 
+<a id='L452' name='L452'></a> 452 <em class='comment'>/* Suspend execution of thread TH.  */</em>
+<a id='L453' name='L453'></a> 453 <strong class='reserved'>extern</strong> <a href='../S/17829.html#L59' title='Defined at 59 in sysdeps/nptl/thread_db.h.'>td_err_e</a> <a href='../S/18833.html#L23' title='Defined at 23 in nptl_db/td_thr_dbsuspend.c.'>td_thr_dbsuspend</a> (<strong class='reserved'>const</strong> <a href='../S/17829.html#L96' title='Defined at 96 in sysdeps/nptl/thread_db.h.'>td_thrhandle_t</a> *<a href='../Y/8093.html' title='Multiple used in 37 places.'>__th</a>);
+<a id='L454' name='L454'></a> 454 
+<a id='L455' name='L455'></a> 455 <em class='comment'>/* Resume execution of thread TH.  */</em>
+<a id='L456' name='L456'></a> 456 <strong class='reserved'>extern</strong> <a href='../S/17829.html#L59' title='Defined at 59 in sysdeps/nptl/thread_db.h.'>td_err_e</a> <a href='../S/18854.html#L23' title='Defined at 23 in nptl_db/td_thr_dbresume.c.'>td_thr_dbresume</a> (<strong class='reserved'>const</strong> <a href='../S/17829.html#L96' title='Defined at 96 in sysdeps/nptl/thread_db.h.'>td_thrhandle_t</a> *<a href='../Y/8093.html' title='Multiple used in 37 places.'>__th</a>);
+<a id='L457' name='L457'></a> 457 
+<a id='L458' name='L458'></a> 458 <em class='sharp'>#endif</em>  <em class='comment'>/* thread_db.h */</em>
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;][^][v]<a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

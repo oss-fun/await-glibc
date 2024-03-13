@@ -1,0 +1,182 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>sysdeps/unix/sysv/linux/hppa/setcontext.S</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18977.html'>sysdeps</a>/<a href='../files/19246.html'>unix</a>/<a href='../files/19257.html'>sysv</a>/<a href='../files/19258.html'>linux</a>/<a href='../files/19282.html'>hppa</a>/setcontext.S</h2>
+<em class='comment'>/* [&lt;][&gt;][^][v][top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* Install given context.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   Copyright (C) 2008-2022 Free Software Foundation, Inc.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'></em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'></em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'></em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   License along with the GNU C Library.  If not, see</em>
+<a id='L17' name='L17'></a>  17 <em class='comment'>   &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L18' name='L18'></a>  18 
+<a id='L19' name='L19'></a>  19 <em class='sharp'>#include</em> &lt;<a href='../I/5967.html'>sysdep.h</a>&gt;
+<a id='L20' name='L20'></a>  20 <em class='sharp'>#include</em> &lt;<a href='18012.html'>libc-symbols.h</a>&gt;
+<a id='L21' name='L21'></a>  21 
+<a id='L22' name='L22'></a>  22 <em class='sharp'>#include</em> "<a href='../I/12472.html'>ucontext_i.h</a>"
+<a id='L23' name='L23'></a>  23 
+<a id='L24' name='L24'></a>  24 
+<a id='L25' name='L25'></a>  25 <a href='../D/3651.html' title='Multiple defined in 54 places.'>ENTRY</a>(<a href='../R/15904.html' title='Multiple referred from 6 places.'>__setcontext</a>)
+<a id='L26' name='L26'></a>  26     <em class='comment'>/* Prologue */</em>
+<a id='L27' name='L27'></a>  27     stw %r2, -20(%sp)
+<a id='L28' name='L28'></a>  28     .cfi_offset 2, -20
+<a id='L29' name='L29'></a>  29     stwm    %r3, 64(%sp)
+<a id='L30' name='L30'></a>  30     .cfi_def_cfa_offset -64
+<a id='L31' name='L31'></a>  31     .cfi_offset 3, 0
+<a id='L32' name='L32'></a>  32 <em class='sharp'>#ifdef</em> <a href='../Y/1408.html' title='Multiple used in 370 places.'>PIC</a>
+<a id='L33' name='L33'></a>  33     stw %r19, -32(%sp)
+<a id='L34' name='L34'></a>  34     .cfi_offset 19, 32
+<a id='L35' name='L35'></a>  35 <em class='sharp'>#endif</em>
+<a id='L36' name='L36'></a>  36 
+<a id='L37' name='L37'></a>  37     <em class='comment'>/* Save ucp.  */</em>
+<a id='L38' name='L38'></a>  38     copy    %r26, %r3
+<a id='L39' name='L39'></a>  39 
+<a id='L40' name='L40'></a>  40 .Lagain:
+<a id='L41' name='L41'></a>  41     <em class='comment'>/* Set the current signal mask.  */</em>
+<a id='L42' name='L42'></a>  42     <em class='comment'>/* sigprocmask(SIG_BLOCK, &amp;ucp-&gt;uc_sigmask, NULL);  */</em>
+<a id='L43' name='L43'></a>  43     copy    %r0, %r24
+<a id='L44' name='L44'></a>  44     ldo oSIGMASK(%r3), %r25
+<a id='L45' name='L45'></a>  45     bl  __sigprocmask, %r2
+<a id='L46' name='L46'></a>  46     ldi SIG_SETMASK, %r26
+<a id='L47' name='L47'></a>  47 
+<a id='L48' name='L48'></a>  48     comib,&lt;&gt;,n 0,%ret0,.Lerror
+<a id='L49' name='L49'></a>  49 
+<a id='L50' name='L50'></a>  50     <em class='comment'>/* Save %sp, %dp.  */</em>
+<a id='L51' name='L51'></a>  51     copy    %sp, %r4
+<a id='L52' name='L52'></a>  52     copy    %dp, %r5
+<a id='L53' name='L53'></a>  53     copy    %r19, %r6
+<a id='L54' name='L54'></a>  54 
+<a id='L55' name='L55'></a>  55     <em class='comment'>/* Get the registers.  */</em>
+<a id='L56' name='L56'></a>  56     ldw oR1(%r3), %r1
+<a id='L57' name='L57'></a>  57     ldw oR2(%r3), %r2
+<a id='L58' name='L58'></a>  58     <em class='comment'>/* ldw  oR3(%r3), %r3 - used for ucp pointer.   */</em>
+<a id='L59' name='L59'></a>  59     <em class='comment'>/* ldw  oR4(%r3), %r4 - used for original %sp.  */</em>
+<a id='L60' name='L60'></a>  60     <em class='comment'>/* ldw  oR5(%r3), %r5 - used for %dp / %r27.    */</em>
+<a id='L61' name='L61'></a>  61     <em class='comment'>/* ldw  oR6(%r3), %r6 - used for %r19.      */</em>
+<a id='L62' name='L62'></a>  62     ldw oR7(%r3), %r7
+<a id='L63' name='L63'></a>  63     ldw oR8(%r3), %r8
+<a id='L64' name='L64'></a>  64     ldw oR9(%r3), %r9
+<a id='L65' name='L65'></a>  65     ldw oR10(%r3), %r10
+<a id='L66' name='L66'></a>  66     ldw oR11(%r3), %r11
+<a id='L67' name='L67'></a>  67     ldw oR12(%r3), %r12
+<a id='L68' name='L68'></a>  68     ldw oR13(%r3), %r13
+<a id='L69' name='L69'></a>  69     ldw oR14(%r3), %r14
+<a id='L70' name='L70'></a>  70     ldw oR15(%r3), %r15
+<a id='L71' name='L71'></a>  71     ldw oR16(%r3), %r16
+<a id='L72' name='L72'></a>  72     ldw oR17(%r3), %r17
+<a id='L73' name='L73'></a>  73     ldw oR18(%r3), %r18
+<a id='L74' name='L74'></a>  74     ldw oR19(%r3), %r19
+<a id='L75' name='L75'></a>  75     ldw oR20(%r3), %r20
+<a id='L76' name='L76'></a>  76     ldw oR21(%r3), %r21
+<a id='L77' name='L77'></a>  77     <em class='comment'>/* ldw  oR22(%r3), %r22 - dyncall arg.  */</em>
+<a id='L78' name='L78'></a>  78     ldw oR23(%r3), %r23
+<a id='L79' name='L79'></a>  79     ldw oR24(%r3), %r24
+<a id='L80' name='L80'></a>  80     ldw oR25(%r3), %r25
+<a id='L81' name='L81'></a>  81     ldw oR26(%r3), %r26
+<a id='L82' name='L82'></a>  82     ldw oR27(%r3), %r27
+<a id='L83' name='L83'></a>  83     ldw oR28(%r3), %r28
+<a id='L84' name='L84'></a>  84     ldw oR29(%r3), %r29
+<a id='L85' name='L85'></a>  85     ldw oR30(%r3), %sp
+<a id='L86' name='L86'></a>  86     <em class='comment'>/* ldw  oR31(%r3), %r31 - dyncall scratch register */</em>
+<a id='L87' name='L87'></a>  87 
+<a id='L88' name='L88'></a>  88     <em class='comment'>/* Restore floating-point registers.  */</em>
+<a id='L89' name='L89'></a>  89     ldo  oFPREGS31(%r3), %r22
+<a id='L90' name='L90'></a>  90     fldds     0(%r22), %fr31
+<a id='L91' name='L91'></a>  91     fldds,mb -8(%r22), %fr30
+<a id='L92' name='L92'></a>  92     fldds,mb -8(%r22), %fr29
+<a id='L93' name='L93'></a>  93     fldds,mb -8(%r22), %fr28
+<a id='L94' name='L94'></a>  94     fldds,mb -8(%r22), %fr27
+<a id='L95' name='L95'></a>  95     fldds,mb -8(%r22), %fr26
+<a id='L96' name='L96'></a>  96     fldds,mb -8(%r22), %fr25
+<a id='L97' name='L97'></a>  97     fldds,mb -8(%r22), %fr24
+<a id='L98' name='L98'></a>  98     fldds,mb -8(%r22), %fr23
+<a id='L99' name='L99'></a>  99     fldds,mb -8(%r22), %fr22
+<a id='L100' name='L100'></a> 100     fldds,mb -8(%r22), %fr21
+<a id='L101' name='L101'></a> 101     fldds,mb -8(%r22), %fr20
+<a id='L102' name='L102'></a> 102     fldds,mb -8(%r22), %fr19
+<a id='L103' name='L103'></a> 103     fldds,mb -8(%r22), %fr18
+<a id='L104' name='L104'></a> 104     fldds,mb -8(%r22), %fr17
+<a id='L105' name='L105'></a> 105     fldds,mb -8(%r22), %fr16
+<a id='L106' name='L106'></a> 106     fldds,mb -8(%r22), %fr15
+<a id='L107' name='L107'></a> 107     fldds,mb -8(%r22), %fr14
+<a id='L108' name='L108'></a> 108     fldds,mb -8(%r22), %fr13
+<a id='L109' name='L109'></a> 109     fldds,mb -8(%r22), %fr12
+<a id='L110' name='L110'></a> 110     fldds,mb -8(%r22), %fr11
+<a id='L111' name='L111'></a> 111     fldds,mb -8(%r22), %fr10
+<a id='L112' name='L112'></a> 112     fldds,mb -8(%r22), %fr9
+<a id='L113' name='L113'></a> 113     fldds,mb -8(%r22), %fr8
+<a id='L114' name='L114'></a> 114     fldds,mb -8(%r22), %fr7
+<a id='L115' name='L115'></a> 115     fldds,mb -8(%r22), %fr6
+<a id='L116' name='L116'></a> 116     fldds,mb -8(%r22), %fr5
+<a id='L117' name='L117'></a> 117     fldds,mb -8(%r22), %fr4
+<a id='L118' name='L118'></a> 118     fldds,mb -8(%r22), %fr3
+<a id='L119' name='L119'></a> 119     fldds,mb -8(%r22), %fr2
+<a id='L120' name='L120'></a> 120     fldds,mb -8(%r22), %fr1
+<a id='L121' name='L121'></a> 121     fldds,mb -8(%r22), %fr0
+<a id='L122' name='L122'></a> 122 
+<a id='L123' name='L123'></a> 123     <em class='comment'>/* Do not load oSS_SP into %sp. The value of oSS_SP indicates</em>
+<a id='L124' name='L124'></a> 124 <em class='comment'>       the start of the user allocated stack, but not the sp that</em>
+<a id='L125' name='L125'></a> 125 <em class='comment'>       should be used by the new context. In fact makecontext</em>
+<a id='L126' name='L126'></a> 126 <em class='comment'>       will create a frame, and adjust sp as required. We do not</em>
+<a id='L127' name='L127'></a> 127 <em class='comment'>       support calling getcontext and modifying ss_sp without</em>
+<a id='L128' name='L128'></a> 128 <em class='comment'>       a call to makecontext to synchronize ss_sp into the machine</em>
+<a id='L129' name='L129'></a> 129 <em class='comment'>       context.  */</em>
+<a id='L130' name='L130'></a> 130 
+<a id='L131' name='L131'></a> 131     <em class='comment'>/* Call external function.  */</em>
+<a id='L132' name='L132'></a> 132     copy    %r2, %r22
+<a id='L133' name='L133'></a> 133     bl  $$dyncall, %r31
+<a id='L134' name='L134'></a> 134     copy    %r31, %r2
+<a id='L135' name='L135'></a> 135 
+<a id='L136' name='L136'></a> 136     <em class='comment'>/* We return here. Get new ucp in %r3, reload %sp.  */</em>
+<a id='L137' name='L137'></a> 137     ldw oUC_LINK(%r3), %r3
+<a id='L138' name='L138'></a> 138     copy    %r4, %sp
+<a id='L139' name='L139'></a> 139     copy    %r5, %dp
+<a id='L140' name='L140'></a> 140     copy    %r6, %r19
+<a id='L141' name='L141'></a> 141 
+<a id='L142' name='L142'></a> 142     <em class='comment'>/* Continue until ucp == NULL.  */</em>
+<a id='L143' name='L143'></a> 143     comib,&lt;&gt; 0,%r3,.Lagain
+<a id='L144' name='L144'></a> 144     nop
+<a id='L145' name='L145'></a> 145 
+<a id='L146' name='L146'></a> 146     <em class='comment'>/* No further context available. Exit now.  */</em>
+<a id='L147' name='L147'></a> 147     bl  HIDDEN_JUMPTARGET(exit), %r2
+<a id='L148' name='L148'></a> 148     ldi 0, %r26
+<a id='L149' name='L149'></a> 149 
+<a id='L150' name='L150'></a> 150 
+<a id='L151' name='L151'></a> 151 .Lerror:
+<a id='L152' name='L152'></a> 152     <em class='comment'>/* Epilogue */</em>
+<a id='L153' name='L153'></a> 153     ldw -84(%r30), %r2
+<a id='L154' name='L154'></a> 154 <em class='sharp'>#ifdef</em> <a href='../Y/1408.html' title='Multiple used in 370 places.'>PIC</a>
+<a id='L155' name='L155'></a> 155     ldw -32(%r30), %r19
+<a id='L156' name='L156'></a> 156 <em class='sharp'>#endif</em>
+<a id='L157' name='L157'></a> 157     bv  %r0(%r2)
+<a id='L158' name='L158'></a> 158     ldwm    -64(%r30), %r3
+<a id='L159' name='L159'></a> 159 L(pseudo_end):
+<a id='L160' name='L160'></a> 160 PSEUDO_END(__setcontext)
+<a id='L161' name='L161'></a> 161 
+<a id='L162' name='L162'></a> 162 weak_alias(__setcontext, setcontext)
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;][^][v]<a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

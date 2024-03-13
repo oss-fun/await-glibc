@@ -1,0 +1,952 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>sysdeps/x86_64/fpu/multiarch/svml_s_erfcf16_core_avx512.S</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18977.html'>sysdeps</a>/<a href='../files/19391.html'>x86_64</a>/<a href='../files/19392.html'>fpu</a>/<a href='../files/19393.html'>multiarch</a>/svml_s_erfcf16_core_avx512.S</h2>
+<em class='comment'>/* [&lt;][&gt;][^][v][top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* Function erfcf vectorized with AVX-512.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   Copyright (C) 2021-2022 Free Software Foundation, Inc.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'></em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'></em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'></em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   License along with the GNU C Library; if not, see</em>
+<a id='L17' name='L17'></a>  17 <em class='comment'>   https://www.gnu.org/licenses/.  */</em>
+<a id='L18' name='L18'></a>  18 
+<a id='L19' name='L19'></a>  19 <em class='comment'>/*</em>
+<a id='L20' name='L20'></a>  20 <em class='comment'> * ALGORITHM DESCRIPTION:</em>
+<a id='L21' name='L21'></a>  21 <em class='comment'> *</em>
+<a id='L22' name='L22'></a>  22 <em class='comment'> *   Approximation formula:</em>
+<a id='L23' name='L23'></a>  23 <em class='comment'> *   erfc(x) ~ erfc(x0) - 2/sqrt(pi)*exp(-x0^2)*D * [ 1 + (x0*D)*p1(x0*D) + D^2 * p3(x0*D) ]</em>
+<a id='L24' name='L24'></a>  24 <em class='comment'> *     D = x - x0</em>
+<a id='L25' name='L25'></a>  25 <em class='comment'> *     erfc(x0) and 2/sqrt(pi)*exp(-x0^2)/(2*x0) are tabulated</em>
+<a id='L26' name='L26'></a>  26 <em class='comment'> *</em>
+<a id='L27' name='L27'></a>  27 <em class='comment'> *</em>
+<a id='L28' name='L28'></a>  28 <em class='comment'> */</em>
+<a id='L29' name='L29'></a>  29 
+<a id='L30' name='L30'></a>  30 <em class='comment'>/* Offsets for data table __svml_serfc_data_internal</em>
+<a id='L31' name='L31'></a>  31 <em class='comment'> */</em>
+<a id='L32' name='L32'></a>  32 <em class='sharp'>#define</em> _erfc_tbl                       0
+<a id='L33' name='L33'></a>  33 <em class='sharp'>#define</em> _AbsMask                        5184
+<a id='L34' name='L34'></a>  34 <em class='sharp'>#define</em> _MaxThreshold                   5248
+<a id='L35' name='L35'></a>  35 <em class='sharp'>#define</em> _SgnMask                        5312
+<a id='L36' name='L36'></a>  36 <em class='sharp'>#define</em> _One                            5376
+<a id='L37' name='L37'></a>  37 <em class='sharp'>#define</em> _SRound                         5440
+<a id='L38' name='L38'></a>  38 <em class='sharp'>#define</em> _TwoM48                         5504
+<a id='L39' name='L39'></a>  39 <em class='sharp'>#define</em> _poly1_0                        5568
+<a id='L40' name='L40'></a>  40 <em class='sharp'>#define</em> _poly1_1                        5632
+<a id='L41' name='L41'></a>  41 <em class='sharp'>#define</em> _poly3_0                        5696
+<a id='L42' name='L42'></a>  42 <em class='sharp'>#define</em> _poly3_1                        5760
+<a id='L43' name='L43'></a>  43 <em class='sharp'>#define</em> _poly1_2                        5824
+<a id='L44' name='L44'></a>  44 <em class='sharp'>#define</em> _poly1_3                        5888
+<a id='L45' name='L45'></a>  45 <em class='sharp'>#define</em> _UF_Threshold                   5952
+<a id='L46' name='L46'></a>  46 
+<a id='L47' name='L47'></a>  47 <em class='comment'>/* Lookup bias for data table __svml_serfc_data_internal.  */</em>
+<a id='L48' name='L48'></a>  48 <em class='sharp'>#define</em> Table_Lookup_Bias               -0x3ffffffc
+<a id='L49' name='L49'></a>  49 
+<a id='L50' name='L50'></a>  50 <em class='sharp'>#include</em> &lt;<a href='../I/5967.html'>sysdep.h</a>&gt;
+<a id='L51' name='L51'></a>  51 
+<a id='L52' name='L52'></a>  52         .text
+<a id='L53' name='L53'></a>  53     .section .text.exex512,"ax",@progbits
+<a id='L54' name='L54'></a>  54 <a href='../D/3651.html' title='Multiple defined in 54 places.'>ENTRY</a>(_ZGVeN16v_erfcf_skx)
+<a id='L55' name='L55'></a>  55         pushq     %rbp
+<a id='L56' name='L56'></a>  56         cfi_def_cfa_offset(16)
+<a id='L57' name='L57'></a>  57         movq      %rsp, %rbp
+<a id='L58' name='L58'></a>  58         cfi_def_cfa(6, 16)
+<a id='L59' name='L59'></a>  59         cfi_offset(6, -16)
+<a id='L60' name='L60'></a>  60         andq      $-64, %rsp
+<a id='L61' name='L61'></a>  61         subq      $192, %rsp
+<a id='L62' name='L62'></a>  62 
+<a id='L63' name='L63'></a>  63 <em class='comment'>/* vector gather: erfc_h(x0), (erfc_l(x0), 2/sqrt(pi)*exp(-x0^2)) */</em>
+<a id='L64' name='L64'></a>  64         lea       Table_Lookup_Bias+__svml_serfc_data_internal(%rip), %rax
+<a id='L65' name='L65'></a>  65 
+<a id='L66' name='L66'></a>  66 <em class='comment'>/*</em>
+<a id='L67' name='L67'></a>  67 <em class='comment'> * erfc(10.125) underflows to 0</em>
+<a id='L68' name='L68'></a>  68 <em class='comment'> * can compute all results in the main path</em>
+<a id='L69' name='L69'></a>  69 <em class='comment'> */</em>
+<a id='L70' name='L70'></a>  70         vmovups   _MaxThreshold+__svml_serfc_data_internal(%rip), %zmm7
+<a id='L71' name='L71'></a>  71         vmovups   _TwoM48+__svml_serfc_data_internal(%rip), %zmm15
+<a id='L72' name='L72'></a>  72         vmovups   _SRound+__svml_serfc_data_internal(%rip), %zmm11
+<a id='L73' name='L73'></a>  73         vmovups   _One+__svml_serfc_data_internal(%rip), %zmm8
+<a id='L74' name='L74'></a>  74         kxnorw    %k0, %k0, %k2
+<a id='L75' name='L75'></a>  75         kxnorw    %k0, %k0, %k1
+<a id='L76' name='L76'></a>  76         vmovaps   %zmm0, %zmm5
+<a id='L77' name='L77'></a>  77         vandps    _AbsMask+__svml_serfc_data_internal(%rip), %zmm5, %zmm6
+<a id='L78' name='L78'></a>  78         vandps    _SgnMask+__svml_serfc_data_internal(%rip), %zmm5, %zmm1
+<a id='L79' name='L79'></a>  79         vminps    <em class='brace'>{</em>sae<em class='brace'>}</em>, %zmm7, %zmm6, %zmm10
+<a id='L80' name='L80'></a>  80         vmovups   _poly3_0+__svml_serfc_data_internal(%rip), %zmm6
+<a id='L81' name='L81'></a>  81         vorps     %zmm1, %zmm8, %zmm9
+<a id='L82' name='L82'></a>  82         vaddps    <em class='brace'>{</em>rn-sae<em class='brace'>}</em>, %zmm11, %zmm10, %zmm14
+<a id='L83' name='L83'></a>  83 
+<a id='L84' name='L84'></a>  84 <em class='comment'>/* 2^(-64) with sign of input */</em>
+<a id='L85' name='L85'></a>  85         vorps     %zmm1, %zmm15, %zmm2
+<a id='L86' name='L86'></a>  86 
+<a id='L87' name='L87'></a>  87 <em class='comment'>/* 2.0 if x&lt;0, 0.0 otherwise */</em>
+<a id='L88' name='L88'></a>  88         vsubps    <em class='brace'>{</em>rn-sae<em class='brace'>}</em>, %zmm9, %zmm8, %zmm4
+<a id='L89' name='L89'></a>  89         vsubps    <em class='brace'>{</em>rn-sae<em class='brace'>}</em>, %zmm11, %zmm14, %zmm13
+<a id='L90' name='L90'></a>  90         vmaxps    <em class='brace'>{</em>sae<em class='brace'>}</em>, %zmm15, %zmm10, %zmm12
+<a id='L91' name='L91'></a>  91         vmovups   _poly3_1+__svml_serfc_data_internal(%rip), %zmm10
+<a id='L92' name='L92'></a>  92 
+<a id='L93' name='L93'></a>  93 <em class='comment'>/* Start polynomial evaluation */</em>
+<a id='L94' name='L94'></a>  94         vmovups   _poly1_0+__svml_serfc_data_internal(%rip), %zmm15
+<a id='L95' name='L95'></a>  95         vmovups   _poly1_1+__svml_serfc_data_internal(%rip), %zmm1
+<a id='L96' name='L96'></a>  96         vmovups   _poly1_2+__svml_serfc_data_internal(%rip), %zmm8
+<a id='L97' name='L97'></a>  97         vmovups   _poly1_3+__svml_serfc_data_internal(%rip), %zmm9
+<a id='L98' name='L98'></a>  98         vpslld    $3, %zmm14, %zmm7
+<a id='L99' name='L99'></a>  99         vsubps    <em class='brace'>{</em>rn-sae<em class='brace'>}</em>, %zmm13, %zmm12, %zmm0
+<a id='L100' name='L100'></a> 100         vmulps    <em class='brace'>{</em>rn-sae<em class='brace'>}</em>, %zmm0, %zmm13, %zmm3
+<a id='L101' name='L101'></a> 101 
+<a id='L102' name='L102'></a> 102 <em class='comment'>/* Diff^2 */</em>
+<a id='L103' name='L103'></a> 103         vmulps    <em class='brace'>{</em>rn-sae<em class='brace'>}</em>, %zmm0, %zmm0, %zmm11
+<a id='L104' name='L104'></a> 104         vfmadd231ps <em class='brace'>{</em>rn-sae<em class='brace'>}</em>, %zmm3, %zmm6, %zmm10
+<a id='L105' name='L105'></a> 105         vfmadd231ps <em class='brace'>{</em>rn-sae<em class='brace'>}</em>, %zmm3, %zmm15, %zmm1
+<a id='L106' name='L106'></a> 106 
+<a id='L107' name='L107'></a> 107 <em class='comment'>/* P3*D2 */</em>
+<a id='L108' name='L108'></a> 108         vmulps    <em class='brace'>{</em>rn-sae<em class='brace'>}</em>, %zmm11, %zmm10, %zmm12
+<a id='L109' name='L109'></a> 109         vfmadd213ps <em class='brace'>{</em>rn-sae<em class='brace'>}</em>, %zmm8, %zmm3, %zmm1
+<a id='L110' name='L110'></a> 110         vfmadd213ps <em class='brace'>{</em>rn-sae<em class='brace'>}</em>, %zmm9, %zmm3, %zmm1
+<a id='L111' name='L111'></a> 111 
+<a id='L112' name='L112'></a> 112 <em class='comment'>/* P1 = P1*T + P3*D2 */</em>
+<a id='L113' name='L113'></a> 113         vfmadd213ps <em class='brace'>{</em>rn-sae<em class='brace'>}</em>, %zmm12, %zmm3, %zmm1
+<a id='L114' name='L114'></a> 114 
+<a id='L115' name='L115'></a> 115 <em class='comment'>/* Special arguments (for flags only) */</em>
+<a id='L116' name='L116'></a> 116         vmovups   _UF_Threshold+__svml_serfc_data_internal(%rip), %zmm3
+<a id='L117' name='L117'></a> 117         vcmpps    $21, <em class='brace'>{</em>sae<em class='brace'>}</em>, %zmm3, %zmm5, %k0
+<a id='L118' name='L118'></a> 118         kmovw     %k0, %edx
+<a id='L119' name='L119'></a> 119         vpxord    %zmm13, %zmm13, %zmm13
+<a id='L120' name='L120'></a> 120         vgatherdps (%rax,%zmm7), %zmm13<em class='brace'>{</em>%k2<em class='brace'>}</em>
+<a id='L121' name='L121'></a> 121 
+<a id='L122' name='L122'></a> 122 <em class='comment'>/* EXP_X0H * (1+P1) */</em>
+<a id='L123' name='L123'></a> 123         vfmadd213ps <em class='brace'>{</em>rn-sae<em class='brace'>}</em>, %zmm13, %zmm13, %zmm1
+<a id='L124' name='L124'></a> 124         vpxord    %zmm14, %zmm14, %zmm14
+<a id='L125' name='L125'></a> 125         vgatherdps -4(%rax,%zmm7), %zmm14<em class='brace'>{</em>%k1<em class='brace'>}</em>
+<a id='L126' name='L126'></a> 126 
+<a id='L127' name='L127'></a> 127 <em class='comment'>/* erfc_high(x0) - Diff * (2/sqrt(pi)*exp(-x0^2))*(1+P1) */</em>
+<a id='L128' name='L128'></a> 128         vfnmadd213ps <em class='brace'>{</em>rn-sae<em class='brace'>}</em>, %zmm14, %zmm1, %zmm0
+<a id='L129' name='L129'></a> 129         vfmadd213ps <em class='brace'>{</em>rn-sae<em class='brace'>}</em>, %zmm4, %zmm2, %zmm0
+<a id='L130' name='L130'></a> 130         testl     %edx, %edx
+<a id='L131' name='L131'></a> 131 
+<a id='L132' name='L132'></a> 132 <em class='comment'>/* Go to special inputs processing branch */</em>
+<a id='L133' name='L133'></a> 133         jne       L(SPECIAL_VALUES_BRANCH)
+<a id='L134' name='L134'></a> 134 <em class='comment'>                                # LOE rbx r12 r13 r14 r15 edx zmm0 zmm5</em>
+<a id='L135' name='L135'></a> 135 
+<a id='L136' name='L136'></a> 136 <em class='comment'>/* Restore registers</em>
+<a id='L137' name='L137'></a> 137 <em class='comment'> * and exit the function</em>
+<a id='L138' name='L138'></a> 138 <em class='comment'> */</em>
+<a id='L139' name='L139'></a> 139 
+<a id='L140' name='L140'></a> 140 L(EXIT):
+<a id='L141' name='L141'></a> 141         movq      %rbp, %rsp
+<a id='L142' name='L142'></a> 142         popq      %rbp
+<a id='L143' name='L143'></a> 143         cfi_def_cfa(7, 8)
+<a id='L144' name='L144'></a> 144         cfi_restore(6)
+<a id='L145' name='L145'></a> 145         ret
+<a id='L146' name='L146'></a> 146         cfi_def_cfa(6, 16)
+<a id='L147' name='L147'></a> 147         cfi_offset(6, -16)
+<a id='L148' name='L148'></a> 148 
+<a id='L149' name='L149'></a> 149 <em class='comment'>/* Branch to process</em>
+<a id='L150' name='L150'></a> 150 <em class='comment'> * special inputs</em>
+<a id='L151' name='L151'></a> 151 <em class='comment'> */</em>
+<a id='L152' name='L152'></a> 152 
+<a id='L153' name='L153'></a> 153 L(SPECIAL_VALUES_BRANCH):
+<a id='L154' name='L154'></a> 154         vmovups   %zmm5, 64(%rsp)
+<a id='L155' name='L155'></a> 155         vmovups   %zmm0, 128(%rsp)
+<a id='L156' name='L156'></a> 156 <em class='comment'>                                # LOE rbx r12 r13 r14 r15 edx zmm0</em>
+<a id='L157' name='L157'></a> 157 
+<a id='L158' name='L158'></a> 158         xorl      %eax, %eax
+<a id='L159' name='L159'></a> 159 <em class='comment'>                                # LOE rbx r12 r13 r14 r15 eax edx</em>
+<a id='L160' name='L160'></a> 160 
+<a id='L161' name='L161'></a> 161         vzeroupper
+<a id='L162' name='L162'></a> 162         movq      %r12, 16(%rsp)
+<a id='L163' name='L163'></a> 163         <em class='comment'>/*  DW_CFA_expression: r12 (r12) (DW_OP_lit8; DW_OP_minus; DW_OP_const4s: -64; DW_OP_and; DW_OP_const4s: -176; DW_OP_plus)  */</em>
+<a id='L164' name='L164'></a> 164         .cfi_escape 0x10, 0x0c, 0x0e, 0x38, 0x1c, 0x0d, 0xc0, 0xff, 0xff, 0xff, 0x1a, 0x0d, 0x50, 0xff, 0xff, 0xff, 0x22
+<a id='L165' name='L165'></a> 165         movl      %eax, %r12d
+<a id='L166' name='L166'></a> 166         movq      %r13, 8(%rsp)
+<a id='L167' name='L167'></a> 167         <em class='comment'>/*  DW_CFA_expression: r13 (r13) (DW_OP_lit8; DW_OP_minus; DW_OP_const4s: -64; DW_OP_and; DW_OP_const4s: -184; DW_OP_plus)  */</em>
+<a id='L168' name='L168'></a> 168         .cfi_escape 0x10, 0x0d, 0x0e, 0x38, 0x1c, 0x0d, 0xc0, 0xff, 0xff, 0xff, 0x1a, 0x0d, 0x48, 0xff, 0xff, 0xff, 0x22
+<a id='L169' name='L169'></a> 169         movl      %edx, %r13d
+<a id='L170' name='L170'></a> 170         movq      %r14, (%rsp)
+<a id='L171' name='L171'></a> 171         <em class='comment'>/*  DW_CFA_expression: r14 (r14) (DW_OP_lit8; DW_OP_minus; DW_OP_const4s: -64; DW_OP_and; DW_OP_const4s: -192; DW_OP_plus)  */</em>
+<a id='L172' name='L172'></a> 172         .cfi_escape 0x10, 0x0e, 0x0e, 0x38, 0x1c, 0x0d, 0xc0, 0xff, 0xff, 0xff, 0x1a, 0x0d, 0x40, 0xff, 0xff, 0xff, 0x22
+<a id='L173' name='L173'></a> 173 <em class='comment'>                                # LOE rbx r15 r12d r13d</em>
+<a id='L174' name='L174'></a> 174 
+<a id='L175' name='L175'></a> 175 <em class='comment'>/* Range mask</em>
+<a id='L176' name='L176'></a> 176 <em class='comment'> * bits check</em>
+<a id='L177' name='L177'></a> 177 <em class='comment'> */</em>
+<a id='L178' name='L178'></a> 178 
+<a id='L179' name='L179'></a> 179 L(RANGEMASK_CHECK):
+<a id='L180' name='L180'></a> 180         btl       %r12d, %r13d
+<a id='L181' name='L181'></a> 181 
+<a id='L182' name='L182'></a> 182 <em class='comment'>/* Call scalar math function */</em>
+<a id='L183' name='L183'></a> 183         jc        L(SCALAR_MATH_CALL)
+<a id='L184' name='L184'></a> 184 <em class='comment'>                                # LOE rbx r15 r12d r13d</em>
+<a id='L185' name='L185'></a> 185 
+<a id='L186' name='L186'></a> 186 <em class='comment'>/* Special inputs</em>
+<a id='L187' name='L187'></a> 187 <em class='comment'> * processing loop</em>
+<a id='L188' name='L188'></a> 188 <em class='comment'> */</em>
+<a id='L189' name='L189'></a> 189 
+<a id='L190' name='L190'></a> 190 L(SPECIAL_VALUES_LOOP):
+<a id='L191' name='L191'></a> 191         incl      %r12d
+<a id='L192' name='L192'></a> 192         cmpl      $16, %r12d
+<a id='L193' name='L193'></a> 193 
+<a id='L194' name='L194'></a> 194 <em class='comment'>/* Check bits in range mask */</em>
+<a id='L195' name='L195'></a> 195         jl        L(RANGEMASK_CHECK)
+<a id='L196' name='L196'></a> 196 <em class='comment'>                                # LOE rbx r15 r12d r13d</em>
+<a id='L197' name='L197'></a> 197 
+<a id='L198' name='L198'></a> 198         movq      16(%rsp), %r12
+<a id='L199' name='L199'></a> 199         cfi_restore(12)
+<a id='L200' name='L200'></a> 200         movq      8(%rsp), %r13
+<a id='L201' name='L201'></a> 201         cfi_restore(13)
+<a id='L202' name='L202'></a> 202         movq      (%rsp), %r14
+<a id='L203' name='L203'></a> 203         cfi_restore(14)
+<a id='L204' name='L204'></a> 204         vmovups   128(%rsp), %zmm0
+<a id='L205' name='L205'></a> 205 
+<a id='L206' name='L206'></a> 206 <em class='comment'>/* Go to exit */</em>
+<a id='L207' name='L207'></a> 207         jmp       L(EXIT)
+<a id='L208' name='L208'></a> 208         <em class='comment'>/*  DW_CFA_expression: r12 (r12) (DW_OP_lit8; DW_OP_minus; DW_OP_const4s: -64; DW_OP_and; DW_OP_const4s: -176; DW_OP_plus)  */</em>
+<a id='L209' name='L209'></a> 209         .cfi_escape 0x10, 0x0c, 0x0e, 0x38, 0x1c, 0x0d, 0xc0, 0xff, 0xff, 0xff, 0x1a, 0x0d, 0x50, 0xff, 0xff, 0xff, 0x22
+<a id='L210' name='L210'></a> 210         <em class='comment'>/*  DW_CFA_expression: r13 (r13) (DW_OP_lit8; DW_OP_minus; DW_OP_const4s: -64; DW_OP_and; DW_OP_const4s: -184; DW_OP_plus)  */</em>
+<a id='L211' name='L211'></a> 211         .cfi_escape 0x10, 0x0d, 0x0e, 0x38, 0x1c, 0x0d, 0xc0, 0xff, 0xff, 0xff, 0x1a, 0x0d, 0x48, 0xff, 0xff, 0xff, 0x22
+<a id='L212' name='L212'></a> 212         <em class='comment'>/*  DW_CFA_expression: r14 (r14) (DW_OP_lit8; DW_OP_minus; DW_OP_const4s: -64; DW_OP_and; DW_OP_const4s: -192; DW_OP_plus)  */</em>
+<a id='L213' name='L213'></a> 213         .cfi_escape 0x10, 0x0e, 0x0e, 0x38, 0x1c, 0x0d, 0xc0, 0xff, 0xff, 0xff, 0x1a, 0x0d, 0x40, 0xff, 0xff, 0xff, 0x22
+<a id='L214' name='L214'></a> 214 <em class='comment'>                                # LOE rbx r12 r13 r14 r15 zmm0</em>
+<a id='L215' name='L215'></a> 215 
+<a id='L216' name='L216'></a> 216 <em class='comment'>/* Scalar math fucntion call</em>
+<a id='L217' name='L217'></a> 217 <em class='comment'> * to process special input</em>
+<a id='L218' name='L218'></a> 218 <em class='comment'> */</em>
+<a id='L219' name='L219'></a> 219 
+<a id='L220' name='L220'></a> 220 L(SCALAR_MATH_CALL):
+<a id='L221' name='L221'></a> 221         movl      %r12d, %r14d
+<a id='L222' name='L222'></a> 222         movss     64(%rsp,%r14,4), %xmm0
+<a id='L223' name='L223'></a> 223         call      erfcf@PLT
+<a id='L224' name='L224'></a> 224 <em class='comment'>                                # LOE rbx r14 r15 r12d r13d xmm0</em>
+<a id='L225' name='L225'></a> 225 
+<a id='L226' name='L226'></a> 226         movss     %xmm0, 128(%rsp,%r14,4)
+<a id='L227' name='L227'></a> 227 
+<a id='L228' name='L228'></a> 228 <em class='comment'>/* Process special inputs in loop */</em>
+<a id='L229' name='L229'></a> 229         jmp       L(SPECIAL_VALUES_LOOP)
+<a id='L230' name='L230'></a> 230 <em class='comment'>                                # LOE rbx r15 r12d r13d</em>
+<a id='L231' name='L231'></a> 231 END(_ZGVeN16v_erfcf_skx)
+<a id='L232' name='L232'></a> 232 
+<a id='L233' name='L233'></a> 233         .section .rodata, "a"
+<a id='L234' name='L234'></a> 234         .align 64
+<a id='L235' name='L235'></a> 235 
+<a id='L236' name='L236'></a> 236 <em class='sharp'>#ifdef</em> <a href='../Y/7971.html' title='Multiple used in 3 places.'>__svml_serfc_data_internal_typedef</a>
+<a id='L237' name='L237'></a> 237 typedef unsigned int VUINT32;
+<a id='L238' name='L238'></a> 238 typedef struct
+<a id='L239' name='L239'></a> 239 <em class='brace'>{</em>
+<a id='L240' name='L240'></a> 240         __declspec(align(64)) VUINT32 _erfc_tbl[645*2][1];
+<a id='L241' name='L241'></a> 241         __declspec(align(64)) VUINT32 _AbsMask[16][1];
+<a id='L242' name='L242'></a> 242         __declspec(align(64)) VUINT32 _MaxThreshold[16][1];
+<a id='L243' name='L243'></a> 243         __declspec(align(64)) VUINT32 _SgnMask[16][1];
+<a id='L244' name='L244'></a> 244         __declspec(align(64)) VUINT32 _One[16][1];
+<a id='L245' name='L245'></a> 245         __declspec(align(64)) VUINT32 _SRound[16][1];
+<a id='L246' name='L246'></a> 246         __declspec(align(64)) VUINT32 _TwoM48[16][1];
+<a id='L247' name='L247'></a> 247         __declspec(align(64)) VUINT32 _poly1_0[16][1];
+<a id='L248' name='L248'></a> 248         __declspec(align(64)) VUINT32 _poly1_1[16][1];
+<a id='L249' name='L249'></a> 249         __declspec(align(64)) VUINT32 _poly3_0[16][1];
+<a id='L250' name='L250'></a> 250         __declspec(align(64)) VUINT32 _poly3_1[16][1];
+<a id='L251' name='L251'></a> 251         __declspec(align(64)) VUINT32 _poly1_2[16][1];
+<a id='L252' name='L252'></a> 252         __declspec(align(64)) VUINT32 _poly1_3[16][1];
+<a id='L253' name='L253'></a> 253         __declspec(align(64)) VUINT32 _UF_Threshold[16][1];
+<a id='L254' name='L254'></a> 254 <em class='brace'>}</em> __svml_serfc_data_internal;
+<a id='L255' name='L255'></a> 255 <em class='sharp'>#endif</em>
+<a id='L256' name='L256'></a> 256 __svml_serfc_data_internal:
+<a id='L257' name='L257'></a> 257         <em class='comment'>/*== _erfc_tbl ==*/</em>
+<a id='L258' name='L258'></a> 258         .long 0x57800000, 0x57906ebb
+<a id='L259' name='L259'></a> 259         .long 0x577b7ca2, 0x579065b4
+<a id='L260' name='L260'></a> 260         .long 0x5776f9d5, 0x57904aa3
+<a id='L261' name='L261'></a> 261         .long 0x57727828, 0x57901d93
+<a id='L262' name='L262'></a> 262         .long 0x576df82b, 0x578fde94
+<a id='L263' name='L263'></a> 263         .long 0x57697a6e, 0x578f8dbd
+<a id='L264' name='L264'></a> 264         .long 0x5764ff7f, 0x578f2b2e
+<a id='L265' name='L265'></a> 265         .long 0x576087ea, 0x578eb70a
+<a id='L266' name='L266'></a> 266         .long 0x575c143d, 0x578e317d
+<a id='L267' name='L267'></a> 267         .long 0x5757a500, 0x578d9ab9
+<a id='L268' name='L268'></a> 268         .long 0x57533abf, 0x578cf2f5
+<a id='L269' name='L269'></a> 269         .long 0x574ed5fe, 0x578c3a6f
+<a id='L270' name='L270'></a> 270         .long 0x574a7744, 0x578b716c
+<a id='L271' name='L271'></a> 271         .long 0x57461f12, 0x578a9834
+<a id='L272' name='L272'></a> 272         .long 0x5741cdeb, 0x5789af18
+<a id='L273' name='L273'></a> 273         .long 0x573d844a, 0x5788b66c
+<a id='L274' name='L274'></a> 274         .long 0x573942ac, 0x5787ae8b
+<a id='L275' name='L275'></a> 275         .long 0x57350989, 0x578697d3
+<a id='L276' name='L276'></a> 276         .long 0x5730d956, 0x578572a8
+<a id='L277' name='L277'></a> 277         .long 0x572cb284, 0x57843f72
+<a id='L278' name='L278'></a> 278         .long 0x57289583, 0x5782fe9f
+<a id='L279' name='L279'></a> 279         .long 0x572482bd, 0x5781b0a0
+<a id='L280' name='L280'></a> 280         .long 0x57207a9b, 0x578055e8
+<a id='L281' name='L281'></a> 281         .long 0x571c7d80, 0x577ddddf
+<a id='L282' name='L282'></a> 282         .long 0x57188bcb, 0x577af867
+<a id='L283' name='L283'></a> 283         .long 0x5714a5da, 0x5777fc62
+<a id='L284' name='L284'></a> 284         .long 0x5710cc05, 0x5774ead4
+<a id='L285' name='L285'></a> 285         .long 0x570cfe9f, 0x5771c4c4
+<a id='L286' name='L286'></a> 286         .long 0x57093df9, 0x576e8b3e
+<a id='L287' name='L287'></a> 287         .long 0x57058a5e, 0x576b3f51
+<a id='L288' name='L288'></a> 288         .long 0x5701e415, 0x5767e20f
+<a id='L289' name='L289'></a> 289         .long 0x56fc96c6, 0x5764748e
+<a id='L290' name='L290'></a> 290         .long 0x56f5810a, 0x5760f7e5
+<a id='L291' name='L291'></a> 291         .long 0x56ee876d, 0x575d6d2d
+<a id='L292' name='L292'></a> 292         .long 0x56e7aa5a, 0x5759d57e
+<a id='L293' name='L293'></a> 293         .long 0x56e0ea35, 0x575631f4
+<a id='L294' name='L294'></a> 294         .long 0x56da4757, 0x575283a7
+<a id='L295' name='L295'></a> 295         .long 0x56d3c214, 0x574ecbb1
+<a id='L296' name='L296'></a> 296         .long 0x56cd5ab3, 0x574b0b28
+<a id='L297' name='L297'></a> 297         .long 0x56c71175, 0x57474323
+<a id='L298' name='L298'></a> 298         .long 0x56c0e692, 0x574374b5
+<a id='L299' name='L299'></a> 299         .long 0x56bada38, 0x573fa0ee
+<a id='L300' name='L300'></a> 300         .long 0x56b4ec8f, 0x573bc8dc
+<a id='L301' name='L301'></a> 301         .long 0x56af1db3, 0x5737ed89
+<a id='L302' name='L302'></a> 302         .long 0x56a96dbc, 0x57340ff9
+<a id='L303' name='L303'></a> 303         .long 0x56a3dcb7, 0x5730312e
+<a id='L304' name='L304'></a> 304         .long 0x569e6aaa, 0x572c5223
+<a id='L305' name='L305'></a> 305         .long 0x56991793, 0x572873cf
+<a id='L306' name='L306'></a> 306         .long 0x5693e369, 0x57249721
+<a id='L307' name='L307'></a> 307         .long 0x568ece1a, 0x5720bd06
+<a id='L308' name='L308'></a> 308         .long 0x5689d78f, 0x571ce661
+<a id='L309' name='L309'></a> 309         .long 0x5684ffa8, 0x5719140f
+<a id='L310' name='L310'></a> 310         .long 0x56804640, 0x571546e7
+<a id='L311' name='L311'></a> 311         .long 0x56775654, 0x57117fb9
+<a id='L312' name='L312'></a> 312         .long 0x566e5c65, 0x570dbf4c
+<a id='L313' name='L313'></a> 313         .long 0x56659e43, 0x570a0662
+<a id='L314' name='L314'></a> 314         .long 0x565d1b6d, 0x570655b1
+<a id='L315' name='L315'></a> 315         .long 0x5654d35d, 0x5702adeb
+<a id='L316' name='L316'></a> 316         .long 0x564cc57d, 0x56fe1f73
+<a id='L317' name='L317'></a> 317         .long 0x5644f12f, 0x56f6f777
+<a id='L318' name='L318'></a> 318         .long 0x563d55cc, 0x56efe513
+<a id='L319' name='L319'></a> 319         .long 0x5635f2a1, 0x56e8e968
+<a id='L320' name='L320'></a> 320         .long 0x562ec6f6, 0x56e20584
+<a id='L321' name='L321'></a> 321         .long 0x5627d207, 0x56db3a64
+<a id='L322' name='L322'></a> 322         .long 0x5621130b, 0x56d488f8
+<a id='L323' name='L323'></a> 323         .long 0x561a8931, 0x56cdf21c
+<a id='L324' name='L324'></a> 324         .long 0x561433a0, 0x56c7769b
+<a id='L325' name='L325'></a> 325         .long 0x560e117c, 0x56c11733
+<a id='L326' name='L326'></a> 326         .long 0x560821e1, 0x56bad48d
+<a id='L327' name='L327'></a> 327         .long 0x560263e5, 0x56b4af46
+<a id='L328' name='L328'></a> 328         .long 0x55f9ad39, 0x56aea7ea
+<a id='L329' name='L329'></a> 329         .long 0x55eef22b, 0x56a8bef3
+<a id='L330' name='L330'></a> 330         .long 0x55e494b6, 0x56a2f4ce
+<a id='L331' name='L331'></a> 331         .long 0x55da92eb, 0x569d49d9
+<a id='L332' name='L332'></a> 332         .long 0x55d0ead3, 0x5697be62
+<a id='L333' name='L333'></a> 333         .long 0x55c79a75, 0x569252aa
+<a id='L334' name='L334'></a> 334         .long 0x55be9fd3, 0x568d06e3
+<a id='L335' name='L335'></a> 335         .long 0x55b5f8ee, 0x5687db31
+<a id='L336' name='L336'></a> 336         .long 0x55ada3c2, 0x5682cfad
+<a id='L337' name='L337'></a> 337         .long 0x55a59e4c, 0x567bc8c2
+<a id='L338' name='L338'></a> 338         .long 0x559de68a, 0x56723298
+<a id='L339' name='L339'></a> 339         .long 0x55967a77, 0x5668dcc1
+<a id='L340' name='L340'></a> 340         .long 0x558f5812, 0x565fc70e
+<a id='L341' name='L341'></a> 341         .long 0x55887d5c, 0x5656f136
+<a id='L342' name='L342'></a> 342         .long 0x5581e856, 0x564e5adf
+<a id='L343' name='L343'></a> 343         .long 0x55772e0c, 0x56460399
+<a id='L344' name='L344'></a> 344         .long 0x556b0eeb, 0x563deae4
+<a id='L345' name='L345'></a> 345         .long 0x555f6f64, 0x5636102b
+<a id='L346' name='L346'></a> 346         .long 0x55544b9e, 0x562e72cb
+<a id='L347' name='L347'></a> 347         .long 0x55499fc8, 0x5627120f
+<a id='L348' name='L348'></a> 348         .long 0x553f681d, 0x561fed36
+<a id='L349' name='L349'></a> 349         .long 0x5535a0e6, 0x5619036e
+<a id='L350' name='L350'></a> 350         .long 0x552c4679, 0x561253dc
+<a id='L351' name='L351'></a> 351         .long 0x55235539, 0x560bdd96
+<a id='L352' name='L352'></a> 352         .long 0x551ac999, 0x56059fa9
+<a id='L353' name='L353'></a> 353         .long 0x5512a01c, 0x55ff3230
+<a id='L354' name='L354'></a> 354         .long 0x550ad554, 0x55f391b9
+<a id='L355' name='L355'></a> 355         .long 0x550365e5, 0x55e85bd0
+<a id='L356' name='L356'></a> 356         .long 0x54f89d02, 0x55dd8e4c
+<a id='L357' name='L357'></a> 357         .long 0x54eb17df, 0x55d326f3
+<a id='L358' name='L358'></a> 358         .long 0x54de360f, 0x55c92385
+<a id='L359' name='L359'></a> 359         .long 0x54d1f166, 0x55bf81b6
+<a id='L360' name='L360'></a> 360         .long 0x54c643dc, 0x55b63f32
+<a id='L361' name='L361'></a> 361         .long 0x54bb2790, 0x55ad59a1
+<a id='L362' name='L362'></a> 362         .long 0x54b096c5, 0x55a4cea4
+<a id='L363' name='L363'></a> 363         .long 0x54a68be5, 0x559c9bd9
+<a id='L364' name='L364'></a> 364         .long 0x549d0180, 0x5594bedd
+<a id='L365' name='L365'></a> 365         .long 0x5493f24c, 0x558d354b
+<a id='L366' name='L366'></a> 366         .long 0x548b5926, 0x5585fcbf
+<a id='L367' name='L367'></a> 367         .long 0x54833111, 0x557e25af
+<a id='L368' name='L368'></a> 368         .long 0x5476ea69, 0x5570ea68
+<a id='L369' name='L369'></a> 369         .long 0x546841c1, 0x556442f0
+<a id='L370' name='L370'></a> 370         .long 0x545a5f10, 0x55582a98
+<a id='L371' name='L371'></a> 371         .long 0x544d398b, 0x554c9cbd
+<a id='L372' name='L372'></a> 372         .long 0x5440c8ae, 0x554194c7
+<a id='L373' name='L373'></a> 373         .long 0x54350440, 0x55370e2c
+<a id='L374' name='L374'></a> 374         .long 0x5429e44f, 0x552d0474
+<a id='L375' name='L375'></a> 375         .long 0x541f612f, 0x55237336
+<a id='L376' name='L376'></a> 376         .long 0x5415737d, 0x551a561b
+<a id='L377' name='L377'></a> 377         .long 0x540c1417, 0x5511a8e1
+<a id='L378' name='L378'></a> 378         .long 0x54033c22, 0x5509675a
+<a id='L379' name='L379'></a> 379         .long 0x53f5ca07, 0x55018d6b
+<a id='L380' name='L380'></a> 380         .long 0x53e610c3, 0x54f42e22
+<a id='L381' name='L381'></a> 381         .long 0x53d74046, 0x54e600c0
+<a id='L382' name='L382'></a> 382         .long 0x53c94cd8, 0x54d88b05
+<a id='L383' name='L383'></a> 383         .long 0x53bc2b3a, 0x54cbc574
+<a id='L384' name='L384'></a> 384         .long 0x53afd0a5, 0x54bfa8c4
+<a id='L385' name='L385'></a> 385         .long 0x53a432c3, 0x54b42ddb
+<a id='L386' name='L386'></a> 386         .long 0x539947af, 0x54a94dcf
+<a id='L387' name='L387'></a> 387         .long 0x538f05f3, 0x549f01ec
+<a id='L388' name='L388'></a> 388         .long 0x5385647e, 0x549543ae
+<a id='L389' name='L389'></a> 389         .long 0x5378b557, 0x548c0cc2
+<a id='L390' name='L390'></a> 390         .long 0x5367c06a, 0x5483570a
+<a id='L391' name='L391'></a> 391         .long 0x5357da71, 0x54763931
+<a id='L392' name='L392'></a> 392         .long 0x5348f45f, 0x5466af65
+<a id='L393' name='L393'></a> 393         .long 0x533affda, 0x5458059c
+<a id='L394' name='L394'></a> 394         .long 0x532def39, 0x544a3127
+<a id='L395' name='L395'></a> 395         .long 0x5321b57a, 0x543d27b5
+<a id='L396' name='L396'></a> 396         .long 0x5316463d, 0x5430df57
+<a id='L397' name='L397'></a> 397         .long 0x530b95bd, 0x54254e7b
+<a id='L398' name='L398'></a> 398         .long 0x530198cc, 0x541a6bee
+<a id='L399' name='L399'></a> 399         .long 0x52f08999, 0x54102ed6
+<a id='L400' name='L400'></a> 400         .long 0x52df1f58, 0x54068eb5
+<a id='L401' name='L401'></a> 401         .long 0x52cedfb9, 0x53fb06c5
+<a id='L402' name='L402'></a> 402         .long 0x52bfb8a0, 0x53ea0a1d
+<a id='L403' name='L403'></a> 403         .long 0x52b198e5, 0x53da1876
+<a id='L404' name='L404'></a> 404         .long 0x52a4704e, 0x53cb237a
+<a id='L405' name='L405'></a> 405         .long 0x52982f7c, 0x53bd1d6f
+<a id='L406' name='L406'></a> 406         .long 0x528cc7eb, 0x53aff93b
+<a id='L407' name='L407'></a> 407         .long 0x52822be3, 0x53a3aa56
+<a id='L408' name='L408'></a> 408         .long 0x52709cde, 0x539824ce
+<a id='L409' name='L409'></a> 409         .long 0x525e46a9, 0x538d5d3c
+<a id='L410' name='L410'></a> 410         .long 0x524d3e18, 0x538348c6
+<a id='L411' name='L411'></a> 411         .long 0x523d6d6f, 0x5373ba24
+<a id='L412' name='L412'></a> 412         .long 0x522ec035, 0x53622096
+<a id='L413' name='L413'></a> 413         .long 0x52212321, 0x5351b22a
+<a id='L414' name='L414'></a> 414         .long 0x52148413, 0x53425d18
+<a id='L415' name='L415'></a> 415         .long 0x5208d1fc, 0x53341080
+<a id='L416' name='L416'></a> 416         .long 0x51fbf9ac, 0x5326bc5e
+<a id='L417' name='L417'></a> 417         .long 0x51e7eb29, 0x531a5183
+<a id='L418' name='L418'></a> 418         .long 0x51d55c2d, 0x530ec18c
+<a id='L419' name='L419'></a> 419         .long 0x51c43238, 0x5303feda
+<a id='L420' name='L420'></a> 420         .long 0x51b45472, 0x52f3f919
+<a id='L421' name='L421'></a> 421         .long 0x51a5ab93, 0x52e15ce8
+<a id='L422' name='L422'></a> 422         .long 0x519821ce, 0x52d0121b
+<a id='L423' name='L423'></a> 423         .long 0x518ba2bc, 0x52c002f8
+<a id='L424' name='L424'></a> 424         .long 0x51801b49, 0x52b11afe
+<a id='L425' name='L425'></a> 425         .long 0x516af33c, 0x52a346d7
+<a id='L426' name='L426'></a> 426         .long 0x51575a21, 0x5296744c
+<a id='L427' name='L427'></a> 427         .long 0x51454c24, 0x528a9237
+<a id='L428' name='L428'></a> 428         .long 0x5134ac3b, 0x527f20e7
+<a id='L429' name='L429'></a> 429         .long 0x51255f51, 0x526abfa9
+<a id='L430' name='L430'></a> 430         .long 0x51174c27, 0x5257e42f
+<a id='L431' name='L431'></a> 431         .long 0x510a5b3b, 0x524673af
+<a id='L432' name='L432'></a> 432         .long 0x50fced50, 0x52365507
+<a id='L433' name='L433'></a> 433         .long 0x50e7141d, 0x522770a1
+<a id='L434' name='L434'></a> 434         .long 0x50d304fc, 0x5219b066
+<a id='L435' name='L435'></a> 435         .long 0x50c09cb5, 0x520cffa3
+<a id='L436' name='L436'></a> 436         .long 0x50afba92, 0x52014af8
+<a id='L437' name='L437'></a> 437         .long 0x50a04037, 0x51ed0088
+<a id='L438' name='L438'></a> 438         .long 0x50921177, 0x51d91d2d
+<a id='L439' name='L439'></a> 439         .long 0x50851430, 0x51c6cc35
+<a id='L440' name='L440'></a> 440         .long 0x50726058, 0x51b5f011
+<a id='L441' name='L441'></a> 441         .long 0x505c9dfa, 0x51a66d2a
+<a id='L442' name='L442'></a> 442         .long 0x5048b7be, 0x519829c8
+<a id='L443' name='L443'></a> 443         .long 0x50368738, 0x518b0df2
+<a id='L444' name='L444'></a> 444         .long 0x5025e8e0, 0x517e06ab
+<a id='L445' name='L445'></a> 445         .long 0x5016bbdf, 0x5167ea53
+<a id='L446' name='L446'></a> 446         .long 0x5008e1df, 0x5153a034
+<a id='L447' name='L447'></a> 447         .long 0x4ff87dc3, 0x5141045e
+<a id='L448' name='L448'></a> 448         .long 0x4fe1721f, 0x512ff56d
+<a id='L449' name='L449'></a> 449         .long 0x4fcc712a, 0x51205461
+<a id='L450' name='L450'></a> 450         .long 0x4fb94efb, 0x51120475
+<a id='L451' name='L451'></a> 451         .long 0x4fa7e31e, 0x5104eafc
+<a id='L452' name='L452'></a> 452         .long 0x4f980855, 0x50f1de7a
+<a id='L453' name='L453'></a> 453         .long 0x4f899c5c, 0x50dbf4a3
+<a id='L454' name='L454'></a> 454         .long 0x4f78ff60, 0x50c7ee0e
+<a id='L455' name='L455'></a> 455         .long 0x4f612ab5, 0x50b5a381
+<a id='L456' name='L456'></a> 456         .long 0x4f4b8583, 0x50a4f0bc
+<a id='L457' name='L457'></a> 457         .long 0x4f37deef, 0x5095b43b
+<a id='L458' name='L458'></a> 458         .long 0x4f260a27, 0x5087cf0e
+<a id='L459' name='L459'></a> 459         .long 0x4f15de0f, 0x5076494d
+<a id='L460' name='L460'></a> 460         .long 0x4f0734f9, 0x505f355e
+<a id='L461' name='L461'></a> 461         .long 0x4ef3d8c4, 0x504a31bf
+<a id='L462' name='L462'></a> 462         .long 0x4edbc95e, 0x503711b4
+<a id='L463' name='L463'></a> 463         .long 0x4ec601e9, 0x5025ac0e
+<a id='L464' name='L464'></a> 464         .long 0x4eb24d81, 0x5015dae6
+<a id='L465' name='L465'></a> 465         .long 0x4ea07bca, 0x50077b62
+<a id='L466' name='L466'></a> 466         .long 0x4e906098, 0x4ff4daf4
+<a id='L467' name='L467'></a> 467         .long 0x4e81d395, 0x4fdd2782
+<a id='L468' name='L468'></a> 468         .long 0x4e695fe3, 0x4fc7a666
+<a id='L469' name='L469'></a> 469         .long 0x4e51a834, 0x4fb42611
+<a id='L470' name='L470'></a> 470         .long 0x4e3c42e7, 0x4fa2790f
+<a id='L471' name='L471'></a> 471         .long 0x4e28f835, 0x4f9275b9
+<a id='L472' name='L472'></a> 472         .long 0x4e179555, 0x4f83f5e9
+<a id='L473' name='L473'></a> 473         .long 0x4e07ec0b, 0x4f6dad68
+<a id='L474' name='L474'></a> 474         .long 0x4df3a498, 0x4f55f04f
+<a id='L475' name='L475'></a> 475         .long 0x4dda43ba, 0x4f407a1d
+<a id='L476' name='L476'></a> 476         .long 0x4dc37003, 0x4f2d1570
+<a id='L477' name='L477'></a> 477         .long 0x4daeea58, 0x4f1b9188
+<a id='L478' name='L478'></a> 478         .long 0x4d9c7974, 0x4f0bc1e7
+<a id='L479' name='L479'></a> 479         .long 0x4d8be963, 0x4efafbec
+<a id='L480' name='L480'></a> 480         .long 0x4d7a160c, 0x4ee14167
+<a id='L481' name='L481'></a> 481         .long 0x4d5f6759, 0x4eca10ce
+<a id='L482' name='L482'></a> 482         .long 0x4d477955, 0x4eb52cb9
+<a id='L483' name='L483'></a> 483         .long 0x4d3205fb, 0x4ea25d43
+<a id='L484' name='L484'></a> 484         .long 0x4d1ecdf3, 0x4e916f95
+<a id='L485' name='L485'></a> 485         .long 0x4d0d97f2, 0x4e823575
+<a id='L486' name='L486'></a> 486         .long 0x4cfc6061, 0x4e6909cc
+<a id='L487' name='L487'></a> 487         .long 0x4ce0cfd4, 0x4e506f88
+<a id='L488' name='L488'></a> 488         .long 0x4cc829c6, 0x4e3a56e4
+<a id='L489' name='L489'></a> 489         .long 0x4cb221ff, 0x4e268119
+<a id='L490' name='L490'></a> 490         .long 0x4c9e73c2, 0x4e14b538
+<a id='L491' name='L491'></a> 491         .long 0x4c8ce119, 0x4e04bfb1
+<a id='L492' name='L492'></a> 492         .long 0x4c7a6462, 0x4dece39b
+<a id='L493' name='L493'></a> 493         .long 0x4c5e6987, 0x4dd34296
+<a id='L494' name='L494'></a> 494         .long 0x4c457726, 0x4dbc4fdc
+<a id='L495' name='L495'></a> 495         .long 0x4c2f3bdb, 0x4da7c64b
+<a id='L496' name='L496'></a> 496         .long 0x4c1b6e79, 0x4d956771
+<a id='L497' name='L497'></a> 497         .long 0x4c09cd3e, 0x4d84fae8
+<a id='L498' name='L498'></a> 498         .long 0x4bf43a38, 0x4d6c9b8f
+<a id='L499' name='L499'></a> 499         .long 0x4bd85225, 0x4d52644f
+<a id='L500' name='L500'></a> 500         .long 0x4bbf8325, 0x4d3afd47
+<a id='L501' name='L501'></a> 501         .long 0x4ba977f0, 0x4d261be0
+<a id='L502' name='L502'></a> 502         .long 0x4b95e415, 0x4d137cf0
+<a id='L503' name='L503'></a> 503         .long 0x4b848320, 0x4d02e402
+<a id='L504' name='L504'></a> 504         .long 0x4b6a2f8b, 0x4ce8356b
+<a id='L505' name='L505'></a> 505         .long 0x4b4ed659, 0x4ccde050
+<a id='L506' name='L506'></a> 506         .long 0x4b369893, 0x4cb670d5
+<a id='L507' name='L507'></a> 507         .long 0x4b211e8a, 0x4ca19816
+<a id='L508' name='L508'></a> 508         .long 0x4b0e19e7, 0x4c8f0f43
+<a id='L509' name='L509'></a> 509         .long 0x4afa896f, 0x4c7d2da8
+<a id='L510' name='L510'></a> 510         .long 0x4adcc11e, 0x4c5febab
+<a id='L511' name='L511'></a> 511         .long 0x4ac26b7f, 0x4c45f27c
+<a id='L512' name='L512'></a> 512         .long 0x4aab2549, 0x4c2ee6b3
+<a id='L513' name='L513'></a> 513         .long 0x4a969605, 0x4c1a767c
+<a id='L514' name='L514'></a> 514         .long 0x4a846ee9, 0x4c0858a4
+<a id='L515' name='L515'></a> 515         .long 0x4a68d3a8, 0x4bf09770
+<a id='L516' name='L516'></a> 516         .long 0x4a4c90c6, 0x4bd42a75
+<a id='L517' name='L517'></a> 517         .long 0x4a33a635, 0x4bbb01dd
+<a id='L518' name='L518'></a> 518         .long 0x4a1db15b, 0x4ba4c066
+<a id='L519' name='L519'></a> 519         .long 0x4a0a5aa0, 0x4b9112d9
+<a id='L520' name='L520'></a> 520         .long 0x49f2a881, 0x4b7f5e08
+<a id='L521' name='L521'></a> 521         .long 0x49d4b277, 0x4b60a591
+<a id='L522' name='L522'></a> 522         .long 0x49ba58bd, 0x4b45867e
+<a id='L523' name='L523'></a> 523         .long 0x49a32ed5, 0x4b2d97f3
+<a id='L524' name='L524'></a> 524         .long 0x498ed4a2, 0x4b187c9e
+<a id='L525' name='L525'></a> 525         .long 0x4979ea08, 0x4b05e186
+<a id='L526' name='L526'></a> 526         .long 0x495a8951, 0x4aeaf9d4
+<a id='L527' name='L527'></a> 527         .long 0x493f01d9, 0x4ace1a8c
+<a id='L528' name='L528'></a> 528         .long 0x4926ddcc, 0x4ab4b0dc
+<a id='L529' name='L529'></a> 529         .long 0x4911b50d, 0x4a9e558a
+<a id='L530' name='L530'></a> 530         .long 0x48fe574a, 0x4a8aad05
+<a id='L531' name='L531'></a> 531         .long 0x48dde0d0, 0x4a72cc48
+<a id='L532' name='L532'></a> 532         .long 0x48c1776e, 0x4a547203
+<a id='L533' name='L533'></a> 533         .long 0x48a89cd3, 0x4a39cbe3
+<a id='L534' name='L534'></a> 534         .long 0x4892e1aa, 0x4a226937
+<a id='L535' name='L535'></a> 535         .long 0x487fc7c2, 0x4a0de652
+<a id='L536' name='L536'></a> 536         .long 0x485e9a3a, 0x49f7d629
+<a id='L537' name='L537'></a> 537         .long 0x4841a2c3, 0x49d85345
+<a id='L538' name='L538'></a> 538         .long 0x48285bae, 0x49bcba74
+<a id='L539' name='L539'></a> 539         .long 0x48124f79, 0x49a49254
+<a id='L540' name='L540'></a> 540         .long 0x47fe2dc4, 0x498f6fd2
+<a id='L541' name='L541'></a> 541         .long 0x47dcae77, 0x4979e90c
+<a id='L542' name='L542'></a> 542         .long 0x47bf81dd, 0x49599a7d
+<a id='L543' name='L543'></a> 543         .long 0x47a61c4e, 0x493d616c
+<a id='L544' name='L544'></a> 544         .long 0x47900357, 0x4924bcd6
+<a id='L545' name='L545'></a> 545         .long 0x47799750, 0x490f3b3e
+<a id='L546' name='L546'></a> 546         .long 0x47582e7f, 0x48f8f1a9
+<a id='L547' name='L547'></a> 547         .long 0x473b27a3, 0x48d83bc6
+<a id='L548' name='L548'></a> 548         .long 0x4721f2b6, 0x48bbbab7
+<a id='L549' name='L549'></a> 549         .long 0x470c11c0, 0x48a2e733
+<a id='L550' name='L550'></a> 550         .long 0x46f22d4c, 0x488d4a80
+<a id='L551' name='L551'></a> 551         .long 0x46d14266, 0x4874f900
+<a id='L552' name='L552'></a> 552         .long 0x46b4bacb, 0x485443df
+<a id='L553' name='L553'></a> 553         .long 0x469c03d6, 0x4837d5b2
+<a id='L554' name='L554'></a> 554         .long 0x46869d9b, 0x481f2272
+<a id='L555' name='L555'></a> 555         .long 0x46683120, 0x4809af94
+<a id='L556' name='L556'></a> 556         .long 0x46482706, 0x47ee23cf
+<a id='L557' name='L557'></a> 557         .long 0x462c7395, 0x47cdd76a
+<a id='L558' name='L558'></a> 558         .long 0x46148366, 0x47b1d636
+<a id='L559' name='L559'></a> 559         .long 0x45ffac6d, 0x4799912d
+<a id='L560' name='L560'></a> 560         .long 0x45dbf8fa, 0x47848b78
+<a id='L561' name='L561'></a> 561         .long 0x45bd2a88, 0x4764b060
+<a id='L562' name='L562'></a> 562         .long 0x45a298a1, 0x474530ba
+<a id='L563' name='L563'></a> 563         .long 0x458bb0fc, 0x4729f27c
+<a id='L564' name='L564'></a> 564         .long 0x456fe94b, 0x47126579
+<a id='L565' name='L565'></a> 565         .long 0x454deaf8, 0x46fc1860
+<a id='L566' name='L566'></a> 566         .long 0x4530a808, 0x46d8f2d6
+<a id='L567' name='L567'></a> 567         .long 0x45177b00, 0x46ba9c63
+<a id='L568' name='L568'></a> 568         .long 0x4501d48c, 0x46a06fec
+<a id='L569' name='L569'></a> 569         .long 0x44de7135, 0x4689de04
+<a id='L570' name='L570'></a> 570         .long 0x44be77a1, 0x466cd440
+<a id='L571' name='L571'></a> 571         .long 0x44a302b0, 0x464b505a
+<a id='L572' name='L572'></a> 572         .long 0x448b71e5, 0x462e74d6
+<a id='L573' name='L573'></a> 573         .long 0x446e7534, 0x46159f2a
+<a id='L574' name='L574'></a> 574         .long 0x444bca2d, 0x46004280
+<a id='L575' name='L575'></a> 575         .long 0x442e1414, 0x45dbc9bf
+<a id='L576' name='L576'></a> 576         .long 0x4414a0a8, 0x45bc396d
+<a id='L577' name='L577'></a> 577         .long 0x43fdac7d, 0x45a11d60
+<a id='L578' name='L578'></a> 578         .long 0x43d860d4, 0x4589d7a8
+<a id='L579' name='L579'></a> 579         .long 0x43b87a3a, 0x456bbf86
+<a id='L580' name='L580'></a> 580         .long 0x439d3454, 0x45497f9a
+<a id='L581' name='L581'></a> 581         .long 0x4385e630, 0x452c23f7
+<a id='L582' name='L582'></a> 582         .long 0x4363fd06, 0x4512fcf7
+<a id='L583' name='L583'></a> 583         .long 0x434200db, 0x44fae63c
+<a id='L584' name='L584'></a> 584         .long 0x4325014d, 0x44d607b0
+<a id='L585' name='L585'></a> 585         .long 0x430c4623, 0x44b67d4e
+<a id='L586' name='L586'></a> 586         .long 0x42ee627d, 0x449b855c
+<a id='L587' name='L587'></a> 587         .long 0x42ca7603, 0x44847920
+<a id='L588' name='L588'></a> 588         .long 0x42abde4b, 0x44619261
+<a id='L589' name='L589'></a> 589         .long 0x4291d40d, 0x443ff482
+<a id='L590' name='L590'></a> 590         .long 0x4277593c, 0x442344bf
+<a id='L591' name='L591'></a> 591         .long 0x4251abca, 0x440acd1c
+<a id='L592' name='L592'></a> 592         .long 0x4231a5c0, 0x43ebe2ca
+<a id='L593' name='L593'></a> 593         .long 0x42167152, 0x43c85727
+<a id='L594' name='L594'></a> 594         .long 0x41feaf84, 0x43aa1178
+<a id='L595' name='L595'></a> 595         .long 0x41d779e7, 0x43904cc0
+<a id='L596' name='L596'></a> 596         .long 0x41b63731, 0x4374c081
+<a id='L597' name='L597'></a> 597         .long 0x419a03db, 0x434f7703
+<a id='L598' name='L598'></a> 598         .long 0x41821dd0, 0x432fc5c4
+<a id='L599' name='L599'></a> 599         .long 0x415bbf2e, 0x4314d94a
+<a id='L600' name='L600'></a> 600         .long 0x41397862, 0x42fbf99c
+<a id='L601' name='L601'></a> 601         .long 0x411c770c, 0x42d52bb9
+<a id='L602' name='L602'></a> 602         .long 0x4103eeb4, 0x42b4411f
+<a id='L603' name='L603'></a> 603         .long 0x40de62c7, 0x429858a7
+<a id='L604' name='L604'></a> 604         .long 0x40bb5652, 0x4280b23e
+<a id='L605' name='L605'></a> 605         .long 0x409dbc89, 0x4259543f
+<a id='L606' name='L606'></a> 606         .long 0x4084bfc1, 0x42376979
+<a id='L607' name='L607'></a> 607         .long 0x405f551f, 0x421ab66b
+<a id='L608' name='L608'></a> 608         .long 0x403bc5f1, 0x420270af
+<a id='L609' name='L609'></a> 609         .long 0x401dccc2, 0x41dbd820
+<a id='L610' name='L610'></a> 610         .long 0x40048c16, 0x41b92c31
+<a id='L611' name='L611'></a> 611         .long 0x3fde907e, 0x419be496
+<a id='L612' name='L612'></a> 612         .long 0x3fbac490, 0x41832dcb
+<a id='L613' name='L613'></a> 613         .long 0x3f9ca73d, 0x415ca86a
+<a id='L614' name='L614'></a> 614         .long 0x3f8354cb, 0x41397eca
+<a id='L615' name='L615'></a> 615         .long 0x3f5c1947, 0x411bdc1e
+<a id='L616' name='L616'></a> 616         .long 0x3f3857fa, 0x4102e528
+<a id='L617' name='L617'></a> 617         .long 0x3f1a529e, 0x40dbc03f
+<a id='L618' name='L618'></a> 618         .long 0x3f0120ef, 0x40b85f58
+<a id='L619' name='L619'></a> 619         .long 0x3ed7fdc8, 0x409a9d36
+<a id='L620' name='L620'></a> 620         .long 0x3eb48e3e, 0x40819878
+<a id='L621' name='L621'></a> 621         .long 0x3e96dc65, 0x4059250b
+<a id='L622' name='L622'></a> 622         .long 0x3e7bfa7c, 0x4035d48d
+<a id='L623' name='L623'></a> 623         .long 0x3e5255b2, 0x40182f4c
+<a id='L624' name='L624'></a> 624         .long 0x3e2f7d27, 0x3ffe9ef1
+<a id='L625' name='L625'></a> 625         .long 0x3e12586c, 0x3fd4e64a
+<a id='L626' name='L626'></a> 626         .long 0x3df3f750, 0x3fb1ed7c
+<a id='L627' name='L627'></a> 627         .long 0x3dcb4137, 0x3f94a0bb
+<a id='L628' name='L628'></a> 628         .long 0x3da94169, 0x3f782f41
+<a id='L629' name='L629'></a> 629         .long 0x3d8ce028, 0x3f4f1cee
+<a id='L630' name='L630'></a> 630         .long 0x3d6a654e, 0x3f2cc100
+<a id='L631' name='L631'></a> 631         .long 0x3d42e7d6, 0x3f100645
+<a id='L632' name='L632'></a> 632         .long 0x3d21fd99, 0x3ef00749
+<a id='L633' name='L633'></a> 633         .long 0x3d0691c1, 0x3ec7ea70
+<a id='L634' name='L634'></a> 634         .long 0x3cdf78d9, 0x3ea66ce0
+<a id='L635' name='L635'></a> 635         .long 0x3cb976f2, 0x3e8a7a45
+<a id='L636' name='L636'></a> 636         .long 0x3c99d8e5, 0x3e665575
+<a id='L637' name='L637'></a> 637         .long 0x3c7f1de8, 0x3e3f778a
+<a id='L638' name='L638'></a> 638         .long 0x3c536be9, 0x3e1f14b2
+<a id='L639' name='L639'></a> 639         .long 0x3c2f2031, 0x3e041bb4
+<a id='L640' name='L640'></a> 640         .long 0x3c10fdbd, 0x3ddb4f88
+<a id='L641' name='L641'></a> 641         .long 0x3beff7df, 0x3db5f2ba
+<a id='L642' name='L642'></a> 642         .long 0x3bc67c0b, 0x3d96e08d
+<a id='L643' name='L643'></a> 643         .long 0x3ba417d4, 0x3d7a1a1e
+<a id='L644' name='L644'></a> 644         .long 0x3b879862, 0x3d4f30a7
+<a id='L645' name='L645'></a> 645         .long 0x3b5ffc37, 0x3d2b8e9a
+<a id='L646' name='L646'></a> 646         .long 0x3b38e85b, 0x3d0dfba1
+<a id='L647' name='L647'></a> 647         .long 0x3b1892fb, 0x3ceae636
+<a id='L648' name='L648'></a> 648         .long 0x3afbaaf5, 0x3cc2374f
+<a id='L649' name='L649'></a> 649         .long 0x3acf75d5, 0x3ca08024
+<a id='L650' name='L650'></a> 650         .long 0x3aaaef8c, 0x3c8492c0
+<a id='L651' name='L651'></a> 651         .long 0x3a8cc60c, 0x3c5ae75b
+<a id='L652' name='L652'></a> 652         .long 0x3a67c170, 0x3c34a340
+<a id='L653' name='L653'></a> 653         .long 0x3a3ead7b, 0x3c14fcf4
+<a id='L654' name='L654'></a> 654         .long 0x3a1cce14, 0x3bf5a5cf
+<a id='L655' name='L655'></a> 655         .long 0x3a00e32d, 0x3bca68ef
+<a id='L656' name='L656'></a> 656         .long 0x39d3c741, 0x3ba6b383
+<a id='L657' name='L657'></a> 657         .long 0x39ade7c9, 0x3b8939a3
+<a id='L658' name='L658'></a> 658         .long 0x398ebc8e, 0x3b61cfd0
+<a id='L659' name='L659'></a> 659         .long 0x396a31ee, 0x3b39b3ce
+<a id='L660' name='L660'></a> 660         .long 0x394008fe, 0x3b18a48b
+<a id='L661' name='L661'></a> 661         .long 0x391d638e, 0x3afad08d
+<a id='L662' name='L662'></a> 662         .long 0x3900ee61, 0x3acdf654
+<a id='L663' name='L663'></a> 663         .long 0x38d322ce, 0x3aa90c4d
+<a id='L664' name='L664'></a> 664         .long 0x38accb15, 0x3a8aaea4
+<a id='L665' name='L665'></a> 665         .long 0x388d5872, 0x3a636e45
+<a id='L666' name='L666'></a> 666         .long 0x3867216f, 0x3a3a6544
+<a id='L667' name='L667'></a> 667         .long 0x383ce218, 0x3a18b095
+<a id='L668' name='L668'></a> 668         .long 0x381a4894, 0x39fa092d
+<a id='L669' name='L669'></a> 669         .long 0x37fbec07, 0x39cc9f41
+<a id='L670' name='L670'></a> 670         .long 0x37cd9386, 0x39a76003
+<a id='L671' name='L671'></a> 671         .long 0x37a7acfd, 0x3988d758
+<a id='L672' name='L672'></a> 672         .long 0x3788b256, 0x395fa559
+<a id='L673' name='L673'></a> 673         .long 0x375ec64b, 0x3936ab0f
+<a id='L674' name='L674'></a> 674         .long 0x373570b9, 0x39152037
+<a id='L675' name='L675'></a> 675         .long 0x3713b43a, 0x38f35dd3
+<a id='L676' name='L676'></a> 676         .long 0x36f05d69, 0x38c67c0a
+<a id='L677' name='L677'></a> 677         .long 0x36c37bc4, 0x38a1ccfc
+<a id='L678' name='L678'></a> 678         .long 0x369ee7d7, 0x3883d518
+<a id='L679' name='L679'></a> 679         .long 0x36811c14, 0x3856b981
+<a id='L680' name='L680'></a> 680         .long 0x3651b337, 0x382ec87a
+<a id='L681' name='L681'></a> 681         .long 0x362a371c, 0x380e33a7
+<a id='L682' name='L682'></a> 682         .long 0x360a1932, 0x37e74660
+<a id='L683' name='L683'></a> 683         .long 0x35dff98b, 0x37bbfab1
+<a id='L684' name='L684'></a> 684         .long 0x35b589f6, 0x3798b6d4
+<a id='L685' name='L685'></a> 685         .long 0x3593127a, 0x37780230
+<a id='L686' name='L686'></a> 686         .long 0x356e2ef2, 0x37494905
+<a id='L687' name='L687'></a> 687         .long 0x3540c69d, 0x372348d9
+<a id='L688' name='L688'></a> 688         .long 0x351bf310, 0x370464b5
+<a id='L689' name='L689'></a> 689         .long 0x34fc31bf, 0x36d69685
+<a id='L690' name='L690'></a> 690         .long 0x34cbd1ee, 0x36add231
+<a id='L691' name='L691'></a> 691         .long 0x34a4a520, 0x368cbaf0
+<a id='L692' name='L692'></a> 692         .long 0x3484ef72, 0x3663c449
+<a id='L693' name='L693'></a> 693         .long 0x34568fd0, 0x363839e2
+<a id='L694' name='L694'></a> 694         .long 0x342d122f, 0x3614efa4
+<a id='L695' name='L695'></a> 695         .long 0x340b893c, 0x35f0b1df
+<a id='L696' name='L696'></a> 696         .long 0x33e0e3a6, 0x35c265d8
+<a id='L697' name='L697'></a> 697         .long 0x33b5237a, 0x359cede7
+<a id='L698' name='L698'></a> 698         .long 0x3391d42c, 0x357d3dc9
+<a id='L699' name='L699'></a> 699         .long 0x336ab0cb, 0x354c3b50
+<a id='L700' name='L700'></a> 700         .long 0x333cc25b, 0x3524a05e
+<a id='L701' name='L701'></a> 701         .long 0x3317be62, 0x3504a304
+<a id='L702' name='L702'></a> 702         .long 0x32f3db16, 0x34d59f46
+<a id='L703' name='L703'></a> 703         .long 0x32c3d8af, 0x34abf19f
+<a id='L704' name='L704'></a> 704         .long 0x329d3680, 0x348a545b
+<a id='L705' name='L705'></a> 705         .long 0x327c475d, 0x345e76f3
+<a id='L706' name='L706'></a> 706         .long 0x324a5141, 0x3432cc8c
+<a id='L707' name='L707'></a> 707         .long 0x32222c05, 0x340fa24c
+<a id='L708' name='L708'></a> 708         .long 0x3201edfc, 0x33e6a843
+<a id='L709' name='L709'></a> 709         .long 0x31d01833, 0x33b91cba
+<a id='L710' name='L710'></a> 710         .long 0x31a68f97, 0x33947ce5
+<a id='L711' name='L711'></a> 711         .long 0x318540a5, 0x336e1a5b
+<a id='L712' name='L712'></a> 712         .long 0x31551b65, 0x333eced8
+<a id='L713' name='L713'></a> 713         .long 0x312a535b, 0x3318d52b
+<a id='L714' name='L714'></a> 714         .long 0x31081119, 0x32f4b613
+<a id='L715' name='L715'></a> 715         .long 0x30d94acf, 0x32c3d10c
+<a id='L716' name='L716'></a> 716         .long 0x30ad6b36, 0x329c9d69
+<a id='L717' name='L717'></a> 717         .long 0x308a563f, 0x327a666d
+<a id='L718' name='L718'></a> 718         .long 0x305c98dc, 0x32481354
+<a id='L719' name='L719'></a> 719         .long 0x302fcd12, 0x321fc975
+<a id='L720' name='L720'></a> 720         .long 0x300c08aa, 0x31ff1904
+<a id='L721' name='L721'></a> 721         .long 0x2fdefaaf, 0x31cb87d8
+<a id='L722' name='L722'></a> 722         .long 0x2fb17113, 0x31a24ef3
+<a id='L723' name='L723'></a> 723         .long 0x2f8d22bb, 0x31815f38
+<a id='L724' name='L724'></a> 724         .long 0x2f60685f, 0x314e2339
+<a id='L725' name='L725'></a> 725         .long 0x2f3251c3, 0x3124258f
+<a id='L726' name='L726'></a> 726         .long 0x2f0da0c6, 0x3102a54d
+<a id='L727' name='L727'></a> 727         .long 0x2ee0dd25, 0x30cfdcca
+<a id='L728' name='L728'></a> 728         .long 0x2eb26c30, 0x30a54727
+<a id='L729' name='L729'></a> 729         .long 0x2e8d8121, 0x30835a7f
+<a id='L730' name='L730'></a> 730         .long 0x2e605773, 0x3050aec3
+<a id='L731' name='L731'></a> 731         .long 0x2e31bffd, 0x3025afef
+<a id='L732' name='L732'></a> 732         .long 0x2e0cc431, 0x30037c6d
+<a id='L733' name='L733'></a> 733         .long 0x2dded902, 0x2fd09664
+<a id='L734' name='L734'></a> 734         .long 0x2db04f61, 0x2fa55e85
+<a id='L735' name='L735'></a> 735         .long 0x2d8b6c69, 0x2f830aa5
+<a id='L736' name='L736'></a> 736         .long 0x2d5c66c4, 0x2f4f93fd
+<a id='L737' name='L737'></a> 737         .long 0x2d2e1f21, 0x2f2453fe
+<a id='L738' name='L738'></a> 738         .long 0x2d097e36, 0x2f0206a5
+<a id='L739' name='L739'></a> 739         .long 0x2cd908c8, 0x2ecdaaf4
+<a id='L740' name='L740'></a> 740         .long 0x2cab3670, 0x2ea293d6
+<a id='L741' name='L741'></a> 741         .long 0x2c86fff0, 0x2e8073d6
+<a id='L742' name='L742'></a> 742         .long 0x2c54ca13, 0x2e4ae1ac
+<a id='L743' name='L743'></a> 743         .long 0x2c279ec9, 0x2e2023e7
+<a id='L744' name='L744'></a> 744         .long 0x2c03f9af, 0x2dfcaee7
+<a id='L745' name='L745'></a> 745         .long 0x2bcfb860, 0x2dc74167
+<a id='L746' name='L746'></a> 746         .long 0x2ba363bd, 0x2d9d0c41
+<a id='L747' name='L747'></a> 747         .long 0x2b807524, 0x2d7770ea
+<a id='L748' name='L748'></a> 748         .long 0x2b49e3d6, 0x2d42d60c
+<a id='L749' name='L749'></a> 749         .long 0x2b1e92b5, 0x2d195702
+<a id='L750' name='L750'></a> 750         .long 0x2af8fac8, 0x2cf13ec4
+<a id='L751' name='L751'></a> 751         .long 0x2ac35eb5, 0x2cbdaded
+<a id='L752' name='L752'></a> 752         .long 0x2a993aaa, 0x2c95101b
+<a id='L753' name='L753'></a> 753         .long 0x2a703d5a, 0x2c6a2c50
+<a id='L754' name='L754'></a> 754         .long 0x2a3c3cf6, 0x2c37d975
+<a id='L755' name='L755'></a> 755         .long 0x2a136bd8, 0x2c104516
+<a id='L756' name='L756'></a> 756         .long 0x29e6cc51, 0x2be24fc5
+<a id='L757' name='L757'></a> 757         .long 0x29b493e1, 0x2bb16ad5
+<a id='L758' name='L758'></a> 758         .long 0x298d376b, 0x2b8b04c7
+<a id='L759' name='L759'></a> 759         .long 0x295cc356, 0x2b59c147
+<a id='L760' name='L760'></a> 760         .long 0x292c79ad, 0x2b2a759f
+<a id='L761' name='L761'></a> 761         .long 0x2906af30, 0x2b055f07
+<a id='L762' name='L762'></a> 762         .long 0x28d23edb, 0x2ad09a6a
+<a id='L763' name='L763'></a> 763         .long 0x28a4050c, 0x2aa30e6d
+<a id='L764' name='L764'></a> 764         .long 0x287fca72, 0x2a7ec8c1
+<a id='L765' name='L765'></a> 765         .long 0x28475b9c, 0x2a46f5b1
+<a id='L766' name='L766'></a> 766         .long 0x281b4cca, 0x2a1b4a74
+<a id='L767' name='L767'></a> 767         .long 0x27f1d725, 0x29f24b83
+<a id='L768' name='L768'></a> 768         .long 0x27bc361f, 0x29bcee14
+<a id='L769' name='L769'></a> 769         .long 0x27926764, 0x29933f23
+<a id='L770' name='L770'></a> 770         .long 0x2763a7e2, 0x29656858
+<a id='L771' name='L771'></a> 771         .long 0x2730ea36, 0x29329e84
+<a id='L772' name='L772'></a> 772         .long 0x27096aae, 0x290b01c6
+<a id='L773' name='L773'></a> 773         .long 0x26d55ed6, 0x28d840d5
+<a id='L774' name='L774'></a> 774         .long 0x26a59297, 0x28a82171
+<a id='L775' name='L775'></a> 775         .long 0x26806b7c, 0x2882a722
+<a id='L776' name='L776'></a> 776         .long 0x26471c70, 0x284af596
+<a id='L777' name='L777'></a> 777         .long 0x261a4874, 0x281d9063
+<a id='L778' name='L778'></a> 778         .long 0x25eefab5, 0x27f4865b
+<a id='L779' name='L779'></a> 779         .long 0x25b8fef0, 0x27bda5bb
+<a id='L780' name='L780'></a> 780         .long 0x258f232d, 0x27930395
+<a id='L781' name='L781'></a> 781         .long 0x255d6497, 0x2763d176
+<a id='L782' name='L782'></a> 782         .long 0x252b220e, 0x27306e78
+<a id='L783' name='L783'></a> 783         .long 0x25043806, 0x270891a3
+<a id='L784' name='L784'></a> 784         .long 0x24cc3533, 0x26d35285
+<a id='L785' name='L785'></a> 785         .long 0x249d9eab, 0x26a36ab9
+<a id='L786' name='L786'></a> 786         .long 0x247333ed, 0x267c9e87
+<a id='L787' name='L787'></a> 787         .long 0x243b895c, 0x2643294f
+<a id='L788' name='L788'></a> 788         .long 0x24108aa2, 0x2616b2d7
+<a id='L789' name='L789'></a> 789         .long 0x23deb305, 0x25e89e19
+<a id='L790' name='L790'></a> 790         .long 0x23ab79f7, 0x25b3722d
+<a id='L791' name='L791'></a> 791         .long 0x2383f8a5, 0x258a5c5b
+<a id='L792' name='L792'></a> 792         .long 0x234b094e, 0x255542a6
+<a id='L793' name='L793'></a> 793         .long 0x231c1be0, 0x252445ca
+<a id='L794' name='L794'></a> 794         .long 0x22eff061, 0x24fcf3b9
+<a id='L795' name='L795'></a> 795         .long 0x22b84dad, 0x24c2a818
+<a id='L796' name='L796'></a> 796         .long 0x228d7fe9, 0x2495b90c
+<a id='L797' name='L797'></a> 797         .long 0x22592b20, 0x246635db
+<a id='L798' name='L798'></a> 798         .long 0x222691fd, 0x2430e58d
+<a id='L799' name='L799'></a> 799         .long 0x21ff65e8, 0x2407dd07
+<a id='L800' name='L800'></a> 800         .long 0x21c3b3ec, 0x23d09839
+<a id='L801' name='L801'></a> 801         .long 0x2195e33f, 0x23a00d5e
+<a id='L802' name='L802'></a> 802         .long 0x21657c23, 0x23757e16
+<a id='L803' name='L803'></a> 803         .long 0x212f973d, 0x233c2e00
+<a id='L804' name='L804'></a> 804         .long 0x210649d6, 0x23102d3f
+<a id='L805' name='L805'></a> 805         .long 0x20cd4d83, 0x22dcd18d
+<a id='L806' name='L806'></a> 806         .long 0x209cdbfe, 0x22a904b4
+<a id='L807' name='L807'></a> 807         .long 0x206f93bd, 0x22814e73
+<a id='L808' name='L808'></a> 808         .long 0x2036de68, 0x2245c0eb
+<a id='L809' name='L809'></a> 809         .long 0x200b8405, 0x22172479
+<a id='L810' name='L810'></a> 810         .long 0x1fd4c713, 0x21e6ec36
+<a id='L811' name='L811'></a> 811         .long 0x1fa22d35, 0x21b0523d
+<a id='L812' name='L812'></a> 812         .long 0x1f771927, 0x21869086
+<a id='L813' name='L813'></a> 813         .long 0x1f3c2718, 0x214d4b0f
+<a id='L814' name='L814'></a> 814         .long 0x1f0f32ff, 0x211c85ba
+<a id='L815' name='L815'></a> 815         .long 0x1ed9ddc3, 0x20ee8f29
+<a id='L816' name='L816'></a> 816         .long 0x1ea5a71b, 0x20b5b53d
+<a id='L817' name='L817'></a> 817         .long 0x1e7bc87b, 0x208a5661
+<a id='L818' name='L818'></a> 818         .long 0x1e3f4167, 0x205288d5
+<a id='L819' name='L819'></a> 819         .long 0x1e11353d, 0x2020208a
+<a id='L820' name='L820'></a> 820         .long 0x1ddc631a, 0x1ff3754b
+<a id='L821' name='L821'></a> 821         .long 0x1da729d6, 0x1fb8fcbd
+<a id='L822' name='L822'></a> 822         .long 0x1d7d76ae, 0x1f8c7d97
+<a id='L823' name='L823'></a> 823         .long 0x1d4010bf, 0x1f554a3f
+<a id='L824' name='L824'></a> 824         .long 0x1d117833, 0x1f21d3cb
+<a id='L825' name='L825'></a> 825         .long 0x1cdc3fc3, 0x1ef57178
+<a id='L826' name='L826'></a> 826         .long 0x1ca6a764, 0x1eba0a73
+<a id='L827' name='L827'></a> 827         .long 0x1c7c141f, 0x1e8cf23a
+<a id='L828' name='L828'></a> 828         .long 0x1c3e8d91, 0x1e5575bf
+<a id='L829' name='L829'></a> 829         .long 0x1c0ff968, 0x1e218fb3
+<a id='L830' name='L830'></a> 830         .long 0x1bd974f4, 0x1df47139
+<a id='L831' name='L831'></a> 831         .long 0x1ba4246f, 0x1db8d48f
+<a id='L832' name='L832'></a> 832         .long 0x1b77ad8b, 0x1d8bb00a
+<a id='L833' name='L833'></a> 833         .long 0x1b3ac5c9, 0x1d5309be
+<a id='L834' name='L834'></a> 834         .long 0x1b0cc6a1, 0x1d1f56ba
+<a id='L835' name='L835'></a> 835         .long 0x1ad41c58, 0x1cf07de1
+<a id='L836' name='L836'></a> 836         .long 0x1a9fb806, 0x1cb56657
+<a id='L837' name='L837'></a> 837         .long 0x1a706b47, 0x1c88c2bc
+<a id='L838' name='L838'></a> 838         .long 0x1a34dbfa, 0x1c4e1cba
+<a id='L839' name='L839'></a> 839         .long 0x1a07fd09, 0x1c1b3d7d
+<a id='L840' name='L840'></a> 840         .long 0x19cc668e, 0x1be9bbfd
+<a id='L841' name='L841'></a> 841         .long 0x19998a40, 0x1bafdf73
+<a id='L842' name='L842'></a> 842         .long 0x19668edd, 0x1b844540
+<a id='L843' name='L843'></a> 843         .long 0x192d054e, 0x1b46dbe6
+<a id='L844' name='L844'></a> 844         .long 0x1901c77a, 0x1b156976
+<a id='L845' name='L845'></a> 845         .long 0x18c29845, 0x1ae0691f
+<a id='L846' name='L846'></a> 846         .long 0x1891d1e0, 0x1aa8720d
+<a id='L847' name='L847'></a> 847         .long 0x185a6f34, 0x1a7cc054
+<a id='L848' name='L848'></a> 848         .long 0x18238672, 0x1a3d887f
+<a id='L849' name='L849'></a> 849         .long 0x17f4b806, 0x1a0e0ecc
+<a id='L850' name='L850'></a> 850         .long 0x17b70648, 0x19d4d840
+<a id='L851' name='L851'></a> 851         .long 0x1788d12d, 0x199f5fda
+<a id='L852' name='L852'></a> 852         .long 0x174c739d, 0x196e8e9b
+<a id='L853' name='L853'></a> 853         .long 0x1718afac, 0x193273f8
+<a id='L854' name='L854'></a> 854         .long 0x16e3f1ae, 0x19056d4a
+<a id='L855' name='L855'></a> 855         .long 0x16aa10bb, 0x18c76cf4
+<a id='L856' name='L856'></a> 856         .long 0x167da48f, 0x1894f659
+<a id='L857' name='L857'></a> 857         .long 0x163d0e1a, 0x185e6d9a
+<a id='L858' name='L858'></a> 858         .long 0x160cd879, 0x1825fb65
+<a id='L859' name='L859'></a> 859         .long 0x15d1c1e5, 0x17f7998c
+<a id='L860' name='L860'></a> 860         .long 0x159c1df9, 0x17b895e1
+<a id='L861' name='L861'></a> 861         .long 0x1568466d, 0x17898a88
+<a id='L862' name='L862'></a> 862         .long 0x152cb568, 0x174cdf9b
+<a id='L863' name='L863'></a> 863         .long 0x15005b01, 0x1718826b
+<a id='L864' name='L864'></a> 864         .long 0x14beb151, 0x16e2f29a
+<a id='L865' name='L865'></a> 865         .long 0x148d955e, 0x16a8c6d9
+<a id='L866' name='L866'></a> 866         .long 0x14522407, 0x167ae8e3
+<a id='L867' name='L867'></a> 867         .long 0x141bdf21, 0x163a6a2d
+<a id='L868' name='L868'></a> 868         .long 0x13e71f72, 0x160a6e25
+<a id='L869' name='L869'></a> 869         .long 0x13ab44c3, 0x15cd7e87
+<a id='L870' name='L870'></a> 870         .long 0x137db4e3, 0x15987319
+<a id='L871' name='L871'></a> 871         .long 0x133bd23f, 0x156215a4
+<a id='L872' name='L872'></a> 872         .long 0x130afa70, 0x15278fa9
+<a id='L873' name='L873'></a> 873         .long 0x12cd92ee, 0x14f840ab
+<a id='L874' name='L874'></a> 874         .long 0x1297f777, 0x14b7cfb1
+<a id='L875' name='L875'></a> 875         .long 0x1260915e, 0x148807fd
+<a id='L876' name='L876'></a> 876         .long 0x1225d8aa, 0x14493e73
+<a id='L877' name='L877'></a> 877         .long 0x11f4d72b, 0x1414c97a
+<a id='L878' name='L878'></a> 878         .long 0x11b4a474, 0x13dbe665
+<a id='L879' name='L879'></a> 879         .long 0x11853669, 0x13a26be2
+<a id='L880' name='L880'></a> 880         .long 0x11446065, 0x136fd110
+<a id='L881' name='L881'></a> 881         .long 0x1110acc4, 0x1330f593
+<a id='L882' name='L882'></a> 882         .long 0x10d51115, 0x13028371
+<a id='L883' name='L883'></a> 883         .long 0x109cd187, 0x12c06c14
+<a id='L884' name='L884'></a> 884         .long 0x1066ba07, 0x128dc782
+<a id='L885' name='L885'></a> 885         .long 0x1029a6c1, 0x1250d3f6
+<a id='L886' name='L886'></a> 886         .long 0x0ff95d83, 0x1219b798
+<a id='L887' name='L887'></a> 887         .long 0x0fb72d9a, 0x11e230b9
+<a id='L888' name='L888'></a> 888         .long 0x0f867e41, 0x11a655c1
+<a id='L889' name='L889'></a> 889         .long 0x0f456641, 0x117484a6
+<a id='L890' name='L890'></a> 890         .long 0x0f10cb43, 0x1133a328
+<a id='L891' name='L891'></a> 891         .long 0x0ed44fd3, 0x1103e85c
+<a id='L892' name='L892'></a> 892         .long 0x0e9b94c1, 0x10c19ffd
+<a id='L893' name='L893'></a> 893         .long 0x0e63e84a, 0x108e0a3d
+<a id='L894' name='L894'></a> 894         .long 0x0e26d8e4, 0x10504b66
+<a id='L895' name='L895'></a> 895         .long 0x0df42c6c, 0x1018a6f6
+<a id='L896' name='L896'></a> 896         .long 0x0db294f0, 0x0fdfa367
+<a id='L897' name='L897'></a> 897         .long 0x0d828bdd, 0x0fa3bcb5
+<a id='L898' name='L898'></a> 898         .long 0x0d3ec540, 0x0f6fa4d1
+<a id='L899' name='L899'></a> 899         .long 0x0d0b5230, 0x0f2f48cc
+<a id='L900' name='L900'></a> 900         .long 0x0ccb653b, 0x0f00259a
+<a id='L901' name='L901'></a> 901         .long 0x0c946596, 0x0ebb479f
+<a id='L902' name='L902'></a> 902         .long 0x00000000, 0x00000000
+<a id='L903' name='L903'></a> 903         .align 64
+<a id='L904' name='L904'></a> 904         .long 0x7fffffff, 0x7fffffff, 0x7fffffff, 0x7fffffff, 0x7fffffff, 0x7fffffff, 0x7fffffff, 0x7fffffff, 0x7fffffff, 0x7fffffff, 0x7fffffff, 0x7fffffff, 0x7fffffff, 0x7fffffff, 0x7fffffff, 0x7fffffff  <em class='comment'>/* _AbsMask */</em>
+<a id='L905' name='L905'></a> 905         .align 64
+<a id='L906' name='L906'></a> 906         .long 0x41210000, 0x41210000, 0x41210000, 0x41210000, 0x41210000, 0x41210000, 0x41210000, 0x41210000, 0x41210000, 0x41210000, 0x41210000, 0x41210000, 0x41210000, 0x41210000, 0x41210000, 0x41210000  <em class='comment'>/* _MaxThreshold=644.0/64.0 */</em>
+<a id='L907' name='L907'></a> 907         .align 64
+<a id='L908' name='L908'></a> 908         .long 0x80000000, 0x80000000, 0x80000000, 0x80000000, 0x80000000, 0x80000000, 0x80000000, 0x80000000, 0x80000000, 0x80000000, 0x80000000, 0x80000000, 0x80000000, 0x80000000, 0x80000000, 0x80000000  <em class='comment'>/* sign mask */</em>
+<a id='L909' name='L909'></a> 909         .align 64
+<a id='L910' name='L910'></a> 910         .long 0x3f800000, 0x3f800000, 0x3f800000, 0x3f800000, 0x3f800000, 0x3f800000, 0x3f800000, 0x3f800000, 0x3f800000, 0x3f800000, 0x3f800000, 0x3f800000, 0x3f800000, 0x3f800000, 0x3f800000, 0x3f800000  <em class='comment'>/* 1.0, used when _VLANG_FMA_AVAILABLE is defined */</em>
+<a id='L911' name='L911'></a> 911         .align 64
+<a id='L912' name='L912'></a> 912         .long 0x48000000, 0x48000000, 0x48000000, 0x48000000, 0x48000000, 0x48000000, 0x48000000, 0x48000000, 0x48000000, 0x48000000, 0x48000000, 0x48000000, 0x48000000, 0x48000000, 0x48000000, 0x48000000  <em class='comment'>/* SRound */</em>
+<a id='L913' name='L913'></a> 913         .align 64
+<a id='L914' name='L914'></a> 914         .long 0x27800000, 0x27800000, 0x27800000, 0x27800000, 0x27800000, 0x27800000, 0x27800000, 0x27800000, 0x27800000, 0x27800000, 0x27800000, 0x27800000, 0x27800000, 0x27800000, 0x27800000, 0x27800000  <em class='comment'>/* _TwoM48 */</em>
+<a id='L915' name='L915'></a> 915         <em class='comment'>// polynomial coefficients</em>
+<a id='L916' name='L916'></a> 916         .align 64
+<a id='L917' name='L917'></a> 917         .long 0x3e08a7ca, 0x3e08a7ca, 0x3e08a7ca, 0x3e08a7ca, 0x3e08a7ca, 0x3e08a7ca, 0x3e08a7ca, 0x3e08a7ca, 0x3e08a7ca, 0x3e08a7ca, 0x3e08a7ca, 0x3e08a7ca, 0x3e08a7ca, 0x3e08a7ca, 0x3e08a7ca, 0x3e08a7ca   <em class='comment'>// poly1[0]</em>
+<a id='L918' name='L918'></a> 918         .align 64
+<a id='L919' name='L919'></a> 919         .long 0xbeaacf22, 0xbeaacf22, 0xbeaacf22, 0xbeaacf22, 0xbeaacf22, 0xbeaacf22, 0xbeaacf22, 0xbeaacf22, 0xbeaacf22, 0xbeaacf22, 0xbeaacf22, 0xbeaacf22, 0xbeaacf22, 0xbeaacf22, 0xbeaacf22, 0xbeaacf22   <em class='comment'>// poly1[1]</em>
+<a id='L920' name='L920'></a> 920         .align 64
+<a id='L921' name='L921'></a> 921         .long 0x3f005b36, 0x3f005b36, 0x3f005b36, 0x3f005b36, 0x3f005b36, 0x3f005b36, 0x3f005b36, 0x3f005b36, 0x3f005b36, 0x3f005b36, 0x3f005b36, 0x3f005b36, 0x3f005b36, 0x3f005b36, 0x3f005b36, 0x3f005b36   <em class='comment'>// poly3[0]</em>
+<a id='L922' name='L922'></a> 922         .align 64
+<a id='L923' name='L923'></a> 923         .long 0xbeab4edb, 0xbeab4edb, 0xbeab4edb, 0xbeab4edb, 0xbeab4edb, 0xbeab4edb, 0xbeab4edb, 0xbeab4edb, 0xbeab4edb, 0xbeab4edb, 0xbeab4edb, 0xbeab4edb, 0xbeab4edb, 0xbeab4edb, 0xbeab4edb, 0xbeab4edb   <em class='comment'>// poly3[1]</em>
+<a id='L924' name='L924'></a> 924         .align 64
+<a id='L925' name='L925'></a> 925         .long 0x3f2aaaa6, 0x3f2aaaa6, 0x3f2aaaa6, 0x3f2aaaa6, 0x3f2aaaa6, 0x3f2aaaa6, 0x3f2aaaa6, 0x3f2aaaa6, 0x3f2aaaa6, 0x3f2aaaa6, 0x3f2aaaa6, 0x3f2aaaa6, 0x3f2aaaa6, 0x3f2aaaa6, 0x3f2aaaa6, 0x3f2aaaa6   <em class='comment'>// poly1[2]</em>
+<a id='L926' name='L926'></a> 926         .align 64
+<a id='L927' name='L927'></a> 927         .long 0xbf7ffffc, 0xbf7ffffc, 0xbf7ffffc, 0xbf7ffffc, 0xbf7ffffc, 0xbf7ffffc, 0xbf7ffffc, 0xbf7ffffc, 0xbf7ffffc, 0xbf7ffffc, 0xbf7ffffc, 0xbf7ffffc, 0xbf7ffffc, 0xbf7ffffc, 0xbf7ffffc, 0xbf7ffffc   <em class='comment'>// poly1[3]</em>
+<a id='L928' name='L928'></a> 928         .align 64
+<a id='L929' name='L929'></a> 929         .long 0x4120DDFB, 0x4120DDFB, 0x4120DDFB, 0x4120DDFB, 0x4120DDFB, 0x4120DDFB, 0x4120DDFB, 0x4120DDFB, 0x4120DDFB, 0x4120DDFB, 0x4120DDFB, 0x4120DDFB, 0x4120DDFB, 0x4120DDFB, 0x4120DDFB, 0x4120DDFB  <em class='comment'>/* UF_Threshold */</em>
+<a id='L930' name='L930'></a> 930         .align 64
+<a id='L931' name='L931'></a> 931         .type   __svml_serfc_data_internal,@object
+<a id='L932' name='L932'></a> 932         .size   __svml_serfc_data_internal,.-__svml_serfc_data_internal
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;][^][v]<a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

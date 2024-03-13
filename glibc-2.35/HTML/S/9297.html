@@ -1,0 +1,581 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>sysdeps/ieee754/ldbl-128/lgamma_negl.c</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18977.html'>sysdeps</a>/<a href='../files/19058.html'>ieee754</a>/<a href='../files/19062.html'>ldbl-128</a>/lgamma_negl.c</h2>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L417'>[^]</a><a href='#L448'>[v]</a>[top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<h2 class='header'>DEFINITIONS</h2>
+This source file includes following definitions.
+<ol>
+<li><a href='#L417' title='Defined at 417.'>lg_sinpi</a></li>
+<li><a href='#L428' title='Defined at 428.'>lg_cospi</a></li>
+<li><a href='#L439' title='Defined at 439.'>lg_cotpi</a></li>
+<li><a href='#L448' title='Defined at 448.'>__lgamma_negl</a></li>
+</ol>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* lgammal expanding around zeros.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   Copyright (C) 2015-2022 Free Software Foundation, Inc.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'></em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'></em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'></em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   License along with the GNU C Library; if not, see</em>
+<a id='L17' name='L17'></a>  17 <em class='comment'>   &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L18' name='L18'></a>  18 
+<a id='L19' name='L19'></a>  19 <em class='sharp'>#include</em> &lt;<a href='18104.html'>float.h</a>&gt;
+<a id='L20' name='L20'></a>  20 <em class='sharp'>#include</em> &lt;<a href='../I/1890.html'>math.h</a>&gt;
+<a id='L21' name='L21'></a>  21 <em class='sharp'>#include</em> &lt;<a href='../I/5892.html'>math_private.h</a>&gt;
+<a id='L22' name='L22'></a>  22 <em class='sharp'>#include</em> &lt;<a href='../I/5869.html'>fenv_private.h</a>&gt;
+<a id='L23' name='L23'></a>  23 
+<a id='L24' name='L24'></a>  24 <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <a href='../D/18523.html' title='Multiple defined in 13 places.'>_Float128</a> <a href='../Y/18112.html' title='Multiple used in 10 places.'>lgamma_zeros</a>[][2] =
+<a id='L25' name='L25'></a>  25   <em class='brace'>{</em>
+<a id='L26' name='L26'></a>  26     <em class='brace'>{</em> <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x2.74ff92c01f0d82abec9f315f1a08p+0), <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0xe.d3ccb7fb2658634a2b9f6b2ba81p-116) <em class='brace'>}</em>,
+<a id='L27' name='L27'></a>  27     <em class='brace'>{</em> <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x2.bf6821437b20197995a4b4641eaep+0), <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0xb.f4b00b4829f961e428533e6ad048p-116) <em class='brace'>}</em>,
+<a id='L28' name='L28'></a>  28     <em class='brace'>{</em> <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x3.24c1b793cb35efb8be699ad3d9bap+0), <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x6.5454cb7fac60e3f16d9d7840c2ep-116) <em class='brace'>}</em>,
+<a id='L29' name='L29'></a>  29     <em class='brace'>{</em> <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x3.f48e2a8f85fca170d4561291236cp+0), <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0xc.320a4887d1cb4c711828a75d5758p-116) <em class='brace'>}</em>,
+<a id='L30' name='L30'></a>  30     <em class='brace'>{</em> <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x4.0a139e16656030c39f0b0de18114p+0), <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x1.53e84029416e1242006b2b3d1cfp-112) <em class='brace'>}</em>,
+<a id='L31' name='L31'></a>  31     <em class='brace'>{</em> <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x4.fdd5de9bbabf3510d0aa40769884p+0), <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x1.01d7d78125286f78d1e501f14966p-112) <em class='brace'>}</em>,
+<a id='L32' name='L32'></a>  32     <em class='brace'>{</em> <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x5.021a95fc2db6432a4c56e595394cp+0), <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x1.ecc6af0430d4fe5746fa7233356fp-112) <em class='brace'>}</em>,
+<a id='L33' name='L33'></a>  33     <em class='brace'>{</em> <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x5.ffa4bd647d0357dd4ed62cbd31ecp+0), <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x1.f8e3f8e5deba2d67dbd70dd96ce1p-112) <em class='brace'>}</em>,
+<a id='L34' name='L34'></a>  34     <em class='brace'>{</em> <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x6.005ac9625f233b607c2d96d16384p+0), <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x1.cb86ac569340cf1e5f24df7aab7bp-112) <em class='brace'>}</em>,
+<a id='L35' name='L35'></a>  35     <em class='brace'>{</em> <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x6.fff2fddae1bbff3d626b65c23fd4p+0), <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x1.e0bfcff5c457ebcf4d3ad9674167p-112) <em class='brace'>}</em>,
+<a id='L36' name='L36'></a>  36     <em class='brace'>{</em> <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x7.000cff7b7f87adf4482dcdb98784p+0), <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x1.54d99e35a74d6407b80292df199fp-112) <em class='brace'>}</em>,
+<a id='L37' name='L37'></a>  37     <em class='brace'>{</em> <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x7.fffe5fe05673c3ca9e82b522b0ccp+0), <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x1.62d177c832e0eb42c2faffd1b145p-112) <em class='brace'>}</em>,
+<a id='L38' name='L38'></a>  38     <em class='brace'>{</em> <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x8.0001a01459fc9f60cb3cec1cec88p+0), <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x2.8998835ac7277f7bcef67c47f188p-112) <em class='brace'>}</em>,
+<a id='L39' name='L39'></a>  39     <em class='brace'>{</em> <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x8.ffffd1c425e80ffc864e95749258p+0), <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x1.e7e20210e7f81cf781b44e9d2b02p-112) <em class='brace'>}</em>,
+<a id='L40' name='L40'></a>  40     <em class='brace'>{</em> <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x9.00002e3bb47d86d6d843fedc352p+0), <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x2.14852f613a16291751d2ab751f7ep-112) <em class='brace'>}</em>,
+<a id='L41' name='L41'></a>  41     <em class='brace'>{</em> <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x9.fffffb606bdfdcd062ae77a50548p+0), <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x3.962d1490cc2e8f031c7007eaa1ap-116) <em class='brace'>}</em>,
+<a id='L42' name='L42'></a>  42     <em class='brace'>{</em> <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0xa.0000049f93bb9927b45d95e1544p+0), <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x1.e03086db9146a9287bd4f2172d5ap-112) <em class='brace'>}</em>,
+<a id='L43' name='L43'></a>  43     <em class='brace'>{</em> <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0xa.ffffff9466e9f1b36dacd2adbd18p+0), <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0xd.05a4e458062f3f95345a4d9c9b6p-116) <em class='brace'>}</em>,
+<a id='L44' name='L44'></a>  44     <em class='brace'>{</em> <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0xb.0000006b9915315d965a6ffea41p+0), <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x1.b415c6fff233e7b7fdc3a094246fp-112) <em class='brace'>}</em>,
+<a id='L45' name='L45'></a>  45     <em class='brace'>{</em> <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0xb.fffffff7089387387de41acc3d4p+0), <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x3.687427c6373bd74a10306e10a28ep-112) <em class='brace'>}</em>,
+<a id='L46' name='L46'></a>  46     <em class='brace'>{</em> <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0xc.00000008f76c7731567c0f0250fp+0), <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x3.87920df5675833859190eb128ef6p-112) <em class='brace'>}</em>,
+<a id='L47' name='L47'></a>  47     <em class='brace'>{</em> <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0xc.ffffffff4f6dcf617f97a5ffc758p+0), <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x2.ab72d76f32eaee2d1a42ed515d3ap-116) <em class='brace'>}</em>,
+<a id='L48' name='L48'></a>  48     <em class='brace'>{</em> <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0xd.00000000b092309c06683dd1b9p+0), <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x3.e3700857a15c19ac5a611de9688ap-112) <em class='brace'>}</em>,
+<a id='L49' name='L49'></a>  49     <em class='brace'>{</em> <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0xd.fffffffff36345ab9e184a3e09dp+0), <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x1.176dc48e47f62d917973dd44e553p-112) <em class='brace'>}</em>,
+<a id='L50' name='L50'></a>  50     <em class='brace'>{</em> <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0xe.000000000c9cba545e94e75ec57p+0), <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x1.8f753e2501e757a17cf2ecbeeb89p-112) <em class='brace'>}</em>,
+<a id='L51' name='L51'></a>  51     <em class='brace'>{</em> <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0xe.ffffffffff28c060c6604ef3037p+0), <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x1.f89d37357c9e3dc17c6c6e63becap-112) <em class='brace'>}</em>,
+<a id='L52' name='L52'></a>  52     <em class='brace'>{</em> <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0xf.0000000000d73f9f399bd0e420f8p+0), <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x5.e9ee31b0b890744fc0e3fbc01048p-116) <em class='brace'>}</em>,
+<a id='L53' name='L53'></a>  53     <em class='brace'>{</em> <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0xf.fffffffffff28c060c6621f512e8p+0), <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0xd.1b2eec9d960bd9adc5be5f5fa5p-116) <em class='brace'>}</em>,
+<a id='L54' name='L54'></a>  54     <em class='brace'>{</em> <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x1.000000000000d73f9f399da1424cp+4), <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x6.c46e0e88305d2800f0e414c506a8p-116) <em class='brace'>}</em>,
+<a id='L55' name='L55'></a>  55     <em class='brace'>{</em> <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x1.0ffffffffffff3569c47e7a93e1cp+4), <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x4.6a08a2e008a998ebabb8087efa2cp-112) <em class='brace'>}</em>,
+<a id='L56' name='L56'></a>  56     <em class='brace'>{</em> <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x1.1000000000000ca963b818568887p+4), <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x6.ca5a3a64ec15db0a95caf2c9ffb4p-112) <em class='brace'>}</em>,
+<a id='L57' name='L57'></a>  57     <em class='brace'>{</em> <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x1.1fffffffffffff4bec3ce234132dp+4), <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x8.b2b726187c841cb92cd5221e444p-116) <em class='brace'>}</em>,
+<a id='L58' name='L58'></a>  58     <em class='brace'>{</em> <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x1.20000000000000b413c31dcbeca5p+4), <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x3.c4d005344b6cd0e7231120294abcp-112) <em class='brace'>}</em>,
+<a id='L59' name='L59'></a>  59     <em class='brace'>{</em> <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x1.2ffffffffffffff685b25cbf5f54p+4), <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x5.ced932e38485f7dd296b8fa41448p-112) <em class='brace'>}</em>,
+<a id='L60' name='L60'></a>  60     <em class='brace'>{</em> <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x1.30000000000000097a4da340a0acp+4), <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x7.e484e0e0ffe38d406ebebe112f88p-112) <em class='brace'>}</em>,
+<a id='L61' name='L61'></a>  61     <em class='brace'>{</em> <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x1.3fffffffffffffff86af516ff7f7p+4), <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x6.bd67e720d57854502b7db75e1718p-112) <em class='brace'>}</em>,
+<a id='L62' name='L62'></a>  62     <em class='brace'>{</em> <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x1.40000000000000007950ae900809p+4), <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x6.bec33375cac025d9c073168c5d9p-112) <em class='brace'>}</em>,
+<a id='L63' name='L63'></a>  63     <em class='brace'>{</em> <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x1.4ffffffffffffffffa391c4248c3p+4), <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x5.c63022b62b5484ba346524db607p-112) <em class='brace'>}</em>,
+<a id='L64' name='L64'></a>  64     <em class='brace'>{</em> <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x1.500000000000000005c6e3bdb73dp+4), <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x5.c62f55ed5322b2685c5e9a51e6a8p-112) <em class='brace'>}</em>,
+<a id='L65' name='L65'></a>  65     <em class='brace'>{</em> <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x1.5fffffffffffffffffbcc71a492p+4), <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x1.eb5aeb96c74d7ad25e060528fb5p-112) <em class='brace'>}</em>,
+<a id='L66' name='L66'></a>  66     <em class='brace'>{</em> <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x1.6000000000000000004338e5b6ep+4), <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x1.eb5aec04b2f2eb663e4e3d8a018cp-112) <em class='brace'>}</em>,
+<a id='L67' name='L67'></a>  67     <em class='brace'>{</em> <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x1.6ffffffffffffffffffd13c97d9dp+4), <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x3.8fcc4d08d6fe5aa56ab04307ce7ep-112) <em class='brace'>}</em>,
+<a id='L68' name='L68'></a>  68     <em class='brace'>{</em> <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x1.70000000000000000002ec368263p+4), <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x3.8fcc4d090cee2f5d0b69a99c353cp-112) <em class='brace'>}</em>,
+<a id='L69' name='L69'></a>  69     <em class='brace'>{</em> <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x1.7fffffffffffffffffffe0d30fe7p+4), <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x7.2f577cca4b4c8cb1dc14001ac5ecp-112) <em class='brace'>}</em>,
+<a id='L70' name='L70'></a>  70     <em class='brace'>{</em> <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x1.800000000000000000001f2cf019p+4), <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x7.2f577cca4b3442e35f0040b3b9e8p-112) <em class='brace'>}</em>,
+<a id='L71' name='L71'></a>  71     <em class='brace'>{</em> <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x1.8ffffffffffffffffffffec0c332p+4), <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x2.e9a0572b1bb5b95f346a92d67a6p-112) <em class='brace'>}</em>,
+<a id='L72' name='L72'></a>  72     <em class='brace'>{</em> <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x1.90000000000000000000013f3ccep+4), <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x2.e9a0572b1bb5c371ddb3561705ap-112) <em class='brace'>}</em>,
+<a id='L73' name='L73'></a>  73     <em class='brace'>{</em> <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x1.9ffffffffffffffffffffff3b8bdp+4), <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x1.cad8d32e386fd783e97296d63dcbp-116) <em class='brace'>}</em>,
+<a id='L74' name='L74'></a>  74     <em class='brace'>{</em> <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x1.a0000000000000000000000c4743p+4), <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x1.cad8d32e386fd7c1ab8c1fe34c0ep-116) <em class='brace'>}</em>,
+<a id='L75' name='L75'></a>  75     <em class='brace'>{</em> <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x1.afffffffffffffffffffffff8b95p+4), <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x3.8f48cc5737d5979c39db806c5406p-112) <em class='brace'>}</em>,
+<a id='L76' name='L76'></a>  76     <em class='brace'>{</em> <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x1.b00000000000000000000000746bp+4), <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x3.8f48cc5737d5979c3b3a6bda06f6p-112) <em class='brace'>}</em>,
+<a id='L77' name='L77'></a>  77     <em class='brace'>{</em> <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x1.bffffffffffffffffffffffffbd8p+4), <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x6.2898d42174dcf171470d8c8c6028p-112) <em class='brace'>}</em>,
+<a id='L78' name='L78'></a>  78     <em class='brace'>{</em> <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x1.c000000000000000000000000428p+4), <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x6.2898d42174dcf171470d18ba412cp-112) <em class='brace'>}</em>,
+<a id='L79' name='L79'></a>  79     <em class='brace'>{</em> <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x1.cfffffffffffffffffffffffffdbp+4), <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x4.c0ce9794ea50a839e311320bde94p-112) <em class='brace'>}</em>,
+<a id='L80' name='L80'></a>  80     <em class='brace'>{</em> <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x1.d000000000000000000000000025p+4), <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x4.c0ce9794ea50a839e311322f7cf8p-112) <em class='brace'>}</em>,
+<a id='L81' name='L81'></a>  81     <em class='brace'>{</em> <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x1.dfffffffffffffffffffffffffffp+4), <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x3.932c5047d60e60caded4c298a174p-112) <em class='brace'>}</em>,
+<a id='L82' name='L82'></a>  82     <em class='brace'>{</em> <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x1.e000000000000000000000000001p+4), <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x3.932c5047d60e60caded4c298973ap-112) <em class='brace'>}</em>,
+<a id='L83' name='L83'></a>  83     <em class='brace'>{</em> <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x1.fp+4), <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0xa.1a6973c1fade2170f7237d35fe3p-116) <em class='brace'>}</em>,
+<a id='L84' name='L84'></a>  84     <em class='brace'>{</em> <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x1.fp+4), <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0xa.1a6973c1fade2170f7237d35fe08p-116) <em class='brace'>}</em>,
+<a id='L85' name='L85'></a>  85     <em class='brace'>{</em> <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x2p+4), <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x5.0d34b9e0fd6f10b87b91be9aff1p-120) <em class='brace'>}</em>,
+<a id='L86' name='L86'></a>  86     <em class='brace'>{</em> <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x2p+4), <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x5.0d34b9e0fd6f10b87b91be9aff0cp-120) <em class='brace'>}</em>,
+<a id='L87' name='L87'></a>  87     <em class='brace'>{</em> <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x2.1p+4), <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x2.73024a9ba1aa36a7059bff52e844p-124) <em class='brace'>}</em>,
+<a id='L88' name='L88'></a>  88     <em class='brace'>{</em> <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x2.1p+4), <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x2.73024a9ba1aa36a7059bff52e844p-124) <em class='brace'>}</em>,
+<a id='L89' name='L89'></a>  89     <em class='brace'>{</em> <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x2.2p+4), <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x1.2710231c0fd7a13f8a2b4af9d6b7p-128) <em class='brace'>}</em>,
+<a id='L90' name='L90'></a>  90     <em class='brace'>{</em> <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x2.2p+4), <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x1.2710231c0fd7a13f8a2b4af9d6b7p-128) <em class='brace'>}</em>,
+<a id='L91' name='L91'></a>  91     <em class='brace'>{</em> <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x2.3p+4), <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x8.6e2ce38b6c8f9419e3fad3f0312p-136) <em class='brace'>}</em>,
+<a id='L92' name='L92'></a>  92     <em class='brace'>{</em> <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x2.3p+4), <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x8.6e2ce38b6c8f9419e3fad3f0312p-136) <em class='brace'>}</em>,
+<a id='L93' name='L93'></a>  93     <em class='brace'>{</em> <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x2.4p+4), <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x3.bf30652185952560d71a254e4eb8p-140) <em class='brace'>}</em>,
+<a id='L94' name='L94'></a>  94     <em class='brace'>{</em> <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x2.4p+4), <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x3.bf30652185952560d71a254e4eb8p-140) <em class='brace'>}</em>,
+<a id='L95' name='L95'></a>  95     <em class='brace'>{</em> <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x2.5p+4), <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x1.9ec8d1c94e85af4c78b15c3d89d3p-144) <em class='brace'>}</em>,
+<a id='L96' name='L96'></a>  96     <em class='brace'>{</em> <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x2.5p+4), <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x1.9ec8d1c94e85af4c78b15c3d89d3p-144) <em class='brace'>}</em>,
+<a id='L97' name='L97'></a>  97     <em class='brace'>{</em> <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x2.6p+4), <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0xa.ea565ce061d57489e9b85276274p-152) <em class='brace'>}</em>,
+<a id='L98' name='L98'></a>  98     <em class='brace'>{</em> <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x2.6p+4), <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0xa.ea565ce061d57489e9b85276274p-152) <em class='brace'>}</em>,
+<a id='L99' name='L99'></a>  99     <em class='brace'>{</em> <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x2.7p+4), <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x4.7a6512692eb37804111dabad30ecp-156) <em class='brace'>}</em>,
+<a id='L100' name='L100'></a> 100     <em class='brace'>{</em> <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x2.7p+4), <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x4.7a6512692eb37804111dabad30ecp-156) <em class='brace'>}</em>,
+<a id='L101' name='L101'></a> 101     <em class='brace'>{</em> <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x2.8p+4), <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x1.ca8ed42a12ae3001a07244abad2bp-160) <em class='brace'>}</em>,
+<a id='L102' name='L102'></a> 102     <em class='brace'>{</em> <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x2.8p+4), <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x1.ca8ed42a12ae3001a07244abad2bp-160) <em class='brace'>}</em>,
+<a id='L103' name='L103'></a> 103     <em class='brace'>{</em> <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x2.9p+4), <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0xb.2f30e1ce812063f12e7e8d8d96e8p-168) <em class='brace'>}</em>,
+<a id='L104' name='L104'></a> 104     <em class='brace'>{</em> <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x2.9p+4), <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0xb.2f30e1ce812063f12e7e8d8d96e8p-168) <em class='brace'>}</em>,
+<a id='L105' name='L105'></a> 105     <em class='brace'>{</em> <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x2.ap+4), <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x4.42bd49d4c37a0db136489772e428p-172) <em class='brace'>}</em>,
+<a id='L106' name='L106'></a> 106     <em class='brace'>{</em> <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x2.ap+4), <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x4.42bd49d4c37a0db136489772e428p-172) <em class='brace'>}</em>,
+<a id='L107' name='L107'></a> 107     <em class='brace'>{</em> <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x2.bp+4), <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x1.95db45257e5122dcbae56def372p-176) <em class='brace'>}</em>,
+<a id='L108' name='L108'></a> 108     <em class='brace'>{</em> <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x2.bp+4), <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x1.95db45257e5122dcbae56def372p-176) <em class='brace'>}</em>,
+<a id='L109' name='L109'></a> 109     <em class='brace'>{</em> <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x2.cp+4), <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x9.3958d81ff63527ecf993f3fb6f48p-184) <em class='brace'>}</em>,
+<a id='L110' name='L110'></a> 110     <em class='brace'>{</em> <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x2.cp+4), <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x9.3958d81ff63527ecf993f3fb6f48p-184) <em class='brace'>}</em>,
+<a id='L111' name='L111'></a> 111     <em class='brace'>{</em> <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x2.dp+4), <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x3.47970e4440c8f1c058bd238c9958p-188) <em class='brace'>}</em>,
+<a id='L112' name='L112'></a> 112     <em class='brace'>{</em> <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x2.dp+4), <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x3.47970e4440c8f1c058bd238c9958p-188) <em class='brace'>}</em>,
+<a id='L113' name='L113'></a> 113     <em class='brace'>{</em> <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x2.ep+4), <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x1.240804f65951062ca46e4f25c608p-192) <em class='brace'>}</em>,
+<a id='L114' name='L114'></a> 114     <em class='brace'>{</em> <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x2.ep+4), <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x1.240804f65951062ca46e4f25c608p-192) <em class='brace'>}</em>,
+<a id='L115' name='L115'></a> 115     <em class='brace'>{</em> <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x2.fp+4), <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x6.36a382849fae6de2d15362d8a394p-200) <em class='brace'>}</em>,
+<a id='L116' name='L116'></a> 116     <em class='brace'>{</em> <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x2.fp+4), <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x6.36a382849fae6de2d15362d8a394p-200) <em class='brace'>}</em>,
+<a id='L117' name='L117'></a> 117     <em class='brace'>{</em> <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x3p+4), <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x2.123680d6dfe4cf4b9b1bcb9d8bdcp-204) <em class='brace'>}</em>,
+<a id='L118' name='L118'></a> 118     <em class='brace'>{</em> <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x3p+4), <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x2.123680d6dfe4cf4b9b1bcb9d8bdcp-204) <em class='brace'>}</em>,
+<a id='L119' name='L119'></a> 119     <em class='brace'>{</em> <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x3.1p+4), <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0xa.d21786ff5842eca51fea0870919p-212) <em class='brace'>}</em>,
+<a id='L120' name='L120'></a> 120     <em class='brace'>{</em> <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x3.1p+4), <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0xa.d21786ff5842eca51fea0870919p-212) <em class='brace'>}</em>,
+<a id='L121' name='L121'></a> 121     <em class='brace'>{</em> <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x3.2p+4), <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x3.766dedc259af040be140a68a6c04p-216) <em class='brace'>}</em>,
+<a id='L122' name='L122'></a> 122   <em class='brace'>}</em>;
+<a id='L123' name='L123'></a> 123 
+<a id='L124' name='L124'></a> 124 <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <a href='../D/18523.html' title='Multiple defined in 13 places.'>_Float128</a> <a href='../Y/13503.html' title='Multiple used in 10 places.'>e_hi</a> = <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x2.b7e151628aed2a6abf7158809cf4p+0);
+<a id='L125' name='L125'></a> 125 <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <a href='../D/18523.html' title='Multiple defined in 13 places.'>_Float128</a> <a href='../Y/13506.html' title='Multiple used in 10 places.'>e_lo</a> = <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0xf.3c762e7160f38b4da56a784d9048p-116);
+<a id='L126' name='L126'></a> 126 
+<a id='L127' name='L127'></a> 127 
+<a id='L128' name='L128'></a> 128 <em class='comment'>/* Coefficients B_2k / 2k(2k-1) of x^-(2k-1) in Stirling's</em>
+<a id='L129' name='L129'></a> 129 <em class='comment'>   approximation to lgamma function.  */</em>
+<a id='L130' name='L130'></a> 130 
+<a id='L131' name='L131'></a> 131 <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <a href='../D/18523.html' title='Multiple defined in 13 places.'>_Float128</a> <a href='../Y/18109.html' title='Multiple used in 20 places.'>lgamma_coeff</a>[] =
+<a id='L132' name='L132'></a> 132   <em class='brace'>{</em>
+<a id='L133' name='L133'></a> 133     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x1.5555555555555555555555555555p-4),
+<a id='L134' name='L134'></a> 134     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0xb.60b60b60b60b60b60b60b60b60b8p-12),
+<a id='L135' name='L135'></a> 135     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x3.4034034034034034034034034034p-12),
+<a id='L136' name='L136'></a> 136     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x2.7027027027027027027027027028p-12),
+<a id='L137' name='L137'></a> 137     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x3.72a3c5631fe46ae1d4e700dca8f2p-12),
+<a id='L138' name='L138'></a> 138     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x7.daac36664f1f207daac36664f1f4p-12),
+<a id='L139' name='L139'></a> 139     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x1.a41a41a41a41a41a41a41a41a41ap-8),
+<a id='L140' name='L140'></a> 140     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x7.90a1b2c3d4e5f708192a3b4c5d7p-8),
+<a id='L141' name='L141'></a> 141     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x2.dfd2c703c0cfff430edfd2c703cp-4),
+<a id='L142' name='L142'></a> 142     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x1.6476701181f39edbdb9ce625987dp+0),
+<a id='L143' name='L143'></a> 143     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0xd.672219167002d3a7a9c886459cp+0),
+<a id='L144' name='L144'></a> 144     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x9.cd9292e6660d55b3f712eb9e07c8p+4),
+<a id='L145' name='L145'></a> 145     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x8.911a740da740da740da740da741p+8),
+<a id='L146' name='L146'></a> 146     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x8.d0cc570e255bf59ff6eec24b49p+12),
+<a id='L147' name='L147'></a> 147     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0xa.8d1044d3708d1c219ee4fdc446ap+16),
+<a id='L148' name='L148'></a> 148     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0xe.8844d8a169abbc406169abbc406p+20),
+<a id='L149' name='L149'></a> 149     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x1.6d29a0f6433b79890cede62433b8p+28),
+<a id='L150' name='L150'></a> 150     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x2.88a233b3c8cddaba9809357125d8p+32),
+<a id='L151' name='L151'></a> 151     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x5.0dde6f27500939a85c40939a85c4p+36),
+<a id='L152' name='L152'></a> 152     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0xb.4005bde03d4642a243581714af68p+40),
+<a id='L153' name='L153'></a> 153     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x1.bc8cd6f8f1f755c78753cdb5d5c9p+48),
+<a id='L154' name='L154'></a> 154     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x4.bbebb143bb94de5a0284fa7ec424p+52),
+<a id='L155' name='L155'></a> 155     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0xe.2e1337f5af0bed90b6b0a352d4fp+56),
+<a id='L156' name='L156'></a> 156     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x2.e78250162b62405ad3e4bfe61b38p+64),
+<a id='L157' name='L157'></a> 157     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0xa.5f7eef9e71ac7c80326ab4cc8bfp+68),
+<a id='L158' name='L158'></a> 158     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x2.83be0395e550213369924971b21ap+76),
+<a id='L159' name='L159'></a> 159     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0xa.8ebfe48da17dd999790760b0cep+80),
+<a id='L160' name='L160'></a> 160   <em class='brace'>}</em>;
+<a id='L161' name='L161'></a> 161 
+<a id='L162' name='L162'></a> 162 <em class='sharp'>#define</em> <a href='../R/5235.html' title='Multiple referred from 35 places.'>NCOEFF</a> (<strong class='reserved'>sizeof</strong> (<a href='../Y/18109.html' title='Multiple used in 20 places.'>lgamma_coeff</a>) / <strong class='reserved'>sizeof</strong> (<a href='../Y/18109.html' title='Multiple used in 20 places.'>lgamma_coeff</a>[0]))
+<a id='L163' name='L163'></a> 163 
+<a id='L164' name='L164'></a> 164 <em class='comment'>/* Polynomial approximations to (|gamma(x)|-1)(x-n)/(x-x0), where n is</em>
+<a id='L165' name='L165'></a> 165 <em class='comment'>   the integer end-point of the half-integer interval containing x and</em>
+<a id='L166' name='L166'></a> 166 <em class='comment'>   x0 is the zero of lgamma in that half-integer interval.  Each</em>
+<a id='L167' name='L167'></a> 167 <em class='comment'>   polynomial is expressed in terms of x-xm, where xm is the midpoint</em>
+<a id='L168' name='L168'></a> 168 <em class='comment'>   of the interval for which the polynomial applies.  */</em>
+<a id='L169' name='L169'></a> 169 
+<a id='L170' name='L170'></a> 170 <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <a href='../D/18523.html' title='Multiple defined in 13 places.'>_Float128</a> <a href='../D/34759.html' title='Multiple defined in 24 places.'>poly_coeff</a>[] =
+<a id='L171' name='L171'></a> 171   <em class='brace'>{</em>
+<a id='L172' name='L172'></a> 172     <em class='comment'>/* Interval [-2.125, -2] (polynomial degree 23).  */</em>
+<a id='L173' name='L173'></a> 173     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x1.0b71c5c54d42eb6c17f30b7aa8f5p+0),
+<a id='L174' name='L174'></a> 174     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0xc.73a1dc05f34951602554c6d7506p-4),
+<a id='L175' name='L175'></a> 175     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x1.ec841408528b51473e6c425ee5ffp-4),
+<a id='L176' name='L176'></a> 176     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0xe.37c9da26fc3c9a3c1844c8c7f1cp-4),
+<a id='L177' name='L177'></a> 177     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x1.03cd87c519305703b021fa33f827p-4),
+<a id='L178' name='L178'></a> 178     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0xe.ae9ada65e09aa7f1c75216128f58p-4),
+<a id='L179' name='L179'></a> 179     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x9.b11855a4864b5731cf85736015a8p-8),
+<a id='L180' name='L180'></a> 180     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0xe.f28c133e697a95c28607c9701dep-4),
+<a id='L181' name='L181'></a> 181     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x2.6ec14a1c586a72a7cc33ee569d6ap-4),
+<a id='L182' name='L182'></a> 182     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0xf.57cab973e14464a262fc24723c38p-4),
+<a id='L183' name='L183'></a> 183     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x4.5b0fc25f16e52997b2886bbae808p-4),
+<a id='L184' name='L184'></a> 184     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0xf.f50e59f1a9b56e76e988dac9ccf8p-4),
+<a id='L185' name='L185'></a> 185     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x6.5f5eae15e9a93369e1d85146c6fcp-4),
+<a id='L186' name='L186'></a> 186     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x1.0d2422daac459e33e0994325ed23p+0),
+<a id='L187' name='L187'></a> 187     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x8.82000a0e7401fb1117a0e6606928p-4),
+<a id='L188' name='L188'></a> 188     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x1.1f492f178a3f1b19f58a2ca68e55p+0),
+<a id='L189' name='L189'></a> 189     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0xa.cb545f949899a04c160b19389abp-4),
+<a id='L190' name='L190'></a> 190     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x1.36165a1b155ba3db3d1b77caf498p+0),
+<a id='L191' name='L191'></a> 191     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0xd.44c5d5576f74302e5cf79e183eep-4),
+<a id='L192' name='L192'></a> 192     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x1.51f22e0cdd33d3d481e326c02f3ep+0),
+<a id='L193' name='L193'></a> 193     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0xf.f73a349c08244ac389c007779bfp-4),
+<a id='L194' name='L194'></a> 194     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x1.73317bf626156ba716747c4ca866p+0),
+<a id='L195' name='L195'></a> 195     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x1.379c3c97b9bc71e1c1c4802dd657p+0),
+<a id='L196' name='L196'></a> 196     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x1.a72a351c54f902d483052000f5dfp+0),
+<a id='L197' name='L197'></a> 197     <em class='comment'>/* Interval [-2.25, -2.125] (polynomial degree 24).  */</em>
+<a id='L198' name='L198'></a> 198     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0xf.2930890d7d675a80c36afb0fd5e8p-4),
+<a id='L199' name='L199'></a> 199     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0xc.a5cfde054eab5c6770daeca577f8p-4),
+<a id='L200' name='L200'></a> 200     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x3.9c9e0fdebb07cdf89c61d41c9238p-4),
+<a id='L201' name='L201'></a> 201     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x1.02a5ad35605fcf4af65a6dbacb84p+0),
+<a id='L202' name='L202'></a> 202     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x9.6e9b1185bb48be9de1918e00a2e8p-4),
+<a id='L203' name='L203'></a> 203     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x1.4d8332f3cfbfa116fd611e9ce90dp+0),
+<a id='L204' name='L204'></a> 204     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x1.1c0c8cb4d9f4b1d490e1a41fae4dp+0),
+<a id='L205' name='L205'></a> 205     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x1.c9a6f5ae9130cd0299e293a42714p+0),
+<a id='L206' name='L206'></a> 206     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x1.d7e9307fd58a2ea997f29573a112p+0),
+<a id='L207' name='L207'></a> 207     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x2.921cb3473d96178ca2a11d2a8d46p+0),
+<a id='L208' name='L208'></a> 208     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x2.e8d59113b6f3409ff8db226e9988p+0),
+<a id='L209' name='L209'></a> 209     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x3.cbab931625a1ae2b26756817f264p+0),
+<a id='L210' name='L210'></a> 210     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x4.7d9f0f05d5296d18663ca003912p+0),
+<a id='L211' name='L211'></a> 211     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x5.ade9cba12a14ea485667b7135bbp+0),
+<a id='L212' name='L212'></a> 212     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x6.dc983a5da74fb48e767b7fec0a3p+0),
+<a id='L213' name='L213'></a> 213     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x8.8d9ed454ae31d9e138dd8ee0d1a8p+0),
+<a id='L214' name='L214'></a> 214     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0xa.6fa099d4e7c202e0c0fd6ed8492p+0),
+<a id='L215' name='L215'></a> 215     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0xc.ebc552a8090a0f0115e92d4ebbc8p+0),
+<a id='L216' name='L216'></a> 216     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0xf.d695e4772c0d829b53fba9ca5568p+0),
+<a id='L217' name='L217'></a> 217     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x1.38c32ae38e5e9eb79b2a4c5570a9p+4),
+<a id='L218' name='L218'></a> 218     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x1.8035145646cfab49306d0999a51bp+4),
+<a id='L219' name='L219'></a> 219     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x1.d930adbb03dd342a4c2a8c4e1af6p+4),
+<a id='L220' name='L220'></a> 220     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x2.45c2edb1b4943ddb3686cd9c6524p+4),
+<a id='L221' name='L221'></a> 221     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x2.e818ebbfafe2f916fa21abf7756p+4),
+<a id='L222' name='L222'></a> 222     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x3.9804ce51d0fb9a430a711fd7307p+4),
+<a id='L223' name='L223'></a> 223     <em class='comment'>/* Interval [-2.375, -2.25] (polynomial degree 25).  */</em>
+<a id='L224' name='L224'></a> 224     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0xd.7d28d505d6181218a25f31d5e45p-4),
+<a id='L225' name='L225'></a> 225     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0xe.69649a3040985140cdf946829fap-4),
+<a id='L226' name='L226'></a> 226     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0xb.0d74a2827d053a8d44595012484p-4),
+<a id='L227' name='L227'></a> 227     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x1.924b0922853617cac181afbc08ddp+0),
+<a id='L228' name='L228'></a> 228     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x1.d49b12bccf0a568582e2d3c410f3p+0),
+<a id='L229' name='L229'></a> 229     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x3.0898bb7d8c4093e636279c791244p+0),
+<a id='L230' name='L230'></a> 230     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x4.207a6cac711cb53868e8a5057eep+0),
+<a id='L231' name='L231'></a> 231     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x6.39ee63ea4fb1dcab0c9144bf3ddcp+0),
+<a id='L232' name='L232'></a> 232     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x8.e2e2556a797b649bf3f53bd26718p+0),
+<a id='L233' name='L233'></a> 233     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0xd.0e83ac82552ef12af508589e7a8p+0),
+<a id='L234' name='L234'></a> 234     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x1.2e4525e0ce6670563c6484a82b05p+4),
+<a id='L235' name='L235'></a> 235     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x1.b8e350d6a8f2b222fa390a57c23dp+4),
+<a id='L236' name='L236'></a> 236     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x2.805cd69b919087d8a80295892c2cp+4),
+<a id='L237' name='L237'></a> 237     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x3.a42585424a1b7e64c71743ab014p+4),
+<a id='L238' name='L238'></a> 238     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x5.4b4f409f98de49f7bfb03c05f984p+4),
+<a id='L239' name='L239'></a> 239     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x7.b3c5827fbe934bc820d6832fb9fcp+4),
+<a id='L240' name='L240'></a> 240     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0xb.33b7b90cc96c425526e0d0866e7p+4),
+<a id='L241' name='L241'></a> 241     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x1.04b77047ac4f59ee3775ca10df0dp+8),
+<a id='L242' name='L242'></a> 242     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x1.7b366f5e94a34f41386eac086313p+8),
+<a id='L243' name='L243'></a> 243     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x2.2797338429385c9849ca6355bfc2p+8),
+<a id='L244' name='L244'></a> 244     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x3.225273cf92a27c9aac1b35511256p+8),
+<a id='L245' name='L245'></a> 245     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x4.8f078aa48afe6cb3a4e89690f898p+8),
+<a id='L246' name='L246'></a> 246     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x6.9f311d7b6654fc1d0b5195141d04p+8),
+<a id='L247' name='L247'></a> 247     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x9.a0c297b6b4621619ca9bacc48ed8p+8),
+<a id='L248' name='L248'></a> 248     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0xe.ce1f06b6f90d92138232a76e4cap+8),
+<a id='L249' name='L249'></a> 249     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x1.5b0e6806fa064daf011613e43b17p+12),
+<a id='L250' name='L250'></a> 250     <em class='comment'>/* Interval [-2.5, -2.375] (polynomial degree 27).  */</em>
+<a id='L251' name='L251'></a> 251     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0xb.74ea1bcfff94b2c01afba9daa7d8p-4),
+<a id='L252' name='L252'></a> 252     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x1.2a82bd590c37538cab143308de4dp+0),
+<a id='L253' name='L253'></a> 253     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x1.88020f828b966fec66b8649fd6fcp+0),
+<a id='L254' name='L254'></a> 254     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x3.32279f040eb694970e9db24863dcp+0),
+<a id='L255' name='L255'></a> 255     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x5.57ac82517767e68a721005853864p+0),
+<a id='L256' name='L256'></a> 256     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x9.c2aedcfe22833de43834a0a6cc4p+0),
+<a id='L257' name='L257'></a> 257     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x1.12c132f1f5577f99e1a0ed3538e1p+4),
+<a id='L258' name='L258'></a> 258     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x1.ea94e26628a3de3597f7bb55a948p+4),
+<a id='L259' name='L259'></a> 259     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x3.66b4ac4fa582f58b59f96b2f7c7p+4),
+<a id='L260' name='L260'></a> 260     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x6.0cf746a9cf4cba8c39afcc73fc84p+4),
+<a id='L261' name='L261'></a> 261     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0xa.c102ef2c20d75a342197df7fedf8p+4),
+<a id='L262' name='L262'></a> 262     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x1.31ebff06e8f14626782df58db3b6p+8),
+<a id='L263' name='L263'></a> 263     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x2.1fd6f0c0e710994e059b9dbdb1fep+8),
+<a id='L264' name='L264'></a> 264     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x3.c6d76040407f447f8b5074f07706p+8),
+<a id='L265' name='L265'></a> 265     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x6.b6d18e0d8feb4c2ef5af6a40ed18p+8),
+<a id='L266' name='L266'></a> 266     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0xb.efaf542c529f91e34217f24ae6a8p+8),
+<a id='L267' name='L267'></a> 267     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x1.53852d873210e7070f5d9eb2296p+12),
+<a id='L268' name='L268'></a> 268     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x2.5b977c0ddc6d540717173ac29fc8p+12),
+<a id='L269' name='L269'></a> 269     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x4.310d452ae05100eff1e02343a724p+12),
+<a id='L270' name='L270'></a> 270     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x7.73a5d8f20c4f986a7dd1912b2968p+12),
+<a id='L271' name='L271'></a> 271     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0xd.3f5ea2484f3fca15eab1f4d1a218p+12),
+<a id='L272' name='L272'></a> 272     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x1.78d18aac156d1d93a2ffe7e08d3fp+16),
+<a id='L273' name='L273'></a> 273     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x2.9df49ca75e5b567f5ea3e47106cp+16),
+<a id='L274' name='L274'></a> 274     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x4.a7149af8961a08aa7c3233b5bb94p+16),
+<a id='L275' name='L275'></a> 275     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x8.3db10ffa742c707c25197d989798p+16),
+<a id='L276' name='L276'></a> 276     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0xe.a26d6dd023cadd02041a049ec368p+16),
+<a id='L277' name='L277'></a> 277     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x1.c825d90514e7c57c7fa5316f947cp+20),
+<a id='L278' name='L278'></a> 278     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x3.34bb81e5a0952df8ca1abdc6684cp+20),
+<a id='L279' name='L279'></a> 279     <em class='comment'>/* Interval [-2.625, -2.5] (polynomial degree 28).  */</em>
+<a id='L280' name='L280'></a> 280     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x3.d10108c27ebafad533c20eac32bp-4),
+<a id='L281' name='L281'></a> 281     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x1.cd557caff7d2b2085f41dbec5106p+0),
+<a id='L282' name='L282'></a> 282     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x3.819b4856d399520dad9776ea2cacp+0),
+<a id='L283' name='L283'></a> 283     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x6.8505cbad03dc34c5e42e8b12eb78p+0),
+<a id='L284' name='L284'></a> 284     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0xb.c1b2e653a9e38f82b399c94e7f08p+0),
+<a id='L285' name='L285'></a> 285     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x1.50a53a38f148138105124df65419p+4),
+<a id='L286' name='L286'></a> 286     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x2.57ae00cbe5232cbeeed34d89727ap+4),
+<a id='L287' name='L287'></a> 287     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x4.2b156301b8604db85a601544bfp+4),
+<a id='L288' name='L288'></a> 288     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x7.6989ed23ca3ca7579b3462592b5cp+4),
+<a id='L289' name='L289'></a> 289     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0xd.2dd2976557939517f831f5552cc8p+4),
+<a id='L290' name='L290'></a> 290     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x1.76e1c3430eb860969bce40cd494p+8),
+<a id='L291' name='L291'></a> 291     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x2.9a77bf5488742466db3a2c7c1ec6p+8),
+<a id='L292' name='L292'></a> 292     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x4.a0d62ed7266e8eb36f725a8ebcep+8),
+<a id='L293' name='L293'></a> 293     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x8.3a6184dd3021067df2f8b91e99c8p+8),
+<a id='L294' name='L294'></a> 294     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0xe.a0ade1538245bf55d39d7e436b1p+8),
+<a id='L295' name='L295'></a> 295     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x1.a01359fae8617b5826dd74428e9p+12),
+<a id='L296' name='L296'></a> 296     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x2.e3b0a32caae77251169acaca1ad4p+12),
+<a id='L297' name='L297'></a> 297     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x5.2301257c81589f62b38fb5993ee8p+12),
+<a id='L298' name='L298'></a> 298     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x9.21c9275db253d4e719b73b18cb9p+12),
+<a id='L299' name='L299'></a> 299     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x1.03c104bc96141cda3f3fa4b112bcp+16),
+<a id='L300' name='L300'></a> 300     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x1.cdc8ed65119196a08b0c78f1445p+16),
+<a id='L301' name='L301'></a> 301     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x3.34f31d2eaacf34382cdb0073572ap+16),
+<a id='L302' name='L302'></a> 302     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x5.b37628cadf12bf0000907d0ef294p+16),
+<a id='L303' name='L303'></a> 303     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0xa.22d8b332c0b1e6a616f425dfe5ap+16),
+<a id='L304' name='L304'></a> 304     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x1.205b01444804c3ff922cd78b4c42p+20),
+<a id='L305' name='L305'></a> 305     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x1.fe8f0cea9d1e0ff25be2470b4318p+20),
+<a id='L306' name='L306'></a> 306     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x3.8872aebeb368399aee02b39340aep+20),
+<a id='L307' name='L307'></a> 307     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x6.ebd560d351e84e26a4381f5b293cp+20),
+<a id='L308' name='L308'></a> 308     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0xc.c3644d094b0dae2fbcbf682cd428p+20),
+<a id='L309' name='L309'></a> 309     <em class='comment'>/* Interval [-2.75, -2.625] (polynomial degree 26).  */</em>
+<a id='L310' name='L310'></a> 310     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x6.b5d252a56e8a75458a27ed1c2dd4p-4),
+<a id='L311' name='L311'></a> 311     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x1.28d60383da3ac721aed3c5794da9p+0),
+<a id='L312' name='L312'></a> 312     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x1.db6513ada8a66ea77d87d9a8827bp+0),
+<a id='L313' name='L313'></a> 313     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x2.e217118f9d348a27f7506a707e6ep+0),
+<a id='L314' name='L314'></a> 314     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x4.450112c5cbf725a0fb9802396c9p+0),
+<a id='L315' name='L315'></a> 315     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x6.4af99151eae7810a75df2a0303c4p+0),
+<a id='L316' name='L316'></a> 316     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x9.2db598b4a97a7f69aeef32aec758p+0),
+<a id='L317' name='L317'></a> 317     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0xd.62bef9c22471f5ee47ea1b9c0b5p+0),
+<a id='L318' name='L318'></a> 318     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x1.379f294e412bd62328326d4222f9p+4),
+<a id='L319' name='L319'></a> 319     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x1.c5827349d8865f1e8825c37c31c6p+4),
+<a id='L320' name='L320'></a> 320     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x2.93a7e7a75b7568cc8cbe8c016c12p+4),
+<a id='L321' name='L321'></a> 321     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x3.bf9bb882afe57edb383d41879d3ap+4),
+<a id='L322' name='L322'></a> 322     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x5.73c737828cee095c43a5566731c8p+4),
+<a id='L323' name='L323'></a> 323     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x7.ee4653493a7f81e0442062b3823cp+4),
+<a id='L324' name='L324'></a> 324     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0xb.891c6b83fc8b55bd973b5d962d6p+4),
+<a id='L325' name='L325'></a> 325     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x1.0c775d7de3bf9b246c0208e0207ep+8),
+<a id='L326' name='L326'></a> 326     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x1.867ee43ec4bd4f4fd56abc05110ap+8),
+<a id='L327' name='L327'></a> 327     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x2.37fe9ba6695821e9822d8c8af0a6p+8),
+<a id='L328' name='L328'></a> 328     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x3.3a2c667e37c942f182cd3223a936p+8),
+<a id='L329' name='L329'></a> 329     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x4.b1b500eb59f3f782c7ccec88754p+8),
+<a id='L330' name='L330'></a> 330     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x6.d3efd3b65b3d0d8488d30b79fa4cp+8),
+<a id='L331' name='L331'></a> 331     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x9.ee8224e65bed5ced8b75eaec609p+8),
+<a id='L332' name='L332'></a> 332     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0xe.72416e510cca77d53fc615c1f3dp+8),
+<a id='L333' name='L333'></a> 333     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x1.4fb538b0a2dfe567a8904b7e0445p+12),
+<a id='L334' name='L334'></a> 334     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x1.e7f56a9266cf525a5b8cf4cb76cep+12),
+<a id='L335' name='L335'></a> 335     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x2.f0365c983f68c597ee49d099cce8p+12),
+<a id='L336' name='L336'></a> 336     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x4.53aa229e1b9f5b5e59625265951p+12),
+<a id='L337' name='L337'></a> 337     <em class='comment'>/* Interval [-2.875, -2.75] (polynomial degree 24).  */</em>
+<a id='L338' name='L338'></a> 338     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0x8.a41b1e4f36ff88dc820815607d68p-4),
+<a id='L339' name='L339'></a> 339     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0xc.da87d3b69dc0f2f9c6f368b8ca1p-4),
+<a id='L340' name='L340'></a> 340     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x1.1474ad5c36158a7bea04fd2f98c6p+0),
+<a id='L341' name='L341'></a> 341     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x1.761ecb90c555df6555b7dba955b6p+0),
+<a id='L342' name='L342'></a> 342     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x1.d279bff9ae291caf6c4b4bcb3202p+0),
+<a id='L343' name='L343'></a> 343     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x2.4e5d00559a6e2b9b5d7fe1f6689cp+0),
+<a id='L344' name='L344'></a> 344     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x2.d57545a75cee8743ae2b17bc8d24p+0),
+<a id='L345' name='L345'></a> 345     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x3.8514eee3aac88b89bec2307021bap+0),
+<a id='L346' name='L346'></a> 346     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x4.5235e3b6e1891ffeb87fed9f8a24p+0),
+<a id='L347' name='L347'></a> 347     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x5.562acdb10eef3c9a773b3e27a864p+0),
+<a id='L348' name='L348'></a> 348     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x6.8ec8965c76efe03c26bff60b1194p+0),
+<a id='L349' name='L349'></a> 349     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x8.15251aca144877af32658399f9b8p+0),
+<a id='L350' name='L350'></a> 350     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x9.f08d56aba174d844138af782c0f8p+0),
+<a id='L351' name='L351'></a> 351     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0xc.3dbbeda2679e8a1346ccc3f6da88p+0),
+<a id='L352' name='L352'></a> 352     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0xf.0f5bfd5eacc26db308ffa0556fa8p+0),
+<a id='L353' name='L353'></a> 353     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x1.28a6ccd84476fbc713d6bab49ac9p+4),
+<a id='L354' name='L354'></a> 354     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x1.6d0a3ae2a3b1c8ff400641a3a21fp+4),
+<a id='L355' name='L355'></a> 355     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x1.c15701b28637f87acfb6a91d33b5p+4),
+<a id='L356' name='L356'></a> 356     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x2.28fbe0eccf472089b017651ca55ep+4),
+<a id='L357' name='L357'></a> 357     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x2.a8a453004f6e8ffaacd1603bc3dp+4),
+<a id='L358' name='L358'></a> 358     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x3.45ae4d9e1e7cd1a5dba0e4ec7f6cp+4),
+<a id='L359' name='L359'></a> 359     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x4.065fbfacb7fad3e473cb577a61e8p+4),
+<a id='L360' name='L360'></a> 360     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x4.f3d1473020927acac1944734a39p+4),
+<a id='L361' name='L361'></a> 361     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x6.54bb091245815a36fb74e314dd18p+4),
+<a id='L362' name='L362'></a> 362     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x7.d7f445129f7fb6c055e582d3f6ep+4),
+<a id='L363' name='L363'></a> 363     <em class='comment'>/* Interval [-3, -2.875] (polynomial degree 23).  */</em>
+<a id='L364' name='L364'></a> 364     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(-0xa.046d667e468f3e44dcae1afcc648p-4),
+<a id='L365' name='L365'></a> 365     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x9.70b88dcc006c214d8d996fdf5ccp-4),
+<a id='L366' name='L366'></a> 366     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0xa.a8a39421c86d3ff24931a0929fp-4),
+<a id='L367' name='L367'></a> 367     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0xd.2f4d1363f324da2b357c8b6ec94p-4),
+<a id='L368' name='L368'></a> 368     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0xd.ca9aa1a3a5c00de11bf60499a97p-4),
+<a id='L369' name='L369'></a> 369     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0xf.cf09c31eeb52a45dfa7ebe3778dp-4),
+<a id='L370' name='L370'></a> 370     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x1.04b133a39ed8a09691205660468bp+0),
+<a id='L371' name='L371'></a> 371     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x1.22b547a06edda944fcb12fd9b5ecp+0),
+<a id='L372' name='L372'></a> 372     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x1.2c57fce7db86a91df09602d344b3p+0),
+<a id='L373' name='L373'></a> 373     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x1.4aade4894708f84795212fe257eep+0),
+<a id='L374' name='L374'></a> 374     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x1.579c8b7b67ec4afed5b28c8bf787p+0),
+<a id='L375' name='L375'></a> 375     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x1.776820e7fc80ae5284239733078ap+0),
+<a id='L376' name='L376'></a> 376     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x1.883ab28c7301fde4ca6b8ec26ec8p+0),
+<a id='L377' name='L377'></a> 377     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x1.aa2ef6e1ae52eb42c9ee83b206e3p+0),
+<a id='L378' name='L378'></a> 378     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x1.bf4ad50f0a9a9311300cf0c51ee7p+0),
+<a id='L379' name='L379'></a> 379     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x1.e40206e0e96b1da463814dde0d09p+0),
+<a id='L380' name='L380'></a> 380     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x1.fdcbcffef3a21b29719c2bd9feb1p+0),
+<a id='L381' name='L381'></a> 381     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x2.25e2e8948939c4d42cf108fae4bep+0),
+<a id='L382' name='L382'></a> 382     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x2.44ce14d2b59c1c0e6bf2cfa81018p+0),
+<a id='L383' name='L383'></a> 383     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x2.70ee80bbd0387162be4861c43622p+0),
+<a id='L384' name='L384'></a> 384     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x2.954b64d2c2ebf3489b949c74476p+0),
+<a id='L385' name='L385'></a> 385     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x2.c616e133a811c1c9446105208656p+0),
+<a id='L386' name='L386'></a> 386     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x3.05a69dfe1a9ba1079f90fcf26bd4p+0),
+<a id='L387' name='L387'></a> 387     <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0x3.410d2ad16a0506de29736e6aafdap+0),
+<a id='L388' name='L388'></a> 388   <em class='brace'>}</em>;
+<a id='L389' name='L389'></a> 389 
+<a id='L390' name='L390'></a> 390 <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/22526.html' title='Multiple used in 10 places.'>poly_deg</a>[] =
+<a id='L391' name='L391'></a> 391   <em class='brace'>{</em>
+<a id='L392' name='L392'></a> 392     23,
+<a id='L393' name='L393'></a> 393     24,
+<a id='L394' name='L394'></a> 394     25,
+<a id='L395' name='L395'></a> 395     27,
+<a id='L396' name='L396'></a> 396     28,
+<a id='L397' name='L397'></a> 397     26,
+<a id='L398' name='L398'></a> 398     24,
+<a id='L399' name='L399'></a> 399     23,
+<a id='L400' name='L400'></a> 400   <em class='brace'>}</em>;
+<a id='L401' name='L401'></a> 401 
+<a id='L402' name='L402'></a> 402 <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/22527.html' title='Multiple used in 10 places.'>poly_end</a>[] =
+<a id='L403' name='L403'></a> 403   <em class='brace'>{</em>
+<a id='L404' name='L404'></a> 404     23,
+<a id='L405' name='L405'></a> 405     48,
+<a id='L406' name='L406'></a> 406     74,
+<a id='L407' name='L407'></a> 407     102,
+<a id='L408' name='L408'></a> 408     131,
+<a id='L409' name='L409'></a> 409     158,
+<a id='L410' name='L410'></a> 410     183,
+<a id='L411' name='L411'></a> 411     207,
+<a id='L412' name='L412'></a> 412   <em class='brace'>}</em>;
+<a id='L413' name='L413'></a> 413 
+<a id='L414' name='L414'></a> 414 <em class='comment'>/* Compute sin (pi * X) for -0.25 &lt;= X &lt;= 0.5.  */</em>
+<a id='L415' name='L415'></a> 415 
+<a id='L416' name='L416'></a> 416 <strong class='reserved'>static</strong> <a href='../D/18523.html' title='Multiple defined in 13 places.'>_Float128</a>
+<a id='L417' name='L417'></a> 417 <a href='../R/21082.html' title='Multiple referred from 20 places.'>lg_sinpi</a> (<a href='../D/18523.html' title='Multiple defined in 13 places.'>_Float128</a> <a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a>)
+<a id='L418' name='L418'></a> 418 <em class='brace'>{</em>
+<a id='L419' name='L419'></a> 419   <strong class='reserved'>if</strong> (<a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a> &lt;= <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0.25))
+<a id='L420' name='L420'></a> 420     <strong class='reserved'>return</strong> <a href='../D/26083.html' title='Multiple defined in 4 places.'>__sinl</a> (<a href='../D/8564.html' title='Multiple defined in 3 places.'>M_PIl</a> * <a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a>);
+<a id='L421' name='L421'></a> 421   <strong class='reserved'>else</strong>
+<a id='L422' name='L422'></a> 422     <strong class='reserved'>return</strong> <a href='../D/23560.html' title='Multiple defined in 4 places.'>__cosl</a> (<a href='../D/8564.html' title='Multiple defined in 3 places.'>M_PIl</a> * (<a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0.5) - <a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a>));
+<a id='L423' name='L423'></a> 423 <em class='brace'>}</em>
+<a id='L424' name='L424'></a> 424 
+<a id='L425' name='L425'></a> 425 <em class='comment'>/* Compute cos (pi * X) for -0.25 &lt;= X &lt;= 0.5.  */</em>
+<a id='L426' name='L426'></a> 426 
+<a id='L427' name='L427'></a> 427 <strong class='reserved'>static</strong> <a href='../D/18523.html' title='Multiple defined in 13 places.'>_Float128</a>
+<a id='L428' name='L428'></a> 428 <a href='../R/21080.html' title='Multiple referred from 10 places.'>lg_cospi</a> (<a href='../D/18523.html' title='Multiple defined in 13 places.'>_Float128</a> <a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a>)
+<a id='L429' name='L429'></a> 429 <em class='brace'>{</em>
+<a id='L430' name='L430'></a> 430   <strong class='reserved'>if</strong> (<a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a> &lt;= <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0.25))
+<a id='L431' name='L431'></a> 431     <strong class='reserved'>return</strong> <a href='../D/23560.html' title='Multiple defined in 4 places.'>__cosl</a> (<a href='../D/8564.html' title='Multiple defined in 3 places.'>M_PIl</a> * <a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a>);
+<a id='L432' name='L432'></a> 432   <strong class='reserved'>else</strong>
+<a id='L433' name='L433'></a> 433     <strong class='reserved'>return</strong> <a href='../D/26083.html' title='Multiple defined in 4 places.'>__sinl</a> (<a href='../D/8564.html' title='Multiple defined in 3 places.'>M_PIl</a> * (<a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0.5) - <a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a>));
+<a id='L434' name='L434'></a> 434 <em class='brace'>}</em>
+<a id='L435' name='L435'></a> 435 
+<a id='L436' name='L436'></a> 436 <em class='comment'>/* Compute cot (pi * X) for -0.25 &lt;= X &lt;= 0.5.  */</em>
+<a id='L437' name='L437'></a> 437 
+<a id='L438' name='L438'></a> 438 <strong class='reserved'>static</strong> <a href='../D/18523.html' title='Multiple defined in 13 places.'>_Float128</a>
+<a id='L439' name='L439'></a> 439 <a href='../R/21081.html' title='Multiple referred from 5 places.'>lg_cotpi</a> (<a href='../D/18523.html' title='Multiple defined in 13 places.'>_Float128</a> <a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a>)
+<a id='L440' name='L440'></a> 440 <em class='brace'>{</em>
+<a id='L441' name='L441'></a> 441   <strong class='reserved'>return</strong> <a href='../D/32604.html' title='Multiple defined in 5 places.'>lg_cospi</a> (<a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a>) / <a href='../D/32606.html' title='Multiple defined in 5 places.'>lg_sinpi</a> (<a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a>);
+<a id='L442' name='L442'></a> 442 <em class='brace'>}</em>
+<a id='L443' name='L443'></a> 443 
+<a id='L444' name='L444'></a> 444 <em class='comment'>/* Compute lgamma of a negative argument -50 &lt; X &lt; -2, setting</em>
+<a id='L445' name='L445'></a> 445 <em class='comment'>   *SIGNGAMP accordingly.  */</em>
+<a id='L446' name='L446'></a> 446 
+<a id='L447' name='L447'></a> 447 <a href='../D/18523.html' title='Multiple defined in 13 places.'>_Float128</a>
+<a id='L448' name='L448'></a> 448 <a href='../R/14635.html' title='Multiple referred from 3 places.'>__lgamma_negl</a> (<a href='../D/18523.html' title='Multiple defined in 13 places.'>_Float128</a> <a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a>, <strong class='reserved'>int</strong> *<a href='../Y/25426.html' title='Multiple used in 108 places.'>signgamp</a>)
+<a id='L449' name='L449'></a> 449 <em class='brace'>{</em>
+<a id='L450' name='L450'></a> 450   <em class='comment'>/* Determine the half-integer region X lies in, handle exact</em>
+<a id='L451' name='L451'></a> 451 <em class='comment'>     integers and determine the sign of the result.  */</em>
+<a id='L452' name='L452'></a> 452   <strong class='reserved'>int</strong> <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> = <a href='../D/30594.html' title='Multiple defined in 2 places.'>floorl</a> (-2 * <a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a>);
+<a id='L453' name='L453'></a> 453   <strong class='reserved'>if</strong> ((<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> &amp; 1) == 0 &amp;&amp; <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> == -2 * <a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a>)
+<a id='L454' name='L454'></a> 454     <strong class='reserved'>return</strong> <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(1.0) / <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0.0);
+<a id='L455' name='L455'></a> 455   <a href='../D/18523.html' title='Multiple defined in 13 places.'>_Float128</a> <a href='../Y/29459.html' title='Multiple used in 27 places.'>xn</a> = ((<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> &amp; 1) == 0 ? -<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> / 2 : (-<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> - 1) / 2);
+<a id='L456' name='L456'></a> 456   <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> -= 4;
+<a id='L457' name='L457'></a> 457   *<a href='../Y/25426.html' title='Multiple used in 108 places.'>signgamp</a> = ((<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> &amp; 2) == 0 ? -1 : 1);
+<a id='L458' name='L458'></a> 458 
+<a id='L459' name='L459'></a> 459   <a href='../D/13842.html' title='Multiple defined in 3 places.'>SET_RESTORE_ROUNDL</a> (<a href='../D/4159.html' title='Multiple defined in 23 places.'>FE_TONEAREST</a>);
+<a id='L460' name='L460'></a> 460 
+<a id='L461' name='L461'></a> 461   <em class='comment'>/* Expand around the zero X0 = X0_HI + X0_LO.  */</em>
+<a id='L462' name='L462'></a> 462   <a href='../D/18523.html' title='Multiple defined in 13 places.'>_Float128</a> <a href='../Y/29227.html' title='Multiple used in 25 places.'>x0_hi</a> = <a href='../Y/18112.html' title='Multiple used in 10 places.'>lgamma_zeros</a>[<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>][0], <a href='../Y/29229.html' title='Multiple used in 20 places.'>x0_lo</a> = <a href='../Y/18112.html' title='Multiple used in 10 places.'>lgamma_zeros</a>[<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>][1];
+<a id='L463' name='L463'></a> 463   <a href='../D/18523.html' title='Multiple defined in 13 places.'>_Float128</a> <a href='../Y/29303.html' title='Multiple used in 34 places.'>xdiff</a> = <a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a> - <a href='../Y/29227.html' title='Multiple used in 25 places.'>x0_hi</a> - <a href='../Y/29229.html' title='Multiple used in 20 places.'>x0_lo</a>;
+<a id='L464' name='L464'></a> 464 
+<a id='L465' name='L465'></a> 465   <em class='comment'>/* For arguments in the range -3 to -2, use polynomial</em>
+<a id='L466' name='L466'></a> 466 <em class='comment'>     approximations to an adjusted version of the gamma function.  */</em>
+<a id='L467' name='L467'></a> 467   <strong class='reserved'>if</strong> (<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> &lt; 2)
+<a id='L468' name='L468'></a> 468     <em class='brace'>{</em>
+<a id='L469' name='L469'></a> 469       <strong class='reserved'>int</strong> <a href='../Y/17344.html' title='Multiple used in 1543 places.'>j</a> = <a href='../D/30594.html' title='Multiple defined in 2 places.'>floorl</a> (-8 * <a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a>) - 16;
+<a id='L470' name='L470'></a> 470       <a href='../D/18523.html' title='Multiple defined in 13 places.'>_Float128</a> <a href='../Y/29444.html' title='Multiple used in 29 places.'>xm</a> = (-33 - 2 * <a href='../Y/17344.html' title='Multiple used in 1543 places.'>j</a>) * <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0.0625);
+<a id='L471' name='L471'></a> 471       <a href='../D/18523.html' title='Multiple defined in 13 places.'>_Float128</a> <a href='../Y/29259.html' title='Multiple used in 89 places.'>x_adj</a> = <a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a> - <a href='../Y/29444.html' title='Multiple used in 29 places.'>xm</a>;
+<a id='L472' name='L472'></a> 472       <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/12619.html' title='Multiple used in 14 places.'>deg</a> = <a href='../Y/22526.html' title='Multiple used in 10 places.'>poly_deg</a>[<a href='../Y/17344.html' title='Multiple used in 1543 places.'>j</a>];
+<a id='L473' name='L473'></a> 473       <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../S/13674.html#L41' title='Defined at 41 in sysdeps/aarch64/memrchr.S.'>end</a> = <a href='../Y/22527.html' title='Multiple used in 10 places.'>poly_end</a>[<a href='../Y/17344.html' title='Multiple used in 1543 places.'>j</a>];
+<a id='L474' name='L474'></a> 474       <a href='../D/18523.html' title='Multiple defined in 13 places.'>_Float128</a> <a href='../Y/15314.html' title='Multiple used in 283 places.'>g</a> = <a href='../D/34759.html' title='Multiple defined in 24 places.'>poly_coeff</a>[<a href='../S/13674.html#L41' title='Defined at 41 in sysdeps/aarch64/memrchr.S.'>end</a>];
+<a id='L475' name='L475'></a> 475       <strong class='reserved'>for</strong> (<a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/17344.html' title='Multiple used in 1543 places.'>j</a> = 1; <a href='../Y/17344.html' title='Multiple used in 1543 places.'>j</a> &lt;= <a href='../Y/12619.html' title='Multiple used in 14 places.'>deg</a>; <a href='../Y/17344.html' title='Multiple used in 1543 places.'>j</a>++)
+<a id='L476' name='L476'></a> 476     <a href='../Y/15314.html' title='Multiple used in 283 places.'>g</a> = <a href='../Y/15314.html' title='Multiple used in 283 places.'>g</a> * <a href='../Y/29259.html' title='Multiple used in 89 places.'>x_adj</a> + <a href='../D/34759.html' title='Multiple defined in 24 places.'>poly_coeff</a>[<a href='../S/13674.html#L41' title='Defined at 41 in sysdeps/aarch64/memrchr.S.'>end</a> - <a href='../Y/17344.html' title='Multiple used in 1543 places.'>j</a>];
+<a id='L477' name='L477'></a> 477       <strong class='reserved'>return</strong> <a href='../D/24783.html' title='Multiple defined in 5 places.'>__log1pl</a> (<a href='../Y/15314.html' title='Multiple used in 283 places.'>g</a> * <a href='../Y/29303.html' title='Multiple used in 34 places.'>xdiff</a> / (<a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a> - <a href='../Y/29459.html' title='Multiple used in 27 places.'>xn</a>));
+<a id='L478' name='L478'></a> 478     <em class='brace'>}</em>
+<a id='L479' name='L479'></a> 479 
+<a id='L480' name='L480'></a> 480   <em class='comment'>/* The result we want is log (sinpi (X0) / sinpi (X))</em>
+<a id='L481' name='L481'></a> 481 <em class='comment'>     + log (gamma (1 - X0) / gamma (1 - X)).  */</em>
+<a id='L482' name='L482'></a> 482   <a href='../D/18523.html' title='Multiple defined in 13 places.'>_Float128</a> <a href='../Y/29278.html' title='Multiple used in 20 places.'>x_idiff</a> = <a href='../D/30346.html' title='Multiple defined in 2 places.'>fabsl</a> (<a href='../Y/29459.html' title='Multiple used in 27 places.'>xn</a> - <a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a>), <a href='../Y/29228.html' title='Multiple used in 15 places.'>x0_idiff</a> = <a href='../D/30346.html' title='Multiple defined in 2 places.'>fabsl</a> (<a href='../Y/29459.html' title='Multiple used in 27 places.'>xn</a> - <a href='../Y/29227.html' title='Multiple used in 25 places.'>x0_hi</a> - <a href='../Y/29229.html' title='Multiple used in 20 places.'>x0_lo</a>);
+<a id='L483' name='L483'></a> 483   <a href='../D/18523.html' title='Multiple defined in 13 places.'>_Float128</a> <a href='../Y/18449.html' title='Multiple used in 20 places.'>log_sinpi_ratio</a>;
+<a id='L484' name='L484'></a> 484   <strong class='reserved'>if</strong> (<a href='../Y/29228.html' title='Multiple used in 15 places.'>x0_idiff</a> &lt; <a href='../Y/29278.html' title='Multiple used in 20 places.'>x_idiff</a> * <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0.5))
+<a id='L485' name='L485'></a> 485     <em class='comment'>/* Use log not log1p to avoid inaccuracy from log1p of arguments</em>
+<a id='L486' name='L486'></a> 486 <em class='comment'>       close to -1.  */</em>
+<a id='L487' name='L487'></a> 487     <a href='../Y/18449.html' title='Multiple used in 20 places.'>log_sinpi_ratio</a> = <a href='../D/24337.html' title='Multiple defined in 6 places.'>__ieee754_logl</a> (<a href='../D/32606.html' title='Multiple defined in 5 places.'>lg_sinpi</a> (<a href='../Y/29228.html' title='Multiple used in 15 places.'>x0_idiff</a>)
+<a id='L488' name='L488'></a> 488                       / <a href='../D/32606.html' title='Multiple defined in 5 places.'>lg_sinpi</a> (<a href='../Y/29278.html' title='Multiple used in 20 places.'>x_idiff</a>));
+<a id='L489' name='L489'></a> 489   <strong class='reserved'>else</strong>
+<a id='L490' name='L490'></a> 490     <em class='brace'>{</em>
+<a id='L491' name='L491'></a> 491       <em class='comment'>/* Use log1p not log to avoid inaccuracy from log of arguments</em>
+<a id='L492' name='L492'></a> 492 <em class='comment'>     close to 1.  X0DIFF2 has positive sign if X0 is further from</em>
+<a id='L493' name='L493'></a> 493 <em class='comment'>     XN than X is from XN, negative sign otherwise.  */</em>
+<a id='L494' name='L494'></a> 494       <a href='../D/18523.html' title='Multiple defined in 13 places.'>_Float128</a> <a href='../Y/29232.html' title='Multiple used in 15 places.'>x0diff2</a> = ((<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> &amp; 1) == 0 ? <a href='../Y/29303.html' title='Multiple used in 34 places.'>xdiff</a> : -<a href='../Y/29303.html' title='Multiple used in 34 places.'>xdiff</a>) * <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0.5);
+<a id='L495' name='L495'></a> 495       <a href='../D/18523.html' title='Multiple defined in 13 places.'>_Float128</a> <a href='../Y/26585.html' title='Multiple used in 15 places.'>sx0d2</a> = <a href='../D/32606.html' title='Multiple defined in 5 places.'>lg_sinpi</a> (<a href='../Y/29232.html' title='Multiple used in 15 places.'>x0diff2</a>);
+<a id='L496' name='L496'></a> 496       <a href='../D/18523.html' title='Multiple defined in 13 places.'>_Float128</a> <a href='../Y/12395.html' title='Multiple used in 10 places.'>cx0d2</a> = <a href='../D/32604.html' title='Multiple defined in 5 places.'>lg_cospi</a> (<a href='../Y/29232.html' title='Multiple used in 15 places.'>x0diff2</a>);
+<a id='L497' name='L497'></a> 497       <a href='../Y/18449.html' title='Multiple used in 20 places.'>log_sinpi_ratio</a> = <a href='../D/24783.html' title='Multiple defined in 5 places.'>__log1pl</a> (2 * <a href='../Y/26585.html' title='Multiple used in 15 places.'>sx0d2</a>
+<a id='L498' name='L498'></a> 498                   * (-<a href='../Y/26585.html' title='Multiple used in 15 places.'>sx0d2</a> + <a href='../Y/12395.html' title='Multiple used in 10 places.'>cx0d2</a> * <a href='../D/32605.html' title='Multiple defined in 5 places.'>lg_cotpi</a> (<a href='../Y/29278.html' title='Multiple used in 20 places.'>x_idiff</a>)));
+<a id='L499' name='L499'></a> 499     <em class='brace'>}</em>
+<a id='L500' name='L500'></a> 500 
+<a id='L501' name='L501'></a> 501   <a href='../D/18523.html' title='Multiple defined in 13 places.'>_Float128</a> <a href='../Y/18446.html' title='Multiple used in 15 places.'>log_gamma_ratio</a>;
+<a id='L502' name='L502'></a> 502   <a href='../D/18523.html' title='Multiple defined in 13 places.'>_Float128</a> <a href='../Y/29525.html' title='Multiple used in 86 places.'>y0</a> = 1 - <a href='../Y/29227.html' title='Multiple used in 25 places.'>x0_hi</a>;
+<a id='L503' name='L503'></a> 503   <a href='../D/18523.html' title='Multiple defined in 13 places.'>_Float128</a> <a href='../Y/29526.html' title='Multiple used in 18 places.'>y0_eps</a> = -<a href='../Y/29227.html' title='Multiple used in 25 places.'>x0_hi</a> + (1 - <a href='../Y/29525.html' title='Multiple used in 86 places.'>y0</a>) - <a href='../Y/29229.html' title='Multiple used in 20 places.'>x0_lo</a>;
+<a id='L504' name='L504'></a> 504   <a href='../D/18523.html' title='Multiple defined in 13 places.'>_Float128</a> <a href='../D/39646.html' title='Multiple defined in 4 places.'>y</a> = 1 - <a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a>;
+<a id='L505' name='L505'></a> 505   <a href='../D/18523.html' title='Multiple defined in 13 places.'>_Float128</a> <a href='../Y/29540.html' title='Multiple used in 22 places.'>y_eps</a> = -<a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a> + (1 - <a href='../D/39646.html' title='Multiple defined in 4 places.'>y</a>);
+<a id='L506' name='L506'></a> 506   <em class='comment'>/* We now wish to compute LOG_GAMMA_RATIO</em>
+<a id='L507' name='L507'></a> 507 <em class='comment'>     = log (gamma (Y0 + Y0_EPS) / gamma (Y + Y_EPS)).  XDIFF</em>
+<a id='L508' name='L508'></a> 508 <em class='comment'>     accurately approximates the difference Y0 + Y0_EPS - Y -</em>
+<a id='L509' name='L509'></a> 509 <em class='comment'>     Y_EPS.  Use Stirling's approximation.  First, we may need to</em>
+<a id='L510' name='L510'></a> 510 <em class='comment'>     adjust into the range where Stirling's approximation is</em>
+<a id='L511' name='L511'></a> 511 <em class='comment'>     sufficiently accurate.  */</em>
+<a id='L512' name='L512'></a> 512   <a href='../D/18523.html' title='Multiple defined in 13 places.'>_Float128</a> <a href='../Y/18443.html' title='Multiple used in 12 places.'>log_gamma_adj</a> = 0;
+<a id='L513' name='L513'></a> 513   <strong class='reserved'>if</strong> (<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> &lt; 20)
+<a id='L514' name='L514'></a> 514     <em class='brace'>{</em>
+<a id='L515' name='L515'></a> 515       <strong class='reserved'>int</strong> <a href='../Y/20144.html' title='Multiple used in 24 places.'>n_up</a> = (21 - <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>) / 2;
+<a id='L516' name='L516'></a> 516       <a href='../D/18523.html' title='Multiple defined in 13 places.'>_Float128</a> <a href='../Y/21403.html' title='Multiple used in 16 places.'>ny0</a>, <a href='../Y/21404.html' title='Multiple used in 12 places.'>ny0_eps</a>, <a href='../Y/21402.html' title='Multiple used in 16 places.'>ny</a>, <a href='../Y/21405.html' title='Multiple used in 12 places.'>ny_eps</a>;
+<a id='L517' name='L517'></a> 517       <a href='../Y/21403.html' title='Multiple used in 16 places.'>ny0</a> = <a href='../Y/29525.html' title='Multiple used in 86 places.'>y0</a> + <a href='../Y/20144.html' title='Multiple used in 24 places.'>n_up</a>;
+<a id='L518' name='L518'></a> 518       <a href='../Y/21404.html' title='Multiple used in 12 places.'>ny0_eps</a> = <a href='../Y/29525.html' title='Multiple used in 86 places.'>y0</a> - (<a href='../Y/21403.html' title='Multiple used in 16 places.'>ny0</a> - <a href='../Y/20144.html' title='Multiple used in 24 places.'>n_up</a>) + <a href='../Y/29526.html' title='Multiple used in 18 places.'>y0_eps</a>;
+<a id='L519' name='L519'></a> 519       <a href='../Y/29525.html' title='Multiple used in 86 places.'>y0</a> = <a href='../Y/21403.html' title='Multiple used in 16 places.'>ny0</a>;
+<a id='L520' name='L520'></a> 520       <a href='../Y/29526.html' title='Multiple used in 18 places.'>y0_eps</a> = <a href='../Y/21404.html' title='Multiple used in 12 places.'>ny0_eps</a>;
+<a id='L521' name='L521'></a> 521       <a href='../Y/21402.html' title='Multiple used in 16 places.'>ny</a> = <a href='../D/39646.html' title='Multiple defined in 4 places.'>y</a> + <a href='../Y/20144.html' title='Multiple used in 24 places.'>n_up</a>;
+<a id='L522' name='L522'></a> 522       <a href='../Y/21405.html' title='Multiple used in 12 places.'>ny_eps</a> = <a href='../D/39646.html' title='Multiple defined in 4 places.'>y</a> - (<a href='../Y/21402.html' title='Multiple used in 16 places.'>ny</a> - <a href='../Y/20144.html' title='Multiple used in 24 places.'>n_up</a>) + <a href='../Y/29540.html' title='Multiple used in 22 places.'>y_eps</a>;
+<a id='L523' name='L523'></a> 523       <a href='../D/39646.html' title='Multiple defined in 4 places.'>y</a> = <a href='../Y/21402.html' title='Multiple used in 16 places.'>ny</a>;
+<a id='L524' name='L524'></a> 524       <a href='../Y/29540.html' title='Multiple used in 22 places.'>y_eps</a> = <a href='../Y/21405.html' title='Multiple used in 12 places.'>ny_eps</a>;
+<a id='L525' name='L525'></a> 525       <a href='../D/18523.html' title='Multiple defined in 13 places.'>_Float128</a> <a href='../Y/22827.html' title='Multiple used in 8 places.'>prodm1</a> = <a href='../D/24535.html' title='Multiple defined in 4 places.'>__lgamma_productl</a> (<a href='../Y/29303.html' title='Multiple used in 34 places.'>xdiff</a>, <a href='../D/39646.html' title='Multiple defined in 4 places.'>y</a> - <a href='../Y/20144.html' title='Multiple used in 24 places.'>n_up</a>, <a href='../Y/29540.html' title='Multiple used in 22 places.'>y_eps</a>, <a href='../Y/20144.html' title='Multiple used in 24 places.'>n_up</a>);
+<a id='L526' name='L526'></a> 526       <a href='../Y/18443.html' title='Multiple used in 12 places.'>log_gamma_adj</a> = -<a href='../D/24783.html' title='Multiple defined in 5 places.'>__log1pl</a> (<a href='../Y/22827.html' title='Multiple used in 8 places.'>prodm1</a>);
+<a id='L527' name='L527'></a> 527     <em class='brace'>}</em>
+<a id='L528' name='L528'></a> 528   <a href='../D/18523.html' title='Multiple defined in 13 places.'>_Float128</a> <a href='../Y/18444.html' title='Multiple used in 10 places.'>log_gamma_high</a>
+<a id='L529' name='L529'></a> 529     = (<a href='../Y/29303.html' title='Multiple used in 34 places.'>xdiff</a> * <a href='../D/24783.html' title='Multiple defined in 5 places.'>__log1pl</a> ((<a href='../Y/29525.html' title='Multiple used in 86 places.'>y0</a> - <a href='../Y/13503.html' title='Multiple used in 10 places.'>e_hi</a> - <a href='../Y/13506.html' title='Multiple used in 10 places.'>e_lo</a> + <a href='../Y/29526.html' title='Multiple used in 18 places.'>y0_eps</a>) / <a href='../Y/13503.html' title='Multiple used in 10 places.'>e_hi</a>)
+<a id='L530' name='L530'></a> 530        + (<a href='../D/39646.html' title='Multiple defined in 4 places.'>y</a> - <a href='../D/6966.html' title='Multiple defined in 55 places.'>L</a>(0.5) + <a href='../Y/29540.html' title='Multiple used in 22 places.'>y_eps</a>) * <a href='../D/24783.html' title='Multiple defined in 5 places.'>__log1pl</a> (<a href='../Y/29303.html' title='Multiple used in 34 places.'>xdiff</a> / <a href='../D/39646.html' title='Multiple defined in 4 places.'>y</a>) + <a href='../Y/18443.html' title='Multiple used in 12 places.'>log_gamma_adj</a>);
+<a id='L531' name='L531'></a> 531   <em class='comment'>/* Compute the sum of (B_2k / 2k(2k-1))(Y0^-(2k-1) - Y^-(2k-1)).  */</em>
+<a id='L532' name='L532'></a> 532   <a href='../D/18523.html' title='Multiple defined in 13 places.'>_Float128</a> <a href='../Y/29530.html' title='Multiple used in 15 places.'>y0r</a> = 1 / <a href='../Y/29525.html' title='Multiple used in 86 places.'>y0</a>, <a href='../Y/29667.html' title='Multiple used in 24 places.'>yr</a> = 1 / <a href='../D/39646.html' title='Multiple defined in 4 places.'>y</a>;
+<a id='L533' name='L533'></a> 533   <a href='../D/18523.html' title='Multiple defined in 13 places.'>_Float128</a> <a href='../Y/29531.html' title='Multiple used in 10 places.'>y0r2</a> = <a href='../Y/29530.html' title='Multiple used in 15 places.'>y0r</a> * <a href='../Y/29530.html' title='Multiple used in 15 places.'>y0r</a>, <a href='../Y/29668.html' title='Multiple used in 10 places.'>yr2</a> = <a href='../Y/29667.html' title='Multiple used in 24 places.'>yr</a> * <a href='../Y/29667.html' title='Multiple used in 24 places.'>yr</a>;
+<a id='L534' name='L534'></a> 534   <a href='../D/18523.html' title='Multiple defined in 13 places.'>_Float128</a> <a href='../Y/23506.html' title='Multiple used in 10 places.'>rdiff</a> = -<a href='../Y/29303.html' title='Multiple used in 34 places.'>xdiff</a> / (<a href='../D/39646.html' title='Multiple defined in 4 places.'>y</a> * <a href='../Y/29525.html' title='Multiple used in 86 places.'>y0</a>);
+<a id='L535' name='L535'></a> 535   <a href='../D/18523.html' title='Multiple defined in 13 places.'>_Float128</a> <a href='../Y/11027.html' title='Multiple used in 20 places.'>bterm</a>[<a href='../D/8661.html' title='Multiple defined in 10 places.'>NCOEFF</a>];
+<a id='L536' name='L536'></a> 536   <a href='../D/18523.html' title='Multiple defined in 13 places.'>_Float128</a> <a href='../Y/12992.html' title='Multiple used in 20 places.'>dlast</a> = <a href='../Y/23506.html' title='Multiple used in 10 places.'>rdiff</a>, <a href='../Y/13613.html' title='Multiple used in 20 places.'>elast</a> = <a href='../Y/23506.html' title='Multiple used in 10 places.'>rdiff</a> * <a href='../Y/29667.html' title='Multiple used in 24 places.'>yr</a> * (<a href='../Y/29667.html' title='Multiple used in 24 places.'>yr</a> + <a href='../Y/29530.html' title='Multiple used in 15 places.'>y0r</a>);
+<a id='L537' name='L537'></a> 537   <a href='../Y/11027.html' title='Multiple used in 20 places.'>bterm</a>[0] = <a href='../Y/12992.html' title='Multiple used in 20 places.'>dlast</a> * <a href='../Y/18109.html' title='Multiple used in 20 places.'>lgamma_coeff</a>[0];
+<a id='L538' name='L538'></a> 538   <strong class='reserved'>for</strong> (<a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/17344.html' title='Multiple used in 1543 places.'>j</a> = 1; <a href='../Y/17344.html' title='Multiple used in 1543 places.'>j</a> &lt; <a href='../D/8661.html' title='Multiple defined in 10 places.'>NCOEFF</a>; <a href='../Y/17344.html' title='Multiple used in 1543 places.'>j</a>++)
+<a id='L539' name='L539'></a> 539     <em class='brace'>{</em>
+<a id='L540' name='L540'></a> 540       <a href='../D/18523.html' title='Multiple defined in 13 places.'>_Float128</a> <a href='../Y/13043.html' title='Multiple used in 15 places.'>dnext</a> = <a href='../Y/12992.html' title='Multiple used in 20 places.'>dlast</a> * <a href='../Y/29531.html' title='Multiple used in 10 places.'>y0r2</a> + <a href='../Y/13613.html' title='Multiple used in 20 places.'>elast</a>;
+<a id='L541' name='L541'></a> 541       <a href='../D/18523.html' title='Multiple defined in 13 places.'>_Float128</a> <a href='../Y/13764.html' title='Multiple used in 10 places.'>enext</a> = <a href='../Y/13613.html' title='Multiple used in 20 places.'>elast</a> * <a href='../Y/29668.html' title='Multiple used in 10 places.'>yr2</a>;
+<a id='L542' name='L542'></a> 542       <a href='../Y/11027.html' title='Multiple used in 20 places.'>bterm</a>[<a href='../Y/17344.html' title='Multiple used in 1543 places.'>j</a>] = <a href='../Y/13043.html' title='Multiple used in 15 places.'>dnext</a> * <a href='../Y/18109.html' title='Multiple used in 20 places.'>lgamma_coeff</a>[<a href='../Y/17344.html' title='Multiple used in 1543 places.'>j</a>];
+<a id='L543' name='L543'></a> 543       <a href='../Y/12992.html' title='Multiple used in 20 places.'>dlast</a> = <a href='../Y/13043.html' title='Multiple used in 15 places.'>dnext</a>;
+<a id='L544' name='L544'></a> 544       <a href='../Y/13613.html' title='Multiple used in 20 places.'>elast</a> = <a href='../Y/13764.html' title='Multiple used in 10 places.'>enext</a>;
+<a id='L545' name='L545'></a> 545     <em class='brace'>}</em>
+<a id='L546' name='L546'></a> 546   <a href='../D/18523.html' title='Multiple defined in 13 places.'>_Float128</a> <a href='../Y/18445.html' title='Multiple used in 15 places.'>log_gamma_low</a> = 0;
+<a id='L547' name='L547'></a> 547   <strong class='reserved'>for</strong> (<a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/17344.html' title='Multiple used in 1543 places.'>j</a> = 0; <a href='../Y/17344.html' title='Multiple used in 1543 places.'>j</a> &lt; <a href='../D/8661.html' title='Multiple defined in 10 places.'>NCOEFF</a>; <a href='../Y/17344.html' title='Multiple used in 1543 places.'>j</a>++)
+<a id='L548' name='L548'></a> 548     <a href='../Y/18445.html' title='Multiple used in 15 places.'>log_gamma_low</a> += <a href='../Y/11027.html' title='Multiple used in 20 places.'>bterm</a>[<a href='../D/8661.html' title='Multiple defined in 10 places.'>NCOEFF</a> - 1 - <a href='../Y/17344.html' title='Multiple used in 1543 places.'>j</a>];
+<a id='L549' name='L549'></a> 549   <a href='../Y/18446.html' title='Multiple used in 15 places.'>log_gamma_ratio</a> = <a href='../Y/18444.html' title='Multiple used in 10 places.'>log_gamma_high</a> + <a href='../Y/18445.html' title='Multiple used in 15 places.'>log_gamma_low</a>;
+<a id='L550' name='L550'></a> 550 
+<a id='L551' name='L551'></a> 551   <strong class='reserved'>return</strong> <a href='../Y/18449.html' title='Multiple used in 20 places.'>log_sinpi_ratio</a> + <a href='../Y/18446.html' title='Multiple used in 15 places.'>log_gamma_ratio</a>;
+<a id='L552' name='L552'></a> 552 <em class='brace'>}</em>
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L417'>[^]</a><a href='#L448'>[v]</a><a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

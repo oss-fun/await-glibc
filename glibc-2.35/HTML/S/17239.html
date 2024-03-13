@@ -1,0 +1,163 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>sysdeps/arm/armv6/strchr.S</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18977.html'>sysdeps</a>/<a href='../files/18999.html'>arm</a>/<a href='../files/19000.html'>armv6</a>/strchr.S</h2>
+<em class='comment'>/* [&lt;][&gt;][^][v][top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* strchr -- find the first instance of C in a nul-terminated string.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   Copyright (C) 2013-2022 Free Software Foundation, Inc.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'></em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'></em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'></em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   License along with the GNU C Library.  If not, see</em>
+<a id='L17' name='L17'></a>  17 <em class='comment'>   &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L18' name='L18'></a>  18 
+<a id='L19' name='L19'></a>  19 <em class='sharp'>#include</em> &lt;<a href='../I/5967.html'>sysdep.h</a>&gt;
+<a id='L20' name='L20'></a>  20 
+<a id='L21' name='L21'></a>  21     .syntax unified
+<a id='L22' name='L22'></a>  22     .text
+<a id='L23' name='L23'></a>  23 
+<a id='L24' name='L24'></a>  24 <a href='../D/3651.html' title='Multiple defined in 54 places.'>ENTRY</a> (<a href='../R/24716.html' title='Multiple referred from 277 places.'>strchr</a>)
+<a id='L25' name='L25'></a>  25     @ r0 = start of string
+<a id='L26' name='L26'></a>  26     @ r1 = character to match
+<a id='L27' name='L27'></a>  27     @ returns NULL for no match, or a pointer to the match
+<a id='L28' name='L28'></a>  28     ldrb    r2, [r0]        @ load the first byte asap
+<a id='L29' name='L29'></a>  29     uxtb    r1, r1
+<a id='L30' name='L30'></a>  30 
+<a id='L31' name='L31'></a>  31     @ To cater to long strings, we want to search through a few
+<a id='L32' name='L32'></a>  32     @ characters until we reach an aligned pointer.  To cater to
+<a id='L33' name='L33'></a>  33     @ small strings, we don't want to start doing word operations
+<a id='L34' name='L34'></a>  34     @ immediately.  The compromise is a maximum of 16 bytes less
+<a id='L35' name='L35'></a>  35     @ whatever is required to end with an aligned pointer.
+<a id='L36' name='L36'></a>  36     @ r3 = number of characters to search in alignment loop
+<a id='L37' name='L37'></a>  37     and r3, r0, #7
+<a id='L38' name='L38'></a>  38     rsb r3, r3, #15     @ 16 - 1 peeled loop iteration
+<a id='L39' name='L39'></a>  39     cmp r2, r1          @ Found C?
+<a id='L40' name='L40'></a>  40     it  ne
+<a id='L41' name='L41'></a>  41     cmpne   r2, #0          @ Found EOS?
+<a id='L42' name='L42'></a>  42     beq 99f
+<a id='L43' name='L43'></a>  43 
+<a id='L44' name='L44'></a>  44     @ Loop until we find ...
+<a id='L45' name='L45'></a>  45 1:  ldrb    r2, [r0, #1]!
+<a id='L46' name='L46'></a>  46     subs    r3, r3, #1      @ ... the aligment point
+<a id='L47' name='L47'></a>  47     it  ne
+<a id='L48' name='L48'></a>  48     cmpne   r2, r1          @ ... or the character
+<a id='L49' name='L49'></a>  49     it  ne
+<a id='L50' name='L50'></a>  50     cmpne   r2, #0          @ ... or EOS
+<a id='L51' name='L51'></a>  51     bne 1b
+<a id='L52' name='L52'></a>  52 
+<a id='L53' name='L53'></a>  53     @ Disambiguate the exit possibilites above
+<a id='L54' name='L54'></a>  54     cmp r2, r1          @ Found the character
+<a id='L55' name='L55'></a>  55     it  ne
+<a id='L56' name='L56'></a>  56     cmpne   r2, #0          @ Found EOS
+<a id='L57' name='L57'></a>  57     beq 99f
+<a id='L58' name='L58'></a>  58     add r0, r0, #1
+<a id='L59' name='L59'></a>  59 
+<a id='L60' name='L60'></a>  60     @ So now we're aligned.  Now we actually need a stack frame.
+<a id='L61' name='L61'></a>  61     push    <em class='brace'>{</em> r4, r5, r6, r7 <em class='brace'>}</em>
+<a id='L62' name='L62'></a>  62     cfi_adjust_cfa_offset (16)
+<a id='L63' name='L63'></a>  63     cfi_rel_offset (r4, 0)
+<a id='L64' name='L64'></a>  64     cfi_rel_offset (r5, 4)
+<a id='L65' name='L65'></a>  65     cfi_rel_offset (r6, 8)
+<a id='L66' name='L66'></a>  66     cfi_rel_offset (r7, 12)
+<a id='L67' name='L67'></a>  67 
+<a id='L68' name='L68'></a>  68     ldrd    r2, r3, [r0], #8
+<a id='L69' name='L69'></a>  69     orr r1, r1, r1, lsl #8  @ Replicate C to all bytes
+<a id='L70' name='L70'></a>  70 <em class='sharp'>#ifdef</em> <a href='../S/17259.html#L63' title='Defined at 63 in sysdeps/arm/sysdep.h.'>ARCH_HAS_T2</a>
+<a id='L71' name='L71'></a>  71     movw    ip, #0x0101
+<a id='L72' name='L72'></a>  72     pld [r0, #64]
+<a id='L73' name='L73'></a>  73     movt    ip, #0x0101
+<a id='L74' name='L74'></a>  74 <em class='sharp'>#else</em>
+<a id='L75' name='L75'></a>  75     ldr ip, =0x01010101
+<a id='L76' name='L76'></a>  76     pld [r0, #64]
+<a id='L77' name='L77'></a>  77 <em class='sharp'>#endif</em>
+<a id='L78' name='L78'></a>  78     orr r1, r1, r1, lsl #16
+<a id='L79' name='L79'></a>  79 
+<a id='L80' name='L80'></a>  80     @ Loop searching for EOS or C, 8 bytes at a time.
+<a id='L81' name='L81'></a>  81 2:
+<a id='L82' name='L82'></a>  82     @ Subtracting (unsigned saturating) from 1 means result of 1 for
+<a id='L83' name='L83'></a>  83     @ any byte that was originally zero and 0 otherwise.  Therefore
+<a id='L84' name='L84'></a>  84     @ we consider the lsb of each byte the "found" bit.
+<a id='L85' name='L85'></a>  85     uqsub8  r4, ip, r2      @ Find EOS
+<a id='L86' name='L86'></a>  86     eor r6, r2, r1      @ Convert C bytes to 0
+<a id='L87' name='L87'></a>  87     uqsub8  r5, ip, r3
+<a id='L88' name='L88'></a>  88     eor r7, r3, r1
+<a id='L89' name='L89'></a>  89     uqsub8  r6, ip, r6      @ Find C
+<a id='L90' name='L90'></a>  90     pld [r0, #128]      @ Prefetch 2 lines ahead
+<a id='L91' name='L91'></a>  91     uqsub8  r7, ip, r7
+<a id='L92' name='L92'></a>  92     orr r4, r4, r6      @ Combine found for EOS and C
+<a id='L93' name='L93'></a>  93     orr r5, r5, r7
+<a id='L94' name='L94'></a>  94     orrs    r6, r4, r5      @ Combine the two words
+<a id='L95' name='L95'></a>  95     it  eq
+<a id='L96' name='L96'></a>  96     ldrdeq  r2, r3, [r0], #8
+<a id='L97' name='L97'></a>  97     beq 2b
+<a id='L98' name='L98'></a>  98 
+<a id='L99' name='L99'></a>  99     @ Found something.  Disambiguate between first and second words.
+<a id='L100' name='L100'></a> 100     @ Adjust r0 to point to the word containing the match.
+<a id='L101' name='L101'></a> 101     @ Adjust r2 to the contents of the word containing the match.
+<a id='L102' name='L102'></a> 102     @ Adjust r4 to the found bits for the word containing the match.
+<a id='L103' name='L103'></a> 103     cmp r4, #0
+<a id='L104' name='L104'></a> 104     sub r0, r0, #4
+<a id='L105' name='L105'></a> 105     itte    eq
+<a id='L106' name='L106'></a> 106     moveq   r4, r5
+<a id='L107' name='L107'></a> 107     moveq   r2, r3
+<a id='L108' name='L108'></a> 108     subne   r0, r0, #4
+<a id='L109' name='L109'></a> 109 
+<a id='L110' name='L110'></a> 110     @ Find the bit-offset of the match within the word.
+<a id='L111' name='L111'></a> 111 <em class='sharp'>#if</em> <strong class='reserved'>defined</strong>(<a href='../Y/2853.html' title='Multiple used in 4 places.'>__ARMEL__</a>)
+<a id='L112' name='L112'></a> 112     @ For LE, swap the found word so clz searches from the little end.
+<a id='L113' name='L113'></a> 113     rev r4, r4
+<a id='L114' name='L114'></a> 114 <em class='sharp'>#else</em>
+<a id='L115' name='L115'></a> 115     @ For BE, byte swap the word to make it easier to extract the byte.
+<a id='L116' name='L116'></a> 116     rev r2, r2
+<a id='L117' name='L117'></a> 117 <em class='sharp'>#endif</em>
+<a id='L118' name='L118'></a> 118     @ We're counting 0x01 (not 0x80), so the bit offset is 7 too high.
+<a id='L119' name='L119'></a> 119     clz r3, r4
+<a id='L120' name='L120'></a> 120     sub r3, r3, #7
+<a id='L121' name='L121'></a> 121     lsr r2, r2, r3      @ Shift down found byte
+<a id='L122' name='L122'></a> 122     uxtb    r1, r1          @ Undo replication of C
+<a id='L123' name='L123'></a> 123     uxtb    r2, r2          @ Extract found byte
+<a id='L124' name='L124'></a> 124     add r0, r0, r3, lsr #3  @ Adjust the pointer to the found byte
+<a id='L125' name='L125'></a> 125 
+<a id='L126' name='L126'></a> 126     pop <em class='brace'>{</em> r4, r5, r6, r7 <em class='brace'>}</em>
+<a id='L127' name='L127'></a> 127     cfi_adjust_cfa_offset (-16)
+<a id='L128' name='L128'></a> 128     cfi_restore (r4)
+<a id='L129' name='L129'></a> 129     cfi_restore (r5)
+<a id='L130' name='L130'></a> 130     cfi_restore (r6)
+<a id='L131' name='L131'></a> 131     cfi_restore (r7)
+<a id='L132' name='L132'></a> 132 
+<a id='L133' name='L133'></a> 133     @ Disambiguate between EOS and C.
+<a id='L134' name='L134'></a> 134 99:
+<a id='L135' name='L135'></a> 135     cmp r2, r1
+<a id='L136' name='L136'></a> 136     it  ne
+<a id='L137' name='L137'></a> 137     movne   r0, #0          @ Found EOS, return NULL
+<a id='L138' name='L138'></a> 138     bx  lr
+<a id='L139' name='L139'></a> 139 
+<a id='L140' name='L140'></a> 140 END (strchr)
+<a id='L141' name='L141'></a> 141 
+<a id='L142' name='L142'></a> 142 weak_alias (strchr, index)
+<a id='L143' name='L143'></a> 143 libc_hidden_builtin_def (strchr)
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;][^][v]<a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

@@ -1,0 +1,456 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>sysdeps/ieee754/float128/float128_private.h</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18977.html'>sysdeps</a>/<a href='../files/19058.html'>ieee754</a>/<a href='../files/19060.html'>float128</a>/float128_private.h</h2>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L409'>[^]</a>[v][top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<h2 class='header'><a href='../J/7892.html' title='Multiple included from 108 places.'>INCLUDED FROM</a></h2>
+<hr />
+<h2 class='header'>DEFINITIONS</h2>
+This source file includes following definitions.
+<ol>
+<li><a href='#L409' title='Defined at 409.'>mul_splitf128</a></li>
+</ol>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* _Float128 overrides for building ldbl-128 as _Float128.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   Copyright (C) 2017-2022 Free Software Foundation, Inc.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'></em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'></em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'></em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   License along with the GNU C Library; if not, see</em>
+<a id='L17' name='L17'></a>  17 <em class='comment'>   &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L18' name='L18'></a>  18 
+<a id='L19' name='L19'></a>  19 <em class='comment'>/* This must be included before the function renames below.  */</em>
+<a id='L20' name='L20'></a>  20 <em class='sharp'>#include</em> &lt;<a href='../I/1859.html'>gmp.h</a>&gt;
+<a id='L21' name='L21'></a>  21 <em class='sharp'>#include</em> &lt;<a href='../I/1890.html'>math.h</a>&gt;
+<a id='L22' name='L22'></a>  22 <em class='sharp'>#undef</em> <a href='../R/3522.html' title='Multiple referred from 8 places.'>HUGE_VALL</a>
+<a id='L23' name='L23'></a>  23 <em class='sharp'>#define</em> <a href='../R/3522.html' title='Multiple referred from 8 places.'>HUGE_VALL</a> <a href='../S/3686.html#L76' title='Defined at 76 in math/math.h.'>HUGE_VAL_F128</a>
+<a id='L24' name='L24'></a>  24 <em class='sharp'>#include</em> &lt;<a href='3426.html'>math/mul_splitl.h</a>&gt;
+<a id='L25' name='L25'></a>  25 
+<a id='L26' name='L26'></a>  26 <em class='comment'>/* This must be included before the renames of types and macros from</em>
+<a id='L27' name='L27'></a>  27 <em class='comment'>   it.  */</em>
+<a id='L28' name='L28'></a>  28 <em class='sharp'>#include</em> &lt;<a href='../I/7709.html'>ieee754.h</a>&gt;
+<a id='L29' name='L29'></a>  29 
+<a id='L30' name='L30'></a>  30 <em class='comment'>/* Renames derived from math_private.h.  */</em>
+<a id='L31' name='L31'></a>  31 <em class='sharp'>#include</em> &lt;<a href='../I/5892.html'>math_private.h</a>&gt;
+<a id='L32' name='L32'></a>  32 <em class='sharp'>#include</em> &lt;<a href='../I/5869.html'>fenv_private.h</a>&gt;
+<a id='L33' name='L33'></a>  33 <em class='sharp'>#include</em> &lt;<a href='9353.html'>ieee754_float128.h</a>&gt;
+<a id='L34' name='L34'></a>  34 <em class='sharp'>#define</em> <a href='../R/20449.html' title='Multiple referred from 23 places.'>ieee854_long_double_shape_type</a> <a href='../S/9353.html#L57' title='Defined at 57 in sysdeps/ieee754/float128/ieee754_float128.h.'>ieee854_float128_shape_type</a>
+<a id='L35' name='L35'></a>  35 <em class='sharp'>#define</em> <a href='../R/20448.html' title='Multiple referred from 49 places.'>ieee854_long_double</a> <a href='../S/9353.html#L110' title='Defined at 110 in sysdeps/ieee754/float128/ieee754_float128.h.'>ieee854_float128</a>
+<a id='L36' name='L36'></a>  36 
+<a id='L37' name='L37'></a>  37 <em class='sharp'>#undef</em> <a href='../R/3068.html' title='Multiple referred from 3 places.'>GET_LDOUBLE_LSW64</a>
+<a id='L38' name='L38'></a>  38 <em class='sharp'>#undef</em> <a href='../R/3069.html' title='Multiple referred from 18 places.'>GET_LDOUBLE_MSW64</a>
+<a id='L39' name='L39'></a>  39 <em class='sharp'>#undef</em> <a href='../R/3071.html' title='Multiple referred from 49 places.'>GET_LDOUBLE_WORDS64</a>
+<a id='L40' name='L40'></a>  40 <em class='sharp'>#undef</em> SET_LDOUBLE_LSW64
+<a id='L41' name='L41'></a>  41 <em class='sharp'>#undef</em> <a href='../R/7611.html' title='Multiple referred from 11 places.'>SET_LDOUBLE_MSW64</a>
+<a id='L42' name='L42'></a>  42 <em class='sharp'>#undef</em> <a href='../R/7613.html' title='Multiple referred from 25 places.'>SET_LDOUBLE_WORDS64</a>
+<a id='L43' name='L43'></a>  43 <em class='sharp'>#define</em> <a href='../R/3068.html' title='Multiple referred from 3 places.'>GET_LDOUBLE_LSW64</a>(<a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a>,<a href='../D/39646.html' title='Multiple defined in 4 places.'>y</a>) <a href='../S/9353.html#L100' title='Defined at 100 in sysdeps/ieee754/float128/ieee754_float128.h.'>GET_FLOAT128_LSW64</a> (<a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a>, <a href='../D/39646.html' title='Multiple defined in 4 places.'>y</a>)
+<a id='L44' name='L44'></a>  44 <em class='sharp'>#define</em> <a href='../R/3069.html' title='Multiple referred from 18 places.'>GET_LDOUBLE_MSW64</a>(<a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a>,<a href='../D/39646.html' title='Multiple defined in 4 places.'>y</a>) <a href='../S/9353.html#L81' title='Defined at 81 in sysdeps/ieee754/float128/ieee754_float128.h.'>GET_FLOAT128_MSW64</a> (<a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a>, <a href='../D/39646.html' title='Multiple defined in 4 places.'>y</a>)
+<a id='L45' name='L45'></a>  45 <em class='sharp'>#define</em> <a href='../R/3071.html' title='Multiple referred from 49 places.'>GET_LDOUBLE_WORDS64</a>(<a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a>,<a href='../D/39646.html' title='Multiple defined in 4 places.'>y</a>,<a href='../D/39723.html' title='Multiple defined in 4 places.'>z</a>) <a href='../S/9353.html#L61' title='Defined at 61 in sysdeps/ieee754/float128/ieee754_float128.h.'>GET_FLOAT128_WORDS64</a> (<a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a>, <a href='../D/39646.html' title='Multiple defined in 4 places.'>y</a>, <a href='../D/39723.html' title='Multiple defined in 4 places.'>z</a>)
+<a id='L46' name='L46'></a>  46 <em class='sharp'>#define</em> SET_LDOUBLE_LSW64(<a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a>,<a href='../D/39646.html' title='Multiple defined in 4 places.'>y</a>) SET_FLOAT128_LSW64 (<a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a>, <a href='../D/39646.html' title='Multiple defined in 4 places.'>y</a>)
+<a id='L47' name='L47'></a>  47 <em class='sharp'>#define</em> <a href='../R/7611.html' title='Multiple referred from 11 places.'>SET_LDOUBLE_MSW64</a>(<a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a>,<a href='../D/39646.html' title='Multiple defined in 4 places.'>y</a>) <a href='../S/9353.html#L90' title='Defined at 90 in sysdeps/ieee754/float128/ieee754_float128.h.'>SET_FLOAT128_MSW64</a> (<a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a>, <a href='../D/39646.html' title='Multiple defined in 4 places.'>y</a>)
+<a id='L48' name='L48'></a>  48 <em class='sharp'>#define</em> <a href='../R/7613.html' title='Multiple referred from 25 places.'>SET_LDOUBLE_WORDS64</a>(<a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a>,<a href='../D/39646.html' title='Multiple defined in 4 places.'>y</a>,<a href='../D/39723.html' title='Multiple defined in 4 places.'>z</a>) <a href='../S/9353.html#L71' title='Defined at 71 in sysdeps/ieee754/float128/ieee754_float128.h.'>SET_FLOAT128_WORDS64</a> (<a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a>, <a href='../D/39646.html' title='Multiple defined in 4 places.'>y</a>, <a href='../D/39723.html' title='Multiple defined in 4 places.'>z</a>)
+<a id='L49' name='L49'></a>  49 
+<a id='L50' name='L50'></a>  50 <em class='sharp'>#undef</em> <a href='../R/3634.html' title='Multiple referred from 31 places.'>IEEE854_LONG_DOUBLE_BIAS</a>
+<a id='L51' name='L51'></a>  51 <em class='sharp'>#define</em> <a href='../R/3634.html' title='Multiple referred from 31 places.'>IEEE854_LONG_DOUBLE_BIAS</a> <a href='../S/9353.html#L138' title='Defined at 138 in sysdeps/ieee754/float128/ieee754_float128.h.'>IEEE854_FLOAT128_BIAS</a>
+<a id='L52' name='L52'></a>  52 
+<a id='L53' name='L53'></a>  53 <em class='sharp'>#ifdef</em> <a href='../S/7160.html#L299' title='Defined at 299 in sysdeps/x86/fpu/fenv_private.h.'>SET_RESTORE_ROUNDF128</a>
+<a id='L54' name='L54'></a>  54 <em class='sharp'># undef</em> <a href='../R/7623.html' title='Multiple referred from 18 places.'>SET_RESTORE_ROUNDL</a>
+<a id='L55' name='L55'></a>  55 <em class='sharp'># define</em> <a href='../R/7623.html' title='Multiple referred from 18 places.'>SET_RESTORE_ROUNDL</a>(<a href='../Y/1611.html' title='Multiple used in 25 places.'>RM</a>) <a href='../S/7160.html#L299' title='Defined at 299 in sysdeps/x86/fpu/fenv_private.h.'>SET_RESTORE_ROUNDF128</a> (<a href='../Y/1611.html' title='Multiple used in 25 places.'>RM</a>)
+<a id='L56' name='L56'></a>  56 <em class='sharp'>#endif</em>
+<a id='L57' name='L57'></a>  57 
+<a id='L58' name='L58'></a>  58 <em class='sharp'>#ifdef</em> <a href='../D/32650.html' title='Multiple defined in 2 places.'>libc_feholdexcept_setroundf128</a>
+<a id='L59' name='L59'></a>  59 <em class='sharp'># undef</em> <a href='../R/21119.html' title='Multiple referred from 2 places.'>libc_feholdexcept_setroundl</a>
+<a id='L60' name='L60'></a>  60 <em class='sharp'># define</em> <a href='../R/21119.html' title='Multiple referred from 2 places.'>libc_feholdexcept_setroundl</a>(<a href='../D/3665.html' title='Multiple defined in 2 places.'>ENV</a>, <a href='../Y/1611.html' title='Multiple used in 25 places.'>RM</a>)   \
+<a id='L61' name='L61'></a>  61   <a href='../D/32650.html' title='Multiple defined in 2 places.'>libc_feholdexcept_setroundf128</a> (<a href='../D/3665.html' title='Multiple defined in 2 places.'>ENV</a>, <a href='../Y/1611.html' title='Multiple used in 25 places.'>RM</a>)
+<a id='L62' name='L62'></a>  62 <em class='sharp'>#endif</em>
+<a id='L63' name='L63'></a>  63 
+<a id='L64' name='L64'></a>  64 <em class='sharp'>#ifdef</em> <a href='../D/32780.html' title='Multiple defined in 2 places.'>libc_feupdateenv_testf128</a>
+<a id='L65' name='L65'></a>  65 <em class='sharp'># undef</em> <a href='../S/12298.html#L144' title='Referred from 144 in sysdeps/generic/fenv_private.h.'>libc_feupdateenv_testl</a>
+<a id='L66' name='L66'></a>  66 <em class='sharp'># define</em> <a href='../S/12298.html#L144' title='Referred from 144 in sysdeps/generic/fenv_private.h.'>libc_feupdateenv_testl</a>(<a href='../D/3665.html' title='Multiple defined in 2 places.'>ENV</a>, <a href='../Y/403.html' title='Multiple used in 10 places.'>EX</a>) <a href='../D/32780.html' title='Multiple defined in 2 places.'>libc_feupdateenv_testf128</a> (<a href='../D/3665.html' title='Multiple defined in 2 places.'>ENV</a>, <a href='../Y/403.html' title='Multiple used in 10 places.'>EX</a>)
+<a id='L67' name='L67'></a>  67 <em class='sharp'>#endif</em>
+<a id='L68' name='L68'></a>  68 
+<a id='L69' name='L69'></a>  69 <em class='comment'>/* misc macros from the header below.  */</em>
+<a id='L70' name='L70'></a>  70 <em class='sharp'>#include</em> &lt;<a href='../I/6297.html'>fix-fp-int-convert-overflow.h</a>&gt;
+<a id='L71' name='L71'></a>  71 <em class='sharp'>#undef</em> <a href='../R/2478.html' title='Multiple referred from 3 places.'>FIX_LDBL_LONG_CONVERT_OVERFLOW</a>
+<a id='L72' name='L72'></a>  72 <em class='sharp'>#undef</em> <a href='../R/2477.html' title='Multiple referred from 3 places.'>FIX_LDBL_LLONG_CONVERT_OVERFLOW</a>
+<a id='L73' name='L73'></a>  73 <em class='sharp'>#define</em> <a href='../R/2478.html' title='Multiple referred from 3 places.'>FIX_LDBL_LONG_CONVERT_OVERFLOW</a> <a href='../D/4211.html' title='Multiple defined in 2 places.'>FIX_FLT128_LONG_CONVERT_OVERFLOW</a>
+<a id='L74' name='L74'></a>  74 <em class='sharp'>#define</em> <a href='../R/2477.html' title='Multiple referred from 3 places.'>FIX_LDBL_LLONG_CONVERT_OVERFLOW</a> <a href='../D/4210.html' title='Multiple defined in 2 places.'>FIX_FLT128_LLONG_CONVERT_OVERFLOW</a>
+<a id='L75' name='L75'></a>  75 
+<a id='L76' name='L76'></a>  76 
+<a id='L77' name='L77'></a>  77 <em class='comment'>/* float.h constants.  */</em>
+<a id='L78' name='L78'></a>  78 <em class='sharp'>#include</em> &lt;<a href='18104.html'>float.h</a>&gt;
+<a id='L79' name='L79'></a>  79 <em class='sharp'>#undef</em> <a href='../R/4237.html' title='Multiple referred from 4 places.'>LDBL_DIG</a>
+<a id='L80' name='L80'></a>  80 <em class='sharp'>#undef</em> <a href='../R/4238.html' title='Multiple referred from 7 places.'>LDBL_EPSILON</a>
+<a id='L81' name='L81'></a>  81 <em class='sharp'>#undef</em> <a href='../R/4239.html' title='Multiple referred from 129 places.'>LDBL_MANT_DIG</a>
+<a id='L82' name='L82'></a>  82 <em class='sharp'>#undef</em> <a href='../R/4240.html' title='Multiple referred from 40 places.'>LDBL_MAX</a>
+<a id='L83' name='L83'></a>  83 <em class='sharp'>#undef</em> <a href='../R/4241.html' title='Multiple referred from 4 places.'>LDBL_MAX_10_EXP</a>
+<a id='L84' name='L84'></a>  84 <em class='sharp'>#undef</em> <a href='../R/4243.html' title='Multiple referred from 10 places.'>LDBL_MAX_EXP</a>
+<a id='L85' name='L85'></a>  85 <em class='sharp'>#undef</em> <a href='../R/4244.html' title='Multiple referred from 42 places.'>LDBL_MIN</a>
+<a id='L86' name='L86'></a>  86 <em class='sharp'>#undef</em> <a href='../R/4245.html' title='Multiple referred from 10 places.'>LDBL_MIN_10_EXP</a>
+<a id='L87' name='L87'></a>  87 <em class='sharp'>#undef</em> <a href='../R/4246.html' title='Multiple referred from 21 places.'>LDBL_MIN_EXP</a>
+<a id='L88' name='L88'></a>  88 <em class='sharp'>#undef</em> <a href='../R/4247.html' title='Multiple referred from 8 places.'>LDBL_TRUE_MIN</a>
+<a id='L89' name='L89'></a>  89 <em class='sharp'>#define</em> <a href='../R/4237.html' title='Multiple referred from 4 places.'>LDBL_DIG</a> <a href='../S/18104.html#L25' title='Defined at 25 in include/float.h.'>FLT128_DIG</a>
+<a id='L90' name='L90'></a>  90 <em class='sharp'>#define</em> <a href='../R/4238.html' title='Multiple referred from 7 places.'>LDBL_EPSILON</a> <a href='../S/18104.html#L32' title='Defined at 32 in include/float.h.'>FLT128_EPSILON</a>
+<a id='L91' name='L91'></a>  91 <em class='sharp'>#define</em> <a href='../R/4239.html' title='Multiple referred from 129 places.'>LDBL_MANT_DIG</a> <a href='../S/18104.html#L23' title='Defined at 23 in include/float.h.'>FLT128_MANT_DIG</a>
+<a id='L92' name='L92'></a>  92 <em class='sharp'>#define</em> <a href='../R/4240.html' title='Multiple referred from 40 places.'>LDBL_MAX</a> <a href='../S/18104.html#L30' title='Defined at 30 in include/float.h.'>FLT128_MAX</a>
+<a id='L93' name='L93'></a>  93 <em class='sharp'>#define</em> <a href='../R/4241.html' title='Multiple referred from 4 places.'>LDBL_MAX_10_EXP</a> <a href='../S/18104.html#L29' title='Defined at 29 in include/float.h.'>FLT128_MAX_10_EXP</a>
+<a id='L94' name='L94'></a>  94 <em class='sharp'>#define</em> <a href='../R/4243.html' title='Multiple referred from 10 places.'>LDBL_MAX_EXP</a> <a href='../S/18104.html#L28' title='Defined at 28 in include/float.h.'>FLT128_MAX_EXP</a>
+<a id='L95' name='L95'></a>  95 <em class='sharp'>#define</em> <a href='../R/4244.html' title='Multiple referred from 42 places.'>LDBL_MIN</a> <a href='../S/18104.html#L34' title='Defined at 34 in include/float.h.'>FLT128_MIN</a>
+<a id='L96' name='L96'></a>  96 <em class='sharp'>#define</em> <a href='../R/4245.html' title='Multiple referred from 10 places.'>LDBL_MIN_10_EXP</a> <a href='../S/18104.html#L27' title='Defined at 27 in include/float.h.'>FLT128_MIN_10_EXP</a>
+<a id='L97' name='L97'></a>  97 <em class='sharp'>#define</em> <a href='../R/4246.html' title='Multiple referred from 21 places.'>LDBL_MIN_EXP</a> <a href='../S/18104.html#L26' title='Defined at 26 in include/float.h.'>FLT128_MIN_EXP</a>
+<a id='L98' name='L98'></a>  98 <em class='sharp'>#define</em> <a href='../R/4247.html' title='Multiple referred from 8 places.'>LDBL_TRUE_MIN</a> <a href='../S/18104.html#L36' title='Defined at 36 in include/float.h.'>FLT128_TRUE_MIN</a>
+<a id='L99' name='L99'></a>  99 
+<a id='L100' name='L100'></a> 100 
+<a id='L101' name='L101'></a> 101 <em class='comment'>/* math.h GNU constants.  */</em>
+<a id='L102' name='L102'></a> 102 <em class='sharp'>#undef</em> M_El
+<a id='L103' name='L103'></a> 103 <em class='sharp'>#undef</em> <a href='../S/7147.html#L195' title='Referred from 195 in sysdeps/x86/fpu/powl_helper.c.'>M_LOG2El</a>
+<a id='L104' name='L104'></a> 104 <em class='sharp'>#undef</em> M_LOG10El
+<a id='L105' name='L105'></a> 105 <em class='sharp'>#undef</em> <a href='../R/5136.html' title='Multiple referred from 2 places.'>M_LN2l</a>
+<a id='L106' name='L106'></a> 106 <em class='sharp'>#undef</em> <a href='../R/5131.html' title='Multiple referred from 3 places.'>M_LN10l</a>
+<a id='L107' name='L107'></a> 107 <em class='sharp'>#undef</em> <a href='../R/5164.html' title='Multiple referred from 24 places.'>M_PIl</a>
+<a id='L108' name='L108'></a> 108 <em class='sharp'>#undef</em> M_PI_2l
+<a id='L109' name='L109'></a> 109 <em class='sharp'>#undef</em> M_PI_4l
+<a id='L110' name='L110'></a> 110 <em class='sharp'>#undef</em> M_1_PIl
+<a id='L111' name='L111'></a> 111 <em class='sharp'>#undef</em> M_2_PIl
+<a id='L112' name='L112'></a> 112 <em class='sharp'>#undef</em> M_2_SQRTPIl
+<a id='L113' name='L113'></a> 113 <em class='sharp'>#undef</em> M_SQRT2l
+<a id='L114' name='L114'></a> 114 <em class='sharp'>#undef</em> <a href='../R/5173.html' title='Multiple referred from 3 places.'>M_SQRT1_2l</a>
+<a id='L115' name='L115'></a> 115 <em class='sharp'>#define</em> M_El <a href='../S/3686.html#L1246' title='Defined at 1246 in math/math.h.'>M_Ef128</a>
+<a id='L116' name='L116'></a> 116 <em class='sharp'>#define</em> <a href='../S/7147.html#L195' title='Referred from 195 in sysdeps/x86/fpu/powl_helper.c.'>M_LOG2El</a> <a href='../S/3686.html#L1247' title='Defined at 1247 in math/math.h.'>M_LOG2Ef128</a>
+<a id='L117' name='L117'></a> 117 <em class='sharp'>#define</em> M_LOG10El <a href='../S/3686.html#L1248' title='Defined at 1248 in math/math.h.'>M_LOG10Ef128</a>
+<a id='L118' name='L118'></a> 118 <em class='sharp'>#define</em> <a href='../R/5136.html' title='Multiple referred from 2 places.'>M_LN2l</a> <a href='../S/3686.html#L1249' title='Defined at 1249 in math/math.h.'>M_LN2f128</a>
+<a id='L119' name='L119'></a> 119 <em class='sharp'>#define</em> <a href='../R/5131.html' title='Multiple referred from 3 places.'>M_LN10l</a> <a href='../S/3686.html#L1250' title='Defined at 1250 in math/math.h.'>M_LN10f128</a>
+<a id='L120' name='L120'></a> 120 <em class='sharp'>#define</em> <a href='../R/5164.html' title='Multiple referred from 24 places.'>M_PIl</a> <a href='../S/3686.html#L1251' title='Defined at 1251 in math/math.h.'>M_PIf128</a>
+<a id='L121' name='L121'></a> 121 <em class='sharp'>#define</em> M_PI_2l <a href='../S/3686.html#L1252' title='Defined at 1252 in math/math.h.'>M_PI_2f128</a>
+<a id='L122' name='L122'></a> 122 <em class='sharp'>#define</em> M_PI_4l <a href='../S/3686.html#L1253' title='Defined at 1253 in math/math.h.'>M_PI_4f128</a>
+<a id='L123' name='L123'></a> 123 <em class='sharp'>#define</em> M_1_PIl <a href='../S/3686.html#L1254' title='Defined at 1254 in math/math.h.'>M_1_PIf128</a>
+<a id='L124' name='L124'></a> 124 <em class='sharp'>#define</em> M_2_PIl <a href='../S/3686.html#L1255' title='Defined at 1255 in math/math.h.'>M_2_PIf128</a>
+<a id='L125' name='L125'></a> 125 <em class='sharp'>#define</em> M_2_SQRTPIl <a href='../S/3686.html#L1256' title='Defined at 1256 in math/math.h.'>M_2_SQRTPIf128</a>
+<a id='L126' name='L126'></a> 126 <em class='sharp'>#define</em> M_SQRT2l <a href='../S/3686.html#L1257' title='Defined at 1257 in math/math.h.'>M_SQRT2f128</a>
+<a id='L127' name='L127'></a> 127 <em class='sharp'>#define</em> <a href='../R/5173.html' title='Multiple referred from 3 places.'>M_SQRT1_2l</a> <a href='../S/3686.html#L1258' title='Defined at 1258 in math/math.h.'>M_SQRT1_2f128</a>
+<a id='L128' name='L128'></a> 128 
+<a id='L129' name='L129'></a> 129 
+<a id='L130' name='L130'></a> 130 <em class='sharp'>#include</em> &lt;<a href='../I/6506.html'>libm-alias-ldouble.h</a>&gt;
+<a id='L131' name='L131'></a> 131 <em class='sharp'>#include</em> &lt;<a href='../I/6505.html'>libm-alias-float128.h</a>&gt;
+<a id='L132' name='L132'></a> 132 <em class='sharp'>#undef</em> <a href='../R/21311.html' title='Multiple referred from 4 places.'>libm_alias_ldouble_r</a>
+<a id='L133' name='L133'></a> 133 <em class='sharp'>#define</em> <a href='../R/21311.html' title='Multiple referred from 4 places.'>libm_alias_ldouble_r</a>(<a href='../Y/15029.html' title='Multiple used in 605 places.'>from</a>, <a href='../Y/27480.html' title='Multiple used in 509 places.'>to</a>, <a href='../Y/23316.html' title='Multiple used in 3267 places.'>r</a>) <a href='../D/32842.html' title='Multiple defined in 4 places.'>libm_alias_float128_r</a> (<a href='../Y/15029.html' title='Multiple used in 605 places.'>from</a>, <a href='../Y/27480.html' title='Multiple used in 509 places.'>to</a>, <a href='../Y/23316.html' title='Multiple used in 3267 places.'>r</a>)
+<a id='L134' name='L134'></a> 134 
+<a id='L135' name='L135'></a> 135 
+<a id='L136' name='L136'></a> 136 <em class='sharp'>#include</em> &lt;<a href='3521.html'>math/math-narrow.h</a>&gt;
+<a id='L137' name='L137'></a> 137 <em class='sharp'>#undef</em> <a href='../R/21299.html' title='Multiple referred from 24 places.'>libm_alias_float_ldouble</a>
+<a id='L138' name='L138'></a> 138 <em class='sharp'>#define</em> <a href='../R/21299.html' title='Multiple referred from 24 places.'>libm_alias_float_ldouble</a>(<a href='../D/30951.html' title='Multiple defined in 15 places.'>func</a>) <a href='../D/32843.html' title='Multiple defined in 4 places.'>libm_alias_float32_float128</a> (<a href='../D/30951.html' title='Multiple defined in 15 places.'>func</a>)
+<a id='L139' name='L139'></a> 139 <em class='sharp'>#undef</em> <a href='../R/21272.html' title='Multiple referred from 24 places.'>libm_alias_double_ldouble</a>
+<a id='L140' name='L140'></a> 140 <em class='sharp'>#define</em> <a href='../R/21272.html' title='Multiple referred from 24 places.'>libm_alias_double_ldouble</a>(<a href='../D/30951.html' title='Multiple defined in 15 places.'>func</a>) <a href='../D/32847.html' title='Multiple defined in 4 places.'>libm_alias_float64_float128</a> (<a href='../D/30951.html' title='Multiple defined in 15 places.'>func</a>)
+<a id='L141' name='L141'></a> 141 <em class='sharp'>#undef</em> <a href='../R/21306.html' title='Multiple referred from 5 places.'>libm_alias_ldouble_narrow</a>
+<a id='L142' name='L142'></a> 142 <em class='sharp'>#define</em> <a href='../R/21306.html' title='Multiple referred from 5 places.'>libm_alias_ldouble_narrow</a>(<a href='../Y/15029.html' title='Multiple used in 605 places.'>from</a>, <a href='../Y/27480.html' title='Multiple used in 509 places.'>to</a>) \
+<a id='L143' name='L143'></a> 143   <a href='../D/32838.html' title='Multiple defined in 4 places.'>libm_alias_float128_narrow</a> (<a href='../Y/15029.html' title='Multiple used in 605 places.'>from</a>, <a href='../Y/27480.html' title='Multiple used in 509 places.'>to</a>)
+<a id='L144' name='L144'></a> 144 
+<a id='L145' name='L145'></a> 145 <em class='sharp'>#include</em> &lt;<a href='12337.html'>math-use-builtins.h</a>&gt;
+<a id='L146' name='L146'></a> 146 <em class='sharp'>#undef</em> <a href='../S/9229.html#L35' title='Referred from 35 in sysdeps/ieee754/ldbl-128/s_nearbyintl.c.'>USE_NEARBYINTL_BUILTIN</a>
+<a id='L147' name='L147'></a> 147 <em class='sharp'>#define</em> <a href='../S/9229.html#L35' title='Referred from 35 in sysdeps/ieee754/ldbl-128/s_nearbyintl.c.'>USE_NEARBYINTL_BUILTIN</a> <a href='../D/16841.html' title='Multiple defined in 5 places.'>USE_NEARBYINTF128_BUILTIN</a>
+<a id='L148' name='L148'></a> 148 <em class='sharp'>#undef</em> <a href='../S/9286.html#L38' title='Referred from 38 in sysdeps/ieee754/ldbl-128/s_rintl.c.'>USE_RINTL_BUILTIN</a>
+<a id='L149' name='L149'></a> 149 <em class='sharp'>#define</em> <a href='../S/9286.html#L38' title='Referred from 38 in sysdeps/ieee754/ldbl-128/s_rintl.c.'>USE_RINTL_BUILTIN</a> <a href='../D/16854.html' title='Multiple defined in 5 places.'>USE_RINTF128_BUILTIN</a>
+<a id='L150' name='L150'></a> 150 <em class='sharp'>#undef</em> <a href='../S/9261.html#L35' title='Referred from 35 in sysdeps/ieee754/ldbl-128/s_floorl.c.'>USE_FLOORL_BUILTIN</a>
+<a id='L151' name='L151'></a> 151 <em class='sharp'>#define</em> <a href='../S/9261.html#L35' title='Referred from 35 in sysdeps/ieee754/ldbl-128/s_floorl.c.'>USE_FLOORL_BUILTIN</a> <a href='../D/16808.html' title='Multiple defined in 5 places.'>USE_FLOORF128_BUILTIN</a>
+<a id='L152' name='L152'></a> 152 <em class='sharp'>#undef</em> <a href='../S/9295.html#L35' title='Referred from 35 in sysdeps/ieee754/ldbl-128/s_ceill.c.'>USE_CEILL_BUILTIN</a>
+<a id='L153' name='L153'></a> 153 <em class='sharp'>#define</em> <a href='../S/9295.html#L35' title='Referred from 35 in sysdeps/ieee754/ldbl-128/s_ceill.c.'>USE_CEILL_BUILTIN</a> <a href='../D/16797.html' title='Multiple defined in 5 places.'>USE_CEILF128_BUILTIN</a>
+<a id='L154' name='L154'></a> 154 <em class='sharp'>#undef</em> <a href='../S/9243.html#L30' title='Referred from 30 in sysdeps/ieee754/ldbl-128/s_truncl.c.'>USE_TRUNCL_BUILTIN</a>
+<a id='L155' name='L155'></a> 155 <em class='sharp'>#define</em> <a href='../S/9243.html#L30' title='Referred from 30 in sysdeps/ieee754/ldbl-128/s_truncl.c.'>USE_TRUNCL_BUILTIN</a> <a href='../D/16872.html' title='Multiple defined in 5 places.'>USE_TRUNCF128_BUILTIN</a>
+<a id='L156' name='L156'></a> 156 <em class='sharp'>#undef</em> <a href='../S/9275.html#L30' title='Referred from 30 in sysdeps/ieee754/ldbl-128/s_roundl.c.'>USE_ROUNDL_BUILTIN</a>
+<a id='L157' name='L157'></a> 157 <em class='sharp'>#define</em> <a href='../S/9275.html#L30' title='Referred from 30 in sysdeps/ieee754/ldbl-128/s_roundl.c.'>USE_ROUNDL_BUILTIN</a> <a href='../D/16862.html' title='Multiple defined in 5 places.'>USE_ROUNDF128_BUILTIN</a>
+<a id='L158' name='L158'></a> 158 <em class='sharp'>#undef</em> <a href='../S/9254.html#L34' title='Referred from 34 in sysdeps/ieee754/ldbl-128/s_roundevenl.c.'>USE_ROUNDEVENL_BUILTIN</a>
+<a id='L159' name='L159'></a> 159 <em class='sharp'>#define</em> <a href='../S/9254.html#L34' title='Referred from 34 in sysdeps/ieee754/ldbl-128/s_roundevenl.c.'>USE_ROUNDEVENL_BUILTIN</a> <a href='../S/12214.html#L4' title='Defined at 4 in sysdeps/generic/math-use-builtins-roundeven.h.'>USE_ROUNDEVENF128_BUILTIN</a>
+<a id='L160' name='L160'></a> 160 <em class='sharp'>#undef</em> <a href='../S/9212.html#L34' title='Referred from 34 in sysdeps/ieee754/ldbl-128/s_copysignl.c.'>USE_COPYSIGNL_BUILTIN</a>
+<a id='L161' name='L161'></a> 161 <em class='sharp'>#define</em> <a href='../S/9212.html#L34' title='Referred from 34 in sysdeps/ieee754/ldbl-128/s_copysignl.c.'>USE_COPYSIGNL_BUILTIN</a> <a href='../D/16803.html' title='Multiple defined in 2 places.'>USE_COPYSIGNF128_BUILTIN</a>
+<a id='L162' name='L162'></a> 162 <em class='sharp'>#undef</em> <a href='../S/9191.html#L40' title='Referred from 40 in sysdeps/ieee754/ldbl-128/s_fmal.c.'>USE_FMAL_BUILTIN</a>
+<a id='L163' name='L163'></a> 163 <em class='sharp'>#define</em> <a href='../S/9191.html#L40' title='Referred from 40 in sysdeps/ieee754/ldbl-128/s_fmal.c.'>USE_FMAL_BUILTIN</a> <a href='../D/16813.html' title='Multiple defined in 6 places.'>USE_FMAF128_BUILTIN</a>
+<a id='L164' name='L164'></a> 164 
+<a id='L165' name='L165'></a> 165 <em class='comment'>/* IEEE function renames.  */</em>
+<a id='L166' name='L166'></a> 166 <em class='sharp'>#define</em> <a href='../R/14405.html' title='Multiple referred from 4 places.'>__ieee754_acoshl</a> <a href='../Y/5041.html' title='Multiple used in 2 places.'>__ieee754_acoshf128</a>
+<a id='L167' name='L167'></a> 167 <em class='sharp'>#define</em> <a href='../R/14406.html' title='Multiple referred from 5 places.'>__ieee754_acosl</a> <a href='../Y/5040.html' title='Multiple used in 2 places.'>__ieee754_acosf128</a>
+<a id='L168' name='L168'></a> 168 <em class='sharp'>#define</em> __ieee754_asinhl <a href='../Y/5046.html' title='Multiple used in 3 places.'>__ieee754_asinhf128</a>
+<a id='L169' name='L169'></a> 169 <em class='sharp'>#define</em> <a href='../R/14409.html' title='Multiple referred from 5 places.'>__ieee754_asinl</a> <a href='../Y/5045.html' title='Multiple used in 2 places.'>__ieee754_asinf128</a>
+<a id='L170' name='L170'></a> 170 <em class='sharp'>#define</em> <a href='../R/14412.html' title='Multiple referred from 5 places.'>__ieee754_atan2l</a> <a href='../Y/5051.html' title='Multiple used in 2 places.'>__ieee754_atan2f128</a>
+<a id='L171' name='L171'></a> 171 <em class='sharp'>#define</em> <a href='../R/14415.html' title='Multiple referred from 5 places.'>__ieee754_atanhl</a> <a href='../Y/5052.html' title='Multiple used in 2 places.'>__ieee754_atanhf128</a>
+<a id='L172' name='L172'></a> 172 <em class='sharp'>#define</em> <a href='../R/14418.html' title='Multiple referred from 5 places.'>__ieee754_coshl</a> <a href='../Y/5054.html' title='Multiple used in 2 places.'>__ieee754_coshf128</a>
+<a id='L173' name='L173'></a> 173 <em class='sharp'>#define</em> __ieee754_cosl <a href='../Y/5053.html' title='Multiple used in 3 places.'>__ieee754_cosf128</a>
+<a id='L174' name='L174'></a> 174 <em class='sharp'>#define</em> <a href='../R/14421.html' title='Multiple referred from 4 places.'>__ieee754_exp10l</a> <a href='../Y/5056.html' title='Multiple used in 2 places.'>__ieee754_exp10f128</a>
+<a id='L175' name='L175'></a> 175 <em class='sharp'>#define</em> <a href='../R/14423.html' title='Multiple referred from 5 places.'>__ieee754_exp2l</a> <a href='../Y/5058.html' title='Multiple used in 2 places.'>__ieee754_exp2f128</a>
+<a id='L176' name='L176'></a> 176 <em class='sharp'>#define</em> <a href='../R/14424.html' title='Multiple referred from 49 places.'>__ieee754_expl</a> <a href='../Y/5064.html' title='Multiple used in 2 places.'>__ieee754_expf128</a>
+<a id='L177' name='L177'></a> 177 <em class='sharp'>#define</em> <a href='../R/14427.html' title='Multiple referred from 11 places.'>__ieee754_fmodl</a> <a href='../Y/5065.html' title='Multiple used in 2 places.'>__ieee754_fmodf128</a>
+<a id='L178' name='L178'></a> 178 <em class='sharp'>#define</em> <a href='../R/14430.html' title='Multiple referred from 6 places.'>__ieee754_gammal_r</a> __ieee754_gammaf128_r
+<a id='L179' name='L179'></a> 179 <em class='sharp'>#define</em> <a href='../R/14431.html' title='Multiple referred from 4 places.'>__ieee754_hypotl</a> <a href='../Y/5073.html' title='Multiple used in 2 places.'>__ieee754_hypotf128</a>
+<a id='L180' name='L180'></a> 180 <em class='sharp'>#define</em> __ieee754_ilogbl <a href='../Y/5074.html' title='Multiple used in 2 places.'>__ieee754_ilogbf128</a>
+<a id='L181' name='L181'></a> 181 <em class='sharp'>#define</em> <a href='../R/14435.html' title='Multiple referred from 16 places.'>__ieee754_j0l</a> <a href='../Y/5075.html' title='Multiple used in 2 places.'>__ieee754_j0f128</a>
+<a id='L182' name='L182'></a> 182 <em class='sharp'>#define</em> <a href='../R/14438.html' title='Multiple referred from 16 places.'>__ieee754_j1l</a> <a href='../Y/5076.html' title='Multiple used in 2 places.'>__ieee754_j1f128</a>
+<a id='L183' name='L183'></a> 183 <em class='sharp'>#define</em> <a href='../R/14441.html' title='Multiple referred from 5 places.'>__ieee754_jnl</a> <a href='../Y/5077.html' title='Multiple used in 2 places.'>__ieee754_jnf128</a>
+<a id='L184' name='L184'></a> 184 <em class='sharp'>#define</em> <a href='../R/14444.html' title='Multiple referred from 16 places.'>__ieee754_lgammal_r</a> __ieee754_lgammaf128_r
+<a id='L185' name='L185'></a> 185 <em class='sharp'>#define</em> <a href='../R/14448.html' title='Multiple referred from 4 places.'>__ieee754_log10l</a> <a href='../Y/5083.html' title='Multiple used in 2 places.'>__ieee754_log10f128</a>
+<a id='L186' name='L186'></a> 186 <em class='sharp'>#define</em> <a href='../R/14450.html' title='Multiple referred from 4 places.'>__ieee754_log2l</a> <a href='../Y/5085.html' title='Multiple used in 2 places.'>__ieee754_log2f128</a>
+<a id='L187' name='L187'></a> 187 <em class='sharp'>#define</em> <a href='../R/14451.html' title='Multiple referred from 43 places.'>__ieee754_logl</a> <a href='../Y/5091.html' title='Multiple used in 2 places.'>__ieee754_logf128</a>
+<a id='L188' name='L188'></a> 188 <em class='sharp'>#define</em> <a href='../R/14453.html' title='Multiple referred from 6 places.'>__ieee754_powl</a> <a href='../Y/5096.html' title='Multiple used in 2 places.'>__ieee754_powf128</a>
+<a id='L189' name='L189'></a> 189 <em class='sharp'>#define</em> <a href='../R/14454.html' title='Multiple referred from 12 places.'>__ieee754_rem_pio2l</a> <a href='../Y/5098.html' title='Multiple used in 2 places.'>__ieee754_rem_pio2f128</a>
+<a id='L190' name='L190'></a> 190 <em class='sharp'>#define</em> <a href='../R/14457.html' title='Multiple referred from 5 places.'>__ieee754_remainderl</a> <a href='../Y/5099.html' title='Multiple used in 2 places.'>__ieee754_remainderf128</a>
+<a id='L191' name='L191'></a> 191 <em class='sharp'>#define</em> <a href='../R/14463.html' title='Multiple referred from 5 places.'>__ieee754_sinhl</a> <a href='../Y/5101.html' title='Multiple used in 2 places.'>__ieee754_sinhf128</a>
+<a id='L192' name='L192'></a> 192 <em class='sharp'>#define</em> <a href='../R/14467.html' title='Multiple referred from 12 places.'>__ieee754_sqrtl</a> <a href='../D/24352.html' title='Multiple defined in 3 places.'>__ieee754_sqrtf128</a>
+<a id='L193' name='L193'></a> 193 <em class='sharp'>#define</em> <a href='../R/14470.html' title='Multiple referred from 10 places.'>__ieee754_y0l</a> <a href='../Y/5102.html' title='Multiple used in 2 places.'>__ieee754_y0f128</a>
+<a id='L194' name='L194'></a> 194 <em class='sharp'>#define</em> <a href='../R/14473.html' title='Multiple referred from 10 places.'>__ieee754_y1l</a> <a href='../Y/5103.html' title='Multiple used in 2 places.'>__ieee754_y1f128</a>
+<a id='L195' name='L195'></a> 195 <em class='sharp'>#define</em> <a href='../R/14474.html' title='Multiple referred from 8 places.'>__ieee754_ynl</a> <a href='../Y/5106.html' title='Multiple used in 2 places.'>__ieee754_ynf128</a>
+<a id='L196' name='L196'></a> 196 
+<a id='L197' name='L197'></a> 197 
+<a id='L198' name='L198'></a> 198 <em class='comment'>/* finite math entry points.  */</em>
+<a id='L199' name='L199'></a> 199 <em class='sharp'>#define</em> __acoshl_finite __acoshf128_finite
+<a id='L200' name='L200'></a> 200 <em class='sharp'>#define</em> __acosl_finite __acosf128_finite
+<a id='L201' name='L201'></a> 201 <em class='sharp'>#define</em> __asinl_finite __asinf128_finite
+<a id='L202' name='L202'></a> 202 <em class='sharp'>#define</em> __atan2l_finite __atan2f128_finite
+<a id='L203' name='L203'></a> 203 <em class='sharp'>#define</em> __atanhl_finite __atanhf128_finite
+<a id='L204' name='L204'></a> 204 <em class='sharp'>#define</em> __coshl_finite __coshf128_finite
+<a id='L205' name='L205'></a> 205 <em class='sharp'>#define</em> __cosl_finite __cosf128_finite
+<a id='L206' name='L206'></a> 206 <em class='sharp'>#define</em> __exp10l_finite __exp10f128_finite
+<a id='L207' name='L207'></a> 207 <em class='sharp'>#define</em> __exp2l_finite __exp2f128_finite
+<a id='L208' name='L208'></a> 208 <em class='sharp'>#define</em> __expl_finite __expf128_finite
+<a id='L209' name='L209'></a> 209 <em class='sharp'>#define</em> __fmodl_finite __fmodf128_finite
+<a id='L210' name='L210'></a> 210 <em class='sharp'>#define</em> __hypotl_finite __hypotf128_finite
+<a id='L211' name='L211'></a> 211 <em class='sharp'>#define</em> __ilogbl_finite __ilogbf128_finite
+<a id='L212' name='L212'></a> 212 <em class='sharp'>#define</em> __j0l_finite __j0f128_finite
+<a id='L213' name='L213'></a> 213 <em class='sharp'>#define</em> __j1l_finite __j1f128_finite
+<a id='L214' name='L214'></a> 214 <em class='sharp'>#define</em> __jnl_finite __jnf128_finite
+<a id='L215' name='L215'></a> 215 <em class='sharp'>#define</em> __lgammal_r_finite __lgammaf128_r_finite
+<a id='L216' name='L216'></a> 216 <em class='sharp'>#define</em> __log10l_finite __log10f128_finite
+<a id='L217' name='L217'></a> 217 <em class='sharp'>#define</em> __log2l_finite __log2f128_finite
+<a id='L218' name='L218'></a> 218 <em class='sharp'>#define</em> __logl_finite __logf128_finite
+<a id='L219' name='L219'></a> 219 <em class='sharp'>#define</em> __powl_finite __powf128_finite
+<a id='L220' name='L220'></a> 220 <em class='sharp'>#define</em> __remainderl_finite __remainderf128_finite
+<a id='L221' name='L221'></a> 221 <em class='sharp'>#define</em> __sinhl_finite __sinhf128_finite
+<a id='L222' name='L222'></a> 222 <em class='sharp'>#define</em> __y0l_finite __y0f128_finite
+<a id='L223' name='L223'></a> 223 <em class='sharp'>#define</em> __y1l_finite __y1f128_finite
+<a id='L224' name='L224'></a> 224 <em class='sharp'>#define</em> __ynl_finite __ynf128_finite
+<a id='L225' name='L225'></a> 225 
+<a id='L226' name='L226'></a> 226 
+<a id='L227' name='L227'></a> 227 <em class='comment'>/* internal function names.  */</em>
+<a id='L228' name='L228'></a> 228 <em class='sharp'>#define</em> <a href='../S/9083.html#L64' title='Referred from 64 in sysdeps/ieee754/ldbl-128ibm/s_asinhl.c.'>__asinhl</a> <a href='../Y/3572.html' title='Multiple used in 2 places.'>__asinhf128</a>
+<a id='L229' name='L229'></a> 229 <em class='sharp'>#define</em> <a href='../R/13663.html' title='Multiple referred from 5 places.'>__atanl</a> <a href='../Y/3583.html' title='Multiple used in 2 places.'>__atanf128</a>
+<a id='L230' name='L230'></a> 230 <em class='sharp'>#define</em> <a href='../S/9098.html#L102' title='Referred from 102 in sysdeps/ieee754/ldbl-128ibm/s_cbrtl.c.'>__cbrtl</a> <a href='../Y/3936.html' title='Multiple used in 2 places.'>__cbrtf128</a>
+<a id='L231' name='L231'></a> 231 <em class='sharp'>#define</em> <a href='../R/13771.html' title='Multiple referred from 2 places.'>__ceill</a> <a href='../Y/3951.html' title='Multiple used in 2 places.'>__ceilf128</a>
+<a id='L232' name='L232'></a> 232 <em class='sharp'>#define</em> <a href='../R/13847.html' title='Multiple referred from 3 places.'>__copysignl</a> __copysignf128
+<a id='L233' name='L233'></a> 233 <em class='sharp'>#define</em> <a href='../R/13853.html' title='Multiple referred from 24 places.'>__cosl</a> <a href='../Y/4082.html' title='Multiple used in 2 places.'>__cosf128</a>
+<a id='L234' name='L234'></a> 234 <em class='sharp'>#define</em> <a href='../R/13945.html' title='Multiple referred from 5 places.'>__erfcl</a> <a href='../Y/4331.html' title='Multiple used in 2 places.'>__erfcf128</a>
+<a id='L235' name='L235'></a> 235 <em class='sharp'>#define</em> <a href='../R/13946.html' title='Multiple referred from 3 places.'>__erfl</a> <a href='../Y/4332.html' title='Multiple used in 2 places.'>__erff128</a>
+<a id='L236' name='L236'></a> 236 <em class='sharp'>#define</em> <a href='../R/13975.html' title='Multiple referred from 7 places.'>__expl</a> <a href='../Y/4380.html' title='Multiple used in 4 places.'>__expf128</a>
+<a id='L237' name='L237'></a> 237 <em class='sharp'>#define</em> <a href='../R/13980.html' title='Multiple referred from 20 places.'>__expm1l</a> <a href='../Y/4387.html' title='Multiple used in 3 places.'>__expm1f128</a>
+<a id='L238' name='L238'></a> 238 <em class='sharp'>#define</em> <a href='../S/9081.html#L43' title='Referred from 43 in sysdeps/ieee754/ldbl-128ibm/s_fabsl.c.'>__fabsl</a> <a href='../Y/4415.html' title='Multiple used in 3 places.'>__fabsf128</a>
+<a id='L239' name='L239'></a> 239 <em class='sharp'>#define</em> __fdiml <a href='../Y/4434.html' title='Multiple used in 3 places.'>__fdimf128</a>
+<a id='L240' name='L240'></a> 240 <em class='sharp'>#define</em> <a href='../R/14062.html' title='Multiple referred from 15 places.'>__finitel</a> <a href='../Y/4496.html' title='Multiple used in 2 places.'>__finitef128</a>
+<a id='L241' name='L241'></a> 241 <em class='sharp'>#define</em> <a href='../R/14074.html' title='Multiple referred from 2 places.'>__floorl</a> <a href='../Y/4510.html' title='Multiple used in 3 places.'>__floorf128</a>
+<a id='L242' name='L242'></a> 242 <em class='sharp'>#define</em> <a href='../R/14085.html' title='Multiple referred from 2 places.'>__fmal</a> <a href='../Y/4520.html' title='Multiple used in 2 places.'>__fmaf128</a>
+<a id='L243' name='L243'></a> 243 <em class='sharp'>#define</em> __fmaxl <a href='../Y/4524.html' title='Multiple used in 3 places.'>__fmaxf128</a>
+<a id='L244' name='L244'></a> 244 <em class='sharp'>#define</em> __fminl <a href='../Y/4530.html' title='Multiple used in 3 places.'>__fminf128</a>
+<a id='L245' name='L245'></a> 245 <em class='sharp'>#define</em> <a href='../R/14105.html' title='Multiple referred from 10 places.'>__fpclassifyl</a> <a href='../Y/4558.html' title='Multiple used in 4 places.'>__fpclassifyf128</a>
+<a id='L246' name='L246'></a> 246 <em class='sharp'>#define</em> <a href='../R/14126.html' title='Multiple referred from 18 places.'>__frexpl</a> <a href='../Y/4583.html' title='Multiple used in 2 places.'>__frexpf128</a>
+<a id='L247' name='L247'></a> 247 <em class='sharp'>#define</em> __gammal_r_finite __gammaf128_r_finite
+<a id='L248' name='L248'></a> 248 <em class='sharp'>#define</em> <a href='../S/9113.html#L38' title='Referred from 38 in sysdeps/ieee754/ldbl-128ibm/s_getpayloadl.c.'>__getpayloadl</a> __getpayloadf128
+<a id='L249' name='L249'></a> 249 <em class='sharp'>#define</em> <a href='../R/14550.html' title='Multiple referred from 13 places.'>__isinfl</a> <a href='../S/18168.html#L116' title='Defined at 116 in include/math.h.'>__isinff128</a>
+<a id='L250' name='L250'></a> 250 <em class='sharp'>#define</em> <a href='../R/14559.html' title='Multiple referred from 15 places.'>__isnanl</a> <a href='../Y/5223.html' title='Multiple used in 5 places.'>__isnanf128</a>
+<a id='L251' name='L251'></a> 251 <em class='sharp'>#define</em> <a href='../R/14578.html' title='Multiple referred from 5 places.'>__issignalingl</a> <a href='../Y/5243.html' title='Multiple used in 4 places.'>__issignalingf128</a>
+<a id='L252' name='L252'></a> 252 <em class='sharp'>#define</em> <a href='../R/14627.html' title='Multiple referred from 6 places.'>__ldexpl</a> <a href='../S/7913.html#L34' title='Defined at 34 in sysdeps/powerpc/powerpc64/le/fpu/multiarch/float128-ifunc-redirects.h.'>__ldexpf128</a>
+<a id='L253' name='L253'></a> 253 <em class='sharp'>#define</em> <a href='../S/9179.html#L141' title='Referred from 141 in sysdeps/ieee754/ldbl-128ibm/s_llrintl.c.'>__llrintl</a> <a href='../Y/5477.html' title='Multiple used in 2 places.'>__llrintf128</a>
+<a id='L254' name='L254'></a> 254 <em class='sharp'>#define</em> <a href='../S/9146.html#L121' title='Referred from 121 in sysdeps/ieee754/ldbl-128ibm/s_llroundl.c.'>__llroundl</a> <a href='../Y/5487.html' title='Multiple used in 2 places.'>__llroundf128</a>
+<a id='L255' name='L255'></a> 255 <em class='sharp'>#define</em> <a href='../R/14866.html' title='Multiple referred from 27 places.'>__log1pl</a> <a href='../Y/5508.html' title='Multiple used in 3 places.'>__log1pf128</a>
+<a id='L256' name='L256'></a> 256 <em class='sharp'>#define</em> <a href='../R/14875.html' title='Multiple referred from 13 places.'>__logbl</a> <a href='../Y/5524.html' title='Multiple used in 2 places.'>__logbf128</a>
+<a id='L257' name='L257'></a> 257 <em class='sharp'>#define</em> <a href='../R/14880.html' title='Multiple referred from 17 places.'>__logl</a> <a href='../Y/5531.html' title='Multiple used in 3 places.'>__logf128</a>
+<a id='L258' name='L258'></a> 258 <em class='sharp'>#define</em> <a href='../S/9103.html#L156' title='Referred from 156 in sysdeps/ieee754/ldbl-128ibm/s_lrintl.c.'>__lrintl</a> <a href='../Y/5553.html' title='Multiple used in 2 places.'>__lrintf128</a>
+<a id='L259' name='L259'></a> 259 <em class='sharp'>#define</em> <a href='../S/9153.html#L136' title='Referred from 136 in sysdeps/ieee754/ldbl-128ibm/s_lroundl.c.'>__lroundl</a> <a href='../Y/5558.html' title='Multiple used in 2 places.'>__lroundf128</a>
+<a id='L260' name='L260'></a> 260 <em class='sharp'>#define</em> <a href='../R/15051.html' title='Multiple referred from 3 places.'>__modfl</a> <a href='../Y/5933.html' title='Multiple used in 2 places.'>__modff128</a>
+<a id='L261' name='L261'></a> 261 <em class='sharp'>#define</em> <a href='../R/15117.html' title='Multiple referred from 10 places.'>__nearbyintl</a> <a href='../Y/6032.html' title='Multiple used in 2 places.'>__nearbyintf128</a>
+<a id='L262' name='L262'></a> 262 <em class='sharp'>#define</em> <a href='../R/15145.html' title='Multiple referred from 10 places.'>__nextafterl</a> __nextafterf128
+<a id='L263' name='L263'></a> 263 <em class='sharp'>#define</em> __nextdownl __nextdownf128
+<a id='L264' name='L264'></a> 264 <em class='sharp'>#define</em> <a href='../S/9126.html#L79' title='Referred from 79 in sysdeps/ieee754/ldbl-128ibm/s_nextupl.c.'>__nextupl</a> __nextupf128
+<a id='L265' name='L265'></a> 265 <em class='sharp'>#define</em> <a href='../S/9080.html#L117' title='Referred from 117 in sysdeps/ieee754/ldbl-128ibm/s_remquol.c.'>__remquol</a> <a href='../Y/7147.html' title='Multiple used in 2 places.'>__remquof128</a>
+<a id='L266' name='L266'></a> 266 <em class='sharp'>#define</em> <a href='../R/15786.html' title='Multiple referred from 2 places.'>__rintl</a> <a href='../Y/7232.html' title='Multiple used in 3 places.'>__rintf128</a>
+<a id='L267' name='L267'></a> 267 <em class='sharp'>#define</em> <a href='../S/9141.html#L71' title='Referred from 71 in sysdeps/ieee754/ldbl-128ibm/s_roundevenl.c.'>__roundevenl</a> <a href='../Y/7257.html' title='Multiple used in 2 places.'>__roundevenf128</a>
+<a id='L268' name='L268'></a> 268 <em class='sharp'>#define</em> <a href='../R/15801.html' title='Multiple referred from 2 places.'>__roundl</a> <a href='../Y/7259.html' title='Multiple used in 2 places.'>__roundf128</a>
+<a id='L269' name='L269'></a> 269 <em class='sharp'>#define</em> <a href='../S/9056.html#L59' title='Referred from 59 in sysdeps/ieee754/dbl-64/s_scalbln.c.'>__scalblnl</a> <a href='../Y/7332.html' title='Multiple used in 3 places.'>__scalblnf128</a>
+<a id='L270' name='L270'></a> 270 <em class='sharp'>#define</em> <a href='../R/15845.html' title='Multiple referred from 11 places.'>__scalbnl</a> <a href='../Y/7333.html' title='Multiple used in 3 places.'>__scalbnf128</a>
+<a id='L271' name='L271'></a> 271 <em class='sharp'>#define</em> <a href='../R/15978.html' title='Multiple referred from 7 places.'>__signbitl</a> <a href='../Y/7445.html' title='Multiple used in 4 places.'>__signbitf128</a>
+<a id='L272' name='L272'></a> 272 <em class='sharp'>#define</em> <a href='../R/16011.html' title='Multiple referred from 20 places.'>__sincosl</a> <a href='../Y/7467.html' title='Multiple used in 3 places.'>__sincosf128</a>
+<a id='L273' name='L273'></a> 273 <em class='sharp'>#define</em> <a href='../R/16017.html' title='Multiple referred from 16 places.'>__sinl</a> <a href='../Y/7474.html' title='Multiple used in 2 places.'>__sinf128</a>
+<a id='L274' name='L274'></a> 274 <em class='sharp'>#define</em> <a href='../R/16047.html' title='Multiple referred from 8 places.'>__sqrtl</a> <a href='../Y/7534.html' title='Multiple used in 4 places.'>__sqrtf128</a>
+<a id='L275' name='L275'></a> 275 <em class='sharp'>#define</em> <a href='../S/9086.html#L88' title='Referred from 88 in sysdeps/ieee754/ldbl-128ibm/s_tanhl.c.'>__tanhl</a> <a href='../Y/8048.html' title='Multiple used in 2 places.'>__tanhf128</a>
+<a id='L276' name='L276'></a> 276 <em class='sharp'>#define</em> <a href='../S/9104.html#L78' title='Referred from 78 in sysdeps/ieee754/ldbl-128ibm/s_tanl.c.'>__tanl</a> <a href='../Y/8047.html' title='Multiple used in 2 places.'>__tanf128</a>
+<a id='L277' name='L277'></a> 277 <em class='sharp'>#define</em> <a href='../R/16232.html' title='Multiple referred from 4 places.'>__totalorderl</a> __totalorderf128
+<a id='L278' name='L278'></a> 278 <em class='sharp'>#define</em> <a href='../R/16230.html' title='Multiple referred from 3 places.'>__totalorder_compatl</a> __totalorder_compatf128
+<a id='L279' name='L279'></a> 279 <em class='sharp'>#define</em> <a href='../R/16236.html' title='Multiple referred from 4 places.'>__totalordermagl</a> __totalordermagf128
+<a id='L280' name='L280'></a> 280 <em class='sharp'>#define</em> <a href='../R/16234.html' title='Multiple referred from 3 places.'>__totalordermag_compatl</a> __totalordermag_compatf128
+<a id='L281' name='L281'></a> 281 <em class='sharp'>#define</em> <a href='../R/16247.html' title='Multiple referred from 2 places.'>__truncl</a> <a href='../Y/8219.html' title='Multiple used in 2 places.'>__truncf128</a>
+<a id='L282' name='L282'></a> 282 <em class='sharp'>#define</em> <a href='../S/8627.html#L36' title='Referred from 36 in sysdeps/ieee754/ldbl-96/x2y2m1.c.'>__x2y2m1l</a> <a href='../Y/8677.html' title='Multiple used in 2 places.'>__x2y2m1f128</a>
+<a id='L283' name='L283'></a> 283 
+<a id='L284' name='L284'></a> 284 <em class='sharp'>#define</em> __faddl __f32addf128
+<a id='L285' name='L285'></a> 285 <em class='sharp'>#define</em> __daddl __f64addf128
+<a id='L286' name='L286'></a> 286 <em class='sharp'>#define</em> __fdivl __f32divf128
+<a id='L287' name='L287'></a> 287 <em class='sharp'>#define</em> __ddivl __f64divf128
+<a id='L288' name='L288'></a> 288 <em class='sharp'>#define</em> __ffmal __f32fmaf128
+<a id='L289' name='L289'></a> 289 <em class='sharp'>#define</em> __dfmal __f64fmaf128
+<a id='L290' name='L290'></a> 290 <em class='sharp'>#define</em> __fmull __f32mulf128
+<a id='L291' name='L291'></a> 291 <em class='sharp'>#define</em> __dmull __f64mulf128
+<a id='L292' name='L292'></a> 292 <em class='sharp'>#define</em> __fsqrtl __f32sqrtf128
+<a id='L293' name='L293'></a> 293 <em class='sharp'>#define</em> __dsqrtl __f64sqrtf128
+<a id='L294' name='L294'></a> 294 <em class='sharp'>#define</em> __fsubl __f32subf128
+<a id='L295' name='L295'></a> 295 <em class='sharp'>#define</em> __dsubl __f64subf128
+<a id='L296' name='L296'></a> 296 
+<a id='L297' name='L297'></a> 297 <em class='comment'>/* Used on __finite compat alias.  */</em>
+<a id='L298' name='L298'></a> 298 <em class='sharp'>#define</em> <a href='../R/13522.html' title='Multiple referred from 4 places.'>__acosl</a> __acosf128
+<a id='L299' name='L299'></a> 299 <em class='sharp'>#define</em> <a href='../R/13521.html' title='Multiple referred from 3 places.'>__acoshl</a> __acoshf128
+<a id='L300' name='L300'></a> 300 <em class='sharp'>#define</em> <a href='../R/13648.html' title='Multiple referred from 4 places.'>__asinl</a> __asinf128
+<a id='L301' name='L301'></a> 301 <em class='sharp'>#define</em> <a href='../R/13658.html' title='Multiple referred from 3 places.'>__atan2l</a> <a href='../Y/3577.html' title='Multiple used in 2 places.'>__atan2f128</a>
+<a id='L302' name='L302'></a> 302 <em class='sharp'>#define</em> <a href='../R/13662.html' title='Multiple referred from 4 places.'>__atanhl</a> __atanhf128
+<a id='L303' name='L303'></a> 303 <em class='sharp'>#define</em> <a href='../R/13852.html' title='Multiple referred from 4 places.'>__coshl</a> __coshf128
+<a id='L304' name='L304'></a> 304 <em class='sharp'>#define</em> <a href='../R/13966.html' title='Multiple referred from 5 places.'>__exp10l</a> <a href='../Y/4369.html' title='Multiple used in 2 places.'>__exp10f128</a>
+<a id='L305' name='L305'></a> 305 <em class='sharp'>#define</em> <a href='../R/13975.html' title='Multiple referred from 7 places.'>__expl</a> <a href='../Y/4380.html' title='Multiple used in 4 places.'>__expf128</a>
+<a id='L306' name='L306'></a> 306 <em class='sharp'>#define</em> <a href='../R/14091.html' title='Multiple referred from 4 places.'>__fmodl</a> <a href='../Y/4537.html' title='Multiple used in 2 places.'>__fmodf128</a>
+<a id='L307' name='L307'></a> 307 <em class='sharp'>#define</em> <a href='../R/14185.html' title='Multiple referred from 3 places.'>__gammal_r</a> __gammaf128_r
+<a id='L308' name='L308'></a> 308 <em class='sharp'>#define</em> <a href='../R/14389.html' title='Multiple referred from 3 places.'>__hypotl</a> <a href='../Y/4972.html' title='Multiple used in 2 places.'>__hypotf128</a>
+<a id='L309' name='L309'></a> 309 <em class='sharp'>#define</em> <a href='../R/14595.html' title='Multiple referred from 3 places.'>__j0l</a> <a href='../Y/5261.html' title='Multiple used in 2 places.'>__j0f128</a>
+<a id='L310' name='L310'></a> 310 <em class='sharp'>#define</em> <a href='../R/14598.html' title='Multiple referred from 3 places.'>__j1l</a> <a href='../Y/5263.html' title='Multiple used in 2 places.'>__j1f128</a>
+<a id='L311' name='L311'></a> 311 <em class='sharp'>#define</em> <a href='../R/14607.html' title='Multiple referred from 3 places.'>__jnl</a> <a href='../Y/5281.html' title='Multiple used in 2 places.'>__jnf128</a>
+<a id='L312' name='L312'></a> 312 <em class='sharp'>#define</em> <a href='../R/14640.html' title='Multiple referred from 3 places.'>__lgammal_r</a> __lgammaf128_r
+<a id='L313' name='L313'></a> 313 <em class='sharp'>#define</em> <a href='../R/14863.html' title='Multiple referred from 3 places.'>__log10l</a> __log10f128
+<a id='L314' name='L314'></a> 314 <em class='sharp'>#define</em> <a href='../R/14871.html' title='Multiple referred from 3 places.'>__log2l</a> <a href='../Y/5511.html' title='Multiple used in 2 places.'>__log2f128</a>
+<a id='L315' name='L315'></a> 315 <em class='sharp'>#define</em> <a href='../R/14880.html' title='Multiple referred from 17 places.'>__logl</a> <a href='../Y/5531.html' title='Multiple used in 3 places.'>__logf128</a>
+<a id='L316' name='L316'></a> 316 <em class='sharp'>#define</em> <a href='../R/15424.html' title='Multiple referred from 2 places.'>__powl</a> __powf128
+<a id='L317' name='L317'></a> 317 <em class='sharp'>#define</em> <a href='../R/15745.html' title='Multiple referred from 7 places.'>__remainderl</a> <a href='../Y/7143.html' title='Multiple used in 2 places.'>__remainderf128</a>
+<a id='L318' name='L318'></a> 318 <em class='sharp'>#define</em> <a href='../R/16016.html' title='Multiple referred from 4 places.'>__sinhl</a> __sinhf128
+<a id='L319' name='L319'></a> 319 <em class='sharp'>#define</em> <a href='../R/16451.html' title='Multiple referred from 4 places.'>__y0l</a> <a href='../Y/8721.html' title='Multiple used in 2 places.'>__y0f128</a>
+<a id='L320' name='L320'></a> 320 <em class='sharp'>#define</em> <a href='../R/16452.html' title='Multiple referred from 4 places.'>__y1l</a> <a href='../Y/8725.html' title='Multiple used in 2 places.'>__y1f128</a>
+<a id='L321' name='L321'></a> 321 <em class='sharp'>#define</em> <a href='../R/16453.html' title='Multiple referred from 4 places.'>__ynl</a> <a href='../Y/8730.html' title='Multiple used in 2 places.'>__ynf128</a>
+<a id='L322' name='L322'></a> 322 
+<a id='L323' name='L323'></a> 323 <em class='comment'>/* __nexttowardf128 is not _Float128 API. */</em>
+<a id='L324' name='L324'></a> 324 <em class='sharp'>#define</em> <a href='../R/15148.html' title='Multiple referred from 9 places.'>__nexttowardl</a> __nexttowardf128_do_not_use
+<a id='L325' name='L325'></a> 325 <em class='sharp'>#define</em> <a href='../R/22221.html' title='Multiple referred from 24 places.'>nexttowardl</a> nexttowardf128_do_not_use
+<a id='L326' name='L326'></a> 326 
+<a id='L327' name='L327'></a> 327 
+<a id='L328' name='L328'></a> 328 <em class='comment'>/* public entry points.  */</em>
+<a id='L329' name='L329'></a> 329 <em class='sharp'>#define</em> <a href='../R/17324.html' title='Multiple referred from 2 places.'>asinhl</a> <a href='../Y/10497.html' title='Multiple used in 2 places.'>asinhf128</a>
+<a id='L330' name='L330'></a> 330 <em class='sharp'>#define</em> <a href='../S/9144.html#L251' title='Referred from 251 in sysdeps/ieee754/ldbl-128ibm/s_atanl.c.'>atanl</a> atanf128
+<a id='L331' name='L331'></a> 331 <em class='sharp'>#define</em> <a href='../R/17806.html' title='Multiple referred from 2 places.'>cbrtl</a> cbrtf128
+<a id='L332' name='L332'></a> 332 <em class='sharp'>#define</em> <a href='../R/17812.html' title='Multiple referred from 9 places.'>ceill</a> <a href='../Y/11412.html' title='Multiple used in 2 places.'>ceilf128</a>
+<a id='L333' name='L333'></a> 333 <em class='sharp'>#define</em> <a href='../R/18323.html' title='Multiple referred from 62 places.'>copysignl</a> copysignf128
+<a id='L334' name='L334'></a> 334 <em class='sharp'>#define</em> <a href='../S/9088.html#L87' title='Referred from 87 in sysdeps/ieee754/ldbl-128ibm/s_cosl.c.'>cosl</a> <a href='../Y/12043.html' title='Multiple used in 2 places.'>cosf128</a>
+<a id='L335' name='L335'></a> 335 <em class='sharp'>#define</em> <a href='../R/19032.html' title='Multiple referred from 2 places.'>erfcl</a> erfcf128
+<a id='L336' name='L336'></a> 336 <em class='sharp'>#define</em> <a href='../R/19034.html' title='Multiple referred from 2 places.'>erfl</a> erff128
+<a id='L337' name='L337'></a> 337 <em class='sharp'>#define</em> <a href='../R/19162.html' title='Multiple referred from 3 places.'>expl</a> expf128
+<a id='L338' name='L338'></a> 338 <em class='sharp'>#define</em> <a href='../R/19171.html' title='Multiple referred from 2 places.'>expm1l</a> expm1f128
+<a id='L339' name='L339'></a> 339 <em class='sharp'>#define</em> <a href='../R/19297.html' title='Multiple referred from 116 places.'>fabsl</a> <a href='../S/18168.html#L127' title='Defined at 127 in include/math.h.'>fabsf128</a>
+<a id='L340' name='L340'></a> 340 <em class='sharp'>#define</em> <a href='../S/3526.html#L77' title='Referred from 77 in math/test-math-cxx11.cc.'>fdiml</a> fdimf128
+<a id='L341' name='L341'></a> 341 <em class='sharp'>#define</em> <a href='../R/19494.html' title='Multiple referred from 11 places.'>finitel</a> finitef128_do_not_use
+<a id='L342' name='L342'></a> 342 <em class='sharp'>#define</em> <a href='../R/19530.html' title='Multiple referred from 28 places.'>floorl</a> <a href='../Y/14716.html' title='Multiple used in 2 places.'>floorf128</a>
+<a id='L343' name='L343'></a> 343 <em class='sharp'>#define</em> <a href='../R/19537.html' title='Multiple referred from 3 places.'>fmal</a> fmaf128
+<a id='L344' name='L344'></a> 344 <em class='sharp'>#define</em> <a href='../S/3526.html#L83' title='Referred from 83 in math/test-math-cxx11.cc.'>fmaxl</a> fmaxf128
+<a id='L345' name='L345'></a> 345 <em class='sharp'>#define</em> <a href='../S/3526.html#L86' title='Referred from 86 in math/test-math-cxx11.cc.'>fminl</a> fminf128
+<a id='L346' name='L346'></a> 346 <em class='sharp'>#define</em> <a href='../R/19711.html' title='Multiple referred from 8 places.'>frexpl</a> frexpf128
+<a id='L347' name='L347'></a> 347 <em class='sharp'>#define</em> <a href='../S/9113.html#L38' title='Referred from 38 in sysdeps/ieee754/ldbl-128ibm/s_getpayloadl.c.'>getpayloadl</a> getpayloadf128
+<a id='L348' name='L348'></a> 348 <em class='sharp'>#define</em> <a href='../R/20828.html' title='Multiple referred from 11 places.'>isinfl</a> isinff128_do_not_use
+<a id='L349' name='L349'></a> 349 <em class='sharp'>#define</em> <a href='../R/20837.html' title='Multiple referred from 14 places.'>isnanl</a> isnanf128_do_not_use
+<a id='L350' name='L350'></a> 350 <em class='sharp'>#define</em> <a href='../R/21053.html' title='Multiple referred from 2 places.'>ldexpl</a> <a href='../Y/17926.html' title='Multiple used in 2 places.'>ldexpf128</a>
+<a id='L351' name='L351'></a> 351 <em class='sharp'>#define</em> <a href='../R/21407.html' title='Multiple referred from 2 places.'>llrintl</a> llrintf128
+<a id='L352' name='L352'></a> 352 <em class='sharp'>#define</em> <a href='../R/21413.html' title='Multiple referred from 2 places.'>llroundl</a> llroundf128
+<a id='L353' name='L353'></a> 353 <em class='sharp'>#define</em> <a href='../R/21496.html' title='Multiple referred from 3 places.'>log1pl</a> log1pf128
+<a id='L354' name='L354'></a> 354 <em class='sharp'>#define</em> <a href='../R/21522.html' title='Multiple referred from 6 places.'>logbl</a> logbf128
+<a id='L355' name='L355'></a> 355 <em class='sharp'>#define</em> <a href='../R/21528.html' title='Multiple referred from 3 places.'>logl</a> logf128
+<a id='L356' name='L356'></a> 356 <em class='sharp'>#define</em> <a href='../R/21576.html' title='Multiple referred from 2 places.'>lrintl</a> lrintf128
+<a id='L357' name='L357'></a> 357 <em class='sharp'>#define</em> <a href='../R/21582.html' title='Multiple referred from 2 places.'>lroundl</a> lroundf128
+<a id='L358' name='L358'></a> 358 <em class='sharp'>#define</em> <a href='../R/21912.html' title='Multiple referred from 8 places.'>modfl</a> modff128
+<a id='L359' name='L359'></a> 359 <em class='sharp'>#define</em> <a href='../R/22142.html' title='Multiple referred from 3 places.'>nanl</a> nanf128
+<a id='L360' name='L360'></a> 360 <em class='sharp'>#define</em> <a href='../R/22159.html' title='Multiple referred from 2 places.'>nearbyintl</a> nearbyintf128
+<a id='L361' name='L361'></a> 361 <em class='sharp'>#define</em> <a href='../R/22210.html' title='Multiple referred from 37 places.'>nextafterl</a> nextafterf128
+<a id='L362' name='L362'></a> 362 <em class='sharp'>#define</em> nextdownl nextdownf128
+<a id='L363' name='L363'></a> 363 <em class='sharp'>#define</em> <a href='../S/9126.html#L79' title='Referred from 79 in sysdeps/ieee754/ldbl-128ibm/s_nextupl.c.'>nextupl</a> nextupf128
+<a id='L364' name='L364'></a> 364 <em class='sharp'>#define</em> <a href='../R/23729.html' title='Multiple referred from 3 places.'>remquol</a> remquof128
+<a id='L365' name='L365'></a> 365 <em class='sharp'>#define</em> <a href='../R/23882.html' title='Multiple referred from 10 places.'>rintl</a> <a href='../Y/24081.html' title='Multiple used in 2 places.'>rintf128</a>
+<a id='L366' name='L366'></a> 366 <em class='sharp'>#define</em> <a href='../S/9141.html#L71' title='Referred from 71 in sysdeps/ieee754/ldbl-128ibm/s_roundevenl.c.'>roundevenl</a> roundevenf128
+<a id='L367' name='L367'></a> 367 <em class='sharp'>#define</em> <a href='../R/23922.html' title='Multiple referred from 11 places.'>roundl</a> <a href='../Y/24177.html' title='Multiple used in 2 places.'>roundf128</a>
+<a id='L368' name='L368'></a> 368 <em class='sharp'>#define</em> <a href='../R/24114.html' title='Multiple referred from 3 places.'>scalbnl</a> scalbnf128
+<a id='L369' name='L369'></a> 369 <em class='sharp'>#define</em> <a href='../S/9158.html#L74' title='Referred from 74 in sysdeps/ieee754/ldbl-128ibm/s_sincosl.c.'>sincosl</a> sincosf128
+<a id='L370' name='L370'></a> 370 <em class='sharp'>#define</em> <a href='../R/24502.html' title='Multiple referred from 2 places.'>sinl</a> sinf128
+<a id='L371' name='L371'></a> 371 <em class='sharp'>#define</em> <a href='../R/24619.html' title='Multiple referred from 61 places.'>sqrtl</a> <a href='../Y/25840.html' title='Multiple used in 2 places.'>sqrtf128</a>
+<a id='L372' name='L372'></a> 372 <em class='sharp'>#define</em> <a href='../S/9086.html#L88' title='Referred from 88 in sysdeps/ieee754/ldbl-128ibm/s_tanhl.c.'>tanhl</a> tanhf128
+<a id='L373' name='L373'></a> 373 <em class='sharp'>#define</em> <a href='../S/9104.html#L78' title='Referred from 78 in sysdeps/ieee754/ldbl-128ibm/s_tanl.c.'>tanl</a> tanf128
+<a id='L374' name='L374'></a> 374 <em class='sharp'>#define</em> <a href='../R/25936.html' title='Multiple referred from 8 places.'>totalorderl</a> totalorderf128
+<a id='L375' name='L375'></a> 375 <em class='sharp'>#define</em> <a href='../R/25937.html' title='Multiple referred from 8 places.'>totalordermagl</a> totalordermagf128
+<a id='L376' name='L376'></a> 376 <em class='sharp'>#define</em> <a href='../R/25973.html' title='Multiple referred from 10 places.'>truncl</a> <a href='../Y/27814.html' title='Multiple used in 2 places.'>truncf128</a>
+<a id='L377' name='L377'></a> 377 
+<a id='L378' name='L378'></a> 378 
+<a id='L379' name='L379'></a> 379 <em class='comment'>/* misc internal renames.  */</em>
+<a id='L380' name='L380'></a> 380 <em class='sharp'>#define</em> <a href='../R/13727.html' title='Multiple referred from 3 places.'>__builtin_fmal</a> __builtin_fmaf128
+<a id='L381' name='L381'></a> 381 <em class='sharp'>#define</em> <a href='../R/13976.html' title='Multiple referred from 14 places.'>__expl_table</a> __expf128_table
+<a id='L382' name='L382'></a> 382 <em class='sharp'>#define</em> <a href='../R/14184.html' title='Multiple referred from 6 places.'>__gamma_productl</a> <a href='../Y/4660.html' title='Multiple used in 2 places.'>__gamma_productf128</a>
+<a id='L383' name='L383'></a> 383 <em class='sharp'>#define</em> <a href='../R/14609.html' title='Multiple referred from 20 places.'>__kernel_cosl</a> <a href='../Y/5289.html' title='Multiple used in 2 places.'>__kernel_cosf128</a>
+<a id='L384' name='L384'></a> 384 <em class='sharp'>#define</em> __kernel_rem_pio2l <a href='../Y/5291.html' title='Multiple used in 2 places.'>__kernel_rem_pio2f128</a>
+<a id='L385' name='L385'></a> 385 <em class='sharp'>#define</em> <a href='../R/14611.html' title='Multiple referred from 10 places.'>__kernel_sincosl</a> <a href='../Y/5294.html' title='Multiple used in 2 places.'>__kernel_sincosf128</a>
+<a id='L386' name='L386'></a> 386 <em class='sharp'>#define</em> <a href='../R/14612.html' title='Multiple referred from 20 places.'>__kernel_sinl</a> <a href='../Y/5295.html' title='Multiple used in 2 places.'>__kernel_sinf128</a>
+<a id='L387' name='L387'></a> 387 <em class='sharp'>#define</em> <a href='../R/14617.html' title='Multiple referred from 6 places.'>__kernel_tanl</a> <a href='../Y/5297.html' title='Multiple used in 2 places.'>__kernel_tanf128</a>
+<a id='L388' name='L388'></a> 388 <em class='sharp'>#define</em> <a href='../R/14635.html' title='Multiple referred from 3 places.'>__lgamma_negl</a> <a href='../Y/5330.html' title='Multiple used in 2 places.'>__lgamma_negf128</a>
+<a id='L389' name='L389'></a> 389 <em class='sharp'>#define</em> <a href='../R/14637.html' title='Multiple referred from 3 places.'>__lgamma_productl</a> <a href='../Y/5331.html' title='Multiple used in 2 places.'>__lgamma_productf128</a>
+<a id='L390' name='L390'></a> 390 <em class='sharp'>#define</em> <a href='../R/15062.html' title='Multiple referred from 2 places.'>__mpn_extract_long_double</a> <a href='../Y/5960.html' title='Multiple used in 2 places.'>__mpn_extract_float128</a>
+<a id='L391' name='L391'></a> 391 <em class='sharp'>#define</em> <a href='../R/16012.html' title='Multiple referred from 51 places.'>__sincosl_table</a> __sincosf128_table
+<a id='L392' name='L392'></a> 392 <em class='sharp'>#define</em> <a href='../R/22064.html' title='Multiple referred from 10 places.'>mul_splitl</a> <a href='../S/9415.html#L409' title='Defined at 409 in sysdeps/ieee754/float128/float128_private.h.'>mul_splitf128</a>
+<a id='L393' name='L393'></a> 393 
+<a id='L394' name='L394'></a> 394 <em class='comment'>/* Builtin renames.  */</em>
+<a id='L395' name='L395'></a> 395 <em class='sharp'>#define</em> <a href='../R/13723.html' title='Multiple referred from 2 places.'>__builtin_copysignl</a> <a href='../D/23347.html' title='Multiple defined in 3 places.'>__builtin_copysignf128</a>
+<a id='L396' name='L396'></a> 396 <em class='sharp'>#define</em> <a href='../R/13749.html' title='Multiple referred from 4 places.'>__builtin_signbitl</a> <a href='../Y/3845.html' title='Multiple used in 4 places.'>__builtin_signbit</a>
+<a id='L397' name='L397'></a> 397 <em class='sharp'>#define</em> <a href='../S/9229.html#L36' title='Referred from 36 in sysdeps/ieee754/ldbl-128/s_nearbyintl.c.'>__builtin_nearbyintl</a> __builtin_nearbyintf128
+<a id='L398' name='L398'></a> 398 <em class='sharp'>#define</em> <a href='../S/9286.html#L39' title='Referred from 39 in sysdeps/ieee754/ldbl-128/s_rintl.c.'>__builtin_rintl</a> __builtin_rintf128
+<a id='L399' name='L399'></a> 399 <em class='sharp'>#define</em> <a href='../S/9261.html#L36' title='Referred from 36 in sysdeps/ieee754/ldbl-128/s_floorl.c.'>__builtin_floorl</a> __builtin_floorf128
+<a id='L400' name='L400'></a> 400 <em class='sharp'>#define</em> <a href='../S/9295.html#L36' title='Referred from 36 in sysdeps/ieee754/ldbl-128/s_ceill.c.'>__builtin_ceill</a> __builtin_ceilf128
+<a id='L401' name='L401'></a> 401 <em class='sharp'>#define</em> <a href='../S/9243.html#L31' title='Referred from 31 in sysdeps/ieee754/ldbl-128/s_truncl.c.'>__builtin_truncl</a> __builtin_truncf128
+<a id='L402' name='L402'></a> 402 <em class='sharp'>#define</em> <a href='../S/9275.html#L31' title='Referred from 31 in sysdeps/ieee754/ldbl-128/s_roundl.c.'>__builtin_roundl</a> __builtin_roundf128
+<a id='L403' name='L403'></a> 403 <em class='sharp'>#define</em> <a href='../R/13723.html' title='Multiple referred from 2 places.'>__builtin_copysignl</a> <a href='../D/23347.html' title='Multiple defined in 3 places.'>__builtin_copysignf128</a>
+<a id='L404' name='L404'></a> 404 
+<a id='L405' name='L405'></a> 405 <em class='comment'>/* Get the constant suffix from bits/floatn-compat.h.  */</em>
+<a id='L406' name='L406'></a> 406 <em class='sharp'>#define</em> <a href='../R/4171.html' title='Multiple referred from 4046 places.'>L</a>(<a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a>) <a href='../D/23781.html' title='Multiple defined in 12 places.'>__f128</a> (<a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a>)
+<a id='L407' name='L407'></a> 407 
+<a id='L408' name='L408'></a> 408 <strong class='reserved'>static</strong> <strong class='reserved'>inline</strong> <strong class='reserved'>void</strong>
+<a id='L409' name='L409'></a> 409 <a href='../S/9415.html#L392' title='Referred from 392 in sysdeps/ieee754/float128/float128_private.h.'>mul_splitf128</a> (<a href='../D/18523.html' title='Multiple defined in 13 places.'>_Float128</a> *<a href='../Y/16092.html' title='Multiple used in 398 places.'>hi</a>, <a href='../D/18523.html' title='Multiple defined in 13 places.'>_Float128</a> *<a href='../Y/18311.html' title='Multiple used in 359 places.'>lo</a>, <a href='../D/18523.html' title='Multiple defined in 13 places.'>_Float128</a> <a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a>, <a href='../D/18523.html' title='Multiple defined in 13 places.'>_Float128</a> <a href='../D/39646.html' title='Multiple defined in 4 places.'>y</a>)
+<a id='L410' name='L410'></a> 410 <em class='brace'>{</em>
+<a id='L411' name='L411'></a> 411 <em class='sharp'>#ifdef</em> <a href='../Y/2941.html' title='Multiple used in 2 places.'>__FP_FAST_FMAF128</a>
+<a id='L412' name='L412'></a> 412   <em class='comment'>/* Fast built-in fused multiply-add.  */</em>
+<a id='L413' name='L413'></a> 413   *<a href='../Y/16092.html' title='Multiple used in 398 places.'>hi</a> = <a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a> * <a href='../D/39646.html' title='Multiple defined in 4 places.'>y</a>;
+<a id='L414' name='L414'></a> 414   *<a href='../Y/18311.html' title='Multiple used in 359 places.'>lo</a> = <a href='../S/9415.html#L380' title='Defined at 380 in sysdeps/ieee754/float128/float128_private.h.'>__builtin_fmal</a> (<a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a>, <a href='../D/39646.html' title='Multiple defined in 4 places.'>y</a>, -*<a href='../Y/16092.html' title='Multiple used in 398 places.'>hi</a>);
+<a id='L415' name='L415'></a> 415 <em class='sharp'>#else</em>
+<a id='L416' name='L416'></a> 416   <em class='comment'>/* Apply Dekker's algorithm.  */</em>
+<a id='L417' name='L417'></a> 417   *<a href='../Y/16092.html' title='Multiple used in 398 places.'>hi</a> = <a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a> * <a href='../D/39646.html' title='Multiple defined in 4 places.'>y</a>;
+<a id='L418' name='L418'></a> 418 <em class='sharp'># define</em> <a href='../R/665.html' title='Multiple referred from 315 places.'>C</a> ((1LL &lt;&lt; (<a href='../S/18104.html#L23' title='Defined at 23 in include/float.h.'>FLT128_MANT_DIG</a> + 1) / 2) + 1)
+<a id='L419' name='L419'></a> 419   <a href='../D/18523.html' title='Multiple defined in 13 places.'>_Float128</a> <a href='../Y/29233.html' title='Multiple used in 154 places.'>x1</a> = <a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a> * <a href='../D/1028.html' title='Multiple defined in 23 places.'>C</a>;
+<a id='L420' name='L420'></a> 420   <a href='../D/18523.html' title='Multiple defined in 13 places.'>_Float128</a> <a href='../Y/29532.html' title='Multiple used in 80 places.'>y1</a> = <a href='../D/39646.html' title='Multiple defined in 4 places.'>y</a> * <a href='../D/1028.html' title='Multiple defined in 23 places.'>C</a>;
+<a id='L421' name='L421'></a> 421 <em class='sharp'># undef</em> <a href='../R/665.html' title='Multiple referred from 315 places.'>C</a>
+<a id='L422' name='L422'></a> 422   <a href='../Y/29233.html' title='Multiple used in 154 places.'>x1</a> = (<a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a> - <a href='../Y/29233.html' title='Multiple used in 154 places.'>x1</a>) + <a href='../Y/29233.html' title='Multiple used in 154 places.'>x1</a>;
+<a id='L423' name='L423'></a> 423   <a href='../Y/29532.html' title='Multiple used in 80 places.'>y1</a> = (<a href='../D/39646.html' title='Multiple defined in 4 places.'>y</a> - <a href='../Y/29532.html' title='Multiple used in 80 places.'>y1</a>) + <a href='../Y/29532.html' title='Multiple used in 80 places.'>y1</a>;
+<a id='L424' name='L424'></a> 424   <a href='../D/18523.html' title='Multiple defined in 13 places.'>_Float128</a> <a href='../Y/29236.html' title='Multiple used in 158 places.'>x2</a> = <a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a> - <a href='../Y/29233.html' title='Multiple used in 154 places.'>x1</a>;
+<a id='L425' name='L425'></a> 425   <a href='../D/18523.html' title='Multiple defined in 13 places.'>_Float128</a> <a href='../Y/29534.html' title='Multiple used in 57 places.'>y2</a> = <a href='../D/39646.html' title='Multiple defined in 4 places.'>y</a> - <a href='../Y/29532.html' title='Multiple used in 80 places.'>y1</a>;
+<a id='L426' name='L426'></a> 426   *<a href='../Y/18311.html' title='Multiple used in 359 places.'>lo</a> = (((<a href='../Y/29233.html' title='Multiple used in 154 places.'>x1</a> * <a href='../Y/29532.html' title='Multiple used in 80 places.'>y1</a> - *<a href='../Y/16092.html' title='Multiple used in 398 places.'>hi</a>) + <a href='../Y/29233.html' title='Multiple used in 154 places.'>x1</a> * <a href='../Y/29534.html' title='Multiple used in 57 places.'>y2</a>) + <a href='../Y/29236.html' title='Multiple used in 158 places.'>x2</a> * <a href='../Y/29532.html' title='Multiple used in 80 places.'>y1</a>) + <a href='../Y/29236.html' title='Multiple used in 158 places.'>x2</a> * <a href='../Y/29534.html' title='Multiple used in 57 places.'>y2</a>;
+<a id='L427' name='L427'></a> 427 <em class='sharp'>#endif</em>
+<a id='L428' name='L428'></a> 428 <em class='brace'>}</em>
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;][^]<a href='#L409'>[v]</a><a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

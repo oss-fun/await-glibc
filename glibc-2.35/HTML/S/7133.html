@@ -1,0 +1,344 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>sysdeps/x86/cpu-tunables.c</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18977.html'>sysdeps</a>/<a href='../files/19380.html'>x86</a>/cpu-tunables.c</h2>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L90'>[^]</a><a href='#L305'>[v]</a>[top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<h2 class='header'>DEFINITIONS</h2>
+This source file includes following definitions.
+<ol>
+<li><a href='#L90' title='Defined at 90.'>TUNABLE_CALLBACK</a></li>
+<li><a href='#L292' title='Defined at 292.'>TUNABLE_CALLBACK</a></li>
+<li><a href='#L305' title='Defined at 305.'>TUNABLE_CALLBACK</a></li>
+</ol>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* x86 CPU feature tuning.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'>   Copyright (C) 2017-2022 Free Software Foundation, Inc.</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'></em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'></em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'></em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   License along with the GNU C Library; if not, see</em>
+<a id='L17' name='L17'></a>  17 <em class='comment'>   &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L18' name='L18'></a>  18 
+<a id='L19' name='L19'></a>  19 <em class='sharp'>#if</em> <a href='../Y/845.html' title='Multiple used in 62 places.'>HAVE_TUNABLES</a>
+<a id='L20' name='L20'></a>  20 <em class='sharp'># define</em> <a href='../R/8964.html' title='Multiple referred from 4 places.'>TUNABLE_NAMESPACE</a> <a href='../Y/12131.html' title='Multiple used in 79 places.'>cpu</a>
+<a id='L21' name='L21'></a>  21 <em class='sharp'># include</em> &lt;stdbool.h&gt;
+<a id='L22' name='L22'></a>  22 <em class='sharp'># include</em> &lt;<a href='../I/1969.html'>stdint.h</a>&gt;
+<a id='L23' name='L23'></a>  23 <em class='sharp'># include</em> &lt;<a href='../I/1819.html'>unistd.h</a>&gt;        <em class='comment'>/* Get STDOUT_FILENO for _dl_printf.  */</em>
+<a id='L24' name='L24'></a>  24 <em class='sharp'># include</em> &lt;<a href='2896.html'>elf/dl-tunables.h</a>&gt;
+<a id='L25' name='L25'></a>  25 <em class='sharp'># include</em> &lt;<a href='../I/1973.html'>string.h</a>&gt;
+<a id='L26' name='L26'></a>  26 <em class='sharp'># include</em> &lt;<a href='../I/9867.html'>cpu-features.h</a>&gt;
+<a id='L27' name='L27'></a>  27 <em class='sharp'># include</em> &lt;<a href='../I/5906.html'>ldsodefs.h</a>&gt;
+<a id='L28' name='L28'></a>  28 
+<a id='L29' name='L29'></a>  29 <em class='comment'>/* We can't use IFUNC memcmp nor strlen in init_cpu_features from libc.a</em>
+<a id='L30' name='L30'></a>  30 <em class='comment'>   since IFUNC must be set up by init_cpu_features.  */</em>
+<a id='L31' name='L31'></a>  31 <em class='sharp'># if</em> <strong class='reserved'>defined</strong> <a href='../Y/2095.html' title='Multiple used in 182 places.'>USE_MULTIARCH</a> &amp;&amp; !<strong class='reserved'>defined</strong> <a href='../D/13935.html' title='Multiple defined in 2 places.'>SHARED</a>
+<a id='L32' name='L32'></a>  32 <em class='sharp'>#  ifdef</em> <a href='../Y/8680.html' title='Multiple used in 78 places.'>__x86_64__</a>
+<a id='L33' name='L33'></a>  33 <em class='sharp'>#   define</em> <a href='../R/1303.html' title='Multiple referred from 12 places.'>DEFAULT_MEMCMP</a>   <a href='../Y/5697.html' title='Multiple used in 2 places.'>__memcmp_sse2</a>
+<a id='L34' name='L34'></a>  34 <em class='sharp'>#  else</em>
+<a id='L35' name='L35'></a>  35 <em class='sharp'>#   define</em> <a href='../R/1303.html' title='Multiple referred from 12 places.'>DEFAULT_MEMCMP</a>   <a href='../Y/5691.html' title='Multiple used in 2 places.'>__memcmp_ia32</a>
+<a id='L36' name='L36'></a>  36 <em class='sharp'>#  endif</em>
+<a id='L37' name='L37'></a>  37 <strong class='reserved'>extern</strong> <a href='../D/26352.html' title='Multiple defined in 58 places.'>__typeof</a> (<a href='../D/33446.html' title='Multiple defined in 22 places.'>memcmp</a>) <a href='../D/1930.html' title='Multiple defined in 3 places.'>DEFAULT_MEMCMP</a>;
+<a id='L38' name='L38'></a>  38 <em class='sharp'># else</em>
+<a id='L39' name='L39'></a>  39 <em class='sharp'>#  define</em> <a href='../R/1303.html' title='Multiple referred from 12 places.'>DEFAULT_MEMCMP</a>    <a href='../D/33446.html' title='Multiple defined in 22 places.'>memcmp</a>
+<a id='L40' name='L40'></a>  40 <em class='sharp'># endif</em>
+<a id='L41' name='L41'></a>  41 
+<a id='L42' name='L42'></a>  42 <em class='sharp'># define</em> <a href='../R/790.html' title='Multiple referred from 29 places.'>CHECK_GLIBC_IFUNC_CPU_OFF</a>(<a href='../D/30173.html' title='Multiple defined in 17 places.'>f</a>, <a href='../D/29165.html' title='Multiple defined in 3 places.'>cpu_features</a>, <a href='../D/33817.html' title='Multiple defined in 21 places.'>name</a>, <a href='../D/32598.html' title='Multiple defined in 10 places.'>len</a>)      \
+<a id='L43' name='L43'></a>  43   <strong class='reserved'>_Static_assert</strong> (<strong class='reserved'>sizeof</strong> (#<a href='../D/33817.html' title='Multiple defined in 21 places.'>name</a>) - 1 == <a href='../D/32598.html' title='Multiple defined in 10 places.'>len</a>, #<a href='../D/33817.html' title='Multiple defined in 21 places.'>name</a> " != " #<a href='../D/32598.html' title='Multiple defined in 10 places.'>len</a>);    \
+<a id='L44' name='L44'></a>  44   <strong class='reserved'>if</strong> (!<a href='../D/1930.html' title='Multiple defined in 3 places.'>DEFAULT_MEMCMP</a> (<a href='../D/30173.html' title='Multiple defined in 17 places.'>f</a>, #<a href='../D/33817.html' title='Multiple defined in 21 places.'>name</a>, <a href='../D/32598.html' title='Multiple defined in 10 places.'>len</a>))                  \
+<a id='L45' name='L45'></a>  45     <em class='brace'>{</em>                                   \
+<a id='L46' name='L46'></a>  46       <a href='../S/7230.html#L47' title='Defined at 47 in sysdeps/x86/include/cpu-features.h.'>CPU_FEATURE_UNSET</a> (<a href='../D/29165.html' title='Multiple defined in 3 places.'>cpu_features</a>, <a href='../D/33817.html' title='Multiple defined in 21 places.'>name</a>)                \
+<a id='L47' name='L47'></a>  47       <strong class='reserved'>break</strong>;                                \
+<a id='L48' name='L48'></a>  48     <em class='brace'>}</em>
+<a id='L49' name='L49'></a>  49 
+<a id='L50' name='L50'></a>  50 <em class='comment'>/* Disable a preferred feature NAME.  We don't enable a preferred feature</em>
+<a id='L51' name='L51'></a>  51 <em class='comment'>   which isn't available.  */</em>
+<a id='L52' name='L52'></a>  52 <em class='sharp'># define</em> <a href='../R/793.html' title='Multiple referred from 2 places.'>CHECK_GLIBC_IFUNC_PREFERRED_OFF</a>(<a href='../D/30173.html' title='Multiple defined in 17 places.'>f</a>, <a href='../D/29165.html' title='Multiple defined in 3 places.'>cpu_features</a>, <a href='../D/33817.html' title='Multiple defined in 21 places.'>name</a>, <a href='../D/32598.html' title='Multiple defined in 10 places.'>len</a>)    \
+<a id='L53' name='L53'></a>  53   <strong class='reserved'>_Static_assert</strong> (<strong class='reserved'>sizeof</strong> (#<a href='../D/33817.html' title='Multiple defined in 21 places.'>name</a>) - 1 == <a href='../D/32598.html' title='Multiple defined in 10 places.'>len</a>, #<a href='../D/33817.html' title='Multiple defined in 21 places.'>name</a> " != " #<a href='../D/32598.html' title='Multiple defined in 10 places.'>len</a>);    \
+<a id='L54' name='L54'></a>  54   <strong class='reserved'>if</strong> (!<a href='../D/1930.html' title='Multiple defined in 3 places.'>DEFAULT_MEMCMP</a> (<a href='../D/30173.html' title='Multiple defined in 17 places.'>f</a>, #<a href='../D/33817.html' title='Multiple defined in 21 places.'>name</a>, <a href='../D/32598.html' title='Multiple defined in 10 places.'>len</a>))                  \
+<a id='L55' name='L55'></a>  55     <em class='brace'>{</em>                                   \
+<a id='L56' name='L56'></a>  56       <a href='../D/29165.html' title='Multiple defined in 3 places.'>cpu_features</a>-&gt;<a href='../Y/22697.html' title='Multiple used in 25 places.'>preferred</a>[<a href='../S/7230.html#L807' title='Defined at 807 in sysdeps/x86/include/cpu-features.h.'>index_arch_</a>##<a href='../D/33817.html' title='Multiple defined in 21 places.'>name</a>]            \
+<a id='L57' name='L57'></a>  57     &amp;= ~<a href='../S/7230.html#L806' title='Defined at 806 in sysdeps/x86/include/cpu-features.h.'>bit_arch_</a>##<a href='../D/33817.html' title='Multiple defined in 21 places.'>name</a>;                        \
+<a id='L58' name='L58'></a>  58       <strong class='reserved'>break</strong>;                                \
+<a id='L59' name='L59'></a>  59     <em class='brace'>}</em>
+<a id='L60' name='L60'></a>  60 
+<a id='L61' name='L61'></a>  61 <em class='comment'>/* Enable/disable a preferred feature NAME.  */</em>
+<a id='L62' name='L62'></a>  62 <em class='sharp'># define</em> <a href='../R/791.html' title='Multiple referred from 7 places.'>CHECK_GLIBC_IFUNC_PREFERRED_BOTH</a>(<a href='../D/30173.html' title='Multiple defined in 17 places.'>f</a>, <a href='../D/29165.html' title='Multiple defined in 3 places.'>cpu_features</a>, <a href='../D/33817.html' title='Multiple defined in 21 places.'>name</a>,    \
+<a id='L63' name='L63'></a>  63                       <a href='../Y/12835.html' title='Multiple used in 26 places.'>disable</a>, <a href='../D/32598.html' title='Multiple defined in 10 places.'>len</a>)         \
+<a id='L64' name='L64'></a>  64   <strong class='reserved'>_Static_assert</strong> (<strong class='reserved'>sizeof</strong> (#<a href='../D/33817.html' title='Multiple defined in 21 places.'>name</a>) - 1 == <a href='../D/32598.html' title='Multiple defined in 10 places.'>len</a>, #<a href='../D/33817.html' title='Multiple defined in 21 places.'>name</a> " != " #<a href='../D/32598.html' title='Multiple defined in 10 places.'>len</a>);    \
+<a id='L65' name='L65'></a>  65   <strong class='reserved'>if</strong> (!<a href='../D/1930.html' title='Multiple defined in 3 places.'>DEFAULT_MEMCMP</a> (<a href='../D/30173.html' title='Multiple defined in 17 places.'>f</a>, #<a href='../D/33817.html' title='Multiple defined in 21 places.'>name</a>, <a href='../D/32598.html' title='Multiple defined in 10 places.'>len</a>))                  \
+<a id='L66' name='L66'></a>  66     <em class='brace'>{</em>                                   \
+<a id='L67' name='L67'></a>  67       <strong class='reserved'>if</strong> (<a href='../Y/12835.html' title='Multiple used in 26 places.'>disable</a>)                          \
+<a id='L68' name='L68'></a>  68     <a href='../D/29165.html' title='Multiple defined in 3 places.'>cpu_features</a>-&gt;<a href='../Y/22697.html' title='Multiple used in 25 places.'>preferred</a>[<a href='../S/7230.html#L807' title='Defined at 807 in sysdeps/x86/include/cpu-features.h.'>index_arch_</a>##<a href='../D/33817.html' title='Multiple defined in 21 places.'>name</a>] &amp;= ~<a href='../S/7230.html#L806' title='Defined at 806 in sysdeps/x86/include/cpu-features.h.'>bit_arch_</a>##<a href='../D/33817.html' title='Multiple defined in 21 places.'>name</a>; \
+<a id='L69' name='L69'></a>  69       <strong class='reserved'>else</strong>                              \
+<a id='L70' name='L70'></a>  70     <a href='../D/29165.html' title='Multiple defined in 3 places.'>cpu_features</a>-&gt;<a href='../Y/22697.html' title='Multiple used in 25 places.'>preferred</a>[<a href='../S/7230.html#L807' title='Defined at 807 in sysdeps/x86/include/cpu-features.h.'>index_arch_</a>##<a href='../D/33817.html' title='Multiple defined in 21 places.'>name</a>] |= <a href='../S/7230.html#L806' title='Defined at 806 in sysdeps/x86/include/cpu-features.h.'>bit_arch_</a>##<a href='../D/33817.html' title='Multiple defined in 21 places.'>name</a>;  \
+<a id='L71' name='L71'></a>  71       <strong class='reserved'>break</strong>;                                \
+<a id='L72' name='L72'></a>  72     <em class='brace'>}</em>
+<a id='L73' name='L73'></a>  73 
+<a id='L74' name='L74'></a>  74 <em class='comment'>/* Enable/disable a preferred feature NAME.  Enable a preferred feature</em>
+<a id='L75' name='L75'></a>  75 <em class='comment'>   only if the feature NEED is usable.  */</em>
+<a id='L76' name='L76'></a>  76 <em class='sharp'># define</em> <a href='../R/792.html' title='Multiple referred from 6 places.'>CHECK_GLIBC_IFUNC_PREFERRED_NEED_BOTH</a>(<a href='../D/30173.html' title='Multiple defined in 17 places.'>f</a>, <a href='../D/29165.html' title='Multiple defined in 3 places.'>cpu_features</a>, <a href='../D/33817.html' title='Multiple defined in 21 places.'>name</a>,   \
+<a id='L77' name='L77'></a>  77                            <a href='../Y/20341.html' title='Multiple used in 17 places.'>need</a>, <a href='../Y/12835.html' title='Multiple used in 26 places.'>disable</a>, <a href='../D/32598.html' title='Multiple defined in 10 places.'>len</a>)  \
+<a id='L78' name='L78'></a>  78   <strong class='reserved'>_Static_assert</strong> (<strong class='reserved'>sizeof</strong> (#<a href='../D/33817.html' title='Multiple defined in 21 places.'>name</a>) - 1 == <a href='../D/32598.html' title='Multiple defined in 10 places.'>len</a>, #<a href='../D/33817.html' title='Multiple defined in 21 places.'>name</a> " != " #<a href='../D/32598.html' title='Multiple defined in 10 places.'>len</a>);    \
+<a id='L79' name='L79'></a>  79   <strong class='reserved'>if</strong> (!<a href='../D/1930.html' title='Multiple defined in 3 places.'>DEFAULT_MEMCMP</a> (<a href='../D/30173.html' title='Multiple defined in 17 places.'>f</a>, #<a href='../D/33817.html' title='Multiple defined in 21 places.'>name</a>, <a href='../D/32598.html' title='Multiple defined in 10 places.'>len</a>))                  \
+<a id='L80' name='L80'></a>  80     <em class='brace'>{</em>                                   \
+<a id='L81' name='L81'></a>  81       <strong class='reserved'>if</strong> (<a href='../Y/12835.html' title='Multiple used in 26 places.'>disable</a>)                          \
+<a id='L82' name='L82'></a>  82     <a href='../D/29165.html' title='Multiple defined in 3 places.'>cpu_features</a>-&gt;<a href='../Y/22697.html' title='Multiple used in 25 places.'>preferred</a>[<a href='../S/7230.html#L807' title='Defined at 807 in sysdeps/x86/include/cpu-features.h.'>index_arch_</a>##<a href='../D/33817.html' title='Multiple defined in 21 places.'>name</a>] &amp;= ~<a href='../S/7230.html#L806' title='Defined at 806 in sysdeps/x86/include/cpu-features.h.'>bit_arch_</a>##<a href='../D/33817.html' title='Multiple defined in 21 places.'>name</a>; \
+<a id='L83' name='L83'></a>  83       <strong class='reserved'>else</strong> <strong class='reserved'>if</strong> (<a href='../S/7230.html#L64' title='Defined at 64 in sysdeps/x86/include/cpu-features.h.'>CPU_FEATURE_USABLE_P</a> (<a href='../D/29165.html' title='Multiple defined in 3 places.'>cpu_features</a>, <a href='../Y/20341.html' title='Multiple used in 17 places.'>need</a>))       \
+<a id='L84' name='L84'></a>  84     <a href='../D/29165.html' title='Multiple defined in 3 places.'>cpu_features</a>-&gt;<a href='../Y/22697.html' title='Multiple used in 25 places.'>preferred</a>[<a href='../S/7230.html#L807' title='Defined at 807 in sysdeps/x86/include/cpu-features.h.'>index_arch_</a>##<a href='../D/33817.html' title='Multiple defined in 21 places.'>name</a>] |= <a href='../S/7230.html#L806' title='Defined at 806 in sysdeps/x86/include/cpu-features.h.'>bit_arch_</a>##<a href='../D/33817.html' title='Multiple defined in 21 places.'>name</a>;  \
+<a id='L85' name='L85'></a>  85       <strong class='reserved'>break</strong>;                                \
+<a id='L86' name='L86'></a>  86     <em class='brace'>}</em>
+<a id='L87' name='L87'></a>  87 
+<a id='L88' name='L88'></a>  88 <a href='../D/27947.html' title='Multiple defined in 7 places.'>attribute_hidden</a>
+<a id='L89' name='L89'></a>  89 <strong class='reserved'>void</strong>
+<a id='L90' name='L90'></a>  90 <a href='../R/8958.html' title='Multiple referred from 42 places.'>TUNABLE_CALLBACK</a> (<a href='../Y/25078.html' title='Multiple used in 3 places.'>set_hwcaps</a>) (<a href='../S/2896.html#L42' title='Defined at 42 in elf/dl-tunables.h.'>tunable_val_t</a> *<a href='../Y/28586.html' title='Multiple used in 74 places.'>valp</a>)
+<a id='L91' name='L91'></a>  91 <em class='brace'>{</em>
+<a id='L92' name='L92'></a>  92   <em class='comment'>/* The current IFUNC selection is based on microbenchmarks in glibc.</em>
+<a id='L93' name='L93'></a>  93 <em class='comment'>     It should give the best performance for most workloads.  But other</em>
+<a id='L94' name='L94'></a>  94 <em class='comment'>     choices may have better performance for a particular workload or on</em>
+<a id='L95' name='L95'></a>  95 <em class='comment'>     the hardware which wasn't available when the selection was made.</em>
+<a id='L96' name='L96'></a>  96 <em class='comment'>     The environment variable:</em>
+<a id='L97' name='L97'></a>  97 <em class='comment'></em>
+<a id='L98' name='L98'></a>  98 <em class='comment'>     GLIBC_TUNABLES=glibc.cpu.hwcaps=-xxx,yyy,-zzz,....</em>
+<a id='L99' name='L99'></a>  99 <em class='comment'></em>
+<a id='L100' name='L100'></a> 100 <em class='comment'>     can be used to enable CPU/ARCH feature yyy, disable CPU/ARCH feature</em>
+<a id='L101' name='L101'></a> 101 <em class='comment'>     yyy and zzz, where the feature name is case-sensitive and has to</em>
+<a id='L102' name='L102'></a> 102 <em class='comment'>     match the ones in cpu-features.h.  It can be used by glibc developers</em>
+<a id='L103' name='L103'></a> 103 <em class='comment'>     to tune for a new processor or override the IFUNC selection to</em>
+<a id='L104' name='L104'></a> 104 <em class='comment'>     improve performance for a particular workload.</em>
+<a id='L105' name='L105'></a> 105 <em class='comment'></em>
+<a id='L106' name='L106'></a> 106 <em class='comment'>     NOTE: the IFUNC selection may change over time.  Please check all</em>
+<a id='L107' name='L107'></a> 107 <em class='comment'>     multiarch implementations when experimenting.  */</em>
+<a id='L108' name='L108'></a> 108 
+<a id='L109' name='L109'></a> 109   <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../S/2562.html#L29' title='Defined at 29 in elf/testobj2.c.'>p</a> = <a href='../Y/28586.html' title='Multiple used in 74 places.'>valp</a>-&gt;<a href='../Y/26367.html' title='Multiple used in 15 places.'>strval</a>;
+<a id='L110' name='L110'></a> 110   <strong class='reserved'>struct</strong> <a href='../D/29165.html' title='Multiple defined in 3 places.'>cpu_features</a> *<a href='../D/29165.html' title='Multiple defined in 3 places.'>cpu_features</a> = &amp;<a href='../D/5109.html' title='Multiple defined in 6 places.'>GLRO</a>(<a href='../Y/12986.html' title='Multiple used in 5 places.'>dl_x86_cpu_features</a>);
+<a id='L111' name='L111'></a> 111   <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../D/32598.html' title='Multiple defined in 10 places.'>len</a>;
+<a id='L112' name='L112'></a> 112 
+<a id='L113' name='L113'></a> 113   <strong class='reserved'>do</strong>
+<a id='L114' name='L114'></a> 114     <em class='brace'>{</em>
+<a id='L115' name='L115'></a> 115       <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../D/28364.html' title='Multiple defined in 2 places.'>c</a>, *<a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>;
+<a id='L116' name='L116'></a> 116       <a href='../S/3749.html#L624' title='Defined at 624 in timezone/private.h.'>bool</a> <a href='../Y/12835.html' title='Multiple used in 26 places.'>disable</a>;
+<a id='L117' name='L117'></a> 117       <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/20905.html' title='Multiple used in 68 places.'>nl</a>;
+<a id='L118' name='L118'></a> 118 
+<a id='L119' name='L119'></a> 119       <strong class='reserved'>for</strong> (<a href='../D/28364.html' title='Multiple defined in 2 places.'>c</a> = <a href='../S/2562.html#L29' title='Defined at 29 in elf/testobj2.c.'>p</a>; *<a href='../D/28364.html' title='Multiple defined in 2 places.'>c</a> != ','; <a href='../D/28364.html' title='Multiple defined in 2 places.'>c</a>++)
+<a id='L120' name='L120'></a> 120     <strong class='reserved'>if</strong> (*<a href='../D/28364.html' title='Multiple defined in 2 places.'>c</a> == '\0')
+<a id='L121' name='L121'></a> 121       <strong class='reserved'>break</strong>;
+<a id='L122' name='L122'></a> 122 
+<a id='L123' name='L123'></a> 123       <a href='../D/32598.html' title='Multiple defined in 10 places.'>len</a> = <a href='../D/28364.html' title='Multiple defined in 2 places.'>c</a> - <a href='../S/2562.html#L29' title='Defined at 29 in elf/testobj2.c.'>p</a>;
+<a id='L124' name='L124'></a> 124       <a href='../Y/12835.html' title='Multiple used in 26 places.'>disable</a> = *<a href='../S/2562.html#L29' title='Defined at 29 in elf/testobj2.c.'>p</a> == '-';
+<a id='L125' name='L125'></a> 125       <strong class='reserved'>if</strong> (<a href='../Y/12835.html' title='Multiple used in 26 places.'>disable</a>)
+<a id='L126' name='L126'></a> 126     <em class='brace'>{</em>
+<a id='L127' name='L127'></a> 127       <a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a> = <a href='../S/2562.html#L29' title='Defined at 29 in elf/testobj2.c.'>p</a> + 1;
+<a id='L128' name='L128'></a> 128       <a href='../Y/20905.html' title='Multiple used in 68 places.'>nl</a> = <a href='../D/32598.html' title='Multiple defined in 10 places.'>len</a> - 1;
+<a id='L129' name='L129'></a> 129     <em class='brace'>}</em>
+<a id='L130' name='L130'></a> 130       <strong class='reserved'>else</strong>
+<a id='L131' name='L131'></a> 131     <em class='brace'>{</em>
+<a id='L132' name='L132'></a> 132       <a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a> = <a href='../S/2562.html#L29' title='Defined at 29 in elf/testobj2.c.'>p</a>;
+<a id='L133' name='L133'></a> 133       <a href='../Y/20905.html' title='Multiple used in 68 places.'>nl</a> = <a href='../D/32598.html' title='Multiple defined in 10 places.'>len</a>;
+<a id='L134' name='L134'></a> 134     <em class='brace'>}</em>
+<a id='L135' name='L135'></a> 135       <strong class='reserved'>switch</strong> (<a href='../Y/20905.html' title='Multiple used in 68 places.'>nl</a>)
+<a id='L136' name='L136'></a> 136     <em class='brace'>{</em>
+<a id='L137' name='L137'></a> 137     <strong class='reserved'>default</strong>:
+<a id='L138' name='L138'></a> 138       <strong class='reserved'>break</strong>;
+<a id='L139' name='L139'></a> 139     <strong class='reserved'>case</strong> 3:
+<a id='L140' name='L140'></a> 140       <strong class='reserved'>if</strong> (<a href='../Y/12835.html' title='Multiple used in 26 places.'>disable</a>)
+<a id='L141' name='L141'></a> 141         <em class='brace'>{</em>
+<a id='L142' name='L142'></a> 142           <a href='../S/7133.html#L42' title='Defined at 42 in sysdeps/x86/cpu-tunables.c.'>CHECK_GLIBC_IFUNC_CPU_OFF</a> (<a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>, <a href='../D/29165.html' title='Multiple defined in 3 places.'>cpu_features</a>, <a href='../Y/80.html' title='Multiple used in 51 places.'>AVX</a>, 3);
+<a id='L143' name='L143'></a> 143           <a href='../S/7133.html#L42' title='Defined at 42 in sysdeps/x86/cpu-tunables.c.'>CHECK_GLIBC_IFUNC_CPU_OFF</a> (<a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>, <a href='../D/29165.html' title='Multiple defined in 3 places.'>cpu_features</a>, <a href='../Y/232.html' title='Multiple used in 8 places.'>CX8</a>, 3);
+<a id='L144' name='L144'></a> 144           <a href='../S/7133.html#L42' title='Defined at 42 in sysdeps/x86/cpu-tunables.c.'>CHECK_GLIBC_IFUNC_CPU_OFF</a> (<a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>, <a href='../D/29165.html' title='Multiple defined in 3 places.'>cpu_features</a>, <a href='../Y/519.html' title='Multiple used in 17 places.'>FMA</a>, 3);
+<a id='L145' name='L145'></a> 145           <a href='../S/7133.html#L42' title='Defined at 42 in sysdeps/x86/cpu-tunables.c.'>CHECK_GLIBC_IFUNC_CPU_OFF</a> (<a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>, <a href='../D/29165.html' title='Multiple defined in 3 places.'>cpu_features</a>, <a href='../Y/862.html' title='Multiple used in 6 places.'>HTT</a>, 3);
+<a id='L146' name='L146'></a> 146           <a href='../S/7133.html#L42' title='Defined at 42 in sysdeps/x86/cpu-tunables.c.'>CHECK_GLIBC_IFUNC_CPU_OFF</a> (<a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>, <a href='../D/29165.html' title='Multiple defined in 3 places.'>cpu_features</a>, <a href='../Y/882.html' title='Multiple used in 11 places.'>IBT</a>, 3);
+<a id='L147' name='L147'></a> 147           <a href='../S/7133.html#L42' title='Defined at 42 in sysdeps/x86/cpu-tunables.c.'>CHECK_GLIBC_IFUNC_CPU_OFF</a> (<a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>, <a href='../D/29165.html' title='Multiple defined in 3 places.'>cpu_features</a>, <a href='../Y/1680.html' title='Multiple used in 67 places.'>RTM</a>, 3);
+<a id='L148' name='L148'></a> 148         <em class='brace'>}</em>
+<a id='L149' name='L149'></a> 149       <strong class='reserved'>break</strong>;
+<a id='L150' name='L150'></a> 150     <strong class='reserved'>case</strong> 4:
+<a id='L151' name='L151'></a> 151       <strong class='reserved'>if</strong> (<a href='../Y/12835.html' title='Multiple used in 26 places.'>disable</a>)
+<a id='L152' name='L152'></a> 152         <em class='brace'>{</em>
+<a id='L153' name='L153'></a> 153           <a href='../S/7133.html#L42' title='Defined at 42 in sysdeps/x86/cpu-tunables.c.'>CHECK_GLIBC_IFUNC_CPU_OFF</a> (<a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>, <a href='../D/29165.html' title='Multiple defined in 3 places.'>cpu_features</a>, <a href='../Y/81.html' title='Multiple used in 95 places.'>AVX2</a>, 4);
+<a id='L154' name='L154'></a> 154           <a href='../S/7133.html#L42' title='Defined at 42 in sysdeps/x86/cpu-tunables.c.'>CHECK_GLIBC_IFUNC_CPU_OFF</a> (<a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>, <a href='../D/29165.html' title='Multiple defined in 3 places.'>cpu_features</a>, <a href='../Y/134.html' title='Multiple used in 7 places.'>BMI1</a>, 4);
+<a id='L155' name='L155'></a> 155           <a href='../S/7133.html#L42' title='Defined at 42 in sysdeps/x86/cpu-tunables.c.'>CHECK_GLIBC_IFUNC_CPU_OFF</a> (<a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>, <a href='../D/29165.html' title='Multiple defined in 3 places.'>cpu_features</a>, <a href='../Y/135.html' title='Multiple used in 69 places.'>BMI2</a>, 4);
+<a id='L156' name='L156'></a> 156           <a href='../S/7133.html#L42' title='Defined at 42 in sysdeps/x86/cpu-tunables.c.'>CHECK_GLIBC_IFUNC_CPU_OFF</a> (<a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>, <a href='../D/29165.html' title='Multiple defined in 3 places.'>cpu_features</a>, <a href='../Y/206.html' title='Multiple used in 8 places.'>CMOV</a>, 4);
+<a id='L157' name='L157'></a> 157           <a href='../S/7133.html#L42' title='Defined at 42 in sysdeps/x86/cpu-tunables.c.'>CHECK_GLIBC_IFUNC_CPU_OFF</a> (<a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>, <a href='../D/29165.html' title='Multiple defined in 3 places.'>cpu_features</a>, <a href='../Y/392.html' title='Multiple used in 15 places.'>ERMS</a>, 4);
+<a id='L158' name='L158'></a> 158           <a href='../S/7133.html#L42' title='Defined at 42 in sysdeps/x86/cpu-tunables.c.'>CHECK_GLIBC_IFUNC_CPU_OFF</a> (<a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>, <a href='../D/29165.html' title='Multiple defined in 3 places.'>cpu_features</a>, <a href='../Y/520.html' title='Multiple used in 11 places.'>FMA4</a>, 4);
+<a id='L159' name='L159'></a> 159           <a href='../S/7133.html#L42' title='Defined at 42 in sysdeps/x86/cpu-tunables.c.'>CHECK_GLIBC_IFUNC_CPU_OFF</a> (<a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>, <a href='../D/29165.html' title='Multiple defined in 3 places.'>cpu_features</a>, <a href='../Y/1809.html' title='Multiple used in 54 places.'>SSE2</a>, 4);
+<a id='L160' name='L160'></a> 160           <a href='../S/7133.html#L52' title='Defined at 52 in sysdeps/x86/cpu-tunables.c.'>CHECK_GLIBC_IFUNC_PREFERRED_OFF</a> (<a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>, <a href='../D/29165.html' title='Multiple defined in 3 places.'>cpu_features</a>, <a href='../Y/876.html' title='Multiple used in 4 places.'>I586</a>, 4);
+<a id='L161' name='L161'></a> 161           <a href='../S/7133.html#L52' title='Defined at 52 in sysdeps/x86/cpu-tunables.c.'>CHECK_GLIBC_IFUNC_PREFERRED_OFF</a> (<a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>, <a href='../D/29165.html' title='Multiple defined in 3 places.'>cpu_features</a>, <a href='../Y/878.html' title='Multiple used in 6 places.'>I686</a>, 4);
+<a id='L162' name='L162'></a> 162         <em class='brace'>}</em>
+<a id='L163' name='L163'></a> 163       <strong class='reserved'>break</strong>;
+<a id='L164' name='L164'></a> 164     <strong class='reserved'>case</strong> 5:
+<a id='L165' name='L165'></a> 165       <strong class='reserved'>if</strong> (<a href='../Y/12835.html' title='Multiple used in 26 places.'>disable</a>)
+<a id='L166' name='L166'></a> 166         <em class='brace'>{</em>
+<a id='L167' name='L167'></a> 167           <a href='../S/7133.html#L42' title='Defined at 42 in sysdeps/x86/cpu-tunables.c.'>CHECK_GLIBC_IFUNC_CPU_OFF</a> (<a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>, <a href='../D/29165.html' title='Multiple defined in 3 places.'>cpu_features</a>, <a href='../Y/1100.html' title='Multiple used in 8 places.'>LZCNT</a>, 5);
+<a id='L168' name='L168'></a> 168           <a href='../S/7133.html#L42' title='Defined at 42 in sysdeps/x86/cpu-tunables.c.'>CHECK_GLIBC_IFUNC_CPU_OFF</a> (<a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>, <a href='../D/29165.html' title='Multiple defined in 3 places.'>cpu_features</a>, <a href='../Y/1247.html' title='Multiple used in 15 places.'>MOVBE</a>, 5);
+<a id='L169' name='L169'></a> 169           <a href='../S/7133.html#L42' title='Defined at 42 in sysdeps/x86/cpu-tunables.c.'>CHECK_GLIBC_IFUNC_CPU_OFF</a> (<a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>, <a href='../D/29165.html' title='Multiple defined in 3 places.'>cpu_features</a>, <a href='../Y/1765.html' title='Multiple used in 11 places.'>SHSTK</a>, 5);
+<a id='L170' name='L170'></a> 170           <a href='../S/7133.html#L42' title='Defined at 42 in sysdeps/x86/cpu-tunables.c.'>CHECK_GLIBC_IFUNC_CPU_OFF</a> (<a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>, <a href='../D/29165.html' title='Multiple defined in 3 places.'>cpu_features</a>, <a href='../Y/1815.html' title='Multiple used in 74 places.'>SSSE3</a>, 5);
+<a id='L171' name='L171'></a> 171           <a href='../S/7133.html#L42' title='Defined at 42 in sysdeps/x86/cpu-tunables.c.'>CHECK_GLIBC_IFUNC_CPU_OFF</a> (<a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>, <a href='../D/29165.html' title='Multiple defined in 3 places.'>cpu_features</a>, <a href='../Y/2215.html' title='Multiple used in 9 places.'>XSAVE</a>, 5);
+<a id='L172' name='L172'></a> 172         <em class='brace'>}</em>
+<a id='L173' name='L173'></a> 173       <strong class='reserved'>break</strong>;
+<a id='L174' name='L174'></a> 174     <strong class='reserved'>case</strong> 6:
+<a id='L175' name='L175'></a> 175       <strong class='reserved'>if</strong> (<a href='../Y/12835.html' title='Multiple used in 26 places.'>disable</a>)
+<a id='L176' name='L176'></a> 176         <em class='brace'>{</em>
+<a id='L177' name='L177'></a> 177           <a href='../S/7133.html#L42' title='Defined at 42 in sysdeps/x86/cpu-tunables.c.'>CHECK_GLIBC_IFUNC_CPU_OFF</a> (<a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>, <a href='../D/29165.html' title='Multiple defined in 3 places.'>cpu_features</a>, <a href='../Y/1430.html' title='Multiple used in 8 places.'>POPCNT</a>, 6);
+<a id='L178' name='L178'></a> 178           <a href='../S/7133.html#L42' title='Defined at 42 in sysdeps/x86/cpu-tunables.c.'>CHECK_GLIBC_IFUNC_CPU_OFF</a> (<a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>, <a href='../D/29165.html' title='Multiple defined in 3 places.'>cpu_features</a>, <a href='../Y/1813.html' title='Multiple used in 15 places.'>SSE4_1</a>, 6);
+<a id='L179' name='L179'></a> 179           <a href='../S/7133.html#L42' title='Defined at 42 in sysdeps/x86/cpu-tunables.c.'>CHECK_GLIBC_IFUNC_CPU_OFF</a> (<a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>, <a href='../D/29165.html' title='Multiple defined in 3 places.'>cpu_features</a>, <a href='../Y/1814.html' title='Multiple used in 34 places.'>SSE4_2</a>, 6);
+<a id='L180' name='L180'></a> 180           <strong class='reserved'>if</strong> (!<a href='../D/1930.html' title='Multiple defined in 3 places.'>DEFAULT_MEMCMP</a> (<a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>, "XSAVEC", 6))
+<a id='L181' name='L181'></a> 181         <em class='brace'>{</em>
+<a id='L182' name='L182'></a> 182           <em class='comment'>/* Update xsave_state_size to XSAVE state size.  */</em>
+<a id='L183' name='L183'></a> 183           <a href='../D/29165.html' title='Multiple defined in 3 places.'>cpu_features</a>-&gt;<a href='../Y/29498.html' title='Multiple used in 7 places.'>xsave_state_size</a>
+<a id='L184' name='L184'></a> 184             = <a href='../D/29165.html' title='Multiple defined in 3 places.'>cpu_features</a>-&gt;<a href='../Y/29497.html' title='Multiple used in 7 places.'>xsave_state_full_size</a>;
+<a id='L185' name='L185'></a> 185           <a href='../S/7230.html#L47' title='Defined at 47 in sysdeps/x86/include/cpu-features.h.'>CPU_FEATURE_UNSET</a> (<a href='../D/29165.html' title='Multiple defined in 3 places.'>cpu_features</a>, <a href='../Y/2216.html' title='Multiple used in 11 places.'>XSAVEC</a>);
+<a id='L186' name='L186'></a> 186         <em class='brace'>}</em>
+<a id='L187' name='L187'></a> 187         <em class='brace'>}</em>
+<a id='L188' name='L188'></a> 188       <strong class='reserved'>break</strong>;
+<a id='L189' name='L189'></a> 189     <strong class='reserved'>case</strong> 7:
+<a id='L190' name='L190'></a> 190       <strong class='reserved'>if</strong> (<a href='../Y/12835.html' title='Multiple used in 26 places.'>disable</a>)
+<a id='L191' name='L191'></a> 191         <em class='brace'>{</em>
+<a id='L192' name='L192'></a> 192           <a href='../S/7133.html#L42' title='Defined at 42 in sysdeps/x86/cpu-tunables.c.'>CHECK_GLIBC_IFUNC_CPU_OFF</a> (<a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>, <a href='../D/29165.html' title='Multiple defined in 3 places.'>cpu_features</a>, <a href='../Y/86.html' title='Multiple used in 28 places.'>AVX512F</a>, 7);
+<a id='L193' name='L193'></a> 193           <a href='../S/7133.html#L42' title='Defined at 42 in sysdeps/x86/cpu-tunables.c.'>CHECK_GLIBC_IFUNC_CPU_OFF</a> (<a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>, <a href='../D/29165.html' title='Multiple defined in 3 places.'>cpu_features</a>, <a href='../Y/1362.html' title='Multiple used in 9 places.'>OSXSAVE</a>, 7);
+<a id='L194' name='L194'></a> 194         <em class='brace'>}</em>
+<a id='L195' name='L195'></a> 195       <strong class='reserved'>break</strong>;
+<a id='L196' name='L196'></a> 196     <strong class='reserved'>case</strong> 8:
+<a id='L197' name='L197'></a> 197       <strong class='reserved'>if</strong> (<a href='../Y/12835.html' title='Multiple used in 26 places.'>disable</a>)
+<a id='L198' name='L198'></a> 198         <em class='brace'>{</em>
+<a id='L199' name='L199'></a> 199           <a href='../S/7133.html#L42' title='Defined at 42 in sysdeps/x86/cpu-tunables.c.'>CHECK_GLIBC_IFUNC_CPU_OFF</a> (<a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>, <a href='../D/29165.html' title='Multiple defined in 3 places.'>cpu_features</a>, <a href='../Y/83.html' title='Multiple used in 9 places.'>AVX512CD</a>, 8);
+<a id='L200' name='L200'></a> 200           <a href='../S/7133.html#L42' title='Defined at 42 in sysdeps/x86/cpu-tunables.c.'>CHECK_GLIBC_IFUNC_CPU_OFF</a> (<a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>, <a href='../D/29165.html' title='Multiple defined in 3 places.'>cpu_features</a>, <a href='../Y/82.html' title='Multiple used in 61 places.'>AVX512BW</a>, 8);
+<a id='L201' name='L201'></a> 201           <a href='../S/7133.html#L42' title='Defined at 42 in sysdeps/x86/cpu-tunables.c.'>CHECK_GLIBC_IFUNC_CPU_OFF</a> (<a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>, <a href='../D/29165.html' title='Multiple defined in 3 places.'>cpu_features</a>, <a href='../Y/84.html' title='Multiple used in 11 places.'>AVX512DQ</a>, 8);
+<a id='L202' name='L202'></a> 202           <a href='../S/7133.html#L42' title='Defined at 42 in sysdeps/x86/cpu-tunables.c.'>CHECK_GLIBC_IFUNC_CPU_OFF</a> (<a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>, <a href='../D/29165.html' title='Multiple defined in 3 places.'>cpu_features</a>, <a href='../Y/85.html' title='Multiple used in 9 places.'>AVX512ER</a>, 8);
+<a id='L203' name='L203'></a> 203           <a href='../S/7133.html#L42' title='Defined at 42 in sysdeps/x86/cpu-tunables.c.'>CHECK_GLIBC_IFUNC_CPU_OFF</a> (<a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>, <a href='../D/29165.html' title='Multiple defined in 3 places.'>cpu_features</a>, <a href='../Y/87.html' title='Multiple used in 8 places.'>AVX512PF</a>, 8);
+<a id='L204' name='L204'></a> 204           <a href='../S/7133.html#L42' title='Defined at 42 in sysdeps/x86/cpu-tunables.c.'>CHECK_GLIBC_IFUNC_CPU_OFF</a> (<a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>, <a href='../D/29165.html' title='Multiple defined in 3 places.'>cpu_features</a>, <a href='../Y/88.html' title='Multiple used in 88 places.'>AVX512VL</a>, 8);
+<a id='L205' name='L205'></a> 205         <em class='brace'>}</em>
+<a id='L206' name='L206'></a> 206       <a href='../S/7133.html#L62' title='Defined at 62 in sysdeps/x86/cpu-tunables.c.'>CHECK_GLIBC_IFUNC_PREFERRED_BOTH</a> (<a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>, <a href='../D/29165.html' title='Multiple defined in 3 places.'>cpu_features</a>, <a href='../Y/1875.html' title='Multiple used in 3 places.'>Slow_BSF</a>,
+<a id='L207' name='L207'></a> 207                         <a href='../Y/12835.html' title='Multiple used in 26 places.'>disable</a>, 8);
+<a id='L208' name='L208'></a> 208       <strong class='reserved'>break</strong>;
+<a id='L209' name='L209'></a> 209     <strong class='reserved'>case</strong> 11:
+<a id='L210' name='L210'></a> 210         <em class='brace'>{</em>
+<a id='L211' name='L211'></a> 211           <a href='../S/7133.html#L62' title='Defined at 62 in sysdeps/x86/cpu-tunables.c.'>CHECK_GLIBC_IFUNC_PREFERRED_BOTH</a> (<a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>, <a href='../D/29165.html' title='Multiple defined in 3 places.'>cpu_features</a>,
+<a id='L212' name='L212'></a> 212                         <a href='../Y/1489.html' title='Multiple used in 3 places.'>Prefer_ERMS</a>,
+<a id='L213' name='L213'></a> 213                         <a href='../Y/12835.html' title='Multiple used in 26 places.'>disable</a>, 11);
+<a id='L214' name='L214'></a> 214           <a href='../S/7133.html#L62' title='Defined at 62 in sysdeps/x86/cpu-tunables.c.'>CHECK_GLIBC_IFUNC_PREFERRED_BOTH</a> (<a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>, <a href='../D/29165.html' title='Multiple defined in 3 places.'>cpu_features</a>,
+<a id='L215' name='L215'></a> 215                         <a href='../Y/1490.html' title='Multiple used in 2 places.'>Prefer_FSRM</a>,
+<a id='L216' name='L216'></a> 216                         <a href='../Y/12835.html' title='Multiple used in 26 places.'>disable</a>, 11);
+<a id='L217' name='L217'></a> 217           <a href='../S/7133.html#L76' title='Defined at 76 in sysdeps/x86/cpu-tunables.c.'>CHECK_GLIBC_IFUNC_PREFERRED_NEED_BOTH</a> (<a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>, <a href='../D/29165.html' title='Multiple defined in 3 places.'>cpu_features</a>,
+<a id='L218' name='L218'></a> 218                              <a href='../Y/1876.html' title='Multiple used in 3 places.'>Slow_SSE4_2</a>,
+<a id='L219' name='L219'></a> 219                              <a href='../Y/1814.html' title='Multiple used in 34 places.'>SSE4_2</a>,
+<a id='L220' name='L220'></a> 220                              <a href='../Y/12835.html' title='Multiple used in 26 places.'>disable</a>, 11);
+<a id='L221' name='L221'></a> 221         <em class='brace'>}</em>
+<a id='L222' name='L222'></a> 222       <strong class='reserved'>break</strong>;
+<a id='L223' name='L223'></a> 223     <strong class='reserved'>case</strong> 15:
+<a id='L224' name='L224'></a> 224         <em class='brace'>{</em>
+<a id='L225' name='L225'></a> 225           <a href='../S/7133.html#L62' title='Defined at 62 in sysdeps/x86/cpu-tunables.c.'>CHECK_GLIBC_IFUNC_PREFERRED_BOTH</a> (<a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>, <a href='../D/29165.html' title='Multiple defined in 3 places.'>cpu_features</a>,
+<a id='L226' name='L226'></a> 226                         <a href='../Y/628.html' title='Multiple used in 4 places.'>Fast_Rep_String</a>,
+<a id='L227' name='L227'></a> 227                         <a href='../Y/12835.html' title='Multiple used in 26 places.'>disable</a>, 15);
+<a id='L228' name='L228'></a> 228         <em class='brace'>}</em>
+<a id='L229' name='L229'></a> 229       <strong class='reserved'>break</strong>;
+<a id='L230' name='L230'></a> 230     <strong class='reserved'>case</strong> 16:
+<a id='L231' name='L231'></a> 231         <em class='brace'>{</em>
+<a id='L232' name='L232'></a> 232           <a href='../S/7133.html#L76' title='Defined at 76 in sysdeps/x86/cpu-tunables.c.'>CHECK_GLIBC_IFUNC_PREFERRED_NEED_BOTH</a>
+<a id='L233' name='L233'></a> 233         (<a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>, <a href='../D/29165.html' title='Multiple defined in 3 places.'>cpu_features</a>, <a href='../Y/1491.html' title='Multiple used in 5 places.'>Prefer_No_AVX512</a>, <a href='../Y/86.html' title='Multiple used in 28 places.'>AVX512F</a>,
+<a id='L234' name='L234'></a> 234          <a href='../Y/12835.html' title='Multiple used in 26 places.'>disable</a>, 16);
+<a id='L235' name='L235'></a> 235         <em class='brace'>}</em>
+<a id='L236' name='L236'></a> 236       <strong class='reserved'>break</strong>;
+<a id='L237' name='L237'></a> 237     <strong class='reserved'>case</strong> 18:
+<a id='L238' name='L238'></a> 238         <em class='brace'>{</em>
+<a id='L239' name='L239'></a> 239           <a href='../S/7133.html#L62' title='Defined at 62 in sysdeps/x86/cpu-tunables.c.'>CHECK_GLIBC_IFUNC_PREFERRED_BOTH</a> (<a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>, <a href='../D/29165.html' title='Multiple defined in 3 places.'>cpu_features</a>,
+<a id='L240' name='L240'></a> 240                         <a href='../Y/627.html' title='Multiple used in 2 places.'>Fast_Copy_Backward</a>,
+<a id='L241' name='L241'></a> 241                         <a href='../Y/12835.html' title='Multiple used in 26 places.'>disable</a>, 18);
+<a id='L242' name='L242'></a> 242         <em class='brace'>}</em>
+<a id='L243' name='L243'></a> 243       <strong class='reserved'>break</strong>;
+<a id='L244' name='L244'></a> 244     <strong class='reserved'>case</strong> 19:
+<a id='L245' name='L245'></a> 245         <em class='brace'>{</em>
+<a id='L246' name='L246'></a> 246           <a href='../S/7133.html#L62' title='Defined at 62 in sysdeps/x86/cpu-tunables.c.'>CHECK_GLIBC_IFUNC_PREFERRED_BOTH</a> (<a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>, <a href='../D/29165.html' title='Multiple defined in 3 places.'>cpu_features</a>,
+<a id='L247' name='L247'></a> 247                         <a href='../Y/630.html' title='Multiple used in 5 places.'>Fast_Unaligned_Load</a>,
+<a id='L248' name='L248'></a> 248                         <a href='../Y/12835.html' title='Multiple used in 26 places.'>disable</a>, 19);
+<a id='L249' name='L249'></a> 249           <a href='../S/7133.html#L62' title='Defined at 62 in sysdeps/x86/cpu-tunables.c.'>CHECK_GLIBC_IFUNC_PREFERRED_BOTH</a> (<a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>, <a href='../D/29165.html' title='Multiple defined in 3 places.'>cpu_features</a>,
+<a id='L250' name='L250'></a> 250                         <a href='../Y/629.html' title='Multiple used in 2 places.'>Fast_Unaligned_Copy</a>,
+<a id='L251' name='L251'></a> 251                         <a href='../Y/12835.html' title='Multiple used in 26 places.'>disable</a>, 19);
+<a id='L252' name='L252'></a> 252         <em class='brace'>}</em>
+<a id='L253' name='L253'></a> 253       <strong class='reserved'>break</strong>;
+<a id='L254' name='L254'></a> 254     <strong class='reserved'>case</strong> 20:
+<a id='L255' name='L255'></a> 255         <em class='brace'>{</em>
+<a id='L256' name='L256'></a> 256           <a href='../S/7133.html#L76' title='Defined at 76 in sysdeps/x86/cpu-tunables.c.'>CHECK_GLIBC_IFUNC_PREFERRED_NEED_BOTH</a>
+<a id='L257' name='L257'></a> 257         (<a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>, <a href='../D/29165.html' title='Multiple defined in 3 places.'>cpu_features</a>, <a href='../Y/1492.html' title='Multiple used in 13 places.'>Prefer_No_VZEROUPPER</a>, <a href='../Y/80.html' title='Multiple used in 51 places.'>AVX</a>, <a href='../Y/12835.html' title='Multiple used in 26 places.'>disable</a>,
+<a id='L258' name='L258'></a> 258          20);
+<a id='L259' name='L259'></a> 259         <em class='brace'>}</em>
+<a id='L260' name='L260'></a> 260       <strong class='reserved'>break</strong>;
+<a id='L261' name='L261'></a> 261     <strong class='reserved'>case</strong> 23:
+<a id='L262' name='L262'></a> 262         <em class='brace'>{</em>
+<a id='L263' name='L263'></a> 263           <a href='../S/7133.html#L76' title='Defined at 76 in sysdeps/x86/cpu-tunables.c.'>CHECK_GLIBC_IFUNC_PREFERRED_NEED_BOTH</a>
+<a id='L264' name='L264'></a> 264         (<a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>, <a href='../D/29165.html' title='Multiple defined in 3 places.'>cpu_features</a>, <a href='../Y/100.html' title='Multiple used in 13 places.'>AVX_Fast_Unaligned_Load</a>, <a href='../Y/80.html' title='Multiple used in 51 places.'>AVX</a>,
+<a id='L265' name='L265'></a> 265          <a href='../Y/12835.html' title='Multiple used in 26 places.'>disable</a>, 23);
+<a id='L266' name='L266'></a> 266         <em class='brace'>}</em>
+<a id='L267' name='L267'></a> 267       <strong class='reserved'>break</strong>;
+<a id='L268' name='L268'></a> 268     <strong class='reserved'>case</strong> 24:
+<a id='L269' name='L269'></a> 269         <em class='brace'>{</em>
+<a id='L270' name='L270'></a> 270           <a href='../S/7133.html#L76' title='Defined at 76 in sysdeps/x86/cpu-tunables.c.'>CHECK_GLIBC_IFUNC_PREFERRED_NEED_BOTH</a>
+<a id='L271' name='L271'></a> 271         (<a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>, <a href='../D/29165.html' title='Multiple defined in 3 places.'>cpu_features</a>, <a href='../Y/1266.html' title='Multiple used in 3 places.'>MathVec_Prefer_No_AVX512</a>, <a href='../Y/86.html' title='Multiple used in 28 places.'>AVX512F</a>,
+<a id='L272' name='L272'></a> 272          <a href='../Y/12835.html' title='Multiple used in 26 places.'>disable</a>, 24);
+<a id='L273' name='L273'></a> 273         <em class='brace'>}</em>
+<a id='L274' name='L274'></a> 274       <strong class='reserved'>break</strong>;
+<a id='L275' name='L275'></a> 275     <strong class='reserved'>case</strong> 26:
+<a id='L276' name='L276'></a> 276         <em class='brace'>{</em>
+<a id='L277' name='L277'></a> 277           <a href='../S/7133.html#L76' title='Defined at 76 in sysdeps/x86/cpu-tunables.c.'>CHECK_GLIBC_IFUNC_PREFERRED_NEED_BOTH</a>
+<a id='L278' name='L278'></a> 278         (<a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>, <a href='../D/29165.html' title='Multiple defined in 3 places.'>cpu_features</a>, Prefer_PMINUB_for_stringop, <a href='../Y/1809.html' title='Multiple used in 54 places.'>SSE2</a>,
+<a id='L279' name='L279'></a> 279          <a href='../Y/12835.html' title='Multiple used in 26 places.'>disable</a>, 26);
+<a id='L280' name='L280'></a> 280         <em class='brace'>}</em>
+<a id='L281' name='L281'></a> 281       <strong class='reserved'>break</strong>;
+<a id='L282' name='L282'></a> 282     <em class='brace'>}</em>
+<a id='L283' name='L283'></a> 283       <a href='../S/2562.html#L29' title='Defined at 29 in elf/testobj2.c.'>p</a> += <a href='../D/32598.html' title='Multiple defined in 10 places.'>len</a> + 1;
+<a id='L284' name='L284'></a> 284     <em class='brace'>}</em>
+<a id='L285' name='L285'></a> 285   <strong class='reserved'>while</strong> (*<a href='../S/2562.html#L29' title='Defined at 29 in elf/testobj2.c.'>p</a> != '\0');
+<a id='L286' name='L286'></a> 286 <em class='brace'>}</em>
+<a id='L287' name='L287'></a> 287 
+<a id='L288' name='L288'></a> 288 <em class='sharp'># if</em> <a href='../D/1125.html' title='Multiple defined in 2 places.'>CET_ENABLED</a>
+<a id='L289' name='L289'></a> 289 
+<a id='L290' name='L290'></a> 290 <a href='../D/27947.html' title='Multiple defined in 7 places.'>attribute_hidden</a>
+<a id='L291' name='L291'></a> 291 <strong class='reserved'>void</strong>
+<a id='L292' name='L292'></a> 292 <a href='../R/8958.html' title='Multiple referred from 42 places.'>TUNABLE_CALLBACK</a> (<a href='../Y/25110.html' title='Multiple used in 3 places.'>set_x86_ibt</a>) (<a href='../S/2896.html#L42' title='Defined at 42 in elf/dl-tunables.h.'>tunable_val_t</a> *<a href='../Y/28586.html' title='Multiple used in 74 places.'>valp</a>)
+<a id='L293' name='L293'></a> 293 <em class='brace'>{</em>
+<a id='L294' name='L294'></a> 294   <strong class='reserved'>if</strong> (<a href='../D/1930.html' title='Multiple defined in 3 places.'>DEFAULT_MEMCMP</a> (<a href='../Y/28586.html' title='Multiple used in 74 places.'>valp</a>-&gt;<a href='../Y/26367.html' title='Multiple used in 15 places.'>strval</a>, "on", <strong class='reserved'>sizeof</strong> ("on")) == 0)
+<a id='L295' name='L295'></a> 295     <a href='../D/5057.html' title='Multiple defined in 6 places.'>GL</a>(<a href='../S/7129.html#L35' title='Defined at 35 in sysdeps/x86/cet-control.h.'>dl_x86_feature_control</a>).<a href='../Y/16438.html' title='Multiple used in 9 places.'>ibt</a> = <a href='../S/7129.html#L28' title='Defined at 28 in sysdeps/x86/cet-control.h.'>cet_always_on</a>;
+<a id='L296' name='L296'></a> 296   <strong class='reserved'>else</strong> <strong class='reserved'>if</strong> (<a href='../D/1930.html' title='Multiple defined in 3 places.'>DEFAULT_MEMCMP</a> (<a href='../Y/28586.html' title='Multiple used in 74 places.'>valp</a>-&gt;<a href='../Y/26367.html' title='Multiple used in 15 places.'>strval</a>, "off", <strong class='reserved'>sizeof</strong> ("off")) == 0)
+<a id='L297' name='L297'></a> 297     <a href='../D/5057.html' title='Multiple defined in 6 places.'>GL</a>(<a href='../S/7129.html#L35' title='Defined at 35 in sysdeps/x86/cet-control.h.'>dl_x86_feature_control</a>).<a href='../Y/16438.html' title='Multiple used in 9 places.'>ibt</a> = <a href='../S/7129.html#L30' title='Defined at 30 in sysdeps/x86/cet-control.h.'>cet_always_off</a>;
+<a id='L298' name='L298'></a> 298   <strong class='reserved'>else</strong> <strong class='reserved'>if</strong> (<a href='../D/1930.html' title='Multiple defined in 3 places.'>DEFAULT_MEMCMP</a> (<a href='../Y/28586.html' title='Multiple used in 74 places.'>valp</a>-&gt;<a href='../Y/26367.html' title='Multiple used in 15 places.'>strval</a>, "permissive",
+<a id='L299' name='L299'></a> 299                <strong class='reserved'>sizeof</strong> ("permissive")) == 0)
+<a id='L300' name='L300'></a> 300     <a href='../D/5057.html' title='Multiple defined in 6 places.'>GL</a>(<a href='../S/7129.html#L35' title='Defined at 35 in sysdeps/x86/cet-control.h.'>dl_x86_feature_control</a>).<a href='../Y/16438.html' title='Multiple used in 9 places.'>ibt</a> = <a href='../S/7129.html#L32' title='Defined at 32 in sysdeps/x86/cet-control.h.'>cet_permissive</a>;
+<a id='L301' name='L301'></a> 301 <em class='brace'>}</em>
+<a id='L302' name='L302'></a> 302 
+<a id='L303' name='L303'></a> 303 <a href='../D/27947.html' title='Multiple defined in 7 places.'>attribute_hidden</a>
+<a id='L304' name='L304'></a> 304 <strong class='reserved'>void</strong>
+<a id='L305' name='L305'></a> 305 <a href='../R/8958.html' title='Multiple referred from 42 places.'>TUNABLE_CALLBACK</a> (<a href='../Y/25111.html' title='Multiple used in 3 places.'>set_x86_shstk</a>) (<a href='../S/2896.html#L42' title='Defined at 42 in elf/dl-tunables.h.'>tunable_val_t</a> *<a href='../Y/28586.html' title='Multiple used in 74 places.'>valp</a>)
+<a id='L306' name='L306'></a> 306 <em class='brace'>{</em>
+<a id='L307' name='L307'></a> 307   <strong class='reserved'>if</strong> (<a href='../D/1930.html' title='Multiple defined in 3 places.'>DEFAULT_MEMCMP</a> (<a href='../Y/28586.html' title='Multiple used in 74 places.'>valp</a>-&gt;<a href='../Y/26367.html' title='Multiple used in 15 places.'>strval</a>, "on", <strong class='reserved'>sizeof</strong> ("on")) == 0)
+<a id='L308' name='L308'></a> 308     <a href='../D/5057.html' title='Multiple defined in 6 places.'>GL</a>(<a href='../S/7129.html#L35' title='Defined at 35 in sysdeps/x86/cet-control.h.'>dl_x86_feature_control</a>).<a href='../Y/25332.html' title='Multiple used in 9 places.'>shstk</a> = <a href='../S/7129.html#L28' title='Defined at 28 in sysdeps/x86/cet-control.h.'>cet_always_on</a>;
+<a id='L309' name='L309'></a> 309   <strong class='reserved'>else</strong> <strong class='reserved'>if</strong> (<a href='../D/1930.html' title='Multiple defined in 3 places.'>DEFAULT_MEMCMP</a> (<a href='../Y/28586.html' title='Multiple used in 74 places.'>valp</a>-&gt;<a href='../Y/26367.html' title='Multiple used in 15 places.'>strval</a>, "off", <strong class='reserved'>sizeof</strong> ("off")) == 0)
+<a id='L310' name='L310'></a> 310     <a href='../D/5057.html' title='Multiple defined in 6 places.'>GL</a>(<a href='../S/7129.html#L35' title='Defined at 35 in sysdeps/x86/cet-control.h.'>dl_x86_feature_control</a>).<a href='../Y/25332.html' title='Multiple used in 9 places.'>shstk</a> = <a href='../S/7129.html#L30' title='Defined at 30 in sysdeps/x86/cet-control.h.'>cet_always_off</a>;
+<a id='L311' name='L311'></a> 311   <strong class='reserved'>else</strong> <strong class='reserved'>if</strong> (<a href='../D/1930.html' title='Multiple defined in 3 places.'>DEFAULT_MEMCMP</a> (<a href='../Y/28586.html' title='Multiple used in 74 places.'>valp</a>-&gt;<a href='../Y/26367.html' title='Multiple used in 15 places.'>strval</a>, "permissive",
+<a id='L312' name='L312'></a> 312                <strong class='reserved'>sizeof</strong> ("permissive")) == 0)
+<a id='L313' name='L313'></a> 313     <a href='../D/5057.html' title='Multiple defined in 6 places.'>GL</a>(<a href='../S/7129.html#L35' title='Defined at 35 in sysdeps/x86/cet-control.h.'>dl_x86_feature_control</a>).<a href='../Y/25332.html' title='Multiple used in 9 places.'>shstk</a> = <a href='../S/7129.html#L32' title='Defined at 32 in sysdeps/x86/cet-control.h.'>cet_permissive</a>;
+<a id='L314' name='L314'></a> 314 <em class='brace'>}</em>
+<a id='L315' name='L315'></a> 315 <em class='sharp'># endif</em>
+<a id='L316' name='L316'></a> 316 <em class='sharp'>#endif</em>
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L90'>[^]</a><a href='#L305'>[v]</a><a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

@@ -1,0 +1,90 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>nptl/nptl-stack.h</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18931.html'>nptl</a>/nptl-stack.h</h2>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L32'>[^]</a><a href='#L39'>[v]</a>[top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<h2 class='header'><a href='../J/3672.html' title='Multiple included from 6 places.'>INCLUDED FROM</a></h2>
+<hr />
+<h2 class='header'>DEFINITIONS</h2>
+This source file includes following definitions.
+<ol>
+<li><a href='#L32' title='Defined at 32.'>__nptl_stack_in_use</a></li>
+<li><a href='#L39' title='Defined at 39.'>libc_hidden_proto</a></li>
+</ol>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* Stack cache management for NPTL.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   Copyright (C) 2002-2022 Free Software Foundation, Inc.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'></em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'></em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'></em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   License along with the GNU C Library; if not, see</em>
+<a id='L17' name='L17'></a>  17 <em class='comment'>   &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L18' name='L18'></a>  18 
+<a id='L19' name='L19'></a>  19 <em class='sharp'>#ifndef</em> <a href='../S/18550.html#L20' title='Defined at 20 in nptl/nptl-stack.h.'>_NPTL_STACK_H</a>
+<a id='L20' name='L20'></a>  20 <em class='sharp'>#define</em> <a href='../S/18550.html#L19' title='Referred from 19 in nptl/nptl-stack.h.'>_NPTL_STACK_H</a>
+<a id='L21' name='L21'></a>  21 
+<a id='L22' name='L22'></a>  22 <em class='sharp'>#include</em> &lt;<a href='18700.html'>nptl/descr.h</a>&gt;
+<a id='L23' name='L23'></a>  23 <em class='sharp'>#include</em> &lt;<a href='../I/5906.html'>ldsodefs.h</a>&gt;
+<a id='L24' name='L24'></a>  24 <em class='sharp'>#include</em> &lt;<a href='18118.html'>list.h</a>&gt;
+<a id='L25' name='L25'></a>  25 <em class='sharp'>#include</em> &lt;stdbool.h&gt;
+<a id='L26' name='L26'></a>  26 
+<a id='L27' name='L27'></a>  27 <em class='comment'>/* Maximum size of the cache, in bytes.  40 MiB by default.  */</em>
+<a id='L28' name='L28'></a>  28 <strong class='reserved'>extern</strong> <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/6209.html' title='Multiple used in 5 places.'>__nptl_stack_cache_maxsize</a> <a href='../D/27947.html' title='Multiple defined in 7 places.'>attribute_hidden</a>;
+<a id='L29' name='L29'></a>  29 
+<a id='L30' name='L30'></a>  30 <em class='comment'>/* Check whether the stack is still used or not.  */</em>
+<a id='L31' name='L31'></a>  31 <strong class='reserved'>static</strong> <strong class='reserved'>inline</strong> <a href='../S/3749.html#L624' title='Defined at 624 in timezone/private.h.'>bool</a>
+<a id='L32' name='L32'></a>  32 <a href='../R/15231.html' title='Multiple referred from 2 places.'>__nptl_stack_in_use</a> (<strong class='reserved'>struct</strong> <a href='../D/35082.html' title='Multiple defined in 2 places.'>pthread</a> *<a href='../Y/22310.html' title='Multiple used in 361 places.'>pd</a>)
+<a id='L33' name='L33'></a>  33 <em class='brace'>{</em>
+<a id='L34' name='L34'></a>  34   <strong class='reserved'>return</strong> <a href='../Y/22310.html' title='Multiple used in 361 places.'>pd</a>-&gt;<a href='../Y/27281.html' title='Multiple used in 178 places.'>tid</a> &lt;= 0;
+<a id='L35' name='L35'></a>  35 <em class='brace'>}</em>
+<a id='L36' name='L36'></a>  36 
+<a id='L37' name='L37'></a>  37 <em class='comment'>/* Remove the stack ELEM from its list.  */</em>
+<a id='L38' name='L38'></a>  38 <strong class='reserved'>void</strong> <a href='../S/18474.html#L26' title='Defined at 26 in nptl/nptl-stack.c.'>__nptl_stack_list_del</a> (<a href='../S/18015.html#L28' title='Defined at 28 in include/list_t.h.'>list_t</a> *<a href='../Y/13614.html' title='Multiple used in 265 places.'>elem</a>);
+<a id='L39' name='L39'></a>  39 <a href='../R/21258.html' title='Multiple referred from 1120 places.'>libc_hidden_proto</a> (<a href='../S/18474.html#L26' title='Defined at 26 in nptl/nptl-stack.c.'>__nptl_stack_list_del</a>)
+<a id='L40' name='L40'></a>  40 
+<a id='L41' name='L41'></a>  41 <em class='comment'>/* Add ELEM to a stack list.  LIST can be either &amp;GL (dl_stack_used)</em>
+<a id='L42' name='L42'></a>  42 <em class='comment'>   or &amp;GL (dl_stack_cache).  */</em>
+<a id='L43' name='L43'></a>  43 <strong class='reserved'>void</strong> <a href='../Y/6210.html' title='Multiple used in 7 places.'>__nptl_stack_list_add</a> (<a href='../S/18015.html#L28' title='Defined at 28 in include/list_t.h.'>list_t</a> *<a href='../Y/13614.html' title='Multiple used in 265 places.'>elem</a>, <a href='../S/18015.html#L28' title='Defined at 28 in include/list_t.h.'>list_t</a> *<a href='../D/32957.html' title='Multiple defined in 3 places.'>list</a>);
+<a id='L44' name='L44'></a>  44 <a href='../D/32800.html' title='Multiple defined in 29 places.'>libc_hidden_proto</a> (<a href='../Y/6210.html' title='Multiple used in 7 places.'>__nptl_stack_list_add</a>)
+<a id='L45' name='L45'></a>  45 
+<a id='L46' name='L46'></a>  46 <em class='comment'>/* Free allocated stack.  */</em>
+<a id='L47' name='L47'></a>  47 <strong class='reserved'>extern</strong> <strong class='reserved'>void</strong> <a href='../S/18474.html#L110' title='Defined at 110 in nptl/nptl-stack.c.'>__nptl_deallocate_stack</a> (<strong class='reserved'>struct</strong> <a href='../D/35082.html' title='Multiple defined in 2 places.'>pthread</a> *<a href='../Y/22310.html' title='Multiple used in 361 places.'>pd</a>);
+<a id='L48' name='L48'></a>  48 <a href='../D/32800.html' title='Multiple defined in 29 places.'>libc_hidden_proto</a> (<a href='../S/18474.html#L110' title='Defined at 110 in nptl/nptl-stack.c.'>__nptl_deallocate_stack</a>)
+<a id='L49' name='L49'></a>  49 
+<a id='L50' name='L50'></a>  50 <em class='comment'>/* Free stacks until cache size is lower than LIMIT.  */</em>
+<a id='L51' name='L51'></a>  51 <strong class='reserved'>void</strong> <a href='../Y/6203.html' title='Multiple used in 4 places.'>__nptl_free_stacks</a> (<a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../D/32933.html' title='Multiple defined in 7 places.'>limit</a>) <a href='../D/27947.html' title='Multiple defined in 7 places.'>attribute_hidden</a>;
+<a id='L52' name='L52'></a>  52 
+<a id='L53' name='L53'></a>  53 <em class='comment'>/* Compute the size of the static TLS area based on data from the</em>
+<a id='L54' name='L54'></a>  54 <em class='comment'>   dynamic loader.  */</em>
+<a id='L55' name='L55'></a>  55 <strong class='reserved'>static</strong> <strong class='reserved'>inline</strong> <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a>
+<a id='L56' name='L56'></a>  56 <a href='../Y/6212.html' title='Multiple used in 4 places.'>__nptl_tls_static_size_for_stack</a> (<strong class='reserved'>void</strong>)
+<a id='L57' name='L57'></a>  57 <em class='brace'>{</em>
+<a id='L58' name='L58'></a>  58   <strong class='reserved'>return</strong> <a href='../D/36120.html' title='Multiple defined in 2 places.'>roundup</a> (<a href='../D/5109.html' title='Multiple defined in 6 places.'>GLRO</a> (<a href='../Y/12969.html' title='Multiple used in 9 places.'>dl_tls_static_size</a>), <a href='../D/5109.html' title='Multiple defined in 6 places.'>GLRO</a> (<a href='../Y/12966.html' title='Multiple used in 7 places.'>dl_tls_static_align</a>));
+<a id='L59' name='L59'></a>  59 <em class='brace'>}</em>
+<a id='L60' name='L60'></a>  60 
+<a id='L61' name='L61'></a>  61 <em class='sharp'>#endif</em> <em class='comment'>/* _NPTL_STACK_H */</em>
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L32'>[^]</a><a href='#L39'>[v]</a><a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

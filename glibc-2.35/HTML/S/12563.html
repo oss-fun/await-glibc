@@ -1,0 +1,1364 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>sysdeps/ia64/fpu/s_tanhl.S</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18977.html'>sysdeps</a>/<a href='../files/19053.html'>ia64</a>/<a href='../files/19055.html'>fpu</a>/s_tanhl.S</h2>
+<em class='comment'>/* [&lt;][&gt;][^][v][top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 .file "tanhl.s"
+<a id='L2' name='L2'></a>   2 
+<a id='L3' name='L3'></a>   3 
+<a id='L4' name='L4'></a>   4 <em class='comment'>// Copyright (c) 2001 - 2003, Intel Corporation</em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>// All rights reserved.</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>//</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>//</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'>// Redistribution and use in source and binary forms, with or without</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'>// modification, are permitted provided that the following conditions are</em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>// met:</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>//</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>// * Redistributions of source code must retain the above copyright</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'>// notice, this list of conditions and the following disclaimer.</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'>//</em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>// * Redistributions in binary form must reproduce the above copyright</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>// notice, this list of conditions and the following disclaimer in the</em>
+<a id='L17' name='L17'></a>  17 <em class='comment'>// documentation and/or other materials provided with the distribution.</em>
+<a id='L18' name='L18'></a>  18 <em class='comment'>//</em>
+<a id='L19' name='L19'></a>  19 <em class='comment'>// * The name of Intel Corporation may not be used to endorse or promote</em>
+<a id='L20' name='L20'></a>  20 <em class='comment'>// products derived from this software without specific prior written</em>
+<a id='L21' name='L21'></a>  21 <em class='comment'>// permission.</em>
+<a id='L22' name='L22'></a>  22 
+<a id='L23' name='L23'></a>  23 <em class='comment'>// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS</em>
+<a id='L24' name='L24'></a>  24 <em class='comment'>// "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT</em>
+<a id='L25' name='L25'></a>  25 <em class='comment'>// LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR</em>
+<a id='L26' name='L26'></a>  26 <em class='comment'>// A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL INTEL OR ITS</em>
+<a id='L27' name='L27'></a>  27 <em class='comment'>// CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,</em>
+<a id='L28' name='L28'></a>  28 <em class='comment'>// EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,</em>
+<a id='L29' name='L29'></a>  29 <em class='comment'>// PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR</em>
+<a id='L30' name='L30'></a>  30 <em class='comment'>// PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY</em>
+<a id='L31' name='L31'></a>  31 <em class='comment'>// OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY OR TORT (INCLUDING</em>
+<a id='L32' name='L32'></a>  32 <em class='comment'>// NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS</em>
+<a id='L33' name='L33'></a>  33 <em class='comment'>// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.</em>
+<a id='L34' name='L34'></a>  34 <em class='comment'>//</em>
+<a id='L35' name='L35'></a>  35 <em class='comment'>// Intel Corporation is the author of this code, and requests that all</em>
+<a id='L36' name='L36'></a>  36 <em class='comment'>// problem reports or change requests be submitted to it directly at</em>
+<a id='L37' name='L37'></a>  37 <em class='comment'>// http://www.intel.com/software/products/opensource/libraries/num.htm.</em>
+<a id='L38' name='L38'></a>  38 <em class='comment'>//</em>
+<a id='L39' name='L39'></a>  39 <em class='comment'>// History</em>
+<a id='L40' name='L40'></a>  40 <em class='comment'>//==============================================================</em>
+<a id='L41' name='L41'></a>  41 <em class='comment'>// 11/29/01  Initial version</em>
+<a id='L42' name='L42'></a>  42 <em class='comment'>// 05/20/02  Cleaned up namespace and sf0 syntax</em>
+<a id='L43' name='L43'></a>  43 <em class='comment'>// 08/14/02  Changed mli templates to mlx</em>
+<a id='L44' name='L44'></a>  44 <em class='comment'>// 02/10/03  Reordered header: .section, .global, .proc, .align</em>
+<a id='L45' name='L45'></a>  45 <em class='comment'>//</em>
+<a id='L46' name='L46'></a>  46 <em class='comment'>// API</em>
+<a id='L47' name='L47'></a>  47 <em class='comment'>//==============================================================</em>
+<a id='L48' name='L48'></a>  48 <em class='comment'>// long double tanhl(long double)</em>
+<a id='L49' name='L49'></a>  49 <em class='comment'>//</em>
+<a id='L50' name='L50'></a>  50 <em class='comment'>// Overview of operation</em>
+<a id='L51' name='L51'></a>  51 <em class='comment'>//==============================================================</em>
+<a id='L52' name='L52'></a>  52 <em class='comment'>//</em>
+<a id='L53' name='L53'></a>  53 <em class='comment'>// Algorithm description</em>
+<a id='L54' name='L54'></a>  54 <em class='comment'>// ---------------------</em>
+<a id='L55' name='L55'></a>  55 <em class='comment'>//</em>
+<a id='L56' name='L56'></a>  56 <em class='comment'>// There are 4 paths:</em>
+<a id='L57' name='L57'></a>  57 <em class='comment'>//</em>
+<a id='L58' name='L58'></a>  58 <em class='comment'>// 1. Special path: x = 0, Inf, NaNs, denormal</em>
+<a id='L59' name='L59'></a>  59 <em class='comment'>//    Return tanhl(x) = +/-0.0 for zeros</em>
+<a id='L60' name='L60'></a>  60 <em class='comment'>//    Return tanhl(x) = QNaN for NaNs</em>
+<a id='L61' name='L61'></a>  61 <em class='comment'>//    Return tanhl(x) = sign(x)*1.0 for Inf</em>
+<a id='L62' name='L62'></a>  62 <em class='comment'>//    Return tanhl(x) = x + x^2   for - denormals</em>
+<a id='L63' name='L63'></a>  63 <em class='comment'>//    Return tanhl(x) = x - x^2   for + denormals</em>
+<a id='L64' name='L64'></a>  64 <em class='comment'>//</em>
+<a id='L65' name='L65'></a>  65 <em class='comment'>// 2. [0;1/8] path: 0.0 &lt; |x| &lt; 1/8</em>
+<a id='L66' name='L66'></a>  66 <em class='comment'>//    Return tanhl(x) = x + x^3*A3 + ... + x^15*A15</em>
+<a id='L67' name='L67'></a>  67 <em class='comment'>//</em>
+<a id='L68' name='L68'></a>  68 <em class='comment'>// 3. Main path: 1/8 &lt;= |x| &lt; 22.8</em>
+<a id='L69' name='L69'></a>  69 <em class='comment'>//    For several ranges of 1/8 &lt;= |x| &lt; 22.8</em>
+<a id='L70' name='L70'></a>  70 <em class='comment'>//    Return tanhl(x) = sign(x)*((A0H+A0L) + y*(A1H+A1L) + y^2*(A2H+A2L) +</em>
+<a id='L71' name='L71'></a>  71 <em class='comment'>//                                       + y^3*A3 + y^4*A4 + ... + y^25*A25 )</em>
+<a id='L72' name='L72'></a>  72 <em class='comment'>//    where y = (|x|/a) - b</em>
+<a id='L73' name='L73'></a>  73 <em class='comment'>//</em>
+<a id='L74' name='L74'></a>  74 <em class='comment'>//    For each range there is particular set of coefficients.</em>
+<a id='L75' name='L75'></a>  75 <em class='comment'>//    Below is the list of ranges:</em>
+<a id='L76' name='L76'></a>  76 <em class='comment'>//    1/8  &lt;= |x| &lt; 1/4     a = 0.125, b = 1.5</em>
+<a id='L77' name='L77'></a>  77 <em class='comment'>//    1/4  &lt;= |x| &lt; 1/2     a = 0.25,  b = 1.5</em>
+<a id='L78' name='L78'></a>  78 <em class='comment'>//    1/2  &lt;= |x| &lt; 1.0     a = 0.5,   b = 1.5</em>
+<a id='L79' name='L79'></a>  79 <em class='comment'>//    1.0  &lt;= |x| &lt; 2.0     a = 1.0,   b = 1.5</em>
+<a id='L80' name='L80'></a>  80 <em class='comment'>//    2.0  &lt;= |x| &lt; 3.25    a = 2.0,   b = 1.5</em>
+<a id='L81' name='L81'></a>  81 <em class='comment'>//    3.25 &lt;= |x| &lt; 4.0     a = 2.0,   b = 2.0</em>
+<a id='L82' name='L82'></a>  82 <em class='comment'>//    4.0  &lt;= |x| &lt; 6.5     a = 4.0,   b = 1.5</em>
+<a id='L83' name='L83'></a>  83 <em class='comment'>//    6.5  &lt;= |x| &lt; 8.0     a = 4.0,   b = 2.0</em>
+<a id='L84' name='L84'></a>  84 <em class='comment'>//    8.0  &lt;= |x| &lt; 13.0    a = 8.0,   b = 1.5</em>
+<a id='L85' name='L85'></a>  85 <em class='comment'>//    13.0 &lt;= |x| &lt; 16.0    a = 8.0,   b = 2.0</em>
+<a id='L86' name='L86'></a>  86 <em class='comment'>//    16.0 &lt;= |x| &lt; 22.8    a = 16.0,  b = 1.5</em>
+<a id='L87' name='L87'></a>  87 <em class='comment'>//    ( [3.25;4.0], [6.5;8.0], [13.9;16.0] subranges separated</em>
+<a id='L88' name='L88'></a>  88 <em class='comment'>//                               for monotonicity issues resolve )</em>
+<a id='L89' name='L89'></a>  89 <em class='comment'>//</em>
+<a id='L90' name='L90'></a>  90 <em class='comment'>// 4. Saturation path: 22.8 &lt;= |x| &lt; +INF</em>
+<a id='L91' name='L91'></a>  91 <em class='comment'>//    Return tanhl(x) = sign(x)*(1.0 - tiny_value)</em>
+<a id='L92' name='L92'></a>  92 <em class='comment'>//    (tiny_value ~ 1e-1233)</em>
+<a id='L93' name='L93'></a>  93 <em class='comment'>//</em>
+<a id='L94' name='L94'></a>  94 <em class='comment'>// Implementation notes</em>
+<a id='L95' name='L95'></a>  95 <em class='comment'>// --------------------</em>
+<a id='L96' name='L96'></a>  96 <em class='comment'>//</em>
+<a id='L97' name='L97'></a>  97 <em class='comment'>// 1. Special path: x = 0, INF, NaNa, denormals</em>
+<a id='L98' name='L98'></a>  98 <em class='comment'>//</em>
+<a id='L99' name='L99'></a>  99 <em class='comment'>//    This branch is cut off by one fclass operation.</em>
+<a id='L100' name='L100'></a> 100 <em class='comment'>//    Then zeros+nans, infinities and denormals processed separately.</em>
+<a id='L101' name='L101'></a> 101 <em class='comment'>//    For denormals we use simple fma operaton x+x*x (- for +denorms)</em>
+<a id='L102' name='L102'></a> 102 <em class='comment'>//</em>
+<a id='L103' name='L103'></a> 103 <em class='comment'>// 2. [0;1/8] path: 0.0 &lt; |x| &lt; 1/8</em>
+<a id='L104' name='L104'></a> 104 <em class='comment'>//</em>
+<a id='L105' name='L105'></a> 105 <em class='comment'>//    Here we use simple polynimial computations, where last step</em>
+<a id='L106' name='L106'></a> 106 <em class='comment'>//    is performed as x + x^3*A3+...</em>
+<a id='L107' name='L107'></a> 107 <em class='comment'>//    The rest of polynomial is factorized using binary tree technique.</em>
+<a id='L108' name='L108'></a> 108 <em class='comment'>//</em>
+<a id='L109' name='L109'></a> 109 <em class='comment'>// 3. Main path: 1/8 &lt;= |x| &lt; 22.8</em>
+<a id='L110' name='L110'></a> 110 <em class='comment'>//</em>
+<a id='L111' name='L111'></a> 111 <em class='comment'>//    Multiprecision have to be performed only for first few</em>
+<a id='L112' name='L112'></a> 112 <em class='comment'>//    polynomial iterations (up to 3-rd x degree)</em>
+<a id='L113' name='L113'></a> 113 <em class='comment'>//    Here we use the same parallelisation way as above:</em>
+<a id='L114' name='L114'></a> 114 <em class='comment'>//    Split whole polynomial to first, "multiprecision" part, and second,</em>
+<a id='L115' name='L115'></a> 115 <em class='comment'>//    so called "tail", native precision part.</em>
+<a id='L116' name='L116'></a> 116 <em class='comment'>//</em>
+<a id='L117' name='L117'></a> 117 <em class='comment'>//    1) Multiprecision part:</em>
+<a id='L118' name='L118'></a> 118 <em class='comment'>//    [v1=(A0H+A0L)+y*(A1H+A1L)] + [v2=y^2*((A2H+A2L)+y*A3)]</em>
+<a id='L119' name='L119'></a> 119 <em class='comment'>//    v1 and v2 terms calculated in parallel</em>
+<a id='L120' name='L120'></a> 120 <em class='comment'>//</em>
+<a id='L121' name='L121'></a> 121 <em class='comment'>//    2) Tail part:</em>
+<a id='L122' name='L122'></a> 122 <em class='comment'>//    v3 = x^4 * ( A4 + x*A5 + ... + x^21*A25 )</em>
+<a id='L123' name='L123'></a> 123 <em class='comment'>//    v3 is splitted to 2 even parts (10 coefficient in each one).</em>
+<a id='L124' name='L124'></a> 124 <em class='comment'>//    These 2 parts are also factorized using binary tree technique.</em>
+<a id='L125' name='L125'></a> 125 <em class='comment'>//</em>
+<a id='L126' name='L126'></a> 126 <em class='comment'>//    So Multiprecision and Tail parts cost is almost the same</em>
+<a id='L127' name='L127'></a> 127 <em class='comment'>//    and we have both results ready before final summation.</em>
+<a id='L128' name='L128'></a> 128 <em class='comment'>//</em>
+<a id='L129' name='L129'></a> 129 <em class='comment'>//    Some tricks were applied to maintain symmetry at direct</em>
+<a id='L130' name='L130'></a> 130 <em class='comment'>//    rounding modes (to +/-inf). We had to set result sign</em>
+<a id='L131' name='L131'></a> 131 <em class='comment'>//    not at the last operation but much more earlier and at</em>
+<a id='L132' name='L132'></a> 132 <em class='comment'>//    several places.</em>
+<a id='L133' name='L133'></a> 133 <em class='comment'>//</em>
+<a id='L134' name='L134'></a> 134 <em class='comment'>// 4. Saturation path: 22.8 &lt;= |x| &lt; +INF</em>
+<a id='L135' name='L135'></a> 135 <em class='comment'>//</em>
+<a id='L136' name='L136'></a> 136 <em class='comment'>//    We use formula sign(x)*(1.0 - tiny_value) instead of simple sign(x)*1.0</em>
+<a id='L137' name='L137'></a> 137 <em class='comment'>//    just to meet IEEE requirements for different rounding modes in this case.</em>
+<a id='L138' name='L138'></a> 138 <em class='comment'>//</em>
+<a id='L139' name='L139'></a> 139 <em class='comment'>// Registers used</em>
+<a id='L140' name='L140'></a> 140 <em class='comment'>//==============================================================</em>
+<a id='L141' name='L141'></a> 141 <em class='comment'>// Floating Point registers used:</em>
+<a id='L142' name='L142'></a> 142 <em class='comment'>// f8 - input &amp; output</em>
+<a id='L143' name='L143'></a> 143 <em class='comment'>// f32 -&gt; f92</em>
+<a id='L144' name='L144'></a> 144 
+<a id='L145' name='L145'></a> 145 <em class='comment'>// General registers used:</em>
+<a id='L146' name='L146'></a> 146 <em class='comment'>// r2, r3, r32 -&gt; r52</em>
+<a id='L147' name='L147'></a> 147 
+<a id='L148' name='L148'></a> 148 <em class='comment'>// Predicate registers used:</em>
+<a id='L149' name='L149'></a> 149 <em class='comment'>// p0, p6 -&gt; p11, p14, p15</em>
+<a id='L150' name='L150'></a> 150 
+<a id='L151' name='L151'></a> 151 <em class='comment'>// p6  - arg is zero, denormal or special IEEE</em>
+<a id='L152' name='L152'></a> 152 <em class='comment'>// p7  - arg is in [16;32] binary interval</em>
+<a id='L153' name='L153'></a> 153 <em class='comment'>// p8  - arg is in one of subranges</em>
+<a id='L154' name='L154'></a> 154 <em class='comment'>//         [3.25;4.0], [6.5;8.0], [13.9;16.0]</em>
+<a id='L155' name='L155'></a> 155 <em class='comment'>// p9  - arg &lt; 1/8</em>
+<a id='L156' name='L156'></a> 156 <em class='comment'>// p10  - arg is NOT in one of subranges</em>
+<a id='L157' name='L157'></a> 157 <em class='comment'>//         [3.25;4.0], [6.5;8.0], [13.9;16.0]</em>
+<a id='L158' name='L158'></a> 158 <em class='comment'>// p11 - arg in saturation domain</em>
+<a id='L159' name='L159'></a> 159 <em class='comment'>// p14 - arg is positive</em>
+<a id='L160' name='L160'></a> 160 <em class='comment'>// p15 - arg is negative</em>
+<a id='L161' name='L161'></a> 161 
+<a id='L162' name='L162'></a> 162 <em class='comment'>// Assembly macros</em>
+<a id='L163' name='L163'></a> 163 <em class='comment'>//==============================================================</em>
+<a id='L164' name='L164'></a> 164 rDataPtr           = r2
+<a id='L165' name='L165'></a> 165 rTailDataPtr       = r3
+<a id='L166' name='L166'></a> 166 
+<a id='L167' name='L167'></a> 167 rBias              = r33
+<a id='L168' name='L168'></a> 168 rSignBit           = r34
+<a id='L169' name='L169'></a> 169 rInterval          = r35
+<a id='L170' name='L170'></a> 170 
+<a id='L171' name='L171'></a> 171 rArgExp            = r36
+<a id='L172' name='L172'></a> 172 rArgSig            = r37
+<a id='L173' name='L173'></a> 173 r3p25Offset        = r38
+<a id='L174' name='L174'></a> 174 r2to4              = r39
+<a id='L175' name='L175'></a> 175 r1p25              = r40
+<a id='L176' name='L176'></a> 176 rOffset            = r41
+<a id='L177' name='L177'></a> 177 r1p5               = r42
+<a id='L178' name='L178'></a> 178 rSaturation        = r43
+<a id='L179' name='L179'></a> 179 r1625Sign          = r44
+<a id='L180' name='L180'></a> 180 rTiny              = r45
+<a id='L181' name='L181'></a> 181 rAddr1             = r46
+<a id='L182' name='L182'></a> 182 rAddr2             = r47
+<a id='L183' name='L183'></a> 183 rTailAddr1         = r48
+<a id='L184' name='L184'></a> 184 rTailAddr2         = r49
+<a id='L185' name='L185'></a> 185 rTailOffset        = r50
+<a id='L186' name='L186'></a> 186 rTailAddOffset     = r51
+<a id='L187' name='L187'></a> 187 rShiftedDataPtr    = r52
+<a id='L188' name='L188'></a> 188 
+<a id='L189' name='L189'></a> 189 <em class='comment'>//==============================================================</em>
+<a id='L190' name='L190'></a> 190 fA0H               = f32
+<a id='L191' name='L191'></a> 191 fA0L               = f33
+<a id='L192' name='L192'></a> 192 fA1H               = f34
+<a id='L193' name='L193'></a> 193 fA1L               = f35
+<a id='L194' name='L194'></a> 194 fA2H               = f36
+<a id='L195' name='L195'></a> 195 fA2L               = f37
+<a id='L196' name='L196'></a> 196 fA3                = f38
+<a id='L197' name='L197'></a> 197 fA4                = f39
+<a id='L198' name='L198'></a> 198 fA5                = f40
+<a id='L199' name='L199'></a> 199 fA6                = f41
+<a id='L200' name='L200'></a> 200 fA7                = f42
+<a id='L201' name='L201'></a> 201 fA8                = f43
+<a id='L202' name='L202'></a> 202 fA9                = f44
+<a id='L203' name='L203'></a> 203 fA10               = f45
+<a id='L204' name='L204'></a> 204 fA11               = f46
+<a id='L205' name='L205'></a> 205 fA12               = f47
+<a id='L206' name='L206'></a> 206 fA13               = f48
+<a id='L207' name='L207'></a> 207 fA14               = f49
+<a id='L208' name='L208'></a> 208 fA15               = f50
+<a id='L209' name='L209'></a> 209 fA16               = f51
+<a id='L210' name='L210'></a> 210 fA17               = f52
+<a id='L211' name='L211'></a> 211 fA18               = f53
+<a id='L212' name='L212'></a> 212 fA19               = f54
+<a id='L213' name='L213'></a> 213 fA20               = f55
+<a id='L214' name='L214'></a> 214 fA21               = f56
+<a id='L215' name='L215'></a> 215 fA22               = f57
+<a id='L216' name='L216'></a> 216 fA23               = f58
+<a id='L217' name='L217'></a> 217 fA24               = f59
+<a id='L218' name='L218'></a> 218 fA25               = f60
+<a id='L219' name='L219'></a> 219 
+<a id='L220' name='L220'></a> 220 fArgSqr            = f61
+<a id='L221' name='L221'></a> 221 fArgCube           = f62
+<a id='L222' name='L222'></a> 222 fArgFour           = f63
+<a id='L223' name='L223'></a> 223 fArgEight          = f64
+<a id='L224' name='L224'></a> 224 
+<a id='L225' name='L225'></a> 225 fArgAbsNorm        = f65
+<a id='L226' name='L226'></a> 226 fArgAbsNorm2       = f66
+<a id='L227' name='L227'></a> 227 fArgAbsNorm2L      = f67
+<a id='L228' name='L228'></a> 228 fArgAbsNorm3       = f68
+<a id='L229' name='L229'></a> 229 fArgAbsNorm4       = f69
+<a id='L230' name='L230'></a> 230 fArgAbsNorm11      = f70
+<a id='L231' name='L231'></a> 231 
+<a id='L232' name='L232'></a> 232 fRes               = f71
+<a id='L233' name='L233'></a> 233 fResH              = f72
+<a id='L234' name='L234'></a> 234 fResL              = f73
+<a id='L235' name='L235'></a> 235 fRes1H             = f74
+<a id='L236' name='L236'></a> 236 fRes1L             = f75
+<a id='L237' name='L237'></a> 237 fRes1Hd            = f76
+<a id='L238' name='L238'></a> 238 fRes2H             = f77
+<a id='L239' name='L239'></a> 239 fRes2L             = f78
+<a id='L240' name='L240'></a> 240 fRes3H             = f79
+<a id='L241' name='L241'></a> 241 fRes3L             = f80
+<a id='L242' name='L242'></a> 242 fRes4              = f81
+<a id='L243' name='L243'></a> 243 
+<a id='L244' name='L244'></a> 244 fTT                = f82
+<a id='L245' name='L245'></a> 245 fTH                = f83
+<a id='L246' name='L246'></a> 246 fTL                = f84
+<a id='L247' name='L247'></a> 247 fTT2               = f85
+<a id='L248' name='L248'></a> 248 fTH2               = f86
+<a id='L249' name='L249'></a> 249 fTL2               = f87
+<a id='L250' name='L250'></a> 250 
+<a id='L251' name='L251'></a> 251 f1p5               = f88
+<a id='L252' name='L252'></a> 252 f2p0               = f89
+<a id='L253' name='L253'></a> 253 fTiny              = f90
+<a id='L254' name='L254'></a> 254 fSignumX           = f91
+<a id='L255' name='L255'></a> 255 fArgAbsNorm4X      = f92
+<a id='L256' name='L256'></a> 256 
+<a id='L257' name='L257'></a> 257 <em class='comment'>// Data tables</em>
+<a id='L258' name='L258'></a> 258 <em class='comment'>//==============================================================</em>
+<a id='L259' name='L259'></a> 259 RODATA
+<a id='L260' name='L260'></a> 260 
+<a id='L261' name='L261'></a> 261 .align 16
+<a id='L262' name='L262'></a> 262 LOCAL_OBJECT_START(tanhl_data)
+<a id='L263' name='L263'></a> 263 
+<a id='L264' name='L264'></a> 264 <em class='comment'>////////// Main tables ///////////</em>
+<a id='L265' name='L265'></a> 265 _0p125_to_0p25_data: <em class='comment'>// exp = 2^-3</em>
+<a id='L266' name='L266'></a> 266 <em class='comment'>// Polynomial coefficients for the tanh(x), 1/8 &lt;= |x| &lt; 1/4</em>
+<a id='L267' name='L267'></a> 267 data8 0x93D27D6AE7E835F8, 0x0000BFF4 <em class='comment'>//A3 = -5.6389704216278164626050408239e-04</em>
+<a id='L268' name='L268'></a> 268 data8 0xBF66E8668A78A8BC <em class='comment'>//A2H = -2.7963640930198357253955165902e-03</em>
+<a id='L269' name='L269'></a> 269 data8 0xBBD5384EFD0E7A54 <em class='comment'>//A2L = -1.7974001252014762983581666453e-20</em>
+<a id='L270' name='L270'></a> 270 data8 0x3FBEE69E31DB6156 <em class='comment'>//A1H = 1.2070645062647619716322822114e-01</em>
+<a id='L271' name='L271'></a> 271 data8 0x3C43A0B4E24A3DCA <em class='comment'>//A1L = 2.1280460108882061756490131241e-18</em>
+<a id='L272' name='L272'></a> 272 data8 0x3FC7B8FF903BF776 <em class='comment'>//A0H = 1.8533319990813951205765874874e-01</em>
+<a id='L273' name='L273'></a> 273 data8 0x3C593F1A61986FD4 <em class='comment'>//A0L = 5.4744612262799573374268254539e-18</em>
+<a id='L274' name='L274'></a> 274 data8 0xDB9E6735560AAE5A, 0x0000BFA3 <em class='comment'>//A25 = -3.4649731131719154051239475238e-28</em>
+<a id='L275' name='L275'></a> 275 data8 0xF0DDE953E4327704, 0x00003FA4 <em class='comment'>//A24 = 7.6004173864565644629900702857e-28</em>
+<a id='L276' name='L276'></a> 276 data8 0x8532AED11DEC5612, 0x00003FAB <em class='comment'>//A23 = 5.3798235684551098715428515761e-26</em>
+<a id='L277' name='L277'></a> 277 data8 0xAEF72A34D88B0038, 0x0000BFAD <em class='comment'>//A22 = -2.8267199091484508912273222600e-25</em>
+<a id='L278' name='L278'></a> 278 data8 0x9645EF1DCB759DDD, 0x0000BFB2 <em class='comment'>//A21 = -7.7689413112830095709522203109e-24</em>
+<a id='L279' name='L279'></a> 279 data8 0xA5D12364E121F70F, 0x00003FB5 <em class='comment'>//A20 = 6.8580281614531622113161030550e-23</em>
+<a id='L280' name='L280'></a> 280 data8 0x9CF166EA815AC705, 0x00003FB9 <em class='comment'>//A19 = 1.0385615003184753213024737634e-21</em>
+<a id='L281' name='L281'></a> 281 data8 0x852B1D0252498752, 0x0000BFBD <em class='comment'>//A18 = -1.4099753997949827217635356478e-20</em>
+<a id='L282' name='L282'></a> 282 data8 0x9270F5716D25EC9F, 0x0000BFC0 <em class='comment'>//A17 = -1.2404055949090177751123473821e-19</em>
+<a id='L283' name='L283'></a> 283 data8 0xC216A9C4EEBDDDCA, 0x00003FC4 <em class='comment'>//A16 = 2.6303900460415782677749729120e-18</em>
+<a id='L284' name='L284'></a> 284 data8 0xDCE944D89FF592F2, 0x00003FC6 <em class='comment'>//A15 = 1.1975620514752377092265425941e-17</em>
+<a id='L285' name='L285'></a> 285 data8 0x83C8DDF213711381, 0x0000BFCC <em class='comment'>//A14 = -4.5721980583985311263109531319e-16</em>
+<a id='L286' name='L286'></a> 286 LOCAL_OBJECT_END(tanhl_data)
+<a id='L287' name='L287'></a> 287 
+<a id='L288' name='L288'></a> 288 LOCAL_OBJECT_START(_0p25_to_0p5_data)
+<a id='L289' name='L289'></a> 289 <em class='comment'>// Polynomial coefficients for the tanh(x), 1/4 &lt;= |x| &lt; 1/2</em>
+<a id='L290' name='L290'></a> 290 data8 0xB6E27B747C47C8AD, 0x0000BFF6 <em class='comment'>//A3 = -2.7905990032063258105302045572e-03</em>
+<a id='L291' name='L291'></a> 291 data8 0xBF93FD54E226F8F7 <em class='comment'>//A2H = -1.9521070769536099515084615064e-02</em>
+<a id='L292' name='L292'></a> 292 data8 0xBC491BC884F6F18A <em class='comment'>//A2L = -2.7222721075104525371410300625e-18</em>
+<a id='L293' name='L293'></a> 293 data8 0x3FCBE3FBB015A591 <em class='comment'>//A1H = 2.1789499376181400980279079249e-01</em>
+<a id='L294' name='L294'></a> 294 data8 0x3C76AFC2D1AE35F7 <em class='comment'>//A1L = 1.9677459707672596091076696742e-17</em>
+<a id='L295' name='L295'></a> 295 data8 0x3FD6EF53DE8C8FAF <em class='comment'>//A0H = 3.5835739835078589399230963863e-01</em>
+<a id='L296' name='L296'></a> 296 data8 0x3C8E2A1C14355F9D <em class='comment'>//A0L = 5.2327050592919416045278607775e-17</em>
+<a id='L297' name='L297'></a> 297 data8 0xF56D363AAE3BAD53, 0x00003FBB <em class='comment'>//A25 = 6.4963882412697389947564301120e-21</em>
+<a id='L298' name='L298'></a> 298 data8 0xAD6348526CEEB897, 0x0000BFBD <em class='comment'>//A24 = -1.8358149767147407353343152624e-20</em>
+<a id='L299' name='L299'></a> 299 data8 0x85D96A988565FD65, 0x0000BFC1 <em class='comment'>//A23 = -2.2674950494950919052759556703e-19</em>
+<a id='L300' name='L300'></a> 300 data8 0xD52CAF6B1E4D9717, 0x00003FC3 <em class='comment'>//A22 = 1.4445269502644677106995571101e-18</em>
+<a id='L301' name='L301'></a> 301 data8 0xBD7E1BE5CBEF7A01, 0x00003FC5 <em class='comment'>//A21 = 5.1362075721080004718090799595e-18</em>
+<a id='L302' name='L302'></a> 302 data8 0xAE84A9B12ADD6948, 0x0000BFC9 <em class='comment'>//A20 = -7.5685210830925426342786733068e-17</em>
+<a id='L303' name='L303'></a> 303 data8 0xEAC2D5FCF80E250C, 0x00003FC6 <em class='comment'>//A19 = 1.2726423522879522181100392135e-17</em>
+<a id='L304' name='L304'></a> 304 data8 0xE0D2A8AC8C2EDB95, 0x00003FCE <em class='comment'>//A18 = 3.1200443098733419749016380203e-15</em>
+<a id='L305' name='L305'></a> 305 data8 0xB22F0AB7B417F78E, 0x0000BFD0 <em class='comment'>//A17 = -9.8911854977385933809488291835e-15</em>
+<a id='L306' name='L306'></a> 306 data8 0xE25A627BAEFFA7A4, 0x0000BFD3 <em class='comment'>//A16 = -1.0052095388666003876301743498e-13</em>
+<a id='L307' name='L307'></a> 307 data8 0xC90F32EC4A17F908, 0x00003FD6 <em class='comment'>//A15 = 7.1430637679768183097897337145e-13</em>
+<a id='L308' name='L308'></a> 308 data8 0x905F6F124AF956B1, 0x00003FD8 <em class='comment'>//A14 = 2.0516607231389483452611375485e-12</em>
+<a id='L309' name='L309'></a> 309 LOCAL_OBJECT_END(_0p25_to_0p5_data)
+<a id='L310' name='L310'></a> 310 
+<a id='L311' name='L311'></a> 311 LOCAL_OBJECT_START(_0p5_to_1_data)
+<a id='L312' name='L312'></a> 312 <em class='comment'>// Polynomial coefficients for the tanh(x), 1/2 &lt;= |x| &lt; 1</em>
+<a id='L313' name='L313'></a> 313 data8 0xAB402BE491EE72A7, 0x00003FF7 <em class='comment'>//A3 = 5.2261556931080934657023772945e-03</em>
+<a id='L314' name='L314'></a> 314 data8 0xBFB8403D3DDA87BE <em class='comment'>//A2H = -9.4730212784752659826992271519e-02</em>
+<a id='L315' name='L315'></a> 315 data8 0xBC6FF7BC2AB71A8B <em class='comment'>//A2L = -1.3863786398568460929625760740e-17</em>
+<a id='L316' name='L316'></a> 316 data8 0x3FD3173B1EFA6EF4 <em class='comment'>//A1H = 2.9829290414066567116435635398e-01</em>
+<a id='L317' name='L317'></a> 317 data8 0x3C881E4DCABDE840 <em class='comment'>//A1L = 4.1838710466827119847963316219e-17</em>
+<a id='L318' name='L318'></a> 318 data8 0x3FE45323E552F228 <em class='comment'>//A0H = 6.3514895238728730220145735075e-01</em>
+<a id='L319' name='L319'></a> 319 data8 0x3C739D5832BF7BCF <em class='comment'>//A0L = 1.7012977006567066423682445459e-17</em>
+<a id='L320' name='L320'></a> 320 data8 0xF153980BECD8AE12, 0x00003FD0 <em class='comment'>//A25 = 1.3396313991261493342597057700e-14</em>
+<a id='L321' name='L321'></a> 321 data8 0xEC9ACCD245368129, 0x0000BFD3 <em class='comment'>//A24 = -1.0507358886349528807350792383e-13</em>
+<a id='L322' name='L322'></a> 322 data8 0x8AE6498CA36D2D1A, 0x00003FD4 <em class='comment'>//A23 = 1.2336759149738309660361813001e-13</em>
+<a id='L323' name='L323'></a> 323 data8 0x8DF02FBF5AC70E64, 0x00003FD7 <em class='comment'>//A22 = 1.0085317723615282268326194551e-12</em>
+<a id='L324' name='L324'></a> 324 data8 0x9E15C7125DA204EE, 0x0000BFD9 <em class='comment'>//A21 = -4.4930478919612724261941857560e-12</em>
+<a id='L325' name='L325'></a> 325 data8 0xA62C6F39BDDCEC1C, 0x00003FD7 <em class='comment'>//A20 = 1.1807342457875095150035780314e-12</em>
+<a id='L326' name='L326'></a> 326 data8 0xDFD8D65D30F80F52, 0x00003FDC <em class='comment'>//A19 = 5.0896919887121116317817665996e-11</em>
+<a id='L327' name='L327'></a> 327 data8 0xB795AFFD458F743E, 0x0000BFDE <em class='comment'>//A18 = -1.6696932710534097241291327756e-10</em>
+<a id='L328' name='L328'></a> 328 data8 0xFEF30234CB01EC89, 0x0000BFDD <em class='comment'>//A17 = -1.1593749714588103589483091370e-10</em>
+<a id='L329' name='L329'></a> 329 data8 0xA2F638356E13761E, 0x00003FE2 <em class='comment'>//A16 = 2.3714062288761887457674853605e-09</em>
+<a id='L330' name='L330'></a> 330 data8 0xC429CC0D031E4FD5, 0x0000BFE3 <em class='comment'>//A15 = -5.7091025466377379046489586383e-09</em>
+<a id='L331' name='L331'></a> 331 data8 0xC78363FF929EFF62, 0x0000BFE4 <em class='comment'>//A14 = -1.1613199289622686725595739572e-08</em>
+<a id='L332' name='L332'></a> 332 LOCAL_OBJECT_END(_0p5_to_1_data)
+<a id='L333' name='L333'></a> 333 
+<a id='L334' name='L334'></a> 334 LOCAL_OBJECT_START(_1_to_2_data)
+<a id='L335' name='L335'></a> 335 <em class='comment'>// Polynomial coefficients for the tanh(x), 1 &lt;= |x| &lt; 2.0</em>
+<a id='L336' name='L336'></a> 336 data8 0xB3D8FB48A548D99A, 0x00003FFB <em class='comment'>//A3 = 8.7816203264683800892441646129e-02</em>
+<a id='L337' name='L337'></a> 337 data8 0xBFC4EFBD8FB38E3B <em class='comment'>//A2H = -1.6356629864377389416141284073e-01</em>
+<a id='L338' name='L338'></a> 338 data8 0xBC77687FD8087B23 <em class='comment'>//A2L = -2.0303377679446772162287121190e-17</em>
+<a id='L339' name='L339'></a> 339 data8 0x3FC72165282C6F72 <em class='comment'>//A1H = 1.8070663892364852154415189034e-01</em>
+<a id='L340' name='L340'></a> 340 data8 0x3C64E01F7A76D777 <em class='comment'>//A1L = 9.0532964466719018524360408402e-18</em>
+<a id='L341' name='L341'></a> 341 data8 0x3FECF6F9786DF577 <em class='comment'>//A0H = 9.0514825364486639625027919465e-01</em>
+<a id='L342' name='L342'></a> 342 data8 0x3C8834EDCE71A65B <em class='comment'>//A0L = 4.1992023813070331863928976191e-17</em>
+<a id='L343' name='L343'></a> 343 data8 0xC3EEEB3EFA688094, 0x00003FE2 <em class='comment'>//A25 = 2.8512044383274095705865793485e-09</em>
+<a id='L344' name='L344'></a> 344 data8 0x88461973672AEB12, 0x0000BFE1 <em class='comment'>//A24 = -9.9152258079470849685057375343e-10</em>
+<a id='L345' name='L345'></a> 345 data8 0xFC2AF9950DC5027E, 0x0000BFE4 <em class='comment'>//A23 = -1.4678101918123116001692289670e-08</em>
+<a id='L346' name='L346'></a> 346 data8 0x9C80CA742F89B7B5, 0x00003FE6 <em class='comment'>//A22 = 3.6438714992394138274843759814e-08</em>
+<a id='L347' name='L347'></a> 347 data8 0xA0B3D7FAA606260A, 0x0000BFE6 <em class='comment'>//A21 = -3.7416469848124568887944709492e-08</em>
+<a id='L348' name='L348'></a> 348 data8 0xDA5858432FBD9D9D, 0x0000BFE6 <em class='comment'>//A20 = -5.0837429421503142141842414978e-08</em>
+<a id='L349' name='L349'></a> 349 data8 0xB0244D1E1AE9C1B0, 0x00003FE9 <em class='comment'>//A19 = 3.2808967255272595749004827841e-07</em>
+<a id='L350' name='L350'></a> 350 data8 0xC8D3109ACF740738, 0x0000BFEA <em class='comment'>//A18 = -7.4812945767507614821609020680e-07</em>
+<a id='L351' name='L351'></a> 351 data8 0xBB0F3440EEA55BBF, 0x00003FEA <em class='comment'>//A17 = 6.9685053481643125932497676583e-07</em>
+<a id='L352' name='L352'></a> 352 data8 0xC13A8B08D8576C19, 0x00003FEB <em class='comment'>//A16 = 1.4396658837712390333960587173e-06</em>
+<a id='L353' name='L353'></a> 353 data8 0xFF3A1163CC5522A1, 0x0000BFED <em class='comment'>//A15 = -7.6063522055104010298762276148e-06</em>
+<a id='L354' name='L354'></a> 354 data8 0x8672AF27EB0823B7, 0x00003FEF <em class='comment'>//A14 = 1.6027448793338500004496520337e-05</em>
+<a id='L355' name='L355'></a> 355 LOCAL_OBJECT_END(_1_to_2_data)
+<a id='L356' name='L356'></a> 356 
+<a id='L357' name='L357'></a> 357 LOCAL_OBJECT_START(_2_to_3p25_data)
+<a id='L358' name='L358'></a> 358 <em class='comment'>// Polynomial coefficients for the tanh(x), 2 &lt;= |x| &lt; 3.25</em>
+<a id='L359' name='L359'></a> 359 data8 0xD45657BEC559E366, 0x00003FFA <em class='comment'>//A3 = 5.1840155367548909799883161889e-02</em>
+<a id='L360' name='L360'></a> 360 data8 0xBFA41B109CA6AB81 <em class='comment'>//A2H = -3.9268988726084870510835145296e-02</em>
+<a id='L361' name='L361'></a> 361 data8 0xBC2C3D708A4E56C5 <em class='comment'>//A2L = -7.6544669252238280132415018518e-19</em>
+<a id='L362' name='L362'></a> 362 data8 0x3F9434A517BBC5F4 <em class='comment'>//A1H = 1.9732074330880380874653212686e-02</em>
+<a id='L363' name='L363'></a> 363 data8 0x3C3ED62DD9585229 <em class='comment'>//A1L = 1.6716574468135097509707871438e-18</em>
+<a id='L364' name='L364'></a> 364 data8 0x3FEFD77D111A0AFF <em class='comment'>//A0H = 9.9505475368673035330147058630e-01</em>
+<a id='L365' name='L365'></a> 365 data8 0x3C9C415E151C6CA5 <em class='comment'>//A0L = 9.8030409604070051319822874013e-17</em>
+<a id='L366' name='L366'></a> 366 data8 0xB1596391D4534D52, 0x00003FEC <em class='comment'>//A25 = 2.6427086526487251988631279067e-06</em>
+<a id='L367' name='L367'></a> 367 data8 0xC4DC44E243D1AF5F, 0x00003FEF <em class='comment'>//A24 = 2.3467591534149209236830008333e-05</em>
+<a id='L368' name='L368'></a> 368 data8 0xAED5786023982BB8, 0x00003FF0 <em class='comment'>//A23 = 4.1683642395739762658623742687e-05</em>
+<a id='L369' name='L369'></a> 369 data8 0xCF39926C9FBC6A10, 0x00003FF0 <em class='comment'>//A22 = 4.9406263949321793291856681624e-05</em>
+<a id='L370' name='L370'></a> 370 data8 0xA255A72359928142, 0x00003FF0 <em class='comment'>//A21 = 3.8703580278108400672236161973e-05</em>
+<a id='L371' name='L371'></a> 371 data8 0xA2E573B9FC332C0D, 0x00003FED <em class='comment'>//A20 = 4.8546879618263642155709302480e-06</em>
+<a id='L372' name='L372'></a> 372 data8 0x82C7BD01830ACA93, 0x00003FF0 <em class='comment'>//A19 = 3.1180436075031301077175550468e-05</em>
+<a id='L373' name='L373'></a> 373 data8 0xB38AF4C76E96444B, 0x0000BFF0 <em class='comment'>//A18 = -4.2806338675404452784440167120e-05</em>
+<a id='L374' name='L374'></a> 374 data8 0xEC08FF0FB194464C, 0x00003FF0 <em class='comment'>//A17 = 5.6275163156181928637744511210e-05</em>
+<a id='L375' name='L375'></a> 375 data8 0xB850825D9E235135, 0x0000BFF0 <em class='comment'>//A16 = -4.3943998628289568813056822585e-05</em>
+<a id='L376' name='L376'></a> 376 data8 0xF98436E838763687, 0x0000BFEF <em class='comment'>//A15 = -2.9744680263523220185672219686e-05</em>
+<a id='L377' name='L377'></a> 377 data8 0xE1851A2D00737A5D, 0x00003FF2 <em class='comment'>//A14 = 2.1507256570895163202182573369e-04</em>
+<a id='L378' name='L378'></a> 378 LOCAL_OBJECT_END(_2_to_3p25_data)
+<a id='L379' name='L379'></a> 379 
+<a id='L380' name='L380'></a> 380 LOCAL_OBJECT_START(_4_to_6p5_data)
+<a id='L381' name='L381'></a> 381 <em class='comment'>// Polynomial coefficients for the tanh(x), 4 &lt;= |x| &lt; 6.5</em>
+<a id='L382' name='L382'></a> 382 data8 0x896FDBD321A0BE58, 0x00003FF5 <em class='comment'>//A3 = 1.0485606995331904734870550114e-03</em>
+<a id='L383' name='L383'></a> 383 data8 0xBF39C522B95A37D6 <em class='comment'>//A2H = -3.9321992640217512306882730044e-04</em>
+<a id='L384' name='L384'></a> 384 data8 0xBBA9B3EC39A45338 <em class='comment'>//A2L = -2.7213922673282819034134988241e-21</em>
+<a id='L385' name='L385'></a> 385 data8 0x3F19C5377A48B5AD <em class='comment'>//A1H = 9.8306189621330793766869338146e-05</em>
+<a id='L386' name='L386'></a> 386 data8 0x3BCAFCB1D08A891C <em class='comment'>//A1L = 1.1429476443042275163117526657e-20</em>
+<a id='L387' name='L387'></a> 387 data8 0x3FEFFFE63ABE253B <em class='comment'>//A0H = 9.9998771165079547440512897083e-01</em>
+<a id='L388' name='L388'></a> 388 data8 0x3C9BB74C4EE0D16F <em class='comment'>//A0L = 9.6159219890436197391279544561e-17</em>
+<a id='L389' name='L389'></a> 389 data8 0x8D86121D469AFA7E, 0x0000BFEF <em class='comment'>//A25 = -1.6870941388985743600323604423e-05</em>
+<a id='L390' name='L390'></a> 390 data8 0x9D3656A36593C5C4, 0x00003FEF <em class='comment'>//A24 = 1.8741161763079973068909254398e-05</em>
+<a id='L391' name='L391'></a> 391 data8 0xDCD772D5BF9ADB96, 0x00003FF0 <em class='comment'>//A23 = 5.2652739523018349983563695656e-05</em>
+<a id='L392' name='L392'></a> 392 data8 0xFF79ADCF0DCBCC2D, 0x00003FF1 <em class='comment'>//A22 = 1.2182012003034659966028035977e-04</em>
+<a id='L393' name='L393'></a> 393 data8 0x84D24E394DEFD0D2, 0x00003FF1 <em class='comment'>//A21 = 6.3334229517535065590380468696e-05</em>
+<a id='L394' name='L394'></a> 394 data8 0xA66B56BFD2782544, 0x00003FF1 <em class='comment'>//A20 = 7.9354902476954571736114945842e-05</em>
+<a id='L395' name='L395'></a> 395 data8 0xFB15771FBF3155FE, 0x0000BFEE <em class='comment'>//A19 = -1.4965763624796745134798717707e-05</em>
+<a id='L396' name='L396'></a> 396 data8 0xC774790126BE54C3, 0x00003FEF <em class='comment'>//A18 = 2.3776885435831770523136610539e-05</em>
+<a id='L397' name='L397'></a> 397 data8 0x825A13DACB8C68CD, 0x00003FEF <em class='comment'>//A17 = 1.5539153272890695426189818556e-05</em>
+<a id='L398' name='L398'></a> 398 data8 0xCFF96E6810AACE27, 0x0000BFF1 <em class='comment'>//A16 = -9.9169893703251156059893890295e-05</em>
+<a id='L399' name='L399'></a> 399 data8 0x8A85D2061B865024, 0x00003FF3 <em class='comment'>//A15 = 2.6421115104625621420758344535e-04</em>
+<a id='L400' name='L400'></a> 400 data8 0x922EC6F3CFE0496E, 0x0000BFF4 <em class='comment'>//A14 = -5.5764283474946207558456581668e-04</em>
+<a id='L401' name='L401'></a> 401 LOCAL_OBJECT_END(_4_to_6p5_data)
+<a id='L402' name='L402'></a> 402 
+<a id='L403' name='L403'></a> 403 LOCAL_OBJECT_START(_8_to_13_data)
+<a id='L404' name='L404'></a> 404 <em class='comment'>// Polynomial coefficients for the tanh(x), 8 &lt;= |x| &lt; 13</em>
+<a id='L405' name='L405'></a> 405 data8 0xDD6050A898303460, 0x00003FE6 <em class='comment'>//A3 = 5.1543170295688189081352133793e-08</em>
+<a id='L406' name='L406'></a> 406 data8 0xBE44C1078FDBADC0 <em class='comment'>//A2H = -9.6643444318955652627581125180e-09</em>
+<a id='L407' name='L407'></a> 407 data8 0xBAF95FCAA6DBBA6F <em class='comment'>//A2L = -1.3118146684038113473094275420e-24</em>
+<a id='L408' name='L408'></a> 408 data8 0x3E14C1078FE26748 <em class='comment'>//A1H = 1.2080430540780827633746315479e-09</em>
+<a id='L409' name='L409'></a> 409 data8 0x3A88168082F37D95 <em class='comment'>//A1L = 9.7290246966246404028418245094e-27</em>
+<a id='L410' name='L410'></a> 410 data8 0x3FEFFFFFFFF59F7C <em class='comment'>//A0H = 9.9999999992449728480892190419e-01</em>
+<a id='L411' name='L411'></a> 411 data8 0x3C7C068EBC5C2EEB <em class='comment'>//A0L = 2.4308346546749583521003998922e-17</em>
+<a id='L412' name='L412'></a> 412 data8 0x9DC155C77A6C46E5, 0x00003FF2 <em class='comment'>//A25 = 1.5044709695520252096006763473e-04</em>
+<a id='L413' name='L413'></a> 413 data8 0xF2F9E09CA47F46E9, 0x00003FF3 <em class='comment'>//A24 = 4.6344010077547944693833282056e-04</em>
+<a id='L414' name='L414'></a> 414 data8 0xCBFD67E704734BC8, 0x00003FF4 <em class='comment'>//A23 = 7.7815958662026429864083620142e-04</em>
+<a id='L415' name='L415'></a> 415 data8 0xC18DC821CD67E621, 0x00003FF4 <em class='comment'>//A22 = 7.3834928521190855055818897104e-04</em>
+<a id='L416' name='L416'></a> 416 data8 0x8AF72BCAB05A296E, 0x00003FF4 <em class='comment'>//A21 = 5.3011135848666430331904214879e-04</em>
+<a id='L417' name='L417'></a> 417 data8 0xC2E73BE9B9AB4007, 0x00003FF2 <em class='comment'>//A20 = 1.8587423129049905806822275188e-04</em>
+<a id='L418' name='L418'></a> 418 data8 0xE7E8C2058E2FF9F7, 0x00003FF1 <em class='comment'>//A19 = 1.1058292891321512917337425414e-04</em>
+<a id='L419' name='L419'></a> 419 data8 0xC46309F52E429F97, 0x0000BFF0 <em class='comment'>//A18 = -4.6822278664829811025251866877e-05</em>
+<a id='L420' name='L420'></a> 420 data8 0x81966C1E007E9BEB, 0x00003FF1 <em class='comment'>//A17 = 6.1792176836716291200611553354e-05</em>
+<a id='L421' name='L421'></a> 421 data8 0x8CEDC4BEFCAB9A7E, 0x0000BFF1 <em class='comment'>//A16 = -6.7200080564674449915571760779e-05</em>
+<a id='L422' name='L422'></a> 422 data8 0x8B64E9FA53210018, 0x00003FF1 <em class='comment'>//A15 = 6.6468331917938095774361868182e-05</em>
+<a id='L423' name='L423'></a> 423 data8 0x82DEDAA539A3A3F1, 0x0000BFF1 <em class='comment'>//A14 = -6.2403928644276709411156885292e-05</em>
+<a id='L424' name='L424'></a> 424 LOCAL_OBJECT_END(_8_to_13_data)
+<a id='L425' name='L425'></a> 425 
+<a id='L426' name='L426'></a> 426 LOCAL_OBJECT_START(_16_to_22p8_data)
+<a id='L427' name='L427'></a> 427 <em class='comment'>// Polynomial coefficients for the tanh(x), 16 &lt;= |x| &lt; 22.88</em>
+<a id='L428' name='L428'></a> 428 data8 0x992C00F33DDE804D, 0x00003FCE <em class='comment'>//A3 = 2.1256869805798788337547274131e-15</em>
+<a id='L429' name='L429'></a> 429 data8 0x3C8D42EA28102760 <em class='comment'>//A2H = 5.0760412270332007485198379096e-17</em>
+<a id='L430' name='L430'></a> 430 data8 0x391A747B43B072DD <em class='comment'>//A2L = 1.2737621993898125881520341053e-33</em>
+<a id='L431' name='L431'></a> 431 data8 0x3C309BC5C3CB4D5F <em class='comment'>//A1H = 9.0034785192019775952205276560e-19</em>
+<a id='L432' name='L432'></a> 432 data8 0x38A8EF3B5C9DCE71 <em class='comment'>//A1L = 9.3793162715476168397242934494e-36</em>
+<a id='L433' name='L433'></a> 433 data8 0x3FF0000000000000 <em class='comment'>//A0H = 1.0000000000000000000000000000e+00</em>
+<a id='L434' name='L434'></a> 434 data8 0x3BACC66AFD5CA22A <em class='comment'>//A0L = 3.0466790472070565954180861749e-21</em>
+<a id='L435' name='L435'></a> 435 data8 0xF020FB351C2F37CB, 0x00003FF1 <em class='comment'>//A25 = 1.1450235038836625246604146870e-04</em>
+<a id='L436' name='L436'></a> 436 data8 0xBE80596C51302A7B, 0x00003FF4 <em class='comment'>//A24 = 7.2670503421185030764546828414e-04</em>
+<a id='L437' name='L437'></a> 437 data8 0x91343CF8577E0131, 0x00003FF6 <em class='comment'>//A23 = 2.2156380512949603402001207105e-03</em>
+<a id='L438' name='L438'></a> 438 data8 0x8D029A8679641286, 0x00003FF7 <em class='comment'>//A22 = 4.3032888906494613055765544559e-03</em>
+<a id='L439' name='L439'></a> 439 data8 0xC3713F64D8DC4BAB, 0x00003FF7 <em class='comment'>//A21 = 5.9644279041951657632420721490e-03</em>
+<a id='L440' name='L440'></a> 440 data8 0xCD678C455A5D06C2, 0x00003FF7 <em class='comment'>//A20 = 6.2684473911812928601693994403e-03</em>
+<a id='L441' name='L441'></a> 441 data8 0xA9E1C825BDCEEBCC, 0x00003FF7 <em class='comment'>//A19 = 5.1843859941826642445235686826e-03</em>
+<a id='L442' name='L442'></a> 442 data8 0xE29C919AD93F6EB9, 0x00003FF6 <em class='comment'>//A18 = 3.4578185539872939928152204329e-03</em>
+<a id='L443' name='L443'></a> 443 data8 0xF7E615A75994A607, 0x00003FF5 <em class='comment'>//A17 = 1.8913175041916131006881986311e-03</em>
+<a id='L444' name='L444'></a> 444 data8 0xE102EFE0F7F2B2AD, 0x00003FF4 <em class='comment'>//A16 = 8.5835064987089641065525269712e-04</em>
+<a id='L445' name='L445'></a> 445 data8 0xAAD62946DEE96996, 0x00003FF3 <em class='comment'>//A15 = 3.2584489313998677644253007210e-04</em>
+<a id='L446' name='L446'></a> 446 data8 0xDA2470DE110B293E, 0x00003FF1 <em class='comment'>//A14 = 1.0401837693241806604296821650e-04</em>
+<a id='L447' name='L447'></a> 447 LOCAL_OBJECT_END(_16_to_22p8_data)
+<a id='L448' name='L448'></a> 448 
+<a id='L449' name='L449'></a> 449 LOCAL_OBJECT_START(_3p25_to_4_data)
+<a id='L450' name='L450'></a> 450 <em class='comment'>// Polynomial coefficients for the tanh(x), 3.25 &lt;= |x| &lt; 4</em>
+<a id='L451' name='L451'></a> 451 data8 0xE9E07240432926E6, 0x00003FF7 <em class='comment'>//A3 = 7.1373517862636557382403555215e-03</em>
+<a id='L452' name='L452'></a> 452 data8 0xBF75F495227AF306 <em class='comment'>//A2H = -5.3602052282115727338540622782e-03</em>
+<a id='L453' name='L453'></a> 453 data8 0xBBBE92D355A6B716 <em class='comment'>//A2L = -6.4741983326810209847018826624e-21</em>
+<a id='L454' name='L454'></a> 454 data8 0x3F65F85AD510B690 <em class='comment'>//A1H = 2.6819013660517934671823070403e-03</em>
+<a id='L455' name='L455'></a> 455 data8 0x3C159A0B73E6EC01 <em class='comment'>//A1L = 2.9275813076637328121849573333e-19</em>
+<a id='L456' name='L456'></a> 456 data8 0x3FEFFA81708A0B42 <em class='comment'>//A0H = 9.9932929973906703402519724477e-01</em>
+<a id='L457' name='L457'></a> 457 data8 0x3C66857246C19DC6 <em class='comment'>//A0L = 9.7670460995685717424398031188e-18</em>
+<a id='L458' name='L458'></a> 458 data8 0xE6B6B8365B1E4D6C, 0x00003FE3 <em class='comment'>//A25 = 6.7146538162212081470554423396e-09</em>
+<a id='L459' name='L459'></a> 459 data8 0xE0453CEEF483A510, 0x00003FE2 <em class='comment'>//A24 = 3.2635647369924061614015292015e-09</em>
+<a id='L460' name='L460'></a> 460 data8 0x9C7D83B56E92CF1A, 0x00003FE5 <em class='comment'>//A23 = 1.8217867585545497089756353348e-08</em>
+<a id='L461' name='L461'></a> 461 data8 0xA94635C48ABA9EB4, 0x0000BFE4 <em class='comment'>//A22 = -9.8530586070049930796756799547e-09</em>
+<a id='L462' name='L462'></a> 462 data8 0xB1B0C14443067646, 0x00003FE5 <em class='comment'>//A21 = 2.0685890807654992387562340307e-08</em>
+<a id='L463' name='L463'></a> 463 data8 0x9C6E549781E293C3, 0x00003FDE <em class='comment'>//A20 = 1.4227314592865135171341122138e-10</em>
+<a id='L464' name='L464'></a> 464 data8 0xB0CBFCE7C80F57A7, 0x0000BFE7 <em class='comment'>//A19 = -8.2327438416004542109809245219e-08</em>
+<a id='L465' name='L465'></a> 465 data8 0xB151AB3876E896E1, 0x00003FE9 <em class='comment'>//A18 = 3.3028241036175815328309577940e-07</em>
+<a id='L466' name='L466'></a> 466 data8 0xFCF3A5C1A5CB7EEE, 0x0000BFEA <em class='comment'>//A17 = -9.4231869277542043001280640966e-07</em>
+<a id='L467' name='L467'></a> 467 data8 0x96A9016C7C95BEDA, 0x00003FEC <em class='comment'>//A16 = 2.2450115975007100522962781833e-06</em>
+<a id='L468' name='L468'></a> 468 data8 0x9B9B0A3901DEC05B, 0x0000BFED <em class='comment'>//A15 = -4.6374089937147736266514566049e-06</em>
+<a id='L469' name='L469'></a> 469 data8 0x8987DF26A6789CCF, 0x00003FEE <em class='comment'>//A14 = 8.1974714257536543772040700977e-06</em>
+<a id='L470' name='L470'></a> 470 LOCAL_OBJECT_END(_3p25_to_4_data)
+<a id='L471' name='L471'></a> 471 
+<a id='L472' name='L472'></a> 472 LOCAL_OBJECT_START(_6p5_to_8_data)
+<a id='L473' name='L473'></a> 473 <em class='comment'>// Polynomial coefficients for the tanh(x), 6.5 &lt;= |x| &lt; 8.0</em>
+<a id='L474' name='L474'></a> 474 data8 0xA11C8A63815E5657, 0x00003FEF <em class='comment'>//A3 = 1.9205985861286093001394561449e-05</em>
+<a id='L475' name='L475'></a> 475 data8 0xBEDE355AD6CB61D8 <em class='comment'>//A2H = -7.2022479400070228499307345427e-06</em>
+<a id='L476' name='L476'></a> 476 data8 0xBB8E6B50B8468A63 <em class='comment'>//A2L = -8.0518953122203408718779840543e-22</em>
+<a id='L477' name='L477'></a> 477 data8 0x3EBE355B48DCF330 <em class='comment'>//A1H = 1.8005623902549165889479948488e-06</em>
+<a id='L478' name='L478'></a> 478 data8 0x3B5837550FFA98DA <em class='comment'>//A1L = 8.0124491698609178046195694087e-23</em>
+<a id='L479' name='L479'></a> 479 data8 0x3FEFFFFF872A91F8 <em class='comment'>//A0H = 9.9999977492967584424832239165e-01</em>
+<a id='L480' name='L480'></a> 480 data8 0x3C8A43B839B4EB63 <em class='comment'>//A0L = 4.5561696441306660142461355317e-17</em>
+<a id='L481' name='L481'></a> 481 data8 0xB5BC1948966B8826, 0x0000BFE6 <em class='comment'>//A25 = -4.2313421330480692560677276010e-08</em>
+<a id='L482' name='L482'></a> 482 data8 0x91D0BE367389BDFC, 0x0000BFE8 <em class='comment'>//A24 = -1.3580117599617083801153887619e-07</em>
+<a id='L483' name='L483'></a> 483 data8 0xFFD950AF282AB36C, 0x0000BFE8 <em class='comment'>//A23 = -2.3827784451962439125197203287e-07</em>
+<a id='L484' name='L484'></a> 484 data8 0x959B1770EBB8903A, 0x0000BFE9 <em class='comment'>//A22 = -2.7866256690165347051403663794e-07</em>
+<a id='L485' name='L485'></a> 485 data8 0xCC78060D1C0CFF3C, 0x0000BFE8 <em class='comment'>//A21 = -1.9042644867126442102188429523e-07</em>
+<a id='L486' name='L486'></a> 486 data8 0xF8919BAF2E87F31D, 0x0000BFE8 <em class='comment'>//A20 = -2.3149771783868910586746973299e-07</em>
+<a id='L487' name='L487'></a> 487 data8 0xC5B6AC942A3F2440, 0x00003FE8 <em class='comment'>//A19 = 1.8413511183396213757149263639e-07</em>
+<a id='L488' name='L488'></a> 488 data8 0xABF1A4703056450A, 0x0000BFEA <em class='comment'>//A18 = -6.4054099983863829656292958643e-07</em>
+<a id='L489' name='L489'></a> 489 data8 0xBB543D8BDB670453, 0x00003FEB <em class='comment'>//A17 = 1.3957102903892251890348444989e-06</em>
+<a id='L490' name='L490'></a> 490 data8 0xC9D6F37700C1D092, 0x0000BFEC <em class='comment'>//A16 = -3.0076451968978522605262647414e-06</em>
+<a id='L491' name='L491'></a> 491 data8 0xCA6EF4BB64E49EC8, 0x00003FED <em class='comment'>//A15 = 6.0329860989478473738709576062e-06</em>
+<a id='L492' name='L492'></a> 492 data8 0xBE25D0FD069D0A93, 0x0000BFEE <em class='comment'>//A14 = -1.1333687314965721384777951065e-05</em>
+<a id='L493' name='L493'></a> 493 LOCAL_OBJECT_END(_6p5_to_8_data)
+<a id='L494' name='L494'></a> 494 
+<a id='L495' name='L495'></a> 495 LOCAL_OBJECT_START(_13_to_16_data)
+<a id='L496' name='L496'></a> 496 <em class='comment'>// Polynomial coefficients for the tanh(x), 13 &lt;= |x| &lt; 16</em>
+<a id='L497' name='L497'></a> 497 data8 0x98176FD2075BDBD5, 0x00003FDB <em class='comment'>//A3 = 1.7290807363028159200235264756e-11</em>
+<a id='L498' name='L498'></a> 498 data8 0xBD8C8464F76162D1 <em class='comment'>//A2H = -3.2420263805679445515400340441e-12</em>
+<a id='L499' name='L499'></a> 499 data8 0xBA2D56B508E0F1FD <em class='comment'>//A2L = -1.8515322669984580704502445180e-28</em>
+<a id='L500' name='L500'></a> 500 data8 0x3D5C8464F761639C <em class='comment'>//A1H = 4.0525329757100331782338488690e-13</em>
+<a id='L501' name='L501'></a> 501 data8 0x3A0A09D9E328E620 <em class='comment'>//A1L = 4.1081479300866418212862258651e-29</em>
+<a id='L502' name='L502'></a> 502 data8 0x3FEFFFFFFFFFFF1B <em class='comment'>//A0H = 9.9999999999997457589273608392e-01</em>
+<a id='L503' name='L503'></a> 503 data8 0x3C9B9B089E9BFD89 <em class='comment'>//A0L = 9.5776165728054091471814161399e-17</em>
+<a id='L504' name='L504'></a> 504 data8 0xC5395B9EC765BDB7, 0x00003FE6 <em class='comment'>//A25 = 4.5919803498257974411526879804e-08</em>
+<a id='L505' name='L505'></a> 505 data8 0x9A0F1FCB1DC24C3A, 0x00003FE8 <em class='comment'>//A24 = 1.4347869798460288751020493795e-07</em>
+<a id='L506' name='L506'></a> 506 data8 0x8AA5C3459FAD0B28, 0x00003FE9 <em class='comment'>//A23 = 2.5825111356333853968900510087e-07</em>
+<a id='L507' name='L507'></a> 507 data8 0x9578B747988CFF9D, 0x00003FE9 <em class='comment'>//A22 = 2.7841245127068220034870119246e-07</em>
+<a id='L508' name='L508'></a> 508 data8 0x810DF1A589D9CAF1, 0x00003FE9 <em class='comment'>//A21 = 2.4038267971021370956311255310e-07</em>
+<a id='L509' name='L509'></a> 509 data8 0x8A00D77B9416EB75, 0x00003FE8 <em class='comment'>//A20 = 1.2852557749068320312899366352e-07</em>
+<a id='L510' name='L510'></a> 510 data8 0xB2436C4A1849C498, 0x00003FE7 <em class='comment'>//A19 = 8.3010350873515703893886683374e-08</em>
+<a id='L511' name='L511'></a> 511 data8 0xEA6405B18356600B, 0x00003FE3 <em class='comment'>//A18 = 6.8216675390299296071261114202e-09</em>
+<a id='L512' name='L512'></a> 512 data8 0xF7606C022194B7E8, 0x00003FE5 <em class='comment'>//A17 = 2.8798432098264655723769995993e-08</em>
+<a id='L513' name='L513'></a> 513 data8 0xAF4B0C453FCAF34E, 0x0000BFE5 <em class='comment'>//A16 = -2.0406809167824936143455638336e-08</em>
+<a id='L514' name='L514'></a> 514 data8 0xC324C1F10D5FA7CC, 0x00003FE5 <em class='comment'>//A15 = 2.2717703170390130238356558599e-08</em>
+<a id='L515' name='L515'></a> 515 data8 0xB34A2E3A4D3B9C31, 0x0000BFE5 <em class='comment'>//A14 = -2.0872076027950789618606920471e-08</em>
+<a id='L516' name='L516'></a> 516 LOCAL_OBJECT_END(_13_to_16_data)
+<a id='L517' name='L517'></a> 517 
+<a id='L518' name='L518'></a> 518 
+<a id='L519' name='L519'></a> 519 <em class='comment'>//////// "Tail" tables //////////</em>
+<a id='L520' name='L520'></a> 520 LOCAL_OBJECT_START(_0p125_to_0p25_data_tail)
+<a id='L521' name='L521'></a> 521 <em class='comment'>// Polynomial coefficients for the erf(x), 1/8 &lt;= |x| &lt; 1/4</em>
+<a id='L522' name='L522'></a> 522 data8 0x9D7D206E97ADC83A, 0x0000BFCC <em class='comment'>//A13 = -5.4639895428711257047470806445e-16</em>
+<a id='L523' name='L523'></a> 523 data8 0xA8972B666A845810, 0x00003FD3 <em class='comment'>//A12 = 7.4869224589947988668562043110e-14</em>
+<a id='L524' name='L524'></a> 524 data8 0x9A5B31511C9F4698, 0x0000BFD4 <em class='comment'>//A11 = -1.3709586467430093373657009487e-13</em>
+<a id='L525' name='L525'></a> 525 data8 0xCBB8047BCB274982, 0x0000BFDA <em class='comment'>//A10 = -1.1580074124926108509393610532e-11</em>
+<a id='L526' name='L526'></a> 526 data8 0xF95EB849E5F9247C, 0x00003FDC <em class='comment'>//A9 = 5.6700173336564916962945623180e-11</em>
+<a id='L527' name='L527'></a> 527 data8 0xE7893404C6A53386, 0x00003FE1 <em class='comment'>//A8 = 1.6846457582993065168777704528e-09</em>
+<a id='L528' name='L528'></a> 528 data8 0xF2E5C7E2B5F55ECC, 0x0000BFE4 <em class='comment'>//A7 = -1.4138500046802141367543484859e-08</em>
+<a id='L529' name='L529'></a> 529 data8 0xF43906FF53A002C0, 0x0000BFE8 <em class='comment'>//A6 = -2.2745017243678613107034288816e-07</em>
+<a id='L530' name='L530'></a> 530 data8 0xC6175D5E47D1D259, 0x00003FEC <em class='comment'>//A5 = 2.9517899220726077077586632607e-06</em>
+<a id='L531' name='L531'></a> 531 data8 0xE7C2AE92CB36769B, 0x00003FEF <em class='comment'>//A4 = 2.7628001723157068127646694830e-05</em>
+<a id='L532' name='L532'></a> 532 LOCAL_OBJECT_END(_0p125_to_0p25_data_tail)
+<a id='L533' name='L533'></a> 533 
+<a id='L534' name='L534'></a> 534 LOCAL_OBJECT_START(_0p25_to_0p5_data_tail)
+<a id='L535' name='L535'></a> 535 <em class='comment'>// Polynomial coefficients for the tanh(x), 1/4 &lt;= |x| &lt; 1/2</em>
+<a id='L536' name='L536'></a> 536 data8 0x9E2972C008B9965E, 0x0000BFDC <em class='comment'>//A13 = -3.5961854154738002253192260213e-11</em>
+<a id='L537' name='L537'></a> 537 data8 0xC3EABA3D219BEA8A, 0x00003FDB <em class='comment'>//A12 = 2.2273173303628274478819473067e-11</em>
+<a id='L538' name='L538'></a> 538 data8 0xC50FB68D960D5CD9, 0x00003FE1 <em class='comment'>//A11 = 1.4338102430978399800743148719e-09</em>
+<a id='L539' name='L539'></a> 539 data8 0xB3BB92499EF2D583, 0x0000BFE3 <em class='comment'>//A10 = -5.2309100551458044083112632491e-09</em>
+<a id='L540' name='L540'></a> 540 data8 0xBD915BE632F1D04E, 0x0000BFE6 <em class='comment'>//A9 = -4.4137194873936112573773943707e-08</em>
+<a id='L541' name='L541'></a> 541 data8 0xBC48C813FA819141, 0x00003FE9 <em class='comment'>//A8 = 3.5070684356359066908197915734e-07</em>
+<a id='L542' name='L542'></a> 542 data8 0xD3E34EA031AC611B, 0x00003FEA <em class='comment'>//A7 = 7.8934400708919584259192272835e-07</em>
+<a id='L543' name='L543'></a> 543 data8 0x8EAC489D859541CD, 0x0000BFEF <em class='comment'>//A6 = -1.7007944944124693133572815137e-05</em>
+<a id='L544' name='L544'></a> 544 data8 0x98D4D7E5D1508B8A, 0x00003FEF <em class='comment'>//A5 = 1.8218924920302265989878708948e-05</em>
+<a id='L545' name='L545'></a> 545 data8 0xAC262F3F8CF49C02, 0x00003FF4 <em class='comment'>//A4 = 6.5669692402266433496312492412e-04</em>
+<a id='L546' name='L546'></a> 546 LOCAL_OBJECT_END(_0p25_to_0p5_data_tail)
+<a id='L547' name='L547'></a> 547 
+<a id='L548' name='L548'></a> 548 LOCAL_OBJECT_START(_0p5_to_1_data_tail)
+<a id='L549' name='L549'></a> 549 <em class='comment'>// Polynomial coefficients for the tanh(x), 1/2 &lt;= |x| &lt; 1</em>
+<a id='L550' name='L550'></a> 550 data8 0xDF67FB36FFA2A538, 0x00003FE7 <em class='comment'>//A13 = 1.0403160796697495720021114635e-07</em>
+<a id='L551' name='L551'></a> 551 data8 0xB7FB80FB5AFA63A4, 0x0000BFE8 <em class='comment'>//A12 = -1.7134699677764282023124981753e-07</em>
+<a id='L552' name='L552'></a> 552 data8 0xC87625A0BA7D6C5F, 0x0000BFEA <em class='comment'>//A11 = -7.4677732458471897291461679095e-07</em>
+<a id='L553' name='L553'></a> 553 data8 0x90DA375DD9AF6D79, 0x00003FED <em class='comment'>//A10 = 4.3169381418023765618186668159e-06</em>
+<a id='L554' name='L554'></a> 554 data8 0x82DFB03317B17316, 0x0000BFED <em class='comment'>//A9 = -3.9003426534601562552753368105e-06</em>
+<a id='L555' name='L555'></a> 555 data8 0xAA582FD4F3438BB4, 0x0000BFF0 <em class='comment'>//A8 = -4.0613288845040776435400454867e-05</em>
+<a id='L556' name='L556'></a> 556 data8 0xB1532D8CF763B21C, 0x00003FF2 <em class='comment'>//A7 = 1.6911021594787399557528570601e-04</em>
+<a id='L557' name='L557'></a> 557 data8 0x82E12AEF7CAB76C6, 0x0000BFEF <em class='comment'>//A6 = -1.5602059530458172761585925044e-05</em>
+<a id='L558' name='L558'></a> 558 data8 0x83256E3D0FBA5C93, 0x0000BFF6 <em class='comment'>//A5 = -2.0011324059500451791903108104e-03</em>
+<a id='L559' name='L559'></a> 559 data8 0xCC4AB2EC0965499B, 0x00003FF7 <em class='comment'>//A4 = 6.2344907419841579664122448353e-03</em>
+<a id='L560' name='L560'></a> 560 LOCAL_OBJECT_END(_0p5_to_1_data_tail)
+<a id='L561' name='L561'></a> 561 
+<a id='L562' name='L562'></a> 562 LOCAL_OBJECT_START(_1_to_2_data_tail)
+<a id='L563' name='L563'></a> 563 <em class='comment'>// Polynomial coefficients for the tanh(x), 1 &lt;= |x| &lt; 2.0</em>
+<a id='L564' name='L564'></a> 564 data8 0xCCAEE174EAC17F78, 0x0000BFEE <em class='comment'>//A13 = -1.2200065117856038355953618829e-05</em>
+<a id='L565' name='L565'></a> 565 data8 0xA39DD0981D1A2776, 0x0000BFF0 <em class='comment'>//A12 = -3.9009204899026604074167603200e-05</em>
+<a id='L566' name='L566'></a> 566 data8 0xB7104FA27FAF80D0, 0x00003FF2 <em class='comment'>//A11 = 1.7458316338540792661905876072e-04</em>
+<a id='L567' name='L567'></a> 567 data8 0xB219A7274436A734, 0x0000BFF3 <em class='comment'>//A10 = -3.3969918595931391572998415468e-04</em>
+<a id='L568' name='L568'></a> 568 data8 0xCCD9D03C0C73CECF, 0x00003FF2 <em class='comment'>//A9 = 1.9536097875337884986025498958e-04</em>
+<a id='L569' name='L569'></a> 569 data8 0x85321EA40CFEEBEE, 0x00003FF5 <em class='comment'>//A8 = 1.0162031558369402750607778300e-03</em>
+<a id='L570' name='L570'></a> 570 data8 0x81F272C08C308220, 0x0000BFF7 <em class='comment'>//A7 = -3.9656696618251138315464862909e-03</em>
+<a id='L571' name='L571'></a> 571 data8 0xE8761C6BDEA9ED87, 0x00003FF7 <em class='comment'>//A6 = 7.0941580558970243020090656343e-03</em>
+<a id='L572' name='L572'></a> 572 data8 0xAE4E9F3691F66877, 0x0000BFF6 <em class='comment'>//A5 = -2.6597155288710984120834711909e-03</em>
+<a id='L573' name='L573'></a> 573 data8 0xCC8286B331BD8AAA, 0x0000BFF9 <em class='comment'>//A4 = -2.4964583478826523250880337777e-02</em>
+<a id='L574' name='L574'></a> 574 LOCAL_OBJECT_END(_1_to_2_data_tail)
+<a id='L575' name='L575'></a> 575 
+<a id='L576' name='L576'></a> 576 LOCAL_OBJECT_START(_2_to_3p25_data_tail)
+<a id='L577' name='L577'></a> 577 <em class='comment'>// Polynomial coefficients for the tanh(x), 2 &lt;= |x| &lt; 3.25</em>
+<a id='L578' name='L578'></a> 578 data8 0x92E1711A3BD6408B, 0x0000BFF4 <em class='comment'>//A13 = -5.6030514548041036913731470443e-04</em>
+<a id='L579' name='L579'></a> 579 data8 0x8B9BD885FF3E98C5, 0x00003FF5 <em class='comment'>//A12 = 1.0651304064581604055612602669e-03</em>
+<a id='L580' name='L580'></a> 580 data8 0xD041356C7FA26A22, 0x0000BFF5 <em class='comment'>//A11 = -1.5888574328066952147023520244e-03</em>
+<a id='L581' name='L581'></a> 581 data8 0xDFA210BE9BE6B7FD, 0x00003FF5 <em class='comment'>//A10 = 1.7061849060196387827639060629e-03</em>
+<a id='L582' name='L582'></a> 582 data8 0x8ECC3606808028E9, 0x0000BFF4 <em class='comment'>//A9 = -5.4472999329435778312080340471e-04</em>
+<a id='L583' name='L583'></a> 583 data8 0xD5C053B8EEBD10C8, 0x0000BFF6 <em class='comment'>//A8 = -3.2615856552479930645151033322e-03</em>
+<a id='L584' name='L584'></a> 584 data8 0xB7BFD63AC5051539, 0x00003FF8 <em class='comment'>//A7 = 1.1215171059191957498023766643e-02</em>
+<a id='L585' name='L585'></a> 585 data8 0xC367C59D7FA3ADA2, 0x0000BFF9 <em class='comment'>//A6 = -2.3853193251842394834616848995e-02</em>
+<a id='L586' name='L586'></a> 586 data8 0x9FC9FB890BB053CF, 0x00003FFA <em class='comment'>//A5 = 3.9010984954739386625695104667e-02</em>
+<a id='L587' name='L587'></a> 587 data8 0xD01D077B42E7ED76, 0x0000BFFA <em class='comment'>//A4 = -5.0808934425896607486919526567e-02</em>
+<a id='L588' name='L588'></a> 588 LOCAL_OBJECT_END(_2_to_3p25_data_tail)
+<a id='L589' name='L589'></a> 589 
+<a id='L590' name='L590'></a> 590 LOCAL_OBJECT_START(_4_to_6p5_data_tail)
+<a id='L591' name='L591'></a> 591 <em class='comment'>// Polynomial coefficients for the tanh(x), 4 &lt;= |x| &lt; 6.5</em>
+<a id='L592' name='L592'></a> 592 data8 0x870CCE8C76C52C7E, 0x00003FF5 <em class='comment'>//A13 = 1.0303499350193060915603525934e-03</em>
+<a id='L593' name='L593'></a> 593 data8 0xE1431E54AD2A738B, 0x0000BFF5 <em class='comment'>//A12 = -1.7186140560972621669872002486e-03</em>
+<a id='L594' name='L594'></a> 594 data8 0xAB20056533E28734, 0x00003FF6 <em class='comment'>//A11 = 2.6111615345168277554841545330e-03</em>
+<a id='L595' name='L595'></a> 595 data8 0xECCB91D64718B9BD, 0x0000BFF6 <em class='comment'>//A10 = -3.6132079169671860943878776041e-03</em>
+<a id='L596' name='L596'></a> 596 data8 0x94771DA3B8C2EB4F, 0x00003FF7 <em class='comment'>//A9 = 4.5308012699419563988381317896e-03</em>
+<a id='L597' name='L597'></a> 597 data8 0xA7497377E4946F2C, 0x0000BFF7 <em class='comment'>//A8 = -5.1051915941441437592654444804e-03</em>
+<a id='L598' name='L598'></a> 598 data8 0xA76B2D6FCA088AE9, 0x00003FF7 <em class='comment'>//A7 = 5.1092120989582196669504468168e-03</em>
+<a id='L599' name='L599'></a> 599 data8 0x928C8961F33C9560, 0x0000BFF7 <em class='comment'>//A6 = -4.4723196805537430568162704711e-03</em>
+<a id='L600' name='L600'></a> 600 data8 0xDBDDDF6CDE9AB9BE, 0x00003FF6 <em class='comment'>//A5 = 3.3548994514326736175581084349e-03</em>
+<a id='L601' name='L601'></a> 601 data8 0x896E211733AD9D40, 0x0000BFF6 <em class='comment'>//A4 = -2.0970183170010094667442967500e-03</em>
+<a id='L602' name='L602'></a> 602 LOCAL_OBJECT_END(_4_to_6p5_data_tail)
+<a id='L603' name='L603'></a> 603 
+<a id='L604' name='L604'></a> 604 LOCAL_OBJECT_START(_8_to_13_data_tail)
+<a id='L605' name='L605'></a> 605 <em class='comment'>// Polynomial coefficients for the tanh(x), 8 &lt;= |x| &lt; 13</em>
+<a id='L606' name='L606'></a> 606 data8 0xE50C3476BED020AA, 0x00003FF0 <em class='comment'>//A13 = 5.4609221347524272615754239857e-05</em>
+<a id='L607' name='L607'></a> 607 data8 0xBA16F5F4EDC0EABC, 0x0000BFF0 <em class='comment'>//A12 = -4.4367239594986428539386662937e-05</em>
+<a id='L608' name='L608'></a> 608 data8 0x8B916C2F002C3D91, 0x00003FF0 <em class='comment'>//A11 = 3.3275617838067362533536610680e-05</em>
+<a id='L609' name='L609'></a> 609 data8 0xBFE8031097CB4442, 0x0000BFEF <em class='comment'>//A10 = -2.2877013297722792747267224605e-05</em>
+<a id='L610' name='L610'></a> 610 data8 0xEFE1FFD106B2DA41, 0x00003FEE <em class='comment'>//A9 = 1.4298129659899553350478452989e-05</em>
+<a id='L611' name='L611'></a> 611 data8 0x86EF1FF403A6622E, 0x0000BFEE <em class='comment'>//A8 = -8.0426979849841642112688693288e-06</em>
+<a id='L612' name='L612'></a> 612 data8 0x86EF200FD047306B, 0x00003FED <em class='comment'>//A7 = 4.0213490418736097707257704218e-06</em>
+<a id='L613' name='L613'></a> 613 data8 0xEC22782377882553, 0x0000BFEB <em class='comment'>//A6 = -1.7593402092805559754997565942e-06</em>
+<a id='L614' name='L614'></a> 614 data8 0xB119DA1DB7C47773, 0x00003FEA <em class='comment'>//A5 = 6.5975257917246601211360847253e-07</em>
+<a id='L615' name='L615'></a> 615 data8 0xDD6050A7761D67BB, 0x0000BFE8 <em class='comment'>//A4 = -2.0617268111985310661707082242e-07</em>
+<a id='L616' name='L616'></a> 616 LOCAL_OBJECT_END(_8_to_13_data_tail)
+<a id='L617' name='L617'></a> 617 
+<a id='L618' name='L618'></a> 618 LOCAL_OBJECT_START(_16_to_22p8_data_tail)
+<a id='L619' name='L619'></a> 619 <em class='comment'>// Polynomial coefficients for the tanh(x), 16 &lt;= |x| &lt; 22.88</em>
+<a id='L620' name='L620'></a> 620 data8 0xEAF4AF87336E81B1, 0x00003FEF <em class='comment'>//A13 = 2.8008914392791730186582989654e-05</em>
+<a id='L621' name='L621'></a> 621 data8 0xD5B309EA768E2711, 0x00003FED <em class='comment'>//A12 = 6.3687375204024238267961143128e-06</em>
+<a id='L622' name='L622'></a> 622 data8 0xA4048CA537113538, 0x00003FEB <em class='comment'>//A11 = 1.2220276227448617951538196845e-06</em>
+<a id='L623' name='L623'></a> 623 data8 0xD3EC78BB3425377D, 0x00003FE8 <em class='comment'>//A10 = 1.9736934193679794194181457250e-07</em>
+<a id='L624' name='L624'></a> 624 data8 0xE5763CD37440266E, 0x00003FE5 <em class='comment'>//A9 = 2.6712876934440631473215182284e-08</em>
+<a id='L625' name='L625'></a> 625 data8 0xCECA765EEB4A265F, 0x00003FE2 <em class='comment'>//A8 = 3.0092031912460315516888139627e-09</em>
+<a id='L626' name='L626'></a> 626 data8 0x99ABF588DF81A52E, 0x00003FDF <em class='comment'>//A7 = 2.7952722177649984066847682907e-10</em>
+<a id='L627' name='L627'></a> 627 data8 0xB9C78918294A4685, 0x00003FDB <em class='comment'>//A6 = 2.1120676552098603524020495036e-11</em>
+<a id='L628' name='L628'></a> 628 data8 0xB3A3C42AD539D50F, 0x00003FD7 <em class='comment'>//A5 = 1.2764169243389521270291967366e-12</em>
+<a id='L629' name='L629'></a> 629 data8 0x86BC347939478174, 0x00003FD3 <em class='comment'>//A4 = 5.9834437707863962671883176163e-14</em>
+<a id='L630' name='L630'></a> 630 LOCAL_OBJECT_END(_16_to_22p8_data_tail)
+<a id='L631' name='L631'></a> 631 
+<a id='L632' name='L632'></a> 632 LOCAL_OBJECT_START(_3p25_to_4_data_tail)
+<a id='L633' name='L633'></a> 633 <em class='comment'>// Polynomial coefficients for the tanh(x), 3.25 &lt;= |x| &lt; 4</em>
+<a id='L634' name='L634'></a> 634 data8 0xBE9A2BE19F21BA1C, 0x0000BFEE <em class='comment'>//A13 = -1.1360778336288065244475976873e-05</em>
+<a id='L635' name='L635'></a> 635 data8 0xF84910F515BDB014, 0x00003FED <em class='comment'>//A12 = 7.3994819819577018481862729782e-06</em>
+<a id='L636' name='L636'></a> 636 data8 0xC4C84FB788AA4007, 0x00003FEF <em class='comment'>//A11 = 2.3458298013663976251972482656e-05</em>
+<a id='L637' name='L637'></a> 637 data8 0x86CC6243C170E5ED, 0x0000BFF2 <em class='comment'>//A10 = -1.2855374755847770638424932233e-04</em>
+<a id='L638' name='L638'></a> 638 data8 0xD3065AC539ABABFF, 0x00003FF3 <em class='comment'>//A9 = 4.0249790677367806832685138089e-04</em>
+<a id='L639' name='L639'></a> 639 data8 0x82C4413795EC381B, 0x0000BFF5 <em class='comment'>//A8 = -9.9767013652382759950854031514e-04</em>
+<a id='L640' name='L640'></a> 640 data8 0x88D588720888899A, 0x00003FF6 <em class='comment'>//A7 = 2.0879228705174076794011525274e-03</em>
+<a id='L641' name='L641'></a> 641 data8 0xF4CA066137741469, 0x0000BFF6 <em class='comment'>//A6 = -3.7351861548964870836350490741e-03</em>
+<a id='L642' name='L642'></a> 642 data8 0xB998746D56E81737, 0x00003FF7 <em class='comment'>//A5 = 5.6639259807333999973200378964e-03</em>
+<a id='L643' name='L643'></a> 643 data8 0xE93FB2F48233275B, 0x0000BFF7 <em class='comment'>//A4 = -7.1181892208343798194003322900e-03</em>
+<a id='L644' name='L644'></a> 644 LOCAL_OBJECT_END(_3p25_to_4_data_tail)
+<a id='L645' name='L645'></a> 645 
+<a id='L646' name='L646'></a> 646 LOCAL_OBJECT_START(_6p5_to_8_data_tail)
+<a id='L647' name='L647'></a> 647 <em class='comment'>// Polynomial coefficients for the tanh(x), 6.5 &lt;= |x| &lt; 8.0</em>
+<a id='L648' name='L648'></a> 648 data8 0xA6881D7D21774BFD, 0x00003FEF <em class='comment'>//A13 = 1.9852125640303530752913966680e-05</em>
+<a id='L649' name='L649'></a> 649 data8 0x875E983AA042E605, 0x0000BFF0 <em class='comment'>//A12 = -3.2274606306629334402383651599e-05</em>
+<a id='L650' name='L650'></a> 650 data8 0xCB19E01E94FC133C, 0x00003FF0 <em class='comment'>//A11 = 4.8423069963831314927026982707e-05</em>
+<a id='L651' name='L651'></a> 651 data8 0x8BA5E8D9E72D56B2, 0x0000BFF1 <em class='comment'>//A10 = -6.6589395655200734237190902534e-05</em>
+<a id='L652' name='L652'></a> 652 data8 0xAE91F647ED4E46B2, 0x00003FF1 <em class='comment'>//A9 = 8.3241541003842930001632190258e-05</em>
+<a id='L653' name='L653'></a> 653 data8 0xC465A7E0B22F884E, 0x0000BFF1 <em class='comment'>//A8 = -9.3649431639051891449916386619e-05</em>
+<a id='L654' name='L654'></a> 654 data8 0xC4666148AA01A4D7, 0x00003FF1 <em class='comment'>//A7 = 9.3650780646160216748407869111e-05</em>
+<a id='L655' name='L655'></a> 655 data8 0xABD9E63D181B0C6C, 0x0000BFF1 <em class='comment'>//A6 = -8.1945023256769295802996591839e-05</em>
+<a id='L656' name='L656'></a> 656 data8 0x80E38B18E509387A, 0x00003FF1 <em class='comment'>//A5 = 6.1458988764532931141264026311e-05</em>
+<a id='L657' name='L657'></a> 657 data8 0xA11C80E20ADA5A64, 0x0000BFF0 <em class='comment'>//A4 = -3.8411937140983728563216440713e-05</em>
+<a id='L658' name='L658'></a> 658 LOCAL_OBJECT_END(_6p5_to_8_data_tail)
+<a id='L659' name='L659'></a> 659 
+<a id='L660' name='L660'></a> 660 LOCAL_OBJECT_START(_13_to_16_data_tail)
+<a id='L661' name='L661'></a> 661 <em class='comment'>// Polynomial coefficients for the tanh(x), 13 &lt;= |x| &lt; 16</em>
+<a id='L662' name='L662'></a> 662 data8 0x9D6CCDA4767CA6D9, 0x00003FE5 <em class='comment'>//A13 = 1.8326683535066775712253572575e-08</em>
+<a id='L663' name='L663'></a> 663 data8 0xFFAF154F334BF403, 0x0000BFE4 <em class='comment'>//A12 = -1.4882762852665077172347508377e-08</em>
+<a id='L664' name='L664'></a> 664 data8 0xBFC68FA7C61B6C17, 0x00003FE4 <em class='comment'>//A11 = 1.1162810813806544919835662888e-08</em>
+<a id='L665' name='L665'></a> 665 data8 0x83D8439A6B19A015, 0x0000BFE4 <em class='comment'>//A10 = -7.6743763372603959795701788561e-09</em>
+<a id='L666' name='L666'></a> 666 data8 0xA4CE5BE9DC6A2962, 0x00003FE3 <em class='comment'>//A9 = 4.7964885012772346158732715382e-09</em>
+<a id='L667' name='L667'></a> 667 data8 0xB96826C0697253CA, 0x0000BFE2 <em class='comment'>//A8 = -2.6980246373950994097953903952e-09</em>
+<a id='L668' name='L668'></a> 668 data8 0xB96826CADDC00E35, 0x00003FE1 <em class='comment'>//A7 = 1.3490123232313844006540534789e-09</em>
+<a id='L669' name='L669'></a> 669 data8 0xA23B21F1155DF322, 0x0000BFE0 <em class='comment'>//A6 = -5.9019289132168830718664922372e-10</em>
+<a id='L670' name='L670'></a> 670 data8 0xF358B2E9A50C349C, 0x00003FDE <em class='comment'>//A5 = 2.2132233424669131155945897524e-10</em>
+<a id='L671' name='L671'></a> 671 data8 0x98176FD2074C1D77, 0x0000BFDD <em class='comment'>//A4 = -6.9163229452106125388824134881e-11</em>
+<a id='L672' name='L672'></a> 672 LOCAL_OBJECT_END(_13_to_16_data_tail)
+<a id='L673' name='L673'></a> 673 
+<a id='L674' name='L674'></a> 674 LOCAL_OBJECT_START(_0_to_1o8_data)
+<a id='L675' name='L675'></a> 675 <em class='comment'>// Polynomial coefficients for the tanh(x), 0.0 &lt;= |x| &lt; 0.125</em>
+<a id='L676' name='L676'></a> 676 data8 0xBA0EC1879495150B, 0x0000BFF5 <em class='comment'>// A15 = -1.4195071451378679802688367813e-03</em>
+<a id='L677' name='L677'></a> 677 data8 0xEB5A82898D1BCBA4, 0x00003FF6 <em class='comment'>// A13 = 3.5912102408030526706365632879e-03</em>
+<a id='L678' name='L678'></a> 678 data8 0x91370DAFE0B64438, 0x0000BFF8 <em class='comment'>// A11 = -8.8632234251336964576640807982e-03</em>
+<a id='L679' name='L679'></a> 679 data8 0xB327A435358F1200, 0x00003FF9 <em class='comment'>// A9 = 2.1869488447622383899199238857e-02</em>
+<a id='L680' name='L680'></a> 680 data8 0xDD0DD0DD07A0775F, 0x0000BFFA <em class='comment'>// A7 = -5.3968253967902161405327069187e-02</em>
+<a id='L681' name='L681'></a> 681 data8 0x888888888887C299, 0x00003FFC <em class='comment'>// A5 = 1.3333333333333264660338062012e-01</em>
+<a id='L682' name='L682'></a> 682 data8 0xAAAAAAAAAAAAAA98, 0x0000BFFD <em class='comment'>// A3 = -3.3333333333333333282255458755e-01</em>
+<a id='L683' name='L683'></a> 683 LOCAL_OBJECT_END(_0_to_1o8_data)
+<a id='L684' name='L684'></a> 684 
+<a id='L685' name='L685'></a> 685 
+<a id='L686' name='L686'></a> 686 .section .text
+<a id='L687' name='L687'></a> 687 GLOBAL_LIBM_ENTRY(tanhl)
+<a id='L688' name='L688'></a> 688 
+<a id='L689' name='L689'></a> 689 <em class='brace'>{</em> .mfi
+<a id='L690' name='L690'></a> 690       alloc          r32         = ar.pfs, 0, 21, 0, 0
+<a id='L691' name='L691'></a> 691       fmerge.se      fArgAbsNorm = f1, f8      <em class='comment'>// normalized x (1.0 &lt;= x &lt; 2.0)</em>
+<a id='L692' name='L692'></a> 692       addl           rSignBit    = 0x20000, r0 <em class='comment'>// Set sign bit for exponent</em>
+<a id='L693' name='L693'></a> 693 <em class='brace'>}</em>
+<a id='L694' name='L694'></a> 694 <em class='brace'>{</em> .mlx
+<a id='L695' name='L695'></a> 695       addl           rDataPtr    = @ltoff(tanhl_data), gp <em class='comment'>// Get common data ptr</em>
+<a id='L696' name='L696'></a> 696       movl           r1p5        = 0x3FF8000000000000    <em class='comment'>// 1.5 in dbl repres.</em>
+<a id='L697' name='L697'></a> 697 <em class='brace'>}</em>;;
+<a id='L698' name='L698'></a> 698 
+<a id='L699' name='L699'></a> 699 <em class='brace'>{</em> .mfi
+<a id='L700' name='L700'></a> 700       getf.exp       rArgExp     = f8              <em class='comment'>// Get arg exponent</em>
+<a id='L701' name='L701'></a> 701       fclass.m       p6,p0       = f8, 0xEF <em class='comment'>// Filter 0, denormals and specials</em>
+<a id='L702' name='L702'></a> 702                             <em class='comment'>// 0xEF = @qnan|@snan|@pos|@neg|@zero|@unorm|@inf</em>
+<a id='L703' name='L703'></a> 703       addl           rBias       = 0xfffc, r0 <em class='comment'>// Value to subtract from exp</em>
+<a id='L704' name='L704'></a> 704                                             <em class='comment'>// to get actual interval number</em>
+<a id='L705' name='L705'></a> 705 <em class='brace'>}</em>
+<a id='L706' name='L706'></a> 706 <em class='brace'>{</em> .mfi
+<a id='L707' name='L707'></a> 707       ld8            rDataPtr    = [rDataPtr]  <em class='comment'>// Get real common data pointer</em>
+<a id='L708' name='L708'></a> 708       fma.s1         fArgSqr     = f8, f8, f0  <em class='comment'>// x^2 (for [0;1/8] path)</em>
+<a id='L709' name='L709'></a> 709       addl           r2to4       = 0x10000, r0 <em class='comment'>// unbiased exponent</em>
+<a id='L710' name='L710'></a> 710                                              <em class='comment'>// for [2;4] binary interval</em>
+<a id='L711' name='L711'></a> 711 <em class='brace'>}</em>;;
+<a id='L712' name='L712'></a> 712 
+<a id='L713' name='L713'></a> 713 <em class='brace'>{</em> .mfi
+<a id='L714' name='L714'></a> 714       getf.sig       rArgSig     = f8              <em class='comment'>// Get arg significand</em>
+<a id='L715' name='L715'></a> 715       fcmp.lt.s1     p15, p14    = f8, f0          <em class='comment'>// Is arg negative/positive?</em>
+<a id='L716' name='L716'></a> 716       addl           rSaturation = 0xb70, r0       <em class='comment'>// First 12 bits of</em>
+<a id='L717' name='L717'></a> 717                                                    <em class='comment'>// saturation value signif.</em>
+<a id='L718' name='L718'></a> 718 <em class='brace'>}</em>
+<a id='L719' name='L719'></a> 719 <em class='brace'>{</em> .mfi
+<a id='L720' name='L720'></a> 720       setf.d         f1p5        = r1p5            <em class='comment'>// 1.5 construction</em>
+<a id='L721' name='L721'></a> 721       fma.s1         f2p0        = f1,f1,f1        <em class='comment'>// 2.0 construction</em>
+<a id='L722' name='L722'></a> 722       addl           r1625Sign   = 0xd01, r0       <em class='comment'>// First 12 bits of</em>
+<a id='L723' name='L723'></a> 723                                                    <em class='comment'>// 1.625 value signif.</em>
+<a id='L724' name='L724'></a> 724       <em class='comment'>// 1.625 significand used to filter values greater than 3.25, 6.5, 13.0</em>
+<a id='L725' name='L725'></a> 725 <em class='brace'>}</em>;;
+<a id='L726' name='L726'></a> 726 
+<a id='L727' name='L727'></a> 727 <em class='brace'>{</em> .mfi
+<a id='L728' name='L728'></a> 728       addl           rTailDataPtr = 0xB00, rDataPtr  <em class='comment'>// Pointer to "tail" data</em>
+<a id='L729' name='L729'></a> 729       fmerge.s       fSignumX = f8, f1            <em class='comment'>// signum(x)</em>
+<a id='L730' name='L730'></a> 730       andcm          rArgExp     = rArgExp, rSignBit <em class='comment'>// Remove sign of exp</em>
+<a id='L731' name='L731'></a> 731 <em class='brace'>}</em>
+<a id='L732' name='L732'></a> 732 <em class='brace'>{</em> .mfb
+<a id='L733' name='L733'></a> 733       addl           rTiny       = 0xf000, r0 <em class='comment'>// Tiny value for saturation path</em>
+<a id='L734' name='L734'></a> 734       nop.f          0
+<a id='L735' name='L735'></a> 735 (p6)  br.cond.spnt   tanhl_spec               <em class='comment'>// Branch to zero, denorm &amp; specs</em>
+<a id='L736' name='L736'></a> 736 <em class='brace'>}</em>;;
+<a id='L737' name='L737'></a> 737 
+<a id='L738' name='L738'></a> 738 <em class='brace'>{</em> .mfi
+<a id='L739' name='L739'></a> 739       sub            rInterval   = rArgExp, rBias <em class='comment'>// Get actual interval number</em>
+<a id='L740' name='L740'></a> 740       nop.f          0
+<a id='L741' name='L741'></a> 741       shr.u          rArgSig     = rArgSig, 52    <em class='comment'>// Leave only 12 bits of sign.</em>
+<a id='L742' name='L742'></a> 742 <em class='brace'>}</em>
+<a id='L743' name='L743'></a> 743 <em class='brace'>{</em> .mfi
+<a id='L744' name='L744'></a> 744       adds           rShiftedDataPtr = 0x10, rDataPtr <em class='comment'>// Second ptr to data</em>
+<a id='L745' name='L745'></a> 745       nop.f          0
+<a id='L746' name='L746'></a> 746       cmp.ge         p8, p10     = rArgExp, r2to4  <em class='comment'>// If exp &gt;= 2to4 interval?</em>
+<a id='L747' name='L747'></a> 747 <em class='brace'>}</em>;;
+<a id='L748' name='L748'></a> 748 
+<a id='L749' name='L749'></a> 749 <em class='brace'>{</em> .mfi
+<a id='L750' name='L750'></a> 750 (p8)  cmp.le         p8, p10     = r1625Sign, rArgSig <em class='comment'>// If signd is greater</em>
+<a id='L751' name='L751'></a> 751                             <em class='comment'>//  than 1.625? (arg is at one of binary subranges)</em>
+<a id='L752' name='L752'></a> 752       nop.f          0
+<a id='L753' name='L753'></a> 753       shl            rOffset     = rInterval, 8 <em class='comment'>// Make offset from</em>
+<a id='L754' name='L754'></a> 754                                               <em class='comment'>// interval number</em>
+<a id='L755' name='L755'></a> 755 <em class='brace'>}</em>
+<a id='L756' name='L756'></a> 756 <em class='brace'>{</em> .mfi
+<a id='L757' name='L757'></a> 757       cmp.gt         p9, p0      = 0x0, rInterval <em class='comment'>// If interval is less than 0</em>
+<a id='L758' name='L758'></a> 758                                                 <em class='comment'>// (means arg is in [0; 1/8])</em>
+<a id='L759' name='L759'></a> 759       nop.f          0
+<a id='L760' name='L760'></a> 760       cmp.eq         p7, p0      = 0x7, rInterval <em class='comment'>// If arg is in [16;] interv.?</em>
+<a id='L761' name='L761'></a> 761 <em class='brace'>}</em>;;
+<a id='L762' name='L762'></a> 762 
+<a id='L763' name='L763'></a> 763 <em class='brace'>{</em> .mfi
+<a id='L764' name='L764'></a> 764 (p8)  adds           rOffset     = 0x400, rOffset <em class='comment'>// Add additional offset</em>
+<a id='L765' name='L765'></a> 765                             <em class='comment'>//  (arg is at one of binary subranges)</em>
+<a id='L766' name='L766'></a> 766       fma.s1         fArgCube    = fArgSqr, f8, f0  <em class='comment'>// x^3 (for [0;1/8] path)</em>
+<a id='L767' name='L767'></a> 767       shl            rTailOffset = rInterval, 7  <em class='comment'>// Make offset to "tail" data</em>
+<a id='L768' name='L768'></a> 768                                                  <em class='comment'>// from interval number</em>
+<a id='L769' name='L769'></a> 769 <em class='brace'>}</em>
+<a id='L770' name='L770'></a> 770 <em class='brace'>{</em> .mib
+<a id='L771' name='L771'></a> 771       setf.exp       fTiny       = rTiny <em class='comment'>// Construct "tiny" value</em>
+<a id='L772' name='L772'></a> 772                                        <em class='comment'>// for saturation path</em>
+<a id='L773' name='L773'></a> 773       cmp.ltu        p11, p0     = 0x7, rInterval <em class='comment'>// if arg &gt; 32</em>
+<a id='L774' name='L774'></a> 774 (p9)  br.cond.spnt   _0_to_1o8
+<a id='L775' name='L775'></a> 775 <em class='brace'>}</em>;;
+<a id='L776' name='L776'></a> 776 
+<a id='L777' name='L777'></a> 777 <em class='brace'>{</em> .mfi
+<a id='L778' name='L778'></a> 778       add            rAddr1      = rDataPtr, rOffset <em class='comment'>// Get address for</em>
+<a id='L779' name='L779'></a> 779                                                    <em class='comment'>// interval data</em>
+<a id='L780' name='L780'></a> 780       nop.f          0
+<a id='L781' name='L781'></a> 781       shl            rTailAddOffset = rInterval, 5 <em class='comment'>// Offset to interval</em>
+<a id='L782' name='L782'></a> 782                                                    <em class='comment'>// "tail" data</em>
+<a id='L783' name='L783'></a> 783 <em class='brace'>}</em>
+<a id='L784' name='L784'></a> 784 <em class='brace'>{</em> .mib
+<a id='L785' name='L785'></a> 785       add            rAddr2      = rShiftedDataPtr, rOffset <em class='comment'>// Get second</em>
+<a id='L786' name='L786'></a> 786                                                  <em class='comment'>// address for interval data</em>
+<a id='L787' name='L787'></a> 787 (p7)  cmp.leu        p11, p0     = rSaturation, rArgSig <em class='comment'>// if arg is</em>
+<a id='L788' name='L788'></a> 788                                                         <em class='comment'>// in [22.8;32] interval</em>
+<a id='L789' name='L789'></a> 789 (p11) br.cond.spnt   _saturation <em class='comment'>// Branch to Saturation path</em>
+<a id='L790' name='L790'></a> 790 <em class='brace'>}</em>;;
+<a id='L791' name='L791'></a> 791 
+<a id='L792' name='L792'></a> 792 <em class='brace'>{</em> .mmi
+<a id='L793' name='L793'></a> 793       ldfe           fA3         = [rAddr1], 0x90 <em class='comment'>// Load A3</em>
+<a id='L794' name='L794'></a> 794       ldfpd          fA2H, fA2L  = [rAddr2], 16 <em class='comment'>// Load A2High, A2Low</em>
+<a id='L795' name='L795'></a> 795       add            rTailOffset = rTailOffset, rTailAddOffset <em class='comment'>// "Tail" offset</em>
+<a id='L796' name='L796'></a> 796 <em class='brace'>}</em>;;
+<a id='L797' name='L797'></a> 797 
+<a id='L798' name='L798'></a> 798 <em class='brace'>{</em> .mmi
+<a id='L799' name='L799'></a> 799       ldfe           fA20        = [rAddr1], 16 <em class='comment'>// Load A20</em>
+<a id='L800' name='L800'></a> 800       ldfpd          fA1H, fA1L  = [rAddr2], 16 <em class='comment'>// Load A1High, A1Low</em>
+<a id='L801' name='L801'></a> 801 (p8)  adds           rTailOffset = 0x280, rTailOffset <em class='comment'>// Additional offset</em>
+<a id='L802' name='L802'></a> 802                                     <em class='comment'>//  (arg is at one of binary subranges)</em>
+<a id='L803' name='L803'></a> 803 <em class='brace'>}</em>;;
+<a id='L804' name='L804'></a> 804 
+<a id='L805' name='L805'></a> 805 <em class='brace'>{</em> .mmi
+<a id='L806' name='L806'></a> 806       ldfe           fA19        = [rAddr1], 16 <em class='comment'>// Load A19</em>
+<a id='L807' name='L807'></a> 807       ldfpd          fA0H, fA0L  = [rAddr2], 16 <em class='comment'>// Load A0High, A0Low</em>
+<a id='L808' name='L808'></a> 808       add            rTailAddr1  = rTailDataPtr, rTailOffset <em class='comment'>// First tail</em>
+<a id='L809' name='L809'></a> 809                                                            <em class='comment'>// data address</em>
+<a id='L810' name='L810'></a> 810 <em class='brace'>}</em>;;
+<a id='L811' name='L811'></a> 811 
+<a id='L812' name='L812'></a> 812 .pred.rel "mutex",p8,p10
+<a id='L813' name='L813'></a> 813 <em class='brace'>{</em> .mfi
+<a id='L814' name='L814'></a> 814       ldfe           fA18        = [rAddr1], 16 <em class='comment'>// Load A18</em>
+<a id='L815' name='L815'></a> 815 (p8)  fms.s1         fArgAbsNorm = fArgAbsNorm, f1, f2p0 <em class='comment'>// Add 2.0</em>
+<a id='L816' name='L816'></a> 816                             <em class='comment'>//  (arg is at one of binary subranges)</em>
+<a id='L817' name='L817'></a> 817       adds           rTailAddr2  = 0x10, rTailAddr1  <em class='comment'>// First tail</em>
+<a id='L818' name='L818'></a> 818                                                      <em class='comment'>// data address</em>
+<a id='L819' name='L819'></a> 819 <em class='brace'>}</em>
+<a id='L820' name='L820'></a> 820 <em class='brace'>{</em> .mfi
+<a id='L821' name='L821'></a> 821       ldfe           fA25        = [rAddr2], 16 <em class='comment'>// Load A25</em>
+<a id='L822' name='L822'></a> 822 (p10) fms.s1         fArgAbsNorm = fArgAbsNorm, f1, f1p5  <em class='comment'>// Add 1.5</em>
+<a id='L823' name='L823'></a> 823                                                 <em class='comment'>// to normalized arg</em>
+<a id='L824' name='L824'></a> 824       nop.i          0
+<a id='L825' name='L825'></a> 825 <em class='brace'>}</em>;;
+<a id='L826' name='L826'></a> 826 
+<a id='L827' name='L827'></a> 827 <em class='brace'>{</em> .mmi
+<a id='L828' name='L828'></a> 828       ldfe           fA17        = [rAddr1], 16 <em class='comment'>// Load A17</em>
+<a id='L829' name='L829'></a> 829       ldfe           fA24        = [rAddr2], 16 <em class='comment'>// Load A24</em>
+<a id='L830' name='L830'></a> 830       nop.i          0
+<a id='L831' name='L831'></a> 831 <em class='brace'>}</em>;;
+<a id='L832' name='L832'></a> 832 
+<a id='L833' name='L833'></a> 833 <em class='brace'>{</em> .mmi
+<a id='L834' name='L834'></a> 834       ldfe           fA16        = [rAddr1], 16 <em class='comment'>// Load A16</em>
+<a id='L835' name='L835'></a> 835       ldfe           fA23        = [rAddr2], 16 <em class='comment'>// Load A23</em>
+<a id='L836' name='L836'></a> 836       nop.i          0
+<a id='L837' name='L837'></a> 837 <em class='brace'>}</em>;;
+<a id='L838' name='L838'></a> 838 
+<a id='L839' name='L839'></a> 839 <em class='brace'>{</em> .mmi
+<a id='L840' name='L840'></a> 840       ldfe           fA15        = [rAddr1], 16 <em class='comment'>// Load A15</em>
+<a id='L841' name='L841'></a> 841       ldfe           fA22        = [rAddr2], 16 <em class='comment'>// Load A22</em>
+<a id='L842' name='L842'></a> 842       nop.i          0
+<a id='L843' name='L843'></a> 843 <em class='brace'>}</em>;;
+<a id='L844' name='L844'></a> 844 
+<a id='L845' name='L845'></a> 845 <em class='brace'>{</em> .mmi
+<a id='L846' name='L846'></a> 846       ldfe           fA14        = [rAddr1], 16 <em class='comment'>// Load A14</em>
+<a id='L847' name='L847'></a> 847       ldfe           fA21        = [rAddr2], 16 <em class='comment'>// Load A21</em>
+<a id='L848' name='L848'></a> 848       nop.i          0
+<a id='L849' name='L849'></a> 849 <em class='brace'>}</em>;;
+<a id='L850' name='L850'></a> 850 
+<a id='L851' name='L851'></a> 851 <em class='brace'>{</em> .mfi
+<a id='L852' name='L852'></a> 852       ldfe           fA13        = [rTailAddr1], 32              <em class='comment'>// Load A13</em>
+<a id='L853' name='L853'></a> 853       fms.s1         fArgAbsNorm2 = fArgAbsNorm, fArgAbsNorm, f0 <em class='comment'>// x^2</em>
+<a id='L854' name='L854'></a> 854       nop.i          0
+<a id='L855' name='L855'></a> 855 <em class='brace'>}</em>
+<a id='L856' name='L856'></a> 856 <em class='brace'>{</em> .mfi
+<a id='L857' name='L857'></a> 857       ldfe           fA12        = [rTailAddr2], 32 <em class='comment'>// Load A12</em>
+<a id='L858' name='L858'></a> 858       nop.f          0
+<a id='L859' name='L859'></a> 859       nop.i          0
+<a id='L860' name='L860'></a> 860 <em class='brace'>}</em>;;
+<a id='L861' name='L861'></a> 861 
+<a id='L862' name='L862'></a> 862 <em class='brace'>{</em> .mfi
+<a id='L863' name='L863'></a> 863       ldfe           fA11        = [rTailAddr1], 32       <em class='comment'>// Load A11</em>
+<a id='L864' name='L864'></a> 864       fma.s1         fRes3H      = fA3, fArgAbsNorm, fA2H <em class='comment'>// (A3*x+A2)*x^2</em>
+<a id='L865' name='L865'></a> 865       nop.i          0
+<a id='L866' name='L866'></a> 866 <em class='brace'>}</em>
+<a id='L867' name='L867'></a> 867 <em class='brace'>{</em> .mfi
+<a id='L868' name='L868'></a> 868       ldfe           fA10        = [rTailAddr2], 32     <em class='comment'>// Load A10</em>
+<a id='L869' name='L869'></a> 869       fma.s1         fTH         = fA3, fArgAbsNorm, f0 <em class='comment'>// (A3*x+A2)*x^2</em>
+<a id='L870' name='L870'></a> 870       nop.i          0
+<a id='L871' name='L871'></a> 871 <em class='brace'>}</em>;;
+<a id='L872' name='L872'></a> 872 
+<a id='L873' name='L873'></a> 873 <em class='brace'>{</em> .mfi
+<a id='L874' name='L874'></a> 874       ldfe           fA9         = [rTailAddr1], 32      <em class='comment'>// Load A9</em>
+<a id='L875' name='L875'></a> 875       fma.s1         fTT2        = fA1L, fArgAbsNorm, f0 <em class='comment'>// A1*x+A0</em>
+<a id='L876' name='L876'></a> 876       nop.i          0
+<a id='L877' name='L877'></a> 877 <em class='brace'>}</em>
+<a id='L878' name='L878'></a> 878 <em class='brace'>{</em> .mfi
+<a id='L879' name='L879'></a> 879       ldfe           fA8         = [rTailAddr2], 32 <em class='comment'>// Load A8</em>
+<a id='L880' name='L880'></a> 880       nop.f          0
+<a id='L881' name='L881'></a> 881       nop.i          0
+<a id='L882' name='L882'></a> 882 <em class='brace'>}</em>;;
+<a id='L883' name='L883'></a> 883 
+<a id='L884' name='L884'></a> 884 <em class='brace'>{</em> .mmi
+<a id='L885' name='L885'></a> 885       ldfe           fA7         = [rTailAddr1], 32 <em class='comment'>// Load A7</em>
+<a id='L886' name='L886'></a> 886       ldfe           fA6         = [rTailAddr2], 32 <em class='comment'>// Load A6</em>
+<a id='L887' name='L887'></a> 887       nop.i          0
+<a id='L888' name='L888'></a> 888 <em class='brace'>}</em>;;
+<a id='L889' name='L889'></a> 889 
+<a id='L890' name='L890'></a> 890 <em class='brace'>{</em> .mmi
+<a id='L891' name='L891'></a> 891       ldfe           fA5         = [rTailAddr1], 32 <em class='comment'>// Load A5</em>
+<a id='L892' name='L892'></a> 892       ldfe           fA4         = [rTailAddr2], 32 <em class='comment'>// Load A4</em>
+<a id='L893' name='L893'></a> 893       nop.i          0
+<a id='L894' name='L894'></a> 894 <em class='brace'>}</em>;;
+<a id='L895' name='L895'></a> 895 
+<a id='L896' name='L896'></a> 896 <em class='brace'>{</em> .mfi
+<a id='L897' name='L897'></a> 897       nop.m          0
+<a id='L898' name='L898'></a> 898       fms.s1         fArgAbsNorm2L = fArgAbsNorm, fArgAbsNorm, fArgAbsNorm2
+<a id='L899' name='L899'></a> 899                                                   <em class='comment'>// Low part of x^2 (delta)</em>
+<a id='L900' name='L900'></a> 900       nop.i          0
+<a id='L901' name='L901'></a> 901 <em class='brace'>}</em>
+<a id='L902' name='L902'></a> 902 <em class='brace'>{</em> .mfi
+<a id='L903' name='L903'></a> 903       nop.m          0
+<a id='L904' name='L904'></a> 904       fms.s1         fArgAbsNorm4  = fArgAbsNorm2, fArgAbsNorm2, f0 <em class='comment'>// x^4</em>
+<a id='L905' name='L905'></a> 905       nop.i          0
+<a id='L906' name='L906'></a> 906 <em class='brace'>}</em>;;
+<a id='L907' name='L907'></a> 907 
+<a id='L908' name='L908'></a> 908 <em class='brace'>{</em> .mfi
+<a id='L909' name='L909'></a> 909       nop.m          0
+<a id='L910' name='L910'></a> 910       fms.s1         fRes3L      = fA2H, f1, fRes3H <em class='comment'>// // (A3*x+A2)*x^2</em>
+<a id='L911' name='L911'></a> 911       nop.i          0
+<a id='L912' name='L912'></a> 912 <em class='brace'>}</em>;;
+<a id='L913' name='L913'></a> 913 
+<a id='L914' name='L914'></a> 914 <em class='brace'>{</em> .mfi
+<a id='L915' name='L915'></a> 915       nop.m          0
+<a id='L916' name='L916'></a> 916       fms.s1         fArgAbsNorm3 = fArgAbsNorm2, fArgAbsNorm, f0 <em class='comment'>// x^3</em>
+<a id='L917' name='L917'></a> 917       nop.i          0
+<a id='L918' name='L918'></a> 918 <em class='brace'>}</em>
+<a id='L919' name='L919'></a> 919 <em class='brace'>{</em> .mfi
+<a id='L920' name='L920'></a> 920       nop.m          0
+<a id='L921' name='L921'></a> 921       fma.s1         fTH2        = fA1H, fArgAbsNorm, fTT2 <em class='comment'>// A1*x+A0</em>
+<a id='L922' name='L922'></a> 922       nop.i          0
+<a id='L923' name='L923'></a> 923 <em class='brace'>}</em>;;
+<a id='L924' name='L924'></a> 924 
+<a id='L925' name='L925'></a> 925 <em class='brace'>{</em> .mfi
+<a id='L926' name='L926'></a> 926       nop.m          0
+<a id='L927' name='L927'></a> 927       fma.s1         fA23        = fA24,  fArgAbsNorm, fA23 <em class='comment'>// Polynomial tail</em>
+<a id='L928' name='L928'></a> 928       nop.i          0
+<a id='L929' name='L929'></a> 929 <em class='brace'>}</em>
+<a id='L930' name='L930'></a> 930 <em class='brace'>{</em> .mfi
+<a id='L931' name='L931'></a> 931       nop.m          0
+<a id='L932' name='L932'></a> 932       fma.s1         fA21        = fA22,  fArgAbsNorm, fA21 <em class='comment'>// Polynomial tail</em>
+<a id='L933' name='L933'></a> 933       nop.i          0
+<a id='L934' name='L934'></a> 934 <em class='brace'>}</em>;;
+<a id='L935' name='L935'></a> 935 
+<a id='L936' name='L936'></a> 936 <em class='brace'>{</em> .mfi
+<a id='L937' name='L937'></a> 937       nop.m          0
+<a id='L938' name='L938'></a> 938       fma.s1         fA12        = fA13,  fArgAbsNorm, fA12 <em class='comment'>// Polynomial tail</em>
+<a id='L939' name='L939'></a> 939       nop.i          0
+<a id='L940' name='L940'></a> 940 <em class='brace'>}</em>
+<a id='L941' name='L941'></a> 941 ;;
+<a id='L942' name='L942'></a> 942 
+<a id='L943' name='L943'></a> 943 <em class='brace'>{</em> .mfi
+<a id='L944' name='L944'></a> 944       nop.m          0
+<a id='L945' name='L945'></a> 945       fma.s1         fRes3L      = fRes3L, f1, fTH <em class='comment'>// (A3*x+A2)*x^2</em>
+<a id='L946' name='L946'></a> 946       nop.i          0
+<a id='L947' name='L947'></a> 947 <em class='brace'>}</em>
+<a id='L948' name='L948'></a> 948 <em class='brace'>{</em> .mfi
+<a id='L949' name='L949'></a> 949       nop.m          0
+<a id='L950' name='L950'></a> 950       fma.s1         fA19        = fA20,  fArgAbsNorm, fA19 <em class='comment'>// Polynomial tail</em>
+<a id='L951' name='L951'></a> 951       nop.i          0
+<a id='L952' name='L952'></a> 952 <em class='brace'>}</em>;;
+<a id='L953' name='L953'></a> 953 
+<a id='L954' name='L954'></a> 954 <em class='brace'>{</em> .mfi
+<a id='L955' name='L955'></a> 955       nop.m          0
+<a id='L956' name='L956'></a> 956       fma.s1         fRes1H      = fTH2, f1, fA0H <em class='comment'>// A1*x+A0</em>
+<a id='L957' name='L957'></a> 957       nop.i          0
+<a id='L958' name='L958'></a> 958 <em class='brace'>}</em>
+<a id='L959' name='L959'></a> 959 <em class='brace'>{</em> .mfi
+<a id='L960' name='L960'></a> 960       nop.m          0
+<a id='L961' name='L961'></a> 961       fms.s1         fTL2        = fA1H, fArgAbsNorm, fTH2 <em class='comment'>// A1*x+A0</em>
+<a id='L962' name='L962'></a> 962       nop.i          0
+<a id='L963' name='L963'></a> 963 <em class='brace'>}</em>;;
+<a id='L964' name='L964'></a> 964 
+<a id='L965' name='L965'></a> 965 <em class='brace'>{</em> .mfi
+<a id='L966' name='L966'></a> 966       nop.m          0
+<a id='L967' name='L967'></a> 967       fma.s1         fA8         = fA9,  fArgAbsNorm, fA8 <em class='comment'>// Polynomial tail</em>
+<a id='L968' name='L968'></a> 968       nop.i          0
+<a id='L969' name='L969'></a> 969 <em class='brace'>}</em>
+<a id='L970' name='L970'></a> 970 <em class='brace'>{</em> .mfi
+<a id='L971' name='L971'></a> 971       nop.m          0
+<a id='L972' name='L972'></a> 972       fma.s1         fA10        = fA11,  fArgAbsNorm, fA10 <em class='comment'>// Polynomial tail</em>
+<a id='L973' name='L973'></a> 973       nop.i          0
+<a id='L974' name='L974'></a> 974 <em class='brace'>}</em>;;
+<a id='L975' name='L975'></a> 975 
+<a id='L976' name='L976'></a> 976 <em class='brace'>{</em> .mfi
+<a id='L977' name='L977'></a> 977       nop.m          0
+<a id='L978' name='L978'></a> 978       fma.s1         fA15        = fA16,  fArgAbsNorm, fA15 <em class='comment'>// Polynomial tail</em>
+<a id='L979' name='L979'></a> 979       nop.i          0
+<a id='L980' name='L980'></a> 980 <em class='brace'>}</em>
+<a id='L981' name='L981'></a> 981 <em class='brace'>{</em> .mfi
+<a id='L982' name='L982'></a> 982       nop.m          0
+<a id='L983' name='L983'></a> 983       fma.s1         fA17        = fA18,  fArgAbsNorm, fA17 <em class='comment'>// Polynomial tail</em>
+<a id='L984' name='L984'></a> 984       nop.i          0
+<a id='L985' name='L985'></a> 985 <em class='brace'>}</em>;;
+<a id='L986' name='L986'></a> 986 
+<a id='L987' name='L987'></a> 987 <em class='brace'>{</em> .mfi
+<a id='L988' name='L988'></a> 988       nop.m          0
+<a id='L989' name='L989'></a> 989       fms.s1         fArgAbsNorm11 = fArgAbsNorm4, fArgAbsNorm4, f0 <em class='comment'>// x^8</em>
+<a id='L990' name='L990'></a> 990       nop.i          0
+<a id='L991' name='L991'></a> 991 <em class='brace'>}</em>
+<a id='L992' name='L992'></a> 992 <em class='brace'>{</em> .mfi
+<a id='L993' name='L993'></a> 993       nop.m          0
+<a id='L994' name='L994'></a> 994       fma.s1         fA4         = fA5,  fArgAbsNorm, fA4 <em class='comment'>// Polynomial tail</em>
+<a id='L995' name='L995'></a> 995       nop.i          0
+<a id='L996' name='L996'></a> 996 <em class='brace'>}</em>;;
+<a id='L997' name='L997'></a> 997 
+<a id='L998' name='L998'></a> 998 <em class='brace'>{</em> .mfi
+<a id='L999' name='L999'></a> 999       nop.m          0
+<a id='L1000' name='L1000'></a>1000       fma.s1         fRes3L      = fRes3L, f1, fA2L <em class='comment'>// (A3*x+A2)*x^2</em>
+<a id='L1001' name='L1001'></a>1001       nop.i          0
+<a id='L1002' name='L1002'></a>1002 <em class='brace'>}</em>
+<a id='L1003' name='L1003'></a>1003 <em class='brace'>{</em> .mfi
+<a id='L1004' name='L1004'></a>1004       nop.m          0
+<a id='L1005' name='L1005'></a>1005       fma.s1         fA6         = fA7,  fArgAbsNorm, fA6 <em class='comment'>// Polynomial tail</em>
+<a id='L1006' name='L1006'></a>1006       nop.i          0
+<a id='L1007' name='L1007'></a>1007 <em class='brace'>}</em>;;
+<a id='L1008' name='L1008'></a>1008 
+<a id='L1009' name='L1009'></a>1009 <em class='brace'>{</em> .mfi
+<a id='L1010' name='L1010'></a>1010       nop.m          0
+<a id='L1011' name='L1011'></a>1011       fma.s1         fTL2        = fTL2, f1, fTT2 <em class='comment'>// A1*x+A0</em>
+<a id='L1012' name='L1012'></a>1012       nop.i          0
+<a id='L1013' name='L1013'></a>1013 <em class='brace'>}</em>
+<a id='L1014' name='L1014'></a>1014 <em class='brace'>{</em> .mfi
+<a id='L1015' name='L1015'></a>1015       nop.m          0
+<a id='L1016' name='L1016'></a>1016       fms.s1         fRes1L      = fA0H, f1, fRes1H <em class='comment'>// A1*x+A0</em>
+<a id='L1017' name='L1017'></a>1017       nop.i          0
+<a id='L1018' name='L1018'></a>1018 <em class='brace'>}</em>;;
+<a id='L1019' name='L1019'></a>1019 
+<a id='L1020' name='L1020'></a>1020 <em class='brace'>{</em> .mfi
+<a id='L1021' name='L1021'></a>1021       nop.m          0
+<a id='L1022' name='L1022'></a>1022       fma.s1         fA23        = fA25,  fArgAbsNorm2, fA23 <em class='comment'>// Polynomial tail</em>
+<a id='L1023' name='L1023'></a>1023       nop.i          0
+<a id='L1024' name='L1024'></a>1024 <em class='brace'>}</em>
+<a id='L1025' name='L1025'></a>1025 <em class='brace'>{</em> .mfi
+<a id='L1026' name='L1026'></a>1026       nop.m          0
+<a id='L1027' name='L1027'></a>1027       fma.s1         fA12        = fA14,  fArgAbsNorm2, fA12 <em class='comment'>// Polynomial tail</em>
+<a id='L1028' name='L1028'></a>1028       nop.i          0
+<a id='L1029' name='L1029'></a>1029 <em class='brace'>}</em>;;
+<a id='L1030' name='L1030'></a>1030 
+<a id='L1031' name='L1031'></a>1031 <em class='brace'>{</em> .mfi
+<a id='L1032' name='L1032'></a>1032       nop.m          0
+<a id='L1033' name='L1033'></a>1033       fma.s1         fA19        = fA21,  fArgAbsNorm2, fA19  <em class='comment'>// Polynomial tail</em>
+<a id='L1034' name='L1034'></a>1034       nop.i          0
+<a id='L1035' name='L1035'></a>1035 <em class='brace'>}</em>
+<a id='L1036' name='L1036'></a>1036 <em class='brace'>{</em> .mfi
+<a id='L1037' name='L1037'></a>1037       nop.m          0
+<a id='L1038' name='L1038'></a>1038       fma.s1         fA8         = fA10,  fArgAbsNorm2, fA8 <em class='comment'>// Polynomial tail</em>
+<a id='L1039' name='L1039'></a>1039       nop.i          0
+<a id='L1040' name='L1040'></a>1040 <em class='brace'>}</em>;;
+<a id='L1041' name='L1041'></a>1041 
+<a id='L1042' name='L1042'></a>1042 <em class='brace'>{</em> .mfi
+<a id='L1043' name='L1043'></a>1043       nop.m          0
+<a id='L1044' name='L1044'></a>1044       fma.s1         fA15        = fA17,  fArgAbsNorm2, fA15 <em class='comment'>// Polynomial tail</em>
+<a id='L1045' name='L1045'></a>1045       nop.i          0
+<a id='L1046' name='L1046'></a>1046 <em class='brace'>}</em>
+<a id='L1047' name='L1047'></a>1047 <em class='brace'>{</em> .mfi
+<a id='L1048' name='L1048'></a>1048       nop.m          0
+<a id='L1049' name='L1049'></a>1049       fms.s1         fArgAbsNorm11 = fArgAbsNorm11, fArgAbsNorm3, f0 <em class='comment'>// x^11</em>
+<a id='L1050' name='L1050'></a>1050       nop.i          0
+<a id='L1051' name='L1051'></a>1051 <em class='brace'>}</em>;;
+<a id='L1052' name='L1052'></a>1052 
+<a id='L1053' name='L1053'></a>1053 <em class='brace'>{</em> .mfi
+<a id='L1054' name='L1054'></a>1054       nop.m          0
+<a id='L1055' name='L1055'></a>1055       fma.s1         fTT         = fRes3L, fArgAbsNorm2, f0 <em class='comment'>// (A3*x+A2)*x^2</em>
+<a id='L1056' name='L1056'></a>1056       nop.i          0
+<a id='L1057' name='L1057'></a>1057 <em class='brace'>}</em>
+<a id='L1058' name='L1058'></a>1058 <em class='brace'>{</em> .mfi
+<a id='L1059' name='L1059'></a>1059       nop.m          0
+<a id='L1060' name='L1060'></a>1060       fma.s1         fA4         = fA6,  fArgAbsNorm2, fA4 <em class='comment'>// Polynomial tail</em>
+<a id='L1061' name='L1061'></a>1061       nop.i          0
+<a id='L1062' name='L1062'></a>1062 <em class='brace'>}</em>;;
+<a id='L1063' name='L1063'></a>1063 
+<a id='L1064' name='L1064'></a>1064 <em class='brace'>{</em> .mfi
+<a id='L1065' name='L1065'></a>1065       nop.m          0
+<a id='L1066' name='L1066'></a>1066       fma.s1         fRes1L      = fRes1L, f1, fTH2 <em class='comment'>// A1*x+A0</em>
+<a id='L1067' name='L1067'></a>1067       nop.i          0
+<a id='L1068' name='L1068'></a>1068 <em class='brace'>}</em>
+<a id='L1069' name='L1069'></a>1069 <em class='brace'>{</em> .mfi
+<a id='L1070' name='L1070'></a>1070       nop.m          0
+<a id='L1071' name='L1071'></a>1071       fms.s1         fArgAbsNorm4X  = fArgAbsNorm4, fSignumX, f0 <em class='comment'>// x^4 * signum</em>
+<a id='L1072' name='L1072'></a>1072       nop.i          0
+<a id='L1073' name='L1073'></a>1073 <em class='brace'>}</em>;;
+<a id='L1074' name='L1074'></a>1074 
+<a id='L1075' name='L1075'></a>1075 <em class='brace'>{</em> .mfi
+<a id='L1076' name='L1076'></a>1076       nop.m          0
+<a id='L1077' name='L1077'></a>1077       fma.s1         fA19        = fA23,  fArgAbsNorm4, fA19 <em class='comment'>// Polynomial tail</em>
+<a id='L1078' name='L1078'></a>1078       nop.i          0
+<a id='L1079' name='L1079'></a>1079 <em class='brace'>}</em>
+<a id='L1080' name='L1080'></a>1080 <em class='brace'>{</em> .mfi
+<a id='L1081' name='L1081'></a>1081       nop.m          0
+<a id='L1082' name='L1082'></a>1082       fma.s1         fA8         = fA12,  fArgAbsNorm4, fA8 <em class='comment'>// Polynomial tail</em>
+<a id='L1083' name='L1083'></a>1083       nop.i          0
+<a id='L1084' name='L1084'></a>1084 <em class='brace'>}</em>;;
+<a id='L1085' name='L1085'></a>1085 
+<a id='L1086' name='L1086'></a>1086 <em class='brace'>{</em> .mfi
+<a id='L1087' name='L1087'></a>1087       nop.m          0
+<a id='L1088' name='L1088'></a>1088       fma.s1         fTT         = fRes3H, fArgAbsNorm2L, fTT <em class='comment'>// (A3*x+A2)*x^2</em>
+<a id='L1089' name='L1089'></a>1089       nop.i          0
+<a id='L1090' name='L1090'></a>1090 <em class='brace'>}</em>;;
+<a id='L1091' name='L1091'></a>1091 
+<a id='L1092' name='L1092'></a>1092 <em class='brace'>{</em> .mfi
+<a id='L1093' name='L1093'></a>1093       nop.m          0
+<a id='L1094' name='L1094'></a>1094       fma.s1         fRes1L      = fRes1L, f1, fTL2 <em class='comment'>// A1*x+A0</em>
+<a id='L1095' name='L1095'></a>1095       nop.i          0
+<a id='L1096' name='L1096'></a>1096 <em class='brace'>}</em>;;
+<a id='L1097' name='L1097'></a>1097 
+<a id='L1098' name='L1098'></a>1098 <em class='brace'>{</em> .mfi
+<a id='L1099' name='L1099'></a>1099       nop.m          0
+<a id='L1100' name='L1100'></a>1100       fma.s1         fA15        = fA19,  fArgAbsNorm4, fA15 <em class='comment'>// Polynomial tail</em>
+<a id='L1101' name='L1101'></a>1101       nop.i          0
+<a id='L1102' name='L1102'></a>1102 <em class='brace'>}</em>
+<a id='L1103' name='L1103'></a>1103 <em class='brace'>{</em> .mfi
+<a id='L1104' name='L1104'></a>1104       nop.m          0
+<a id='L1105' name='L1105'></a>1105       fma.s1         fA4         = fA8,  fArgAbsNorm4, fA4 <em class='comment'>// Polynomial tail</em>
+<a id='L1106' name='L1106'></a>1106       nop.i          0
+<a id='L1107' name='L1107'></a>1107 <em class='brace'>}</em>;;
+<a id='L1108' name='L1108'></a>1108 
+<a id='L1109' name='L1109'></a>1109 <em class='brace'>{</em> .mfi
+<a id='L1110' name='L1110'></a>1110       nop.m          0
+<a id='L1111' name='L1111'></a>1111       fma.s1         fRes2H      = fRes3H, fArgAbsNorm2, fTT <em class='comment'>// (A3*x+A2)*x^2</em>
+<a id='L1112' name='L1112'></a>1112       nop.i          0
+<a id='L1113' name='L1113'></a>1113 <em class='brace'>}</em>;;
+<a id='L1114' name='L1114'></a>1114 
+<a id='L1115' name='L1115'></a>1115 <em class='brace'>{</em> .mfi
+<a id='L1116' name='L1116'></a>1116       nop.m          0
+<a id='L1117' name='L1117'></a>1117       fma.s1         fRes1L      = fRes1L, f1, fA0L <em class='comment'>// A1*x+A0</em>
+<a id='L1118' name='L1118'></a>1118       nop.i          0
+<a id='L1119' name='L1119'></a>1119 <em class='brace'>}</em>;;
+<a id='L1120' name='L1120'></a>1120 
+<a id='L1121' name='L1121'></a>1121 <em class='brace'>{</em> .mfi
+<a id='L1122' name='L1122'></a>1122       nop.m          0
+<a id='L1123' name='L1123'></a>1123       fma.s1         fRes4       = fA15, fArgAbsNorm11, fA4 <em class='comment'>// Result of</em>
+<a id='L1124' name='L1124'></a>1124                                                     <em class='comment'>// polynomial tail</em>
+<a id='L1125' name='L1125'></a>1125       nop.i          0
+<a id='L1126' name='L1126'></a>1126 <em class='brace'>}</em>;;
+<a id='L1127' name='L1127'></a>1127 
+<a id='L1128' name='L1128'></a>1128 <em class='brace'>{</em> .mfi
+<a id='L1129' name='L1129'></a>1129       nop.m          0
+<a id='L1130' name='L1130'></a>1130       fms.s1         fRes2L      = fRes3H, fArgAbsNorm2, fRes2H <em class='comment'>// (A3*x+A2)*x^2</em>
+<a id='L1131' name='L1131'></a>1131       nop.i          0
+<a id='L1132' name='L1132'></a>1132 <em class='brace'>}</em>
+<a id='L1133' name='L1133'></a>1133 <em class='brace'>{</em> .mfi
+<a id='L1134' name='L1134'></a>1134       nop.m          0
+<a id='L1135' name='L1135'></a>1135       fma.s1         fResH       = fRes2H, f1, fRes1H <em class='comment'>// High result</em>
+<a id='L1136' name='L1136'></a>1136       nop.i          0
+<a id='L1137' name='L1137'></a>1137 <em class='brace'>}</em>;;
+<a id='L1138' name='L1138'></a>1138 
+<a id='L1139' name='L1139'></a>1139 <em class='brace'>{</em> .mfi
+<a id='L1140' name='L1140'></a>1140       nop.m          0
+<a id='L1141' name='L1141'></a>1141 (p14) fma.s1         fRes1L      = fRes4, fArgAbsNorm4X, fRes1L <em class='comment'>// A1*x+A0</em>
+<a id='L1142' name='L1142'></a>1142       nop.i          0
+<a id='L1143' name='L1143'></a>1143 <em class='brace'>}</em>
+<a id='L1144' name='L1144'></a>1144 <em class='brace'>{</em> .mfi
+<a id='L1145' name='L1145'></a>1145       nop.m          0
+<a id='L1146' name='L1146'></a>1146 (p15) fms.s1         fRes1L      = fRes4, fArgAbsNorm4X, fRes1L <em class='comment'>// A1*x+A0</em>
+<a id='L1147' name='L1147'></a>1147       nop.i          0
+<a id='L1148' name='L1148'></a>1148 <em class='brace'>}</em>;;
+<a id='L1149' name='L1149'></a>1149 
+<a id='L1150' name='L1150'></a>1150 <em class='brace'>{</em> .mfi
+<a id='L1151' name='L1151'></a>1151       nop.m          0
+<a id='L1152' name='L1152'></a>1152       fma.s1         fRes2L      = fRes2L, f1, fTT <em class='comment'>// (A3*x+A2)*x^2</em>
+<a id='L1153' name='L1153'></a>1153       nop.i          0
+<a id='L1154' name='L1154'></a>1154 <em class='brace'>}</em>
+<a id='L1155' name='L1155'></a>1155 <em class='brace'>{</em> .mfi
+<a id='L1156' name='L1156'></a>1156       nop.m          0
+<a id='L1157' name='L1157'></a>1157       fms.s1         fResL       = fRes1H, f1, fResH <em class='comment'>// Low result</em>
+<a id='L1158' name='L1158'></a>1158       nop.i          0
+<a id='L1159' name='L1159'></a>1159 <em class='brace'>}</em>;;
+<a id='L1160' name='L1160'></a>1160 
+<a id='L1161' name='L1161'></a>1161 <em class='brace'>{</em> .mfi
+<a id='L1162' name='L1162'></a>1162       nop.m          0
+<a id='L1163' name='L1163'></a>1163       fma.s0         fRes1L      = fRes2L, fSignumX, fRes1L <em class='comment'>// Low result</em>
+<a id='L1164' name='L1164'></a>1164                  <em class='comment'>// .s0 - for symmetry issue resolving at +/-inf rounding mode</em>
+<a id='L1165' name='L1165'></a>1165       nop.i          0
+<a id='L1166' name='L1166'></a>1166 <em class='brace'>}</em>
+<a id='L1167' name='L1167'></a>1167 <em class='brace'>{</em> .mfi
+<a id='L1168' name='L1168'></a>1168       nop.m          0
+<a id='L1169' name='L1169'></a>1169       fma.s1         fResL       = fResL, f1, fRes2H <em class='comment'>// Low result</em>
+<a id='L1170' name='L1170'></a>1170       nop.i          0
+<a id='L1171' name='L1171'></a>1171 <em class='brace'>}</em>;;
+<a id='L1172' name='L1172'></a>1172 
+<a id='L1173' name='L1173'></a>1173 <em class='brace'>{</em> .mfi
+<a id='L1174' name='L1174'></a>1174       nop.m          0
+<a id='L1175' name='L1175'></a>1175 (p14) fma.s0         fResL       = fRes1L, f1, fResL <em class='comment'>// Low result</em>
+<a id='L1176' name='L1176'></a>1176                  <em class='comment'>// .s0 - for symmetry issue resolving at +/-inf rounding mode</em>
+<a id='L1177' name='L1177'></a>1177       nop.i          0
+<a id='L1178' name='L1178'></a>1178 <em class='brace'>}</em>
+<a id='L1179' name='L1179'></a>1179 <em class='brace'>{</em> .mfi
+<a id='L1180' name='L1180'></a>1180       nop.m          0
+<a id='L1181' name='L1181'></a>1181 (p15) fms.s0         fResL     = fRes1L, f1, fResL <em class='comment'>// Low result</em>
+<a id='L1182' name='L1182'></a>1182                  <em class='comment'>// .s0 - for symmetry issue resolving at +/-inf rounding mode</em>
+<a id='L1183' name='L1183'></a>1183       nop.i          0
+<a id='L1184' name='L1184'></a>1184 <em class='brace'>}</em>;;
+<a id='L1185' name='L1185'></a>1185 
+<a id='L1186' name='L1186'></a>1186 .pred.rel "mutex",p14,p15
+<a id='L1187' name='L1187'></a>1187 <em class='brace'>{</em> .mfi
+<a id='L1188' name='L1188'></a>1188       nop.m          0
+<a id='L1189' name='L1189'></a>1189 (p14) fma.s0         f8          = fResL, f1,  fResH<em class='comment'>// Add high and low results</em>
+<a id='L1190' name='L1190'></a>1190       nop.i          0
+<a id='L1191' name='L1191'></a>1191 <em class='brace'>}</em>
+<a id='L1192' name='L1192'></a>1192 <em class='brace'>{</em> .mfb
+<a id='L1193' name='L1193'></a>1193       nop.m          0
+<a id='L1194' name='L1194'></a>1194 (p15) fms.s0         f8          = fResL, f1, fResH <em class='comment'>// Add high and low results</em>
+<a id='L1195' name='L1195'></a>1195       br.ret.sptk    b0      <em class='comment'>// Main path return</em>
+<a id='L1196' name='L1196'></a>1196 <em class='brace'>}</em>;;
+<a id='L1197' name='L1197'></a>1197 
+<a id='L1198' name='L1198'></a>1198 <em class='comment'>//  satiration path ////////////////////////////////////////////////////////////</em>
+<a id='L1199' name='L1199'></a>1199 _saturation:
+<a id='L1200' name='L1200'></a>1200 
+<a id='L1201' name='L1201'></a>1201 .pred.rel "mutex",p14,p15
+<a id='L1202' name='L1202'></a>1202 <em class='brace'>{</em> .mfi
+<a id='L1203' name='L1203'></a>1203       nop.m          0
+<a id='L1204' name='L1204'></a>1204 (p14) fms.s0            f8          = f1, f1, fTiny <em class='comment'>// Saturation result r = 1-tiny</em>
+<a id='L1205' name='L1205'></a>1205       nop.i 0
+<a id='L1206' name='L1206'></a>1206 <em class='brace'>}</em>;;
+<a id='L1207' name='L1207'></a>1207 <em class='brace'>{</em> .mfb
+<a id='L1208' name='L1208'></a>1208       nop.m          0
+<a id='L1209' name='L1209'></a>1209 (p15) fnma.s0           f8          = f1, f1, fTiny <em class='comment'>// Saturation result r = tiny-1</em>
+<a id='L1210' name='L1210'></a>1210       br.ret.sptk    b0     <em class='comment'>// Saturation path return</em>
+<a id='L1211' name='L1211'></a>1211 <em class='brace'>}</em>;;
+<a id='L1212' name='L1212'></a>1212 
+<a id='L1213' name='L1213'></a>1213 
+<a id='L1214' name='L1214'></a>1214 <em class='comment'>//  0, denormals and special IEEE numbers path /////////////////////////////////</em>
+<a id='L1215' name='L1215'></a>1215 tanhl_spec:
+<a id='L1216' name='L1216'></a>1216 
+<a id='L1217' name='L1217'></a>1217 <em class='brace'>{</em> .mfi
+<a id='L1218' name='L1218'></a>1218       nop.m          0
+<a id='L1219' name='L1219'></a>1219       fclass.m       p6,p0       = f8, 0x23 <em class='comment'>// To filter infinities</em>
+<a id='L1220' name='L1220'></a>1220                                           <em class='comment'>// 0x23 = @pos|@neg|@inf</em>
+<a id='L1221' name='L1221'></a>1221       nop.i          0
+<a id='L1222' name='L1222'></a>1222 <em class='brace'>}</em>;;
+<a id='L1223' name='L1223'></a>1223 
+<a id='L1224' name='L1224'></a>1224 <em class='brace'>{</em> .mfi
+<a id='L1225' name='L1225'></a>1225       nop.m          0
+<a id='L1226' name='L1226'></a>1226       fclass.m       p7,p0       = f8, 0xC7 <em class='comment'>// To filter NaNs &amp; Zeros</em>
+<a id='L1227' name='L1227'></a>1227                                  <em class='comment'>// 0xC7 = @pos|@neg|@zero|@qnan|@snan</em>
+<a id='L1228' name='L1228'></a>1228       nop.i          0
+<a id='L1229' name='L1229'></a>1229 <em class='brace'>}</em>;;
+<a id='L1230' name='L1230'></a>1230 
+<a id='L1231' name='L1231'></a>1231 <em class='brace'>{</em> .mfb
+<a id='L1232' name='L1232'></a>1232       nop.m          0
+<a id='L1233' name='L1233'></a>1233 (p6)  fmerge.s       f8          = f8, f1     <em class='comment'>// +/-1 for INF args</em>
+<a id='L1234' name='L1234'></a>1234 (p6)  br.ret.spnt    b0                       <em class='comment'>// exit for x = INF</em>
+<a id='L1235' name='L1235'></a>1235 <em class='brace'>}</em>;;
+<a id='L1236' name='L1236'></a>1236 
+<a id='L1237' name='L1237'></a>1237 <em class='brace'>{</em> .mfb
+<a id='L1238' name='L1238'></a>1238       nop.m          0
+<a id='L1239' name='L1239'></a>1239 (p7)  fma.s0         f8          = f8, f1, f8    <em class='comment'>// +/-0 for 0 args</em>
+<a id='L1240' name='L1240'></a>1240                                                  <em class='comment'>// and NaNs for NaNs</em>
+<a id='L1241' name='L1241'></a>1241 (p7)  br.ret.spnt    b0                          <em class='comment'>// exit for x = NaN or +/-0</em>
+<a id='L1242' name='L1242'></a>1242 <em class='brace'>}</em>;;
+<a id='L1243' name='L1243'></a>1243 
+<a id='L1244' name='L1244'></a>1244 <em class='brace'>{</em> .mfi
+<a id='L1245' name='L1245'></a>1245       nop.m          0
+<a id='L1246' name='L1246'></a>1246       fnorm.s0       f8          = f8            <em class='comment'>// Normalize arg</em>
+<a id='L1247' name='L1247'></a>1247       nop.i          0
+<a id='L1248' name='L1248'></a>1248 <em class='brace'>}</em>;;
+<a id='L1249' name='L1249'></a>1249 
+<a id='L1250' name='L1250'></a>1250 .pred.rel "mutex",p14,p15
+<a id='L1251' name='L1251'></a>1251 <em class='brace'>{</em> .mfi
+<a id='L1252' name='L1252'></a>1252       nop.m          0
+<a id='L1253' name='L1253'></a>1253 (p14) fnma.s0        f8          = f8, f8, f8  <em class='comment'>// res = r-r^2</em>
+<a id='L1254' name='L1254'></a>1254       nop.i          0
+<a id='L1255' name='L1255'></a>1255 <em class='brace'>}</em>
+<a id='L1256' name='L1256'></a>1256 <em class='brace'>{</em> .mfb
+<a id='L1257' name='L1257'></a>1257       nop.m          0
+<a id='L1258' name='L1258'></a>1258 (p15) fma.s0         f8          = f8, f8, f8  <em class='comment'>// res = r+r^2</em>
+<a id='L1259' name='L1259'></a>1259       br.ret.sptk    b0          <em class='comment'>// 0, denormals, IEEE specials return</em>
+<a id='L1260' name='L1260'></a>1260 <em class='brace'>}</em>;;
+<a id='L1261' name='L1261'></a>1261 
+<a id='L1262' name='L1262'></a>1262 
+<a id='L1263' name='L1263'></a>1263 <em class='comment'>//  0 &lt; |x| &lt; 1/8 path /////////////////////////////////////////////////////////</em>
+<a id='L1264' name='L1264'></a>1264 _0_to_1o8:
+<a id='L1265' name='L1265'></a>1265 
+<a id='L1266' name='L1266'></a>1266 <em class='brace'>{</em> .mmi
+<a id='L1267' name='L1267'></a>1267       adds           rAddr1      = 0x11e0, rDataPtr <em class='comment'>// Ptr 1 to coeffs</em>
+<a id='L1268' name='L1268'></a>1268       adds           rAddr2      = 0x11f0, rDataPtr <em class='comment'>// Ptr 2 to coeffs</em>
+<a id='L1269' name='L1269'></a>1269       nop.i          0
+<a id='L1270' name='L1270'></a>1270 <em class='brace'>}</em>;;
+<a id='L1271' name='L1271'></a>1271 
+<a id='L1272' name='L1272'></a>1272 <em class='brace'>{</em> .mmi
+<a id='L1273' name='L1273'></a>1273       ldfe           fA15        = [rAddr1], 32 <em class='comment'>// Load A15</em>
+<a id='L1274' name='L1274'></a>1274       ldfe           fA13        = [rAddr2], 32 <em class='comment'>// Load A13</em>
+<a id='L1275' name='L1275'></a>1275       nop.i          0
+<a id='L1276' name='L1276'></a>1276 <em class='brace'>}</em>;;
+<a id='L1277' name='L1277'></a>1277 
+<a id='L1278' name='L1278'></a>1278 <em class='brace'>{</em> .mmi
+<a id='L1279' name='L1279'></a>1279       ldfe           fA11        = [rAddr1], 32 <em class='comment'>// Load A11</em>
+<a id='L1280' name='L1280'></a>1280       ldfe           fA9         = [rAddr2], 32 <em class='comment'>// Load A9</em>
+<a id='L1281' name='L1281'></a>1281       nop.i          0
+<a id='L1282' name='L1282'></a>1282 <em class='brace'>}</em>;;
+<a id='L1283' name='L1283'></a>1283 
+<a id='L1284' name='L1284'></a>1284 <em class='brace'>{</em> .mmi
+<a id='L1285' name='L1285'></a>1285       ldfe           fA7         = [rAddr1], 32 <em class='comment'>// Load A7</em>
+<a id='L1286' name='L1286'></a>1286       ldfe           fA5         = [rAddr2]  <em class='comment'>// Load A5</em>
+<a id='L1287' name='L1287'></a>1287       nop.i          0
+<a id='L1288' name='L1288'></a>1288 <em class='brace'>}</em>;;
+<a id='L1289' name='L1289'></a>1289 
+<a id='L1290' name='L1290'></a>1290 <em class='brace'>{</em> .mfi
+<a id='L1291' name='L1291'></a>1291       ldfe           fA3         = [rAddr1] <em class='comment'>// Load A3</em>
+<a id='L1292' name='L1292'></a>1292       fma.s1         fA11        = fA13, fArgSqr, fA11 <em class='comment'>// Polynomial tail</em>
+<a id='L1293' name='L1293'></a>1293       nop.i          0
+<a id='L1294' name='L1294'></a>1294 <em class='brace'>}</em>
+<a id='L1295' name='L1295'></a>1295 <em class='brace'>{</em> .mfi
+<a id='L1296' name='L1296'></a>1296       nop.m          0
+<a id='L1297' name='L1297'></a>1297       fma.s1         fArgFour    = fArgSqr, fArgSqr, f0 <em class='comment'>// a^4</em>
+<a id='L1298' name='L1298'></a>1298       nop.i          0
+<a id='L1299' name='L1299'></a>1299 <em class='brace'>}</em>;;
+<a id='L1300' name='L1300'></a>1300 
+<a id='L1301' name='L1301'></a>1301 
+<a id='L1302' name='L1302'></a>1302 <em class='brace'>{</em> .mfi
+<a id='L1303' name='L1303'></a>1303       nop.m          0
+<a id='L1304' name='L1304'></a>1304       fma.s1         fA3         = fA5, fArgSqr, fA3 <em class='comment'>// Polynomial tail</em>
+<a id='L1305' name='L1305'></a>1305       nop.i          0
+<a id='L1306' name='L1306'></a>1306 <em class='brace'>}</em>
+<a id='L1307' name='L1307'></a>1307 <em class='brace'>{</em> .mfi
+<a id='L1308' name='L1308'></a>1308       nop.m          0
+<a id='L1309' name='L1309'></a>1309       fma.s1         fA7         = fA9, fArgSqr, fA7 <em class='comment'>// Polynomial tail</em>
+<a id='L1310' name='L1310'></a>1310       nop.i          0
+<a id='L1311' name='L1311'></a>1311 <em class='brace'>}</em>;;
+<a id='L1312' name='L1312'></a>1312 
+<a id='L1313' name='L1313'></a>1313 
+<a id='L1314' name='L1314'></a>1314 <em class='brace'>{</em> .mfi
+<a id='L1315' name='L1315'></a>1315       nop.m          0
+<a id='L1316' name='L1316'></a>1316       fma.s1         fA11        = fA15, fArgFour, fA11 <em class='comment'>// Polynomial tail</em>
+<a id='L1317' name='L1317'></a>1317       nop.i          0
+<a id='L1318' name='L1318'></a>1318 <em class='brace'>}</em>;;
+<a id='L1319' name='L1319'></a>1319 
+<a id='L1320' name='L1320'></a>1320 <em class='brace'>{</em> .mfi
+<a id='L1321' name='L1321'></a>1321       nop.m          0
+<a id='L1322' name='L1322'></a>1322       fma.s1         fA3         = fA7, fArgFour, fA3 <em class='comment'>// Polynomial tail</em>
+<a id='L1323' name='L1323'></a>1323       nop.i          0
+<a id='L1324' name='L1324'></a>1324 <em class='brace'>}</em>
+<a id='L1325' name='L1325'></a>1325 <em class='brace'>{</em> .mfi
+<a id='L1326' name='L1326'></a>1326       nop.m          0
+<a id='L1327' name='L1327'></a>1327       fma.s1         fArgEight   = fArgFour, fArgFour, f0 <em class='comment'>// a^8</em>
+<a id='L1328' name='L1328'></a>1328       nop.i          0
+<a id='L1329' name='L1329'></a>1329 <em class='brace'>}</em>;;
+<a id='L1330' name='L1330'></a>1330 
+<a id='L1331' name='L1331'></a>1331 <em class='brace'>{</em> .mfi
+<a id='L1332' name='L1332'></a>1332       nop.m          0
+<a id='L1333' name='L1333'></a>1333       fma.s1         fRes        = fA11, fArgEight, fA3 <em class='comment'>//Polynomial tail result</em>
+<a id='L1334' name='L1334'></a>1334       nop.i          0
+<a id='L1335' name='L1335'></a>1335 <em class='brace'>}</em>;;
+<a id='L1336' name='L1336'></a>1336 
+<a id='L1337' name='L1337'></a>1337 <em class='brace'>{</em> .mfb
+<a id='L1338' name='L1338'></a>1338       nop.m          0
+<a id='L1339' name='L1339'></a>1339       fma.s0         f8          = fRes, fArgCube, f8 <em class='comment'>// (Polynomial tail)*x^3</em>
+<a id='L1340' name='L1340'></a>1340       br.ret.sptk    b0          <em class='comment'>// [0;1/8] interval return</em>
+<a id='L1341' name='L1341'></a>1341 <em class='brace'>}</em>;;
+<a id='L1342' name='L1342'></a>1342 
+<a id='L1343' name='L1343'></a>1343 GLOBAL_LIBM_END(tanhl)
+<a id='L1344' name='L1344'></a>1344 libm_alias_ldouble_other (tanh, tanh)
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;][^][v]<a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

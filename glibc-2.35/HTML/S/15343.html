@@ -1,0 +1,492 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>sysdeps/x86_64/fpu/multiarch/svml_d_tanh8_core_avx512.S</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18977.html'>sysdeps</a>/<a href='../files/19391.html'>x86_64</a>/<a href='../files/19392.html'>fpu</a>/<a href='../files/19393.html'>multiarch</a>/svml_d_tanh8_core_avx512.S</h2>
+<em class='comment'>/* [&lt;][&gt;][^][v][top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* Function tanh vectorized with AVX-512.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   Copyright (C) 2021-2022 Free Software Foundation, Inc.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'></em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'></em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'></em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   License along with the GNU C Library; if not, see</em>
+<a id='L17' name='L17'></a>  17 <em class='comment'>   https://www.gnu.org/licenses/.  */</em>
+<a id='L18' name='L18'></a>  18 
+<a id='L19' name='L19'></a>  19 <em class='comment'>/*</em>
+<a id='L20' name='L20'></a>  20 <em class='comment'> * ALGORITHM DESCRIPTION:</em>
+<a id='L21' name='L21'></a>  21 <em class='comment'> *</em>
+<a id='L22' name='L22'></a>  22 <em class='comment'> *   NOTE: Since the hyperbolic tangent function is odd</em>
+<a id='L23' name='L23'></a>  23 <em class='comment'> *         (tanh(x) = -tanh(-x)), below algorithm deals with the absolute</em>
+<a id='L24' name='L24'></a>  24 <em class='comment'> *         value of the argument |x|: tanh(x) = sign(x) * tanh(|x|)</em>
+<a id='L25' name='L25'></a>  25 <em class='comment'> *</em>
+<a id='L26' name='L26'></a>  26 <em class='comment'> *   We use a table lookup method to compute tanh(|x|).</em>
+<a id='L27' name='L27'></a>  27 <em class='comment'> *   The basic idea is to split the input range into a number of subintervals</em>
+<a id='L28' name='L28'></a>  28 <em class='comment'> *   and to approximate tanh(.) with a polynomial on each of them.</em>
+<a id='L29' name='L29'></a>  29 <em class='comment'> *</em>
+<a id='L30' name='L30'></a>  30 <em class='comment'> *   IEEE SPECIAL CONDITIONS:</em>
+<a id='L31' name='L31'></a>  31 <em class='comment'> *   x = [+,-]0, r = [+,-]0</em>
+<a id='L32' name='L32'></a>  32 <em class='comment'> *   x = +Inf,   r = +1</em>
+<a id='L33' name='L33'></a>  33 <em class='comment'> *   x = -Inf,   r = -1</em>
+<a id='L34' name='L34'></a>  34 <em class='comment'> *   x = QNaN,   r = QNaN</em>
+<a id='L35' name='L35'></a>  35 <em class='comment'> *   x = SNaN,   r = QNaN</em>
+<a id='L36' name='L36'></a>  36 <em class='comment'> *</em>
+<a id='L37' name='L37'></a>  37 <em class='comment'> *</em>
+<a id='L38' name='L38'></a>  38 <em class='comment'> *   ALGORITHM DETAILS</em>
+<a id='L39' name='L39'></a>  39 <em class='comment'> *   We handle special values in a callout function, aside from main path</em>
+<a id='L40' name='L40'></a>  40 <em class='comment'> *   computations. "Special" for this algorithm are:</em>
+<a id='L41' name='L41'></a>  41 <em class='comment'> *   INF, NAN, |x| &gt; HUGE_THRESHOLD</em>
+<a id='L42' name='L42'></a>  42 <em class='comment'> *</em>
+<a id='L43' name='L43'></a>  43 <em class='comment'> *</em>
+<a id='L44' name='L44'></a>  44 <em class='comment'> *   Main path computations are organized as follows:</em>
+<a id='L45' name='L45'></a>  45 <em class='comment'> *   Actually we split the interval [0, SATURATION_THRESHOLD)</em>
+<a id='L46' name='L46'></a>  46 <em class='comment'> *   into a number of subintervals.  On each subinterval we approximate tanh(.)</em>
+<a id='L47' name='L47'></a>  47 <em class='comment'> *   with a minimax polynomial of pre-defined degree. Polynomial coefficients</em>
+<a id='L48' name='L48'></a>  48 <em class='comment'> *   are computed beforehand and stored in table. We also use</em>
+<a id='L49' name='L49'></a>  49 <em class='comment'> *</em>
+<a id='L50' name='L50'></a>  50 <em class='comment'> *       y := |x| + B,</em>
+<a id='L51' name='L51'></a>  51 <em class='comment'> *</em>
+<a id='L52' name='L52'></a>  52 <em class='comment'> *   here B depends on subinterval and is used to make argument</em>
+<a id='L53' name='L53'></a>  53 <em class='comment'> *   closer to zero.</em>
+<a id='L54' name='L54'></a>  54 <em class='comment'> *   We also add large fake interval [SATURATION_THRESHOLD, HUGE_THRESHOLD],</em>
+<a id='L55' name='L55'></a>  55 <em class='comment'> *   where 1.0 + 0.0*y + 0.0*y^2 ... coefficients are stored - just to</em>
+<a id='L56' name='L56'></a>  56 <em class='comment'> *   preserve main path computation logic but return 1.0 for all arguments.</em>
+<a id='L57' name='L57'></a>  57 <em class='comment'> *</em>
+<a id='L58' name='L58'></a>  58 <em class='comment'> *   Hence reconstruction looks as follows:</em>
+<a id='L59' name='L59'></a>  59 <em class='comment'> *   we extract proper polynomial and range reduction coefficients</em>
+<a id='L60' name='L60'></a>  60 <em class='comment'> *        (Pj and B), corresponding to subinterval, to which |x| belongs,</em>
+<a id='L61' name='L61'></a>  61 <em class='comment'> *        and return</em>
+<a id='L62' name='L62'></a>  62 <em class='comment'> *</em>
+<a id='L63' name='L63'></a>  63 <em class='comment'> *       r := sign(x) * (P0 + P1 * y + ... + Pn * y^n)</em>
+<a id='L64' name='L64'></a>  64 <em class='comment'> *</em>
+<a id='L65' name='L65'></a>  65 <em class='comment'> *   NOTE: we use multiprecision technique to multiply and sum the first</em>
+<a id='L66' name='L66'></a>  66 <em class='comment'> *         K terms of the polynomial. So Pj, j = 0..K are stored in</em>
+<a id='L67' name='L67'></a>  67 <em class='comment'> *         table each as a pair of target precision numbers (Pj and PLj) to</em>
+<a id='L68' name='L68'></a>  68 <em class='comment'> *         achieve wider than target precision.</em>
+<a id='L69' name='L69'></a>  69 <em class='comment'> *</em>
+<a id='L70' name='L70'></a>  70 <em class='comment'> *</em>
+<a id='L71' name='L71'></a>  71 <em class='comment'> */</em>
+<a id='L72' name='L72'></a>  72 
+<a id='L73' name='L73'></a>  73 <em class='comment'>/* Offsets for data table __svml_dtanh_data_internal</em>
+<a id='L74' name='L74'></a>  74 <em class='comment'> */</em>
+<a id='L75' name='L75'></a>  75 <em class='sharp'>#define</em> _dC                             0
+<a id='L76' name='L76'></a>  76 <em class='sharp'>#define</em> _dP0                            128
+<a id='L77' name='L77'></a>  77 <em class='sharp'>#define</em> _dP1                            256
+<a id='L78' name='L78'></a>  78 <em class='sharp'>#define</em> _dP2                            384
+<a id='L79' name='L79'></a>  79 <em class='sharp'>#define</em> _dP3                            512
+<a id='L80' name='L80'></a>  80 <em class='sharp'>#define</em> _dP4                            640
+<a id='L81' name='L81'></a>  81 <em class='sharp'>#define</em> _dP5                            768
+<a id='L82' name='L82'></a>  82 <em class='sharp'>#define</em> _dP6                            896
+<a id='L83' name='L83'></a>  83 <em class='sharp'>#define</em> _dP7                            1024
+<a id='L84' name='L84'></a>  84 <em class='sharp'>#define</em> _dP8                            1152
+<a id='L85' name='L85'></a>  85 <em class='sharp'>#define</em> _dP9                            1280
+<a id='L86' name='L86'></a>  86 <em class='sharp'>#define</em> _dP10                           1408
+<a id='L87' name='L87'></a>  87 <em class='sharp'>#define</em> _dP11                           1536
+<a id='L88' name='L88'></a>  88 <em class='sharp'>#define</em> _dP12                           1664
+<a id='L89' name='L89'></a>  89 <em class='sharp'>#define</em> _dP13                           1792
+<a id='L90' name='L90'></a>  90 <em class='sharp'>#define</em> _dP14                           1920
+<a id='L91' name='L91'></a>  91 <em class='sharp'>#define</em> _dP15                           2048
+<a id='L92' name='L92'></a>  92 <em class='sharp'>#define</em> _dP16                           2176
+<a id='L93' name='L93'></a>  93 <em class='sharp'>#define</em> _dP17                           2304
+<a id='L94' name='L94'></a>  94 <em class='sharp'>#define</em> _iExpMantMask_UISA              2432
+<a id='L95' name='L95'></a>  95 <em class='sharp'>#define</em> _iMinIdxOfsMask_UISA            2496
+<a id='L96' name='L96'></a>  96 <em class='sharp'>#define</em> _iMaxIdxMask_UISA               2560
+<a id='L97' name='L97'></a>  97 <em class='sharp'>#define</em> _dbSignMask                     2624
+<a id='L98' name='L98'></a>  98 <em class='sharp'>#define</em> _dbAbsMask                      2688
+<a id='L99' name='L99'></a>  99 <em class='sharp'>#define</em> _iExpMantMask                   2752
+<a id='L100' name='L100'></a> 100 <em class='sharp'>#define</em> _iExpMask                       2816
+<a id='L101' name='L101'></a> 101 <em class='sharp'>#define</em> _iMinIdxOfsMask                 2880
+<a id='L102' name='L102'></a> 102 <em class='sharp'>#define</em> _iMaxIdxMask                    2944
+<a id='L103' name='L103'></a> 103 
+<a id='L104' name='L104'></a> 104 <em class='sharp'>#include</em> &lt;<a href='../I/5967.html'>sysdep.h</a>&gt;
+<a id='L105' name='L105'></a> 105 
+<a id='L106' name='L106'></a> 106         .text
+<a id='L107' name='L107'></a> 107     .section .text.evex512,"ax",@progbits
+<a id='L108' name='L108'></a> 108 <a href='../D/3651.html' title='Multiple defined in 54 places.'>ENTRY</a>(_ZGVeN8v_tanh_skx)
+<a id='L109' name='L109'></a> 109         pushq     %rbp
+<a id='L110' name='L110'></a> 110         cfi_def_cfa_offset(16)
+<a id='L111' name='L111'></a> 111         movq      %rsp, %rbp
+<a id='L112' name='L112'></a> 112         cfi_def_cfa(6, 16)
+<a id='L113' name='L113'></a> 113         cfi_offset(6, -16)
+<a id='L114' name='L114'></a> 114         andq      $-64, %rsp
+<a id='L115' name='L115'></a> 115         subq      $320, %rsp
+<a id='L116' name='L116'></a> 116         vpsrlq    $32, %zmm0, %zmm4
+<a id='L117' name='L117'></a> 117         vmovups   %zmm0, (%rsp)
+<a id='L118' name='L118'></a> 118         vmovups   __svml_dtanh_data_internal(%rip), %zmm14
+<a id='L119' name='L119'></a> 119         vmovups   _dP0+__svml_dtanh_data_internal(%rip), %zmm15
+<a id='L120' name='L120'></a> 120         vpmovqd   %zmm4, %ymm5
+<a id='L121' name='L121'></a> 121 
+<a id='L122' name='L122'></a> 122 <em class='comment'>/*  Constant loading  */</em>
+<a id='L123' name='L123'></a> 123         vandpd    _dbAbsMask+__svml_dtanh_data_internal(%rip), %zmm0, %zmm13
+<a id='L124' name='L124'></a> 124         vandpd    _dbSignMask+__svml_dtanh_data_internal(%rip), %zmm0, %zmm3
+<a id='L125' name='L125'></a> 125 
+<a id='L126' name='L126'></a> 126 <em class='comment'>/* Here huge arguments, INF and NaNs are filtered out to callout. */</em>
+<a id='L127' name='L127'></a> 127         vpand     _iExpMantMask_UISA+__svml_dtanh_data_internal(%rip), %ymm5, %ymm7
+<a id='L128' name='L128'></a> 128         vmovups   _dP2+__svml_dtanh_data_internal(%rip), %zmm0
+<a id='L129' name='L129'></a> 129         vmovups   _dP16+__svml_dtanh_data_internal(%rip), %zmm4
+<a id='L130' name='L130'></a> 130         vmovups   _dP15+__svml_dtanh_data_internal(%rip), %zmm5
+<a id='L131' name='L131'></a> 131         vmovups   %zmm3, 64(%rsp)
+<a id='L132' name='L132'></a> 132         vmovups   _dP3+__svml_dtanh_data_internal(%rip), %zmm3
+<a id='L133' name='L133'></a> 133         vpsubd    _iMinIdxOfsMask_UISA+__svml_dtanh_data_internal(%rip), %ymm7, %ymm8
+<a id='L134' name='L134'></a> 134 
+<a id='L135' name='L135'></a> 135 <em class='comment'>/* if VMIN, VMAX is defined for I type */</em>
+<a id='L136' name='L136'></a> 136         vxorps    %ymm9, %ymm9, %ymm9
+<a id='L137' name='L137'></a> 137         vpmaxsd   %ymm9, %ymm8, %ymm10
+<a id='L138' name='L138'></a> 138         vpminsd   _iMaxIdxMask_UISA+__svml_dtanh_data_internal(%rip), %ymm10, %ymm11
+<a id='L139' name='L139'></a> 139         vpsrld    $19, %ymm11, %ymm12
+<a id='L140' name='L140'></a> 140         vmovups   _dP12+__svml_dtanh_data_internal(%rip), %zmm8
+<a id='L141' name='L141'></a> 141         vmovups   _dP11+__svml_dtanh_data_internal(%rip), %zmm9
+<a id='L142' name='L142'></a> 142         vmovups   _dP10+__svml_dtanh_data_internal(%rip), %zmm10
+<a id='L143' name='L143'></a> 143         vmovups   _dP9+__svml_dtanh_data_internal(%rip), %zmm11
+<a id='L144' name='L144'></a> 144         vpmovzxdq %ymm12, %zmm2
+<a id='L145' name='L145'></a> 145         vmovups   _dP8+__svml_dtanh_data_internal(%rip), %zmm12
+<a id='L146' name='L146'></a> 146         vpermt2pd _dP2+64+__svml_dtanh_data_internal(%rip), %zmm2, %zmm0
+<a id='L147' name='L147'></a> 147         vpermt2pd _dC+64+__svml_dtanh_data_internal(%rip), %zmm2, %zmm14
+<a id='L148' name='L148'></a> 148         vpermt2pd _dP16+64+__svml_dtanh_data_internal(%rip), %zmm2, %zmm4
+<a id='L149' name='L149'></a> 149         vpermt2pd _dP15+64+__svml_dtanh_data_internal(%rip), %zmm2, %zmm5
+<a id='L150' name='L150'></a> 150         vsubpd    <em class='brace'>{</em>rn-sae<em class='brace'>}</em>, %zmm14, %zmm13, %zmm1
+<a id='L151' name='L151'></a> 151         vpermt2pd _dP12+64+__svml_dtanh_data_internal(%rip), %zmm2, %zmm8
+<a id='L152' name='L152'></a> 152         vpermt2pd _dP11+64+__svml_dtanh_data_internal(%rip), %zmm2, %zmm9
+<a id='L153' name='L153'></a> 153         vpermt2pd _dP10+64+__svml_dtanh_data_internal(%rip), %zmm2, %zmm10
+<a id='L154' name='L154'></a> 154         vpermt2pd _dP9+64+__svml_dtanh_data_internal(%rip), %zmm2, %zmm11
+<a id='L155' name='L155'></a> 155         vpermt2pd _dP8+64+__svml_dtanh_data_internal(%rip), %zmm2, %zmm12
+<a id='L156' name='L156'></a> 156         vpermt2pd _dP3+64+__svml_dtanh_data_internal(%rip), %zmm2, %zmm3
+<a id='L157' name='L157'></a> 157         vpermt2pd _dP0+64+__svml_dtanh_data_internal(%rip), %zmm2, %zmm15
+<a id='L158' name='L158'></a> 158         vmovups   %zmm0, 192(%rsp)
+<a id='L159' name='L159'></a> 159         vmovups   _dP17+__svml_dtanh_data_internal(%rip), %zmm0
+<a id='L160' name='L160'></a> 160         vmovups   _dP7+__svml_dtanh_data_internal(%rip), %zmm13
+<a id='L161' name='L161'></a> 161         vmovups   _dP6+__svml_dtanh_data_internal(%rip), %zmm14
+<a id='L162' name='L162'></a> 162         vmovups   %zmm3, 256(%rsp)
+<a id='L163' name='L163'></a> 163         vmovups   _dP5+__svml_dtanh_data_internal(%rip), %zmm3
+<a id='L164' name='L164'></a> 164         vmovups   %zmm15, 128(%rsp)
+<a id='L165' name='L165'></a> 165         vmovups   _dP4+__svml_dtanh_data_internal(%rip), %zmm15
+<a id='L166' name='L166'></a> 166         vpermt2pd _dP17+64+__svml_dtanh_data_internal(%rip), %zmm2, %zmm0
+<a id='L167' name='L167'></a> 167         vpermt2pd _dP7+64+__svml_dtanh_data_internal(%rip), %zmm2, %zmm13
+<a id='L168' name='L168'></a> 168         vpermt2pd _dP6+64+__svml_dtanh_data_internal(%rip), %zmm2, %zmm14
+<a id='L169' name='L169'></a> 169         vpermt2pd _dP5+64+__svml_dtanh_data_internal(%rip), %zmm2, %zmm3
+<a id='L170' name='L170'></a> 170         vpermt2pd _dP4+64+__svml_dtanh_data_internal(%rip), %zmm2, %zmm15
+<a id='L171' name='L171'></a> 171         vfmadd213pd <em class='brace'>{</em>rn-sae<em class='brace'>}</em>, %zmm4, %zmm1, %zmm0
+<a id='L172' name='L172'></a> 172         vpcmpgtd  _iExpMask+__svml_dtanh_data_internal(%rip), %ymm7, %ymm6
+<a id='L173' name='L173'></a> 173         vmovmskps %ymm6, %edx
+<a id='L174' name='L174'></a> 174         vmovups   _dP14+__svml_dtanh_data_internal(%rip), %zmm6
+<a id='L175' name='L175'></a> 175         vfmadd213pd <em class='brace'>{</em>rn-sae<em class='brace'>}</em>, %zmm5, %zmm1, %zmm0
+<a id='L176' name='L176'></a> 176         vmovups   _dP13+__svml_dtanh_data_internal(%rip), %zmm7
+<a id='L177' name='L177'></a> 177         vpermt2pd _dP14+64+__svml_dtanh_data_internal(%rip), %zmm2, %zmm6
+<a id='L178' name='L178'></a> 178         vpermt2pd _dP13+64+__svml_dtanh_data_internal(%rip), %zmm2, %zmm7
+<a id='L179' name='L179'></a> 179         vfmadd213pd <em class='brace'>{</em>rn-sae<em class='brace'>}</em>, %zmm6, %zmm1, %zmm0
+<a id='L180' name='L180'></a> 180         vmovups   256(%rsp), %zmm2
+<a id='L181' name='L181'></a> 181         vfmadd213pd <em class='brace'>{</em>rn-sae<em class='brace'>}</em>, %zmm7, %zmm1, %zmm0
+<a id='L182' name='L182'></a> 182         vfmadd213pd <em class='brace'>{</em>rn-sae<em class='brace'>}</em>, %zmm8, %zmm1, %zmm0
+<a id='L183' name='L183'></a> 183         vfmadd213pd <em class='brace'>{</em>rn-sae<em class='brace'>}</em>, %zmm9, %zmm1, %zmm0
+<a id='L184' name='L184'></a> 184         vfmadd213pd <em class='brace'>{</em>rn-sae<em class='brace'>}</em>, %zmm10, %zmm1, %zmm0
+<a id='L185' name='L185'></a> 185         vfmadd213pd <em class='brace'>{</em>rn-sae<em class='brace'>}</em>, %zmm11, %zmm1, %zmm0
+<a id='L186' name='L186'></a> 186         vfmadd213pd <em class='brace'>{</em>rn-sae<em class='brace'>}</em>, %zmm12, %zmm1, %zmm0
+<a id='L187' name='L187'></a> 187         vfmadd213pd <em class='brace'>{</em>rn-sae<em class='brace'>}</em>, %zmm13, %zmm1, %zmm0
+<a id='L188' name='L188'></a> 188         vfmadd213pd <em class='brace'>{</em>rn-sae<em class='brace'>}</em>, %zmm14, %zmm1, %zmm0
+<a id='L189' name='L189'></a> 189         vfmadd213pd <em class='brace'>{</em>rn-sae<em class='brace'>}</em>, %zmm3, %zmm1, %zmm0
+<a id='L190' name='L190'></a> 190         vmovups   128(%rsp), %zmm3
+<a id='L191' name='L191'></a> 191         vfmadd213pd <em class='brace'>{</em>rn-sae<em class='brace'>}</em>, %zmm15, %zmm1, %zmm0
+<a id='L192' name='L192'></a> 192         vfmadd213pd <em class='brace'>{</em>rn-sae<em class='brace'>}</em>, %zmm2, %zmm1, %zmm0
+<a id='L193' name='L193'></a> 193         vmovups   192(%rsp), %zmm2
+<a id='L194' name='L194'></a> 194         vfmadd213pd <em class='brace'>{</em>rn-sae<em class='brace'>}</em>, %zmm2, %zmm1, %zmm0
+<a id='L195' name='L195'></a> 195         vfmadd213pd <em class='brace'>{</em>rn-sae<em class='brace'>}</em>, %zmm3, %zmm1, %zmm0
+<a id='L196' name='L196'></a> 196         vorpd     64(%rsp), %zmm0, %zmm0
+<a id='L197' name='L197'></a> 197         testl     %edx, %edx
+<a id='L198' name='L198'></a> 198 
+<a id='L199' name='L199'></a> 199 <em class='comment'>/* Go to special inputs processing branch */</em>
+<a id='L200' name='L200'></a> 200         jne       L(SPECIAL_VALUES_BRANCH)
+<a id='L201' name='L201'></a> 201 <em class='comment'>                                # LOE rbx r12 r13 r14 r15 edx zmm0</em>
+<a id='L202' name='L202'></a> 202 
+<a id='L203' name='L203'></a> 203 <em class='comment'>/* Restore registers</em>
+<a id='L204' name='L204'></a> 204 <em class='comment'> * and exit the function</em>
+<a id='L205' name='L205'></a> 205 <em class='comment'> */</em>
+<a id='L206' name='L206'></a> 206 
+<a id='L207' name='L207'></a> 207 L(EXIT):
+<a id='L208' name='L208'></a> 208         movq      %rbp, %rsp
+<a id='L209' name='L209'></a> 209         popq      %rbp
+<a id='L210' name='L210'></a> 210         cfi_def_cfa(7, 8)
+<a id='L211' name='L211'></a> 211         cfi_restore(6)
+<a id='L212' name='L212'></a> 212         ret
+<a id='L213' name='L213'></a> 213         cfi_def_cfa(6, 16)
+<a id='L214' name='L214'></a> 214         cfi_offset(6, -16)
+<a id='L215' name='L215'></a> 215 
+<a id='L216' name='L216'></a> 216 <em class='comment'>/* Branch to process</em>
+<a id='L217' name='L217'></a> 217 <em class='comment'> * special inputs</em>
+<a id='L218' name='L218'></a> 218 <em class='comment'> */</em>
+<a id='L219' name='L219'></a> 219 
+<a id='L220' name='L220'></a> 220 L(SPECIAL_VALUES_BRANCH):
+<a id='L221' name='L221'></a> 221         vmovups   (%rsp), %zmm1
+<a id='L222' name='L222'></a> 222         vmovups   %zmm0, 128(%rsp)
+<a id='L223' name='L223'></a> 223         vmovups   %zmm1, 64(%rsp)
+<a id='L224' name='L224'></a> 224 <em class='comment'>                                # LOE rbx r12 r13 r14 r15 edx zmm0</em>
+<a id='L225' name='L225'></a> 225 
+<a id='L226' name='L226'></a> 226         xorl      %eax, %eax
+<a id='L227' name='L227'></a> 227 <em class='comment'>                                # LOE rbx r12 r13 r14 r15 eax edx</em>
+<a id='L228' name='L228'></a> 228 
+<a id='L229' name='L229'></a> 229         vzeroupper
+<a id='L230' name='L230'></a> 230         movq      %r12, 16(%rsp)
+<a id='L231' name='L231'></a> 231         <em class='comment'>/*  DW_CFA_expression: r12 (r12) (DW_OP_lit8; DW_OP_minus; DW_OP_const4s: -64; DW_OP_and; DW_OP_const4s: -304; DW_OP_plus)  */</em>
+<a id='L232' name='L232'></a> 232         .cfi_escape 0x10, 0x0c, 0x0e, 0x38, 0x1c, 0x0d, 0xc0, 0xff, 0xff, 0xff, 0x1a, 0x0d, 0xd0, 0xfe, 0xff, 0xff, 0x22
+<a id='L233' name='L233'></a> 233         movl      %eax, %r12d
+<a id='L234' name='L234'></a> 234         movq      %r13, 8(%rsp)
+<a id='L235' name='L235'></a> 235         <em class='comment'>/*  DW_CFA_expression: r13 (r13) (DW_OP_lit8; DW_OP_minus; DW_OP_const4s: -64; DW_OP_and; DW_OP_const4s: -312; DW_OP_plus)  */</em>
+<a id='L236' name='L236'></a> 236         .cfi_escape 0x10, 0x0d, 0x0e, 0x38, 0x1c, 0x0d, 0xc0, 0xff, 0xff, 0xff, 0x1a, 0x0d, 0xc8, 0xfe, 0xff, 0xff, 0x22
+<a id='L237' name='L237'></a> 237         movl      %edx, %r13d
+<a id='L238' name='L238'></a> 238         movq      %r14, (%rsp)
+<a id='L239' name='L239'></a> 239         <em class='comment'>/*  DW_CFA_expression: r14 (r14) (DW_OP_lit8; DW_OP_minus; DW_OP_const4s: -64; DW_OP_and; DW_OP_const4s: -320; DW_OP_plus)  */</em>
+<a id='L240' name='L240'></a> 240         .cfi_escape 0x10, 0x0e, 0x0e, 0x38, 0x1c, 0x0d, 0xc0, 0xff, 0xff, 0xff, 0x1a, 0x0d, 0xc0, 0xfe, 0xff, 0xff, 0x22
+<a id='L241' name='L241'></a> 241 <em class='comment'>                                # LOE rbx r15 r12d r13d</em>
+<a id='L242' name='L242'></a> 242 
+<a id='L243' name='L243'></a> 243 <em class='comment'>/* Range mask</em>
+<a id='L244' name='L244'></a> 244 <em class='comment'> * bits check</em>
+<a id='L245' name='L245'></a> 245 <em class='comment'> */</em>
+<a id='L246' name='L246'></a> 246 
+<a id='L247' name='L247'></a> 247 L(RANGEMASK_CHECK):
+<a id='L248' name='L248'></a> 248         btl       %r12d, %r13d
+<a id='L249' name='L249'></a> 249 
+<a id='L250' name='L250'></a> 250 <em class='comment'>/* Call scalar math function */</em>
+<a id='L251' name='L251'></a> 251         jc        L(SCALAR_MATH_CALL)
+<a id='L252' name='L252'></a> 252 <em class='comment'>                                # LOE rbx r15 r12d r13d</em>
+<a id='L253' name='L253'></a> 253 
+<a id='L254' name='L254'></a> 254 <em class='comment'>/* Special inputs</em>
+<a id='L255' name='L255'></a> 255 <em class='comment'> * processing loop</em>
+<a id='L256' name='L256'></a> 256 <em class='comment'> */</em>
+<a id='L257' name='L257'></a> 257 
+<a id='L258' name='L258'></a> 258 L(SPECIAL_VALUES_LOOP):
+<a id='L259' name='L259'></a> 259         incl      %r12d
+<a id='L260' name='L260'></a> 260         cmpl      $8, %r12d
+<a id='L261' name='L261'></a> 261 
+<a id='L262' name='L262'></a> 262 <em class='comment'>/* Check bits in range mask */</em>
+<a id='L263' name='L263'></a> 263         jl        L(RANGEMASK_CHECK)
+<a id='L264' name='L264'></a> 264 <em class='comment'>                                # LOE rbx r15 r12d r13d</em>
+<a id='L265' name='L265'></a> 265 
+<a id='L266' name='L266'></a> 266         movq      16(%rsp), %r12
+<a id='L267' name='L267'></a> 267         cfi_restore(12)
+<a id='L268' name='L268'></a> 268         movq      8(%rsp), %r13
+<a id='L269' name='L269'></a> 269         cfi_restore(13)
+<a id='L270' name='L270'></a> 270         movq      (%rsp), %r14
+<a id='L271' name='L271'></a> 271         cfi_restore(14)
+<a id='L272' name='L272'></a> 272         vmovups   128(%rsp), %zmm0
+<a id='L273' name='L273'></a> 273 
+<a id='L274' name='L274'></a> 274 <em class='comment'>/* Go to exit */</em>
+<a id='L275' name='L275'></a> 275         jmp       L(EXIT)
+<a id='L276' name='L276'></a> 276         <em class='comment'>/*  DW_CFA_expression: r12 (r12) (DW_OP_lit8; DW_OP_minus; DW_OP_const4s: -64; DW_OP_and; DW_OP_const4s: -304; DW_OP_plus)  */</em>
+<a id='L277' name='L277'></a> 277         .cfi_escape 0x10, 0x0c, 0x0e, 0x38, 0x1c, 0x0d, 0xc0, 0xff, 0xff, 0xff, 0x1a, 0x0d, 0xd0, 0xfe, 0xff, 0xff, 0x22
+<a id='L278' name='L278'></a> 278         <em class='comment'>/*  DW_CFA_expression: r13 (r13) (DW_OP_lit8; DW_OP_minus; DW_OP_const4s: -64; DW_OP_and; DW_OP_const4s: -312; DW_OP_plus)  */</em>
+<a id='L279' name='L279'></a> 279         .cfi_escape 0x10, 0x0d, 0x0e, 0x38, 0x1c, 0x0d, 0xc0, 0xff, 0xff, 0xff, 0x1a, 0x0d, 0xc8, 0xfe, 0xff, 0xff, 0x22
+<a id='L280' name='L280'></a> 280         <em class='comment'>/*  DW_CFA_expression: r14 (r14) (DW_OP_lit8; DW_OP_minus; DW_OP_const4s: -64; DW_OP_and; DW_OP_const4s: -320; DW_OP_plus)  */</em>
+<a id='L281' name='L281'></a> 281         .cfi_escape 0x10, 0x0e, 0x0e, 0x38, 0x1c, 0x0d, 0xc0, 0xff, 0xff, 0xff, 0x1a, 0x0d, 0xc0, 0xfe, 0xff, 0xff, 0x22
+<a id='L282' name='L282'></a> 282 <em class='comment'>                                # LOE rbx r12 r13 r14 r15 zmm0</em>
+<a id='L283' name='L283'></a> 283 
+<a id='L284' name='L284'></a> 284 <em class='comment'>/* Scalar math fucntion call</em>
+<a id='L285' name='L285'></a> 285 <em class='comment'> * to process special input</em>
+<a id='L286' name='L286'></a> 286 <em class='comment'> */</em>
+<a id='L287' name='L287'></a> 287 
+<a id='L288' name='L288'></a> 288 L(SCALAR_MATH_CALL):
+<a id='L289' name='L289'></a> 289         movl      %r12d, %r14d
+<a id='L290' name='L290'></a> 290         movsd     64(%rsp,%r14,8), %xmm0
+<a id='L291' name='L291'></a> 291         call      tanh@PLT
+<a id='L292' name='L292'></a> 292 <em class='comment'>                                # LOE rbx r14 r15 r12d r13d xmm0</em>
+<a id='L293' name='L293'></a> 293 
+<a id='L294' name='L294'></a> 294         movsd     %xmm0, 128(%rsp,%r14,8)
+<a id='L295' name='L295'></a> 295 
+<a id='L296' name='L296'></a> 296 <em class='comment'>/* Process special inputs in loop */</em>
+<a id='L297' name='L297'></a> 297         jmp       L(SPECIAL_VALUES_LOOP)
+<a id='L298' name='L298'></a> 298 <em class='comment'>                                # LOE rbx r15 r12d r13d</em>
+<a id='L299' name='L299'></a> 299 END(_ZGVeN8v_tanh_skx)
+<a id='L300' name='L300'></a> 300 
+<a id='L301' name='L301'></a> 301         .section .rodata, "a"
+<a id='L302' name='L302'></a> 302         .align 64
+<a id='L303' name='L303'></a> 303 
+<a id='L304' name='L304'></a> 304 <em class='sharp'>#ifdef</em> <a href='../Y/7954.html' title='Multiple used in 3 places.'>__svml_dtanh_data_internal_typedef</a>
+<a id='L305' name='L305'></a> 305 typedef unsigned int VUINT32;
+<a id='L306' name='L306'></a> 306 typedef struct
+<a id='L307' name='L307'></a> 307 <em class='brace'>{</em>
+<a id='L308' name='L308'></a> 308         __declspec(align(64)) VUINT32 _dC[16][2];
+<a id='L309' name='L309'></a> 309         __declspec(align(64)) VUINT32 _dP0[16][2];
+<a id='L310' name='L310'></a> 310         __declspec(align(64)) VUINT32 _dP1[16][2];
+<a id='L311' name='L311'></a> 311         __declspec(align(64)) VUINT32 _dP2[16][2];
+<a id='L312' name='L312'></a> 312         __declspec(align(64)) VUINT32 _dP3[16][2];
+<a id='L313' name='L313'></a> 313         __declspec(align(64)) VUINT32 _dP4[16][2];
+<a id='L314' name='L314'></a> 314         __declspec(align(64)) VUINT32 _dP5[16][2];
+<a id='L315' name='L315'></a> 315         __declspec(align(64)) VUINT32 _dP6[16][2];
+<a id='L316' name='L316'></a> 316         __declspec(align(64)) VUINT32 _dP7[16][2];
+<a id='L317' name='L317'></a> 317         __declspec(align(64)) VUINT32 _dP8[16][2];
+<a id='L318' name='L318'></a> 318         __declspec(align(64)) VUINT32 _dP9[16][2];
+<a id='L319' name='L319'></a> 319         __declspec(align(64)) VUINT32 _dP10[16][2];
+<a id='L320' name='L320'></a> 320         __declspec(align(64)) VUINT32 _dP11[16][2];
+<a id='L321' name='L321'></a> 321         __declspec(align(64)) VUINT32 _dP12[16][2];
+<a id='L322' name='L322'></a> 322         __declspec(align(64)) VUINT32 _dP13[16][2];
+<a id='L323' name='L323'></a> 323         __declspec(align(64)) VUINT32 _dP14[16][2];
+<a id='L324' name='L324'></a> 324         __declspec(align(64)) VUINT32 _dP15[16][2];
+<a id='L325' name='L325'></a> 325         __declspec(align(64)) VUINT32 _dP16[16][2];
+<a id='L326' name='L326'></a> 326         __declspec(align(64)) VUINT32 _dP17[16][2];
+<a id='L327' name='L327'></a> 327         __declspec(align(64)) VUINT32 _iExpMantMask_UISA[16][1];
+<a id='L328' name='L328'></a> 328         __declspec(align(64)) VUINT32 _iMinIdxOfsMask_UISA[16][1];
+<a id='L329' name='L329'></a> 329         __declspec(align(64)) VUINT32 _iMaxIdxMask_UISA[16][1];
+<a id='L330' name='L330'></a> 330         __declspec(align(64)) VUINT32 _dbSignMask[8][2];
+<a id='L331' name='L331'></a> 331         __declspec(align(64)) VUINT32 _dbAbsMask[8][2];
+<a id='L332' name='L332'></a> 332         __declspec(align(64)) VUINT32 _iExpMantMask[16][1];
+<a id='L333' name='L333'></a> 333         __declspec(align(64)) VUINT32 _iExpMask[16][1];
+<a id='L334' name='L334'></a> 334         __declspec(align(64)) VUINT32 _iMinIdxOfsMask[16][1];
+<a id='L335' name='L335'></a> 335         __declspec(align(64)) VUINT32 _iMaxIdxMask[16][1];
+<a id='L336' name='L336'></a> 336 <em class='brace'>}</em> __svml_dtanh_data_internal;
+<a id='L337' name='L337'></a> 337 <em class='sharp'>#endif</em>
+<a id='L338' name='L338'></a> 338 __svml_dtanh_data_internal:
+<a id='L339' name='L339'></a> 339         <em class='comment'>/*== _dC ==*/</em>
+<a id='L340' name='L340'></a> 340         .quad 0x0000000000000000, 0x3fcc000000000000, 0x3fd4000000000000, 0x3fdc000000000000
+<a id='L341' name='L341'></a> 341         .quad 0x3fe4000000000000, 0x3fec000000000000, 0x3ff4000000000000, 0x3ffc000000000000
+<a id='L342' name='L342'></a> 342         .quad 0x4004000000000000, 0x400c000000000000, 0x4014000000000000, 0x401c000000000000
+<a id='L343' name='L343'></a> 343         .quad 0x4024000000000000, 0x402c000000000000, 0x4034000000000000, 0x0000000000000000
+<a id='L344' name='L344'></a> 344         <em class='comment'>/*== p0 ==*/</em>
+<a id='L345' name='L345'></a> 345         .align 64
+<a id='L346' name='L346'></a> 346         .quad 0x0000000000000000, 0x3fcb8fd0416a7c92, 0x3fd35f98a0ea650e, 0x3fda5729ee488037
+<a id='L347' name='L347'></a> 347         .quad 0x3fe1bf47eabb8f95, 0x3fe686650b8c2015, 0x3feb2523bb6b2dee, 0x3fee1fbf97e33527
+<a id='L348' name='L348'></a> 348         .quad 0x3fef9258260a71c2, 0x3feff112c63a9077, 0x3fefff419668df11, 0x3feffffc832750f2
+<a id='L349' name='L349'></a> 349         .quad 0x3feffffffdc96f35, 0x3fefffffffffcf58, 0x3ff0000000000000, 0x3ff0000000000000
+<a id='L350' name='L350'></a> 350         <em class='comment'>/*== p1 ==*/</em>
+<a id='L351' name='L351'></a> 351         .align 64
+<a id='L352' name='L352'></a> 352         .quad 0x0000000000000000, 0x3c65e23ebcd3bcbe, 0xbc4c600bac3adf00, 0x3c6c44091785d040
+<a id='L353' name='L353'></a> 353         .quad 0x3c8221d7a6e3674b, 0x3c69f89d2cf6b85c, 0x3c73b3e9ec0b8f1c, 0xbc7f8d4b0428aada
+<a id='L354' name='L354'></a> 354         .quad 0xbc7c52d880cf43c0, 0x3c7dd36e37096480, 0x3c7b4f6380c442ca, 0xbc729755de470096
+<a id='L355' name='L355'></a> 355         .quad 0x3c84cf852845efbd, 0x3c6fc4fb440a5378, 0xbc63981083b55870, 0x0000000000000000
+<a id='L356' name='L356'></a> 356         <em class='comment'>/*== p2 ==*/</em>
+<a id='L357' name='L357'></a> 357         .align 64
+<a id='L358' name='L358'></a> 358         .quad 0x3ff0000000000000, 0x3fee842ca3f08532, 0x3fed11574af58f1b, 0x3fea945b9c24e4f9
+<a id='L359' name='L359'></a> 359         .quad 0x3fe6284c3374f815, 0x3fe02500a09f8d6e, 0x3fd1f25131e3a8c0, 0x3fbd22ca1c24a139
+<a id='L360' name='L360'></a> 360         .quad 0x3f9b3afe1fba5c76, 0x3f6dd37d19b22b21, 0x3f27ccec13a9ef96, 0x3ecbe6c3f33250ae
+<a id='L361' name='L361'></a> 361         .quad 0x3e41b4865394f75f, 0x3d8853f01bda5f28, 0x3c73953c0197ef58, 0x0000000000000000
+<a id='L362' name='L362'></a> 362         <em class='comment'>/*== p3 ==*/</em>
+<a id='L363' name='L363'></a> 363         .align 64
+<a id='L364' name='L364'></a> 364         .quad 0xbbf0b3ea3fdfaa19, 0xbfca48aaeb53bc21, 0xbfd19921f4329916, 0xbfd5e0f09bef8011
+<a id='L365' name='L365'></a> 365         .quad 0xbfd893b59c35c882, 0xbfd6ba7cb7576538, 0xbfce7291743d7555, 0xbfbb6d85a01efb80
+<a id='L366' name='L366'></a> 366         .quad 0xbf9addae58c7141a, 0xbf6dc59376c7aa19, 0xbf27cc5e74677410, 0xbecbe6c0e8b4cc87
+<a id='L367' name='L367'></a> 367         .quad 0xbe41b486526b0565, 0xbd8853f01bef63a4, 0xbc73955be519be31, 0x0000000000000000
+<a id='L368' name='L368'></a> 368         <em class='comment'>/*== p4 ==*/</em>
+<a id='L369' name='L369'></a> 369         .align 64
+<a id='L370' name='L370'></a> 370         .quad 0xbfd5555555555555, 0xbfd183afc292ba11, 0xbfcc1a4b039c9bfa, 0xbfc16e1e6d8d0be6
+<a id='L371' name='L371'></a> 371         .quad 0xbf92426c751e48a2, 0x3fb4f152b2bad124, 0x3fbbba40cbef72be, 0x3fb01ba038be6a3d
+<a id='L372' name='L372'></a> 372         .quad 0x3f916df44871efc8, 0x3f63c6869dfc8870, 0x3f1fb9aef915d828, 0x3ec299d1e27c6e11
+<a id='L373' name='L373'></a> 373         .quad 0x3e379b5ddcca334c, 0x3d8037f57bc62c9a, 0x3c6a2d4b50a2cff7, 0x0000000000000000
+<a id='L374' name='L374'></a> 374         <em class='comment'>/*== p5 ==*/</em>
+<a id='L375' name='L375'></a> 375         .align 64
+<a id='L376' name='L376'></a> 376         .quad 0xbce6863ee44ed636, 0x3fc04dcd0476c75e, 0x3fc43d3449a80f08, 0x3fc5c26f3699b7e7
+<a id='L377' name='L377'></a> 377         .quad 0x3fc1a686f6ab2533, 0x3faf203c316ce730, 0xbf89c7a02788557c, 0xbf98157e26e0d541
+<a id='L378' name='L378'></a> 378         .quad 0xbf807b55c1c7d278, 0xbf53a18d5843190f, 0xbf0fb6bbc89b1a5b, 0xbeb299c9c684a963
+<a id='L379' name='L379'></a> 379         .quad 0xbe279b5dd4fb3d01, 0xbd7037f57ae72aa6, 0xbc5a2ca2bba78e86, 0x0000000000000000
+<a id='L380' name='L380'></a> 380         <em class='comment'>/*== p6 ==*/</em>
+<a id='L381' name='L381'></a> 381         .align 64
+<a id='L382' name='L382'></a> 382         .quad 0x3fc1111111112ab5, 0x3fb5c19efdfc08ad, 0x3fa74c98dc34fbac, 0xbf790d6a8eff0a77
+<a id='L383' name='L383'></a> 383         .quad 0xbfac3c021789a786, 0xbfae2196b7326859, 0xbf93a7a011ff8c2a, 0x3f6e4709c7e8430e
+<a id='L384' name='L384'></a> 384         .quad 0x3f67682afa611151, 0x3f3ef2ee77717cbf, 0x3ef95a4482f180b7, 0x3e9dc2c27da3b603
+<a id='L385' name='L385'></a> 385         .quad 0x3e12e2afd9f7433e, 0x3d59f320348679ba, 0x3c44b61d9bbcc940, 0x0000000000000000
+<a id='L386' name='L386'></a> 386         <em class='comment'>/*== p7 ==*/</em>
+<a id='L387' name='L387'></a> 387         .align 64
+<a id='L388' name='L388'></a> 388         .quad 0xbda1ea19ddddb3b4, 0xbfb0b8df995ce4df, 0xbfb2955cf41e8164, 0xbfaf9d05c309f7c6
+<a id='L389' name='L389'></a> 389         .quad 0xbf987d27ccff4291, 0x3f8b2ca62572b098, 0x3f8f1cf6c7f5b00a, 0x3f60379811e43dd5
+<a id='L390' name='L390'></a> 390         .quad 0xbf4793826f78537e, 0xbf2405695e36240f, 0xbee0e08de39ce756, 0xbe83d709ba5f714e
+<a id='L391' name='L391'></a> 391         .quad 0xbdf92e3fc5ee63e0, 0xbd414cc030f2110e, 0xbc2ba022e8d82a87, 0x0000000000000000
+<a id='L392' name='L392'></a> 392         <em class='comment'>/*== p8 ==*/</em>
+<a id='L393' name='L393'></a> 393         .align 64
+<a id='L394' name='L394'></a> 394         .quad 0xbfaba1ba1990520b, 0xbf96e37bba52f6fc, 0x3ecff7df18455399, 0x3f97362834d33a4e
+<a id='L395' name='L395'></a> 395         .quad 0x3f9e7f8380184b45, 0x3f869543e7c420d4, 0xbf7326bd4914222a, 0xbf5fc15b0a9d98fa
+<a id='L396' name='L396'></a> 396         .quad 0x3f14cffcfa69fbb6, 0x3f057e48e5b79d10, 0x3ec33b66d7d77264, 0x3e66ac4e578b9b10
+<a id='L397' name='L397'></a> 397         .quad 0x3ddcc74b8d3d5c42, 0x3d23c589137f92b4, 0x3c107f8e2c8707a1, 0x0000000000000000
+<a id='L398' name='L398'></a> 398         <em class='comment'>/*== p9 ==*/</em>
+<a id='L399' name='L399'></a> 399         .align 64
+<a id='L400' name='L400'></a> 400         .quad 0xbe351ca7f096011f, 0x3f9eaaf3320c3851, 0x3f9cf823fe761fc1, 0x3f9022271754ff1f
+<a id='L401' name='L401'></a> 401         .quad 0xbf731fe77c9c60af, 0xbf84a6046865ec7d, 0xbf4ca3f1f2b9192b, 0x3f4c77dee0afd227
+<a id='L402' name='L402'></a> 402         .quad 0x3f04055bce68597a, 0xbee2bf0cb4a71647, 0xbea31eaafe73efd5, 0xbe46abb02c4368ed
+<a id='L403' name='L403'></a> 403         .quad 0xbdbcc749ca8079dd, 0xbd03c5883836b9d2, 0xbbf07a5416264aec, 0x0000000000000000
+<a id='L404' name='L404'></a> 404         <em class='comment'>/*== p10 ==*/</em>
+<a id='L405' name='L405'></a> 405         .align 64
+<a id='L406' name='L406'></a> 406         .quad 0x3f9664f94e6ac14e, 0xbf94d3343bae39dd, 0xbf7bc748e60df843, 0xbf8c89372b43ba85
+<a id='L407' name='L407'></a> 407         .quad 0xbf8129a092de747a, 0x3f60c85b4d538746, 0x3f5be9392199ec18, 0xbf2a0c68a4489f10
+<a id='L408' name='L408'></a> 408         .quad 0xbf00462601dc2faa, 0x3eb7b6a219dea9f4, 0x3e80cbcc8d4c5c8a, 0x3e2425bb231a5e29
+<a id='L409' name='L409'></a> 409         .quad 0x3d9992a4beac8662, 0x3ce191ba5ed3fb67, 0x3bc892450bad44c4, 0x0000000000000000
+<a id='L410' name='L410'></a> 410         <em class='comment'>/*== p11 ==*/</em>
+<a id='L411' name='L411'></a> 411         .align 64
+<a id='L412' name='L412'></a> 412         .quad 0xbea8c4c1fd7852fe, 0xbfccce16b1046f13, 0xbf81a16f224bb7b6, 0xbf62cbf00406bc09
+<a id='L413' name='L413'></a> 413         .quad 0x3f75b29bb02cf69b, 0x3f607df0f9f90c17, 0xbf4b852a6e0758d5, 0xbf0078c63d1b8445
+<a id='L414' name='L414'></a> 414         .quad 0x3eec12eadd55be7a, 0xbe6fa600f593181b, 0xbe5a3c935dce3f7d, 0xbe001c6d95e3ae96
+<a id='L415' name='L415'></a> 415         .quad 0xbd74755a00ea1fd3, 0xbcbc1c6c063bb7ac, 0xbba3be9a4460fe00, 0x0000000000000000
+<a id='L416' name='L416'></a> 416         <em class='comment'>/*== p12 ==*/</em>
+<a id='L417' name='L417'></a> 417         .align 64
+<a id='L418' name='L418'></a> 418         .quad 0xbf822404577aa9dd, 0x403d8b07f7a82aa3, 0xbf9f44ab92fbab0a, 0x3fb2eac604473d6a
+<a id='L419' name='L419'></a> 419         .quad 0x3f45f87d903aaac8, 0xbf5e104671036300, 0x3f19bc98ddf0f340, 0x3f0d4304bc9246e8
+<a id='L420' name='L420'></a> 420         .quad 0xbed13c415f7b9d41, 0xbe722b8d9720cdb0, 0x3e322666d739bec0, 0x3dd76a553d7e7918
+<a id='L421' name='L421'></a> 421         .quad 0x3d4de0fa59416a39, 0x3c948716cf3681b4, 0x3b873f9f2d2fda99, 0x0000000000000000
+<a id='L422' name='L422'></a> 422         <em class='comment'>/*== p13 ==*/</em>
+<a id='L423' name='L423'></a> 423         .align 64
+<a id='L424' name='L424'></a> 424         .quad 0xbefdd99a221ed573, 0x4070593a3735bab4, 0xbfccab654e44835e, 0x3fd13ed80037dbac
+<a id='L425' name='L425'></a> 425         .quad 0xbf6045b9076cc487, 0x3f2085ee7e8ac170, 0x3f23524622610430, 0xbeff12a6626911b4
+<a id='L426' name='L426'></a> 426         .quad 0x3eab9008bca408af, 0x3e634df71865f620, 0xbe05bb1bcf83ca73, 0xbdaf2ac143fb6762
+<a id='L427' name='L427'></a> 427         .quad 0xbd23eae52a3dbf57, 0xbc6b5e3e9ca0955e, 0xbb5eca68e2c1ba2e, 0x0000000000000000
+<a id='L428' name='L428'></a> 428         <em class='comment'>/*== p14 ==*/</em>
+<a id='L429' name='L429'></a> 429         .align 64
+<a id='L430' name='L430'></a> 430         .quad 0x3f6e3be689423841, 0xc0d263511f5baac1, 0x40169f73b15ebe5c, 0xc025c1dd41cd6cb5
+<a id='L431' name='L431'></a> 431         .quad 0xbf58fd89fe05e0d1, 0x3f73f7af01d5af7a, 0xbf1e40bdead17e6b, 0x3ee224cd6c4513e5
+<a id='L432' name='L432'></a> 432         .quad 0xbe24b645e68eeaa3, 0xbe4abfebfb72bc83, 0x3dd51c38f8695ed3, 0x3d8313ac38c6832b
+<a id='L433' name='L433'></a> 433         .quad 0x3cf7787935626685, 0x3c401ffc49c6bc29, 0xbabf0b21acfa52ab, 0x0000000000000000
+<a id='L434' name='L434'></a> 434         <em class='comment'>/*== p15 ==*/</em>
+<a id='L435' name='L435'></a> 435         .align 64
+<a id='L436' name='L436'></a> 436         .quad 0xbf2a1306713a4f3a, 0xc1045e509116b066, 0x4041fab9250984ce, 0xc0458d090ec3de95
+<a id='L437' name='L437'></a> 437         .quad 0xbf74949d60113d63, 0x3f7c9fd6200d0ade, 0x3f02cd40e0ad0a9f, 0xbe858ab8e019f311
+<a id='L438' name='L438'></a> 438         .quad 0xbe792fa6323b7cf8, 0x3e2df04d67876402, 0xbd95c72be95e4d2c, 0xbd55a89c30203106
+<a id='L439' name='L439'></a> 439         .quad 0xbccad6b3bb9eff65, 0xbc12705ccd3dd884, 0xba8e0a4c47ae75f5, 0x0000000000000000
+<a id='L440' name='L440'></a> 440         <em class='comment'>/*== p16 ==*/</em>
+<a id='L441' name='L441'></a> 441         .align 64
+<a id='L442' name='L442'></a> 442         .quad 0xbf55d7e76dc56871, 0x41528c38809c90c7, 0xc076d57fb5190b02, 0x4085f09f888f8ada
+<a id='L443' name='L443'></a> 443         .quad 0x3fa246332a2fcba5, 0xbfb29d851a896fcd, 0x3ed9065ae369b212, 0xbeb8e1ba4c98a030
+<a id='L444' name='L444'></a> 444         .quad 0x3e6ffd0766ad4016, 0xbe0c63c29f505f5b, 0xbd7fab216b9e0e49, 0x3d2826b62056aa27
+<a id='L445' name='L445'></a> 445         .quad 0x3ca313e31762f523, 0x3bea37aa21895319, 0x3ae5c7f1fd871496, 0x0000000000000000
+<a id='L446' name='L446'></a> 446         <em class='comment'>/*== p17 ==*/</em>
+<a id='L447' name='L447'></a> 447         .align 64
+<a id='L448' name='L448'></a> 448         .quad 0x3f35e67ab76a26e7, 0x41848ee0627d8206, 0xc0a216d618b489ec, 0x40a5b89107c8af4f
+<a id='L449' name='L449'></a> 449         .quad 0x3fb69d8374520eda, 0xbfbded519f981716, 0xbef02d288b5b3371, 0x3eb290981209c1a6
+<a id='L450' name='L450'></a> 450         .quad 0xbe567e924bf5ff6e, 0x3de3f7f7de6b0eb6, 0x3d69ed18bae3ebbc, 0xbcf7534c4f3dfa71
+<a id='L451' name='L451'></a> 451         .quad 0xbc730b73f1eaff20, 0xbbba2cff8135d462, 0xbab5a71b5f7d9035, 0x0000000000000000
+<a id='L452' name='L452'></a> 452         .align 64
+<a id='L453' name='L453'></a> 453         .long 0x7ff80000, 0x7ff80000, 0x7ff80000, 0x7ff80000, 0x7ff80000, 0x7ff80000, 0x7ff80000, 0x7ff80000, 0x7ff80000, 0x7ff80000, 0x7ff80000, 0x7ff80000, 0x7ff80000, 0x7ff80000, 0x7ff80000, 0x7ff80000           <em class='comment'>/* _iExpMantMask_UISA     */</em>
+<a id='L454' name='L454'></a> 454         .align 64
+<a id='L455' name='L455'></a> 455         .long 0x3fc00000, 0x3fc00000, 0x3fc00000, 0x3fc00000, 0x3fc00000, 0x3fc00000, 0x3fc00000, 0x3fc00000, 0x3fc00000, 0x3fc00000, 0x3fc00000, 0x3fc00000, 0x3fc00000, 0x3fc00000, 0x3fc00000, 0x3fc00000           <em class='comment'>/* _iMinIdxOfsMask_UISA   */</em>
+<a id='L456' name='L456'></a> 456         .align 64
+<a id='L457' name='L457'></a> 457         .long 0x00780000, 0x00780000, 0x00780000, 0x00780000, 0x00780000, 0x00780000, 0x00780000, 0x00780000, 0x00780000, 0x00780000, 0x00780000, 0x00780000, 0x00780000, 0x00780000, 0x00780000, 0x00780000           <em class='comment'>/* _iMaxIdxMask_UISA      */</em>
+<a id='L458' name='L458'></a> 458         .align 64
+<a id='L459' name='L459'></a> 459         .quad 0x8000000000000000, 0x8000000000000000, 0x8000000000000000, 0x8000000000000000, 0x8000000000000000, 0x8000000000000000, 0x8000000000000000, 0x8000000000000000   <em class='comment'>/* _dbSignMask       */</em>
+<a id='L460' name='L460'></a> 460         .align 64
+<a id='L461' name='L461'></a> 461         .quad 0x7fffffffffffffff, 0x7fffffffffffffff, 0x7fffffffffffffff, 0x7fffffffffffffff, 0x7fffffffffffffff, 0x7fffffffffffffff, 0x7fffffffffffffff, 0x7fffffffffffffff   <em class='comment'>/* _dbAbsMask        */</em>
+<a id='L462' name='L462'></a> 462         .align 64
+<a id='L463' name='L463'></a> 463         .long 0x7ffe0000, 0x7ffe0000, 0x7ffe0000, 0x7ffe0000, 0x7ffe0000, 0x7ffe0000, 0x7ffe0000, 0x7ffe0000, 0x7ffe0000, 0x7ffe0000, 0x7ffe0000, 0x7ffe0000, 0x7ffe0000, 0x7ffe0000, 0x7ffe0000, 0x7ffe0000           <em class='comment'>/* _iExpMantMask     */</em>
+<a id='L464' name='L464'></a> 464         .align 64
+<a id='L465' name='L465'></a> 465         .long 0x7fe00000, 0x7fe00000, 0x7fe00000, 0x7fe00000, 0x7fe00000, 0x7fe00000, 0x7fe00000, 0x7fe00000, 0x7fe00000, 0x7fe00000, 0x7fe00000, 0x7fe00000, 0x7fe00000, 0x7fe00000, 0x7fe00000, 0x7fe00000           <em class='comment'>/* _iExpMask         */</em>
+<a id='L466' name='L466'></a> 466         .align 64
+<a id='L467' name='L467'></a> 467         .long 0x3fbe0000, 0x3fbe0000, 0x3fbe0000, 0x3fbe0000, 0x3fbe0000, 0x3fbe0000, 0x3fbe0000, 0x3fbe0000, 0x3fbe0000, 0x3fbe0000, 0x3fbe0000, 0x3fbe0000, 0x3fbe0000, 0x3fbe0000, 0x3fbe0000, 0x3fbe0000           <em class='comment'>/* _iMinIdxOfsMask   */</em>
+<a id='L468' name='L468'></a> 468         .align 64
+<a id='L469' name='L469'></a> 469         .long 0x00760000, 0x00760000, 0x00760000, 0x00760000, 0x00760000, 0x00760000, 0x00760000, 0x00760000, 0x00760000, 0x00760000, 0x00760000, 0x00760000, 0x00760000, 0x00760000, 0x00760000, 0x00760000           <em class='comment'>/* _iMaxIdxMask      */</em>
+<a id='L470' name='L470'></a> 470         .align 64
+<a id='L471' name='L471'></a> 471         .type   __svml_dtanh_data_internal,@object
+<a id='L472' name='L472'></a> 472         .size   __svml_dtanh_data_internal,.-__svml_dtanh_data_internal
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;][^][v]<a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

@@ -1,0 +1,497 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>sysdeps/aarch64/multiarch/memcpy_thunderx2.S</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18977.html'>sysdeps</a>/<a href='../files/18978.html'>aarch64</a>/<a href='../files/18981.html'>multiarch</a>/memcpy_thunderx2.S</h2>
+<em class='comment'>/* [&lt;][&gt;][^][v][top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* A Thunderx2 Optimized memcpy implementation for AARCH64.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   Copyright (C) 2018-2022 Free Software Foundation, Inc.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'></em>
+<a id='L4' name='L4'></a>   4 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L5' name='L5'></a>   5 <em class='comment'></em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L10' name='L10'></a>  10 <em class='comment'></em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L15' name='L15'></a>  15 <em class='comment'></em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L17' name='L17'></a>  17 <em class='comment'>   License along with the GNU C Library; if not, see</em>
+<a id='L18' name='L18'></a>  18 <em class='comment'>   &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L19' name='L19'></a>  19 
+<a id='L20' name='L20'></a>  20 <em class='sharp'>#include</em> &lt;<a href='../I/5967.html'>sysdep.h</a>&gt;
+<a id='L21' name='L21'></a>  21 
+<a id='L22' name='L22'></a>  22 <em class='comment'>/* Assumptions:</em>
+<a id='L23' name='L23'></a>  23 <em class='comment'> *</em>
+<a id='L24' name='L24'></a>  24 <em class='comment'> * ARMv8-a, AArch64, unaligned accesses.</em>
+<a id='L25' name='L25'></a>  25 <em class='comment'> *</em>
+<a id='L26' name='L26'></a>  26 <em class='comment'> */</em>
+<a id='L27' name='L27'></a>  27 
+<a id='L28' name='L28'></a>  28 <em class='sharp'>#define</em> dstin   x0
+<a id='L29' name='L29'></a>  29 <em class='sharp'>#define</em> <a href='../R/24622.html' title='Multiple referred from 813 places.'>src</a> x1
+<a id='L30' name='L30'></a>  30 <em class='sharp'>#define</em> <a href='../R/18338.html' title='Multiple referred from 1109 places.'>count</a>   x2
+<a id='L31' name='L31'></a>  31 <em class='sharp'>#define</em> <a href='../R/18879.html' title='Multiple referred from 624 places.'>dst</a> x3
+<a id='L32' name='L32'></a>  32 <em class='sharp'>#define</em> <a href='../R/24625.html' title='Multiple referred from 30 places.'>srcend</a>  x4
+<a id='L33' name='L33'></a>  33 <em class='sharp'>#define</em> <a href='../R/18880.html' title='Multiple referred from 6 places.'>dstend</a>  x5
+<a id='L34' name='L34'></a>  34 <em class='sharp'>#define</em> <a href='../R/25690.html' title='Multiple referred from 37 places.'>tmp2</a>    x6
+<a id='L35' name='L35'></a>  35 <em class='sharp'>#define</em> <a href='../R/25691.html' title='Multiple referred from 20 places.'>tmp3</a>    x7
+<a id='L36' name='L36'></a>  36 <em class='sharp'>#define</em> tmp3w   w7
+<a id='L37' name='L37'></a>  37 <em class='sharp'>#define</em> A_l x6
+<a id='L38' name='L38'></a>  38 <em class='sharp'>#define</em> A_lw    w6
+<a id='L39' name='L39'></a>  39 <em class='sharp'>#define</em> A_h x7
+<a id='L40' name='L40'></a>  40 <em class='sharp'>#define</em> A_hw    w7
+<a id='L41' name='L41'></a>  41 <em class='sharp'>#define</em> B_l x8
+<a id='L42' name='L42'></a>  42 <em class='sharp'>#define</em> B_lw    w8
+<a id='L43' name='L43'></a>  43 <em class='sharp'>#define</em> B_h x9
+<a id='L44' name='L44'></a>  44 <em class='sharp'>#define</em> C_l x10
+<a id='L45' name='L45'></a>  45 <em class='sharp'>#define</em> C_h x11
+<a id='L46' name='L46'></a>  46 <em class='sharp'>#define</em> D_l x12
+<a id='L47' name='L47'></a>  47 <em class='sharp'>#define</em> D_h x13
+<a id='L48' name='L48'></a>  48 <em class='sharp'>#define</em> E_l src
+<a id='L49' name='L49'></a>  49 <em class='sharp'>#define</em> E_h count
+<a id='L50' name='L50'></a>  50 <em class='sharp'>#define</em> F_l srcend
+<a id='L51' name='L51'></a>  51 <em class='sharp'>#define</em> F_h dst
+<a id='L52' name='L52'></a>  52 <em class='sharp'>#define</em> G_l count
+<a id='L53' name='L53'></a>  53 <em class='sharp'>#define</em> G_h dst
+<a id='L54' name='L54'></a>  54 <em class='sharp'>#define</em> <a href='../R/25689.html' title='Multiple referred from 12 places.'>tmp1</a>    x14
+<a id='L55' name='L55'></a>  55 
+<a id='L56' name='L56'></a>  56 <em class='sharp'>#define</em> A_q q0
+<a id='L57' name='L57'></a>  57 <em class='sharp'>#define</em> B_q q1
+<a id='L58' name='L58'></a>  58 <em class='sharp'>#define</em> C_q q2
+<a id='L59' name='L59'></a>  59 <em class='sharp'>#define</em> D_q q3
+<a id='L60' name='L60'></a>  60 <em class='sharp'>#define</em> E_q q4
+<a id='L61' name='L61'></a>  61 <em class='sharp'>#define</em> F_q q5
+<a id='L62' name='L62'></a>  62 <em class='sharp'>#define</em> G_q q6
+<a id='L63' name='L63'></a>  63 <em class='sharp'>#define</em> H_q q7
+<a id='L64' name='L64'></a>  64 <em class='sharp'>#define</em> I_q q16
+<a id='L65' name='L65'></a>  65 <em class='sharp'>#define</em> J_q q17
+<a id='L66' name='L66'></a>  66 
+<a id='L67' name='L67'></a>  67 <em class='sharp'>#define</em> A_v v0
+<a id='L68' name='L68'></a>  68 <em class='sharp'>#define</em> B_v v1
+<a id='L69' name='L69'></a>  69 <em class='sharp'>#define</em> C_v v2
+<a id='L70' name='L70'></a>  70 <em class='sharp'>#define</em> D_v v3
+<a id='L71' name='L71'></a>  71 <em class='sharp'>#define</em> E_v v4
+<a id='L72' name='L72'></a>  72 <em class='sharp'>#define</em> F_v v5
+<a id='L73' name='L73'></a>  73 <em class='sharp'>#define</em> G_v v6
+<a id='L74' name='L74'></a>  74 <em class='sharp'>#define</em> H_v v7
+<a id='L75' name='L75'></a>  75 <em class='sharp'>#define</em> I_v v16
+<a id='L76' name='L76'></a>  76 <em class='sharp'>#define</em> J_v v17
+<a id='L77' name='L77'></a>  77 
+<a id='L78' name='L78'></a>  78 <em class='sharp'>#ifndef</em> <a href='../D/7892.html' title='Multiple defined in 21 places.'>MEMMOVE</a>
+<a id='L79' name='L79'></a>  79 <em class='sharp'># define</em> <a href='../R/4835.html' title='Multiple referred from 6 places.'>MEMMOVE</a> memmove
+<a id='L80' name='L80'></a>  80 <em class='sharp'>#endif</em>
+<a id='L81' name='L81'></a>  81 <em class='sharp'>#ifndef</em> <a href='../D/7873.html' title='Multiple defined in 73 places.'>MEMCPY</a>
+<a id='L82' name='L82'></a>  82 <em class='sharp'># define</em> <a href='../R/4818.html' title='Multiple referred from 32 places.'>MEMCPY</a> memcpy
+<a id='L83' name='L83'></a>  83 <em class='sharp'>#endif</em>
+<a id='L84' name='L84'></a>  84 
+<a id='L85' name='L85'></a>  85 <em class='sharp'>#if</em> <a href='../D/6753.html' title='Multiple defined in 3 places.'>IS_IN</a> (<a href='../D/32623.html' title='Multiple defined in 2 places.'>libc</a>)
+<a id='L86' name='L86'></a>  86 
+<a id='L87' name='L87'></a>  87 <em class='sharp'>#undef</em> <a href='../R/4818.html' title='Multiple referred from 32 places.'>MEMCPY</a>
+<a id='L88' name='L88'></a>  88 <em class='sharp'>#define</em> <a href='../R/4818.html' title='Multiple referred from 32 places.'>MEMCPY</a> __memcpy_thunderx2
+<a id='L89' name='L89'></a>  89 <em class='sharp'>#undef</em> <a href='../R/4835.html' title='Multiple referred from 6 places.'>MEMMOVE</a>
+<a id='L90' name='L90'></a>  90 <em class='sharp'>#define</em> <a href='../R/4835.html' title='Multiple referred from 6 places.'>MEMMOVE</a> __memmove_thunderx2
+<a id='L91' name='L91'></a>  91 
+<a id='L92' name='L92'></a>  92 
+<a id='L93' name='L93'></a>  93 <em class='comment'>/* Overlapping large forward memmoves use a loop that copies backwards.</em>
+<a id='L94' name='L94'></a>  94 <em class='comment'>   Otherwise memcpy is used. Small moves branch to memcopy16 directly.</em>
+<a id='L95' name='L95'></a>  95 <em class='comment'>   The longer memcpy cases fall through to the memcpy head.</em>
+<a id='L96' name='L96'></a>  96 <em class='comment'>*/</em>
+<a id='L97' name='L97'></a>  97 
+<a id='L98' name='L98'></a>  98 ENTRY_ALIGN (MEMMOVE, 6)
+<a id='L99' name='L99'></a>  99 
+<a id='L100' name='L100'></a> 100     PTR_ARG (0)
+<a id='L101' name='L101'></a> 101     PTR_ARG (1)
+<a id='L102' name='L102'></a> 102     SIZE_ARG (2)
+<a id='L103' name='L103'></a> 103 
+<a id='L104' name='L104'></a> 104     add srcend, src, count
+<a id='L105' name='L105'></a> 105     cmp count, 16
+<a id='L106' name='L106'></a> 106     b.ls    L(memcopy16)
+<a id='L107' name='L107'></a> 107     sub tmp1, dstin, src
+<a id='L108' name='L108'></a> 108     cmp count, 96
+<a id='L109' name='L109'></a> 109     ccmp    tmp1, count, 2, hi
+<a id='L110' name='L110'></a> 110     b.lo    L(move_long)
+<a id='L111' name='L111'></a> 111 
+<a id='L112' name='L112'></a> 112 END (MEMMOVE)
+<a id='L113' name='L113'></a> 113 libc_hidden_builtin_def (MEMMOVE)
+<a id='L114' name='L114'></a> 114 
+<a id='L115' name='L115'></a> 115 
+<a id='L116' name='L116'></a> 116 <em class='comment'>/* Copies are split into 3 main cases: small copies of up to 16 bytes,</em>
+<a id='L117' name='L117'></a> 117 <em class='comment'>   medium copies of 17..96 bytes which are fully unrolled. Large copies</em>
+<a id='L118' name='L118'></a> 118 <em class='comment'>   of more than 96 bytes align the destination and use load-and-merge</em>
+<a id='L119' name='L119'></a> 119 <em class='comment'>   approach in the case src and dst addresses are unaligned not evenly,</em>
+<a id='L120' name='L120'></a> 120 <em class='comment'>   so that, actual loads and stores are always aligned.</em>
+<a id='L121' name='L121'></a> 121 <em class='comment'>   Large copies use the loops processing 64 bytes per iteration for</em>
+<a id='L122' name='L122'></a> 122 <em class='comment'>   unaligned case and 128 bytes per iteration for aligned ones.</em>
+<a id='L123' name='L123'></a> 123 <em class='comment'>*/</em>
+<a id='L124' name='L124'></a> 124 
+<a id='L125' name='L125'></a> 125 <em class='sharp'>#define</em> MEMCPY_PREFETCH_LDR 640
+<a id='L126' name='L126'></a> 126 
+<a id='L127' name='L127'></a> 127     .p2align 4
+<a id='L128' name='L128'></a> 128 <a href='../D/3651.html' title='Multiple defined in 54 places.'>ENTRY</a> (<a href='../R/4818.html' title='Multiple referred from 32 places.'>MEMCPY</a>)
+<a id='L129' name='L129'></a> 129 
+<a id='L130' name='L130'></a> 130     PTR_ARG (0)
+<a id='L131' name='L131'></a> 131     PTR_ARG (1)
+<a id='L132' name='L132'></a> 132     SIZE_ARG (2)
+<a id='L133' name='L133'></a> 133 
+<a id='L134' name='L134'></a> 134     add srcend, src, count
+<a id='L135' name='L135'></a> 135     cmp count, 16
+<a id='L136' name='L136'></a> 136     b.ls    L(memcopy16)
+<a id='L137' name='L137'></a> 137     ldr A_q, [src], #16
+<a id='L138' name='L138'></a> 138     add dstend, dstin, count
+<a id='L139' name='L139'></a> 139     and tmp1, src, 15
+<a id='L140' name='L140'></a> 140     cmp count, 96
+<a id='L141' name='L141'></a> 141     b.hi    L(memcopy_long)
+<a id='L142' name='L142'></a> 142 
+<a id='L143' name='L143'></a> 143     <em class='comment'>/* Medium copies: 17..96 bytes.  */</em>
+<a id='L144' name='L144'></a> 144     ldr E_q, [srcend, -16]
+<a id='L145' name='L145'></a> 145     cmp count, 64
+<a id='L146' name='L146'></a> 146     b.gt    L(memcpy_copy96)
+<a id='L147' name='L147'></a> 147     cmp count, 48
+<a id='L148' name='L148'></a> 148     b.le    L(bytes_17_to_48)
+<a id='L149' name='L149'></a> 149     <em class='comment'>/* 49..64 bytes */</em>
+<a id='L150' name='L150'></a> 150     ldp B_q, C_q, [src]
+<a id='L151' name='L151'></a> 151     str E_q, [dstend, -16]
+<a id='L152' name='L152'></a> 152     stp A_q, B_q, [dstin]
+<a id='L153' name='L153'></a> 153     str C_q, [dstin, 32]
+<a id='L154' name='L154'></a> 154     ret
+<a id='L155' name='L155'></a> 155 
+<a id='L156' name='L156'></a> 156 L(bytes_17_to_48):
+<a id='L157' name='L157'></a> 157     <em class='comment'>/* 17..48 bytes*/</em>
+<a id='L158' name='L158'></a> 158     cmp count, 32
+<a id='L159' name='L159'></a> 159     b.gt    L(bytes_32_to_48)
+<a id='L160' name='L160'></a> 160     <em class='comment'>/* 17..32 bytes*/</em>
+<a id='L161' name='L161'></a> 161     str A_q, [dstin]
+<a id='L162' name='L162'></a> 162     str E_q, [dstend, -16]
+<a id='L163' name='L163'></a> 163     ret
+<a id='L164' name='L164'></a> 164 
+<a id='L165' name='L165'></a> 165 L(bytes_32_to_48):
+<a id='L166' name='L166'></a> 166     <em class='comment'>/* 32..48 */</em>
+<a id='L167' name='L167'></a> 167     ldr B_q, [src]
+<a id='L168' name='L168'></a> 168     str A_q, [dstin]
+<a id='L169' name='L169'></a> 169     str E_q, [dstend, -16]
+<a id='L170' name='L170'></a> 170     str B_q, [dstin, 16]
+<a id='L171' name='L171'></a> 171     ret
+<a id='L172' name='L172'></a> 172 
+<a id='L173' name='L173'></a> 173     .p2align 4
+<a id='L174' name='L174'></a> 174     <em class='comment'>/* Small copies: 0..16 bytes.  */</em>
+<a id='L175' name='L175'></a> 175 L(memcopy16):
+<a id='L176' name='L176'></a> 176     cmp count, 8
+<a id='L177' name='L177'></a> 177     b.lo    L(bytes_0_to_8)
+<a id='L178' name='L178'></a> 178     ldr A_l, [src]
+<a id='L179' name='L179'></a> 179     ldr A_h, [srcend, -8]
+<a id='L180' name='L180'></a> 180     add dstend, dstin, count
+<a id='L181' name='L181'></a> 181     str A_l, [dstin]
+<a id='L182' name='L182'></a> 182     str A_h, [dstend, -8]
+<a id='L183' name='L183'></a> 183     ret
+<a id='L184' name='L184'></a> 184     .p2align 4
+<a id='L185' name='L185'></a> 185 
+<a id='L186' name='L186'></a> 186 L(bytes_0_to_8):
+<a id='L187' name='L187'></a> 187     tbz count, 2, L(bytes_0_to_3)
+<a id='L188' name='L188'></a> 188     ldr A_lw, [src]
+<a id='L189' name='L189'></a> 189     ldr A_hw, [srcend, -4]
+<a id='L190' name='L190'></a> 190     add dstend, dstin, count
+<a id='L191' name='L191'></a> 191     str A_lw, [dstin]
+<a id='L192' name='L192'></a> 192     str A_hw, [dstend, -4]
+<a id='L193' name='L193'></a> 193     ret
+<a id='L194' name='L194'></a> 194 
+<a id='L195' name='L195'></a> 195     <em class='comment'>/* Copy 0..3 bytes.  Use a branchless sequence that copies the same</em>
+<a id='L196' name='L196'></a> 196 <em class='comment'>       byte 3 times if count==1, or the 2nd byte twice if count==2.  */</em>
+<a id='L197' name='L197'></a> 197 L(bytes_0_to_3):
+<a id='L198' name='L198'></a> 198     cbz count, 1f
+<a id='L199' name='L199'></a> 199     lsr tmp1, count, 1
+<a id='L200' name='L200'></a> 200     ldrb    A_lw, [src]
+<a id='L201' name='L201'></a> 201     ldrb    A_hw, [srcend, -1]
+<a id='L202' name='L202'></a> 202     add dstend, dstin, count
+<a id='L203' name='L203'></a> 203     ldrb    B_lw, [src, tmp1]
+<a id='L204' name='L204'></a> 204     strb    B_lw, [dstin, tmp1]
+<a id='L205' name='L205'></a> 205     strb    A_hw, [dstend, -1]
+<a id='L206' name='L206'></a> 206     strb    A_lw, [dstin]
+<a id='L207' name='L207'></a> 207 1:
+<a id='L208' name='L208'></a> 208     ret
+<a id='L209' name='L209'></a> 209 
+<a id='L210' name='L210'></a> 210     .p2align 4
+<a id='L211' name='L211'></a> 211 
+<a id='L212' name='L212'></a> 212 L(memcpy_copy96):
+<a id='L213' name='L213'></a> 213     <em class='comment'>/* Copying 65..96 bytes. A_q (first 16 bytes) and</em>
+<a id='L214' name='L214'></a> 214 <em class='comment'>       E_q(last 16 bytes) are already loaded. The size</em>
+<a id='L215' name='L215'></a> 215 <em class='comment'>       is large enough to benefit from aligned loads */</em>
+<a id='L216' name='L216'></a> 216     bic src, src, 15
+<a id='L217' name='L217'></a> 217     ldp B_q, C_q, [src]
+<a id='L218' name='L218'></a> 218     <em class='comment'>/* Loaded 64 bytes, second 16-bytes chunk can be</em>
+<a id='L219' name='L219'></a> 219 <em class='comment'>       overlapping with the first chunk by tmp1 bytes.</em>
+<a id='L220' name='L220'></a> 220 <em class='comment'>       Stored 16 bytes. */</em>
+<a id='L221' name='L221'></a> 221     sub dst, dstin, tmp1
+<a id='L222' name='L222'></a> 222     add count, count, tmp1
+<a id='L223' name='L223'></a> 223     <em class='comment'>/* The range of count being [65..96] becomes [65..111]</em>
+<a id='L224' name='L224'></a> 224 <em class='comment'>       after tmp [0..15] gets added to it,</em>
+<a id='L225' name='L225'></a> 225 <em class='comment'>       count now is &lt;bytes-left-to-load&gt;+48 */</em>
+<a id='L226' name='L226'></a> 226     cmp count, 80
+<a id='L227' name='L227'></a> 227     b.gt    L(copy96_medium)
+<a id='L228' name='L228'></a> 228     ldr D_q, [src, 32]
+<a id='L229' name='L229'></a> 229     stp B_q, C_q, [dst, 16]
+<a id='L230' name='L230'></a> 230     str D_q, [dst, 48]
+<a id='L231' name='L231'></a> 231     str A_q, [dstin]
+<a id='L232' name='L232'></a> 232     str E_q, [dstend, -16]
+<a id='L233' name='L233'></a> 233     ret
+<a id='L234' name='L234'></a> 234 
+<a id='L235' name='L235'></a> 235     .p2align 4
+<a id='L236' name='L236'></a> 236 L(copy96_medium):
+<a id='L237' name='L237'></a> 237     ldp D_q, G_q, [src, 32]
+<a id='L238' name='L238'></a> 238     cmp count, 96
+<a id='L239' name='L239'></a> 239     b.gt    L(copy96_large)
+<a id='L240' name='L240'></a> 240     stp B_q, C_q, [dst, 16]
+<a id='L241' name='L241'></a> 241     stp D_q, G_q, [dst, 48]
+<a id='L242' name='L242'></a> 242     str A_q, [dstin]
+<a id='L243' name='L243'></a> 243     str E_q, [dstend, -16]
+<a id='L244' name='L244'></a> 244     ret
+<a id='L245' name='L245'></a> 245 
+<a id='L246' name='L246'></a> 246 L(copy96_large):
+<a id='L247' name='L247'></a> 247     ldr F_q, [src, 64]
+<a id='L248' name='L248'></a> 248     str B_q, [dst, 16]
+<a id='L249' name='L249'></a> 249     stp C_q, D_q, [dst, 32]
+<a id='L250' name='L250'></a> 250     stp G_q, F_q, [dst, 64]
+<a id='L251' name='L251'></a> 251     str A_q, [dstin]
+<a id='L252' name='L252'></a> 252     str E_q, [dstend, -16]
+<a id='L253' name='L253'></a> 253     ret
+<a id='L254' name='L254'></a> 254 
+<a id='L255' name='L255'></a> 255     .p2align 4
+<a id='L256' name='L256'></a> 256 L(memcopy_long):
+<a id='L257' name='L257'></a> 257     bic src, src, 15
+<a id='L258' name='L258'></a> 258     ldp B_q, C_q, [src], #32
+<a id='L259' name='L259'></a> 259     sub dst, dstin, tmp1
+<a id='L260' name='L260'></a> 260     add count, count, tmp1
+<a id='L261' name='L261'></a> 261     add dst, dst, 16
+<a id='L262' name='L262'></a> 262     and tmp1, dst, 15
+<a id='L263' name='L263'></a> 263     ldp D_q, E_q, [src], #32
+<a id='L264' name='L264'></a> 264     str A_q, [dstin]
+<a id='L265' name='L265'></a> 265 
+<a id='L266' name='L266'></a> 266     <em class='comment'>/* Already loaded 64+16 bytes. Check if at</em>
+<a id='L267' name='L267'></a> 267 <em class='comment'>       least 64 more bytes left */</em>
+<a id='L268' name='L268'></a> 268     subs    count, count, 64+64+16
+<a id='L269' name='L269'></a> 269     b.lt    L(loop128_exit0)
+<a id='L270' name='L270'></a> 270     cmp count, MEMCPY_PREFETCH_LDR + 64 + 32
+<a id='L271' name='L271'></a> 271     b.lt    L(loop128)
+<a id='L272' name='L272'></a> 272     cbnz    tmp1, L(dst_unaligned)
+<a id='L273' name='L273'></a> 273     sub count, count, MEMCPY_PREFETCH_LDR + 64 + 32
+<a id='L274' name='L274'></a> 274 
+<a id='L275' name='L275'></a> 275     .p2align 4
+<a id='L276' name='L276'></a> 276 
+<a id='L277' name='L277'></a> 277 L(loop128_prefetch):
+<a id='L278' name='L278'></a> 278     prfm    pldl1strm, [src, MEMCPY_PREFETCH_LDR]
+<a id='L279' name='L279'></a> 279     ldp F_q, G_q, [src], #32
+<a id='L280' name='L280'></a> 280     stp B_q, C_q, [dst], #32
+<a id='L281' name='L281'></a> 281     ldp H_q, I_q, [src], #32
+<a id='L282' name='L282'></a> 282     prfm    pldl1strm, [src, MEMCPY_PREFETCH_LDR]
+<a id='L283' name='L283'></a> 283     ldp B_q, C_q, [src], #32
+<a id='L284' name='L284'></a> 284     stp D_q, E_q, [dst], #32
+<a id='L285' name='L285'></a> 285     ldp D_q, E_q, [src], #32
+<a id='L286' name='L286'></a> 286     stp F_q, G_q, [dst], #32
+<a id='L287' name='L287'></a> 287     stp H_q, I_q, [dst], #32
+<a id='L288' name='L288'></a> 288     subs    count, count, 128
+<a id='L289' name='L289'></a> 289     b.ge    L(loop128_prefetch)
+<a id='L290' name='L290'></a> 290 
+<a id='L291' name='L291'></a> 291     add count, count, MEMCPY_PREFETCH_LDR + 64 + 32
+<a id='L292' name='L292'></a> 292     .p2align 4
+<a id='L293' name='L293'></a> 293 L(loop128):
+<a id='L294' name='L294'></a> 294     ldp F_q, G_q, [src], #32
+<a id='L295' name='L295'></a> 295     ldp H_q, I_q, [src], #32
+<a id='L296' name='L296'></a> 296     stp B_q, C_q, [dst], #32
+<a id='L297' name='L297'></a> 297     stp D_q, E_q, [dst], #32
+<a id='L298' name='L298'></a> 298     subs    count, count, 64
+<a id='L299' name='L299'></a> 299     b.lt    L(loop128_exit1)
+<a id='L300' name='L300'></a> 300     ldp B_q, C_q, [src], #32
+<a id='L301' name='L301'></a> 301     ldp D_q, E_q, [src], #32
+<a id='L302' name='L302'></a> 302     stp F_q, G_q, [dst], #32
+<a id='L303' name='L303'></a> 303     stp H_q, I_q, [dst], #32
+<a id='L304' name='L304'></a> 304     subs    count, count, 64
+<a id='L305' name='L305'></a> 305     b.ge    L(loop128)
+<a id='L306' name='L306'></a> 306 L(loop128_exit0):
+<a id='L307' name='L307'></a> 307     ldp F_q, G_q, [srcend, -64]
+<a id='L308' name='L308'></a> 308     ldp H_q, I_q, [srcend, -32]
+<a id='L309' name='L309'></a> 309     stp B_q, C_q, [dst], #32
+<a id='L310' name='L310'></a> 310     stp D_q, E_q, [dst]
+<a id='L311' name='L311'></a> 311     stp F_q, G_q, [dstend, -64]
+<a id='L312' name='L312'></a> 312     stp H_q, I_q, [dstend, -32]
+<a id='L313' name='L313'></a> 313     ret
+<a id='L314' name='L314'></a> 314 L(loop128_exit1):
+<a id='L315' name='L315'></a> 315     ldp B_q, C_q, [srcend, -64]
+<a id='L316' name='L316'></a> 316     ldp D_q, E_q, [srcend, -32]
+<a id='L317' name='L317'></a> 317     stp F_q, G_q, [dst], #32
+<a id='L318' name='L318'></a> 318     stp H_q, I_q, [dst]
+<a id='L319' name='L319'></a> 319     stp B_q, C_q, [dstend, -64]
+<a id='L320' name='L320'></a> 320     stp D_q, E_q, [dstend, -32]
+<a id='L321' name='L321'></a> 321     ret
+<a id='L322' name='L322'></a> 322 
+<a id='L323' name='L323'></a> 323 L(dst_unaligned_tail):
+<a id='L324' name='L324'></a> 324     ldp C_q, D_q, [srcend, -64]
+<a id='L325' name='L325'></a> 325     ldp E_q, F_q, [srcend, -32]
+<a id='L326' name='L326'></a> 326     stp A_q, B_q, [dst], #32
+<a id='L327' name='L327'></a> 327     stp H_q, I_q, [dst], #16
+<a id='L328' name='L328'></a> 328     str G_q, [dst, tmp1]
+<a id='L329' name='L329'></a> 329     stp C_q, D_q, [dstend, -64]
+<a id='L330' name='L330'></a> 330     stp E_q, F_q, [dstend, -32]
+<a id='L331' name='L331'></a> 331     ret
+<a id='L332' name='L332'></a> 332 
+<a id='L333' name='L333'></a> 333 L(dst_unaligned):
+<a id='L334' name='L334'></a> 334     <em class='comment'>/* For the unaligned store case the code loads two</em>
+<a id='L335' name='L335'></a> 335 <em class='comment'>       aligned chunks and then merges them using ext</em>
+<a id='L336' name='L336'></a> 336 <em class='comment'>       instruction. This can be up to 30% faster than</em>
+<a id='L337' name='L337'></a> 337 <em class='comment'>       the the simple unaligned store access.</em>
+<a id='L338' name='L338'></a> 338 <em class='comment'></em>
+<a id='L339' name='L339'></a> 339 <em class='comment'>       Current state: tmp1 = dst % 16; C_q, D_q, E_q</em>
+<a id='L340' name='L340'></a> 340 <em class='comment'>       contains data yet to be stored. src and dst points</em>
+<a id='L341' name='L341'></a> 341 <em class='comment'>       to next-to-be-processed data. A_q, B_q contains</em>
+<a id='L342' name='L342'></a> 342 <em class='comment'>       data already stored before, count = bytes left to</em>
+<a id='L343' name='L343'></a> 343 <em class='comment'>       be load decremented by 64.</em>
+<a id='L344' name='L344'></a> 344 <em class='comment'></em>
+<a id='L345' name='L345'></a> 345 <em class='comment'>       The control is passed here if at least 64 bytes left</em>
+<a id='L346' name='L346'></a> 346 <em class='comment'>       to be loaded. The code does two aligned loads and then</em>
+<a id='L347' name='L347'></a> 347 <em class='comment'>       extracts (16-tmp1) bytes from the first register and</em>
+<a id='L348' name='L348'></a> 348 <em class='comment'>       tmp1 bytes from the next register forming the value</em>
+<a id='L349' name='L349'></a> 349 <em class='comment'>       for the aligned store.</em>
+<a id='L350' name='L350'></a> 350 <em class='comment'></em>
+<a id='L351' name='L351'></a> 351 <em class='comment'>       As ext instruction can only have it's index encoded</em>
+<a id='L352' name='L352'></a> 352 <em class='comment'>       as immediate. 15 code chunks process each possible</em>
+<a id='L353' name='L353'></a> 353 <em class='comment'>       index value. Computed goto is used to reach the</em>
+<a id='L354' name='L354'></a> 354 <em class='comment'>       required code. */</em>
+<a id='L355' name='L355'></a> 355 
+<a id='L356' name='L356'></a> 356     <em class='comment'>/* Store the 16 bytes to dst and align dst for further</em>
+<a id='L357' name='L357'></a> 357 <em class='comment'>       operations, several bytes will be stored at this</em>
+<a id='L358' name='L358'></a> 358 <em class='comment'>       address once more */</em>
+<a id='L359' name='L359'></a> 359 
+<a id='L360' name='L360'></a> 360     ldp F_q, G_q, [src], #32
+<a id='L361' name='L361'></a> 361     stp B_q, C_q, [dst], #32
+<a id='L362' name='L362'></a> 362     bic dst, dst, 15
+<a id='L363' name='L363'></a> 363     sub count, count, 32
+<a id='L364' name='L364'></a> 364     adrp    tmp2, L(ext_table)
+<a id='L365' name='L365'></a> 365     add tmp2, tmp2, :lo12:L(ext_table)
+<a id='L366' name='L366'></a> 366     add tmp2, tmp2, tmp1, LSL #2
+<a id='L367' name='L367'></a> 367     ldr tmp3w, [tmp2]
+<a id='L368' name='L368'></a> 368     add tmp2, tmp2, tmp3w, SXTW
+<a id='L369' name='L369'></a> 369     br  tmp2
+<a id='L370' name='L370'></a> 370 
+<a id='L371' name='L371'></a> 371 .p2align 4
+<a id='L372' name='L372'></a> 372     <em class='comment'>/* to make the loop in each chunk 16-bytes aligned */</em>
+<a id='L373' name='L373'></a> 373     nop
+<a id='L374' name='L374'></a> 374 <em class='sharp'>#define</em> EXT_CHUNK(shft) \
+<a id='L375' name='L375'></a> 375 L(ext_size_ ## shft):;\
+<a id='L376' name='L376'></a> 376     ext     A_v.16b, C_v.16b, D_v.16b, 16-shft;\
+<a id='L377' name='L377'></a> 377     ext     B_v.16b, D_v.16b, E_v.16b, 16-shft;\
+<a id='L378' name='L378'></a> 378     ext     H_v.16b, E_v.16b, F_v.16b, 16-shft;\
+<a id='L379' name='L379'></a> 379 1:;\
+<a id='L380' name='L380'></a> 380     stp     A_q, B_q, [dst], #32;\
+<a id='L381' name='L381'></a> 381     prfm    pldl1strm, [src, MEMCPY_PREFETCH_LDR];\
+<a id='L382' name='L382'></a> 382     ldp     C_q, D_q, [src], #32;\
+<a id='L383' name='L383'></a> 383     ext     I_v.16b, F_v.16b, G_v.16b, 16-shft;\
+<a id='L384' name='L384'></a> 384     stp     H_q, I_q, [dst], #32;\
+<a id='L385' name='L385'></a> 385     ext     A_v.16b, G_v.16b, C_v.16b, 16-shft;\
+<a id='L386' name='L386'></a> 386     ext     B_v.16b, C_v.16b, D_v.16b, 16-shft;\
+<a id='L387' name='L387'></a> 387     ldp     F_q, G_q, [src], #32;\
+<a id='L388' name='L388'></a> 388     ext     H_v.16b, D_v.16b, F_v.16b, 16-shft;\
+<a id='L389' name='L389'></a> 389     subs    count, count, 64;\
+<a id='L390' name='L390'></a> 390     b.ge    1b;\
+<a id='L391' name='L391'></a> 391 2:;\
+<a id='L392' name='L392'></a> 392     ext     I_v.16b, F_v.16b, G_v.16b, 16-shft;\
+<a id='L393' name='L393'></a> 393     b   L(dst_unaligned_tail);
+<a id='L394' name='L394'></a> 394 
+<a id='L395' name='L395'></a> 395 EXT_CHUNK(1)
+<a id='L396' name='L396'></a> 396 EXT_CHUNK(2)
+<a id='L397' name='L397'></a> 397 EXT_CHUNK(3)
+<a id='L398' name='L398'></a> 398 EXT_CHUNK(4)
+<a id='L399' name='L399'></a> 399 EXT_CHUNK(5)
+<a id='L400' name='L400'></a> 400 EXT_CHUNK(6)
+<a id='L401' name='L401'></a> 401 EXT_CHUNK(7)
+<a id='L402' name='L402'></a> 402 EXT_CHUNK(8)
+<a id='L403' name='L403'></a> 403 EXT_CHUNK(9)
+<a id='L404' name='L404'></a> 404 EXT_CHUNK(10)
+<a id='L405' name='L405'></a> 405 EXT_CHUNK(11)
+<a id='L406' name='L406'></a> 406 EXT_CHUNK(12)
+<a id='L407' name='L407'></a> 407 EXT_CHUNK(13)
+<a id='L408' name='L408'></a> 408 EXT_CHUNK(14)
+<a id='L409' name='L409'></a> 409 EXT_CHUNK(15)
+<a id='L410' name='L410'></a> 410 
+<a id='L411' name='L411'></a> 411 L(move_long):
+<a id='L412' name='L412'></a> 412     .p2align 4
+<a id='L413' name='L413'></a> 413 1:
+<a id='L414' name='L414'></a> 414     cbz tmp1, 3f
+<a id='L415' name='L415'></a> 415 
+<a id='L416' name='L416'></a> 416     add srcend, src, count
+<a id='L417' name='L417'></a> 417     add dstend, dstin, count
+<a id='L418' name='L418'></a> 418 
+<a id='L419' name='L419'></a> 419     and tmp1, srcend, 15
+<a id='L420' name='L420'></a> 420     ldr D_q, [srcend, -16]
+<a id='L421' name='L421'></a> 421     sub srcend, srcend, tmp1
+<a id='L422' name='L422'></a> 422     sub count, count, tmp1
+<a id='L423' name='L423'></a> 423     ldp A_q, B_q, [srcend, -32]
+<a id='L424' name='L424'></a> 424     str D_q, [dstend, -16]
+<a id='L425' name='L425'></a> 425     ldp C_q, D_q, [srcend, -64]!
+<a id='L426' name='L426'></a> 426     sub dstend, dstend, tmp1
+<a id='L427' name='L427'></a> 427     subs    count, count, 128
+<a id='L428' name='L428'></a> 428     b.ls    2f
+<a id='L429' name='L429'></a> 429 
+<a id='L430' name='L430'></a> 430     .p2align 4
+<a id='L431' name='L431'></a> 431 1:
+<a id='L432' name='L432'></a> 432     subs    count, count, 64
+<a id='L433' name='L433'></a> 433     stp A_q, B_q, [dstend, -32]
+<a id='L434' name='L434'></a> 434     ldp A_q, B_q, [srcend, -32]
+<a id='L435' name='L435'></a> 435     stp C_q, D_q, [dstend, -64]!
+<a id='L436' name='L436'></a> 436     ldp C_q, D_q, [srcend, -64]!
+<a id='L437' name='L437'></a> 437     b.hi    1b
+<a id='L438' name='L438'></a> 438 
+<a id='L439' name='L439'></a> 439     <em class='comment'>/* Write the last full set of 64 bytes.  The remainder is at most 64</em>
+<a id='L440' name='L440'></a> 440 <em class='comment'>       bytes, so it is safe to always copy 64 bytes from the start even if</em>
+<a id='L441' name='L441'></a> 441 <em class='comment'>       there is just 1 byte left.  */</em>
+<a id='L442' name='L442'></a> 442 2:
+<a id='L443' name='L443'></a> 443     ldp E_q, F_q, [src, 32]
+<a id='L444' name='L444'></a> 444     ldp G_q, H_q, [src]
+<a id='L445' name='L445'></a> 445     stp A_q, B_q, [dstend, -32]
+<a id='L446' name='L446'></a> 446     stp C_q, D_q, [dstend, -64]
+<a id='L447' name='L447'></a> 447     stp E_q, F_q, [dstin, 32]
+<a id='L448' name='L448'></a> 448     stp G_q, H_q, [dstin]
+<a id='L449' name='L449'></a> 449 3:  ret
+<a id='L450' name='L450'></a> 450 
+<a id='L451' name='L451'></a> 451 
+<a id='L452' name='L452'></a> 452 END (MEMCPY)
+<a id='L453' name='L453'></a> 453     .section    .rodata
+<a id='L454' name='L454'></a> 454     .p2align    4
+<a id='L455' name='L455'></a> 455 
+<a id='L456' name='L456'></a> 456 L(ext_table):
+<a id='L457' name='L457'></a> 457     <em class='comment'>/* The first entry is for the alignment of 0 and is never</em>
+<a id='L458' name='L458'></a> 458 <em class='comment'>       actually used (could be any value).  */</em>
+<a id='L459' name='L459'></a> 459     .word   0
+<a id='L460' name='L460'></a> 460     .word   L(ext_size_1) -.
+<a id='L461' name='L461'></a> 461     .word   L(ext_size_2) -.
+<a id='L462' name='L462'></a> 462     .word   L(ext_size_3) -.
+<a id='L463' name='L463'></a> 463     .word   L(ext_size_4) -.
+<a id='L464' name='L464'></a> 464     .word   L(ext_size_5) -.
+<a id='L465' name='L465'></a> 465     .word   L(ext_size_6) -.
+<a id='L466' name='L466'></a> 466     .word   L(ext_size_7) -.
+<a id='L467' name='L467'></a> 467     .word   L(ext_size_8) -.
+<a id='L468' name='L468'></a> 468     .word   L(ext_size_9) -.
+<a id='L469' name='L469'></a> 469     .word   L(ext_size_10) -.
+<a id='L470' name='L470'></a> 470     .word   L(ext_size_11) -.
+<a id='L471' name='L471'></a> 471     .word   L(ext_size_12) -.
+<a id='L472' name='L472'></a> 472     .word   L(ext_size_13) -.
+<a id='L473' name='L473'></a> 473     .word   L(ext_size_14) -.
+<a id='L474' name='L474'></a> 474     .word   L(ext_size_15) -.
+<a id='L475' name='L475'></a> 475 
+<a id='L476' name='L476'></a> 476 libc_hidden_builtin_def (MEMCPY)
+<a id='L477' name='L477'></a> 477 <em class='sharp'>#endif</em>
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;][^][v]<a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

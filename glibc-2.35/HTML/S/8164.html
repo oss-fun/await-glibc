@@ -1,0 +1,422 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>sysdeps/powerpc/powerpc64/power8/strnlen.S</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18977.html'>sysdeps</a>/<a href='../files/19149.html'>powerpc</a>/<a href='../files/19172.html'>powerpc64</a>/<a href='../files/19189.html'>power8</a>/strnlen.S</h2>
+<em class='comment'>/* [&lt;][&gt;][^][v][top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* Optimized strnlen implementation for POWER8 using a vmx loop.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'></em>
+<a id='L3' name='L3'></a>   3 <em class='comment'>   Copyright (C) 2017-2022 Free Software Foundation, Inc.</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'>   License along with the GNU C Library; if not, see</em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L16' name='L16'></a>  16 
+<a id='L17' name='L17'></a>  17 <em class='comment'>/* It is implemented the following heuristic:</em>
+<a id='L18' name='L18'></a>  18 <em class='comment'>    1. Case maxlen &lt;= 32: align the pointer to 8 bytes to loop through</em>
+<a id='L19' name='L19'></a>  19 <em class='comment'>    reading doublewords. Uses the POWER7 algorithm.</em>
+<a id='L20' name='L20'></a>  20 <em class='comment'>    2. Case maxlen &gt; 32: check for null bytes in the first 16 bytes using</em>
+<a id='L21' name='L21'></a>  21 <em class='comment'>    unaligned accesses. Return length if found. Otherwise:</em>
+<a id='L22' name='L22'></a>  22 <em class='comment'>        2.1 Case maxlen &lt; 64: deduct the bytes previously read, align</em>
+<a id='L23' name='L23'></a>  23 <em class='comment'>        the pointer to 16 bytes and loop through reading quadwords</em>
+<a id='L24' name='L24'></a>  24 <em class='comment'>        until find null bytes or reach maxlen.</em>
+<a id='L25' name='L25'></a>  25 <em class='comment'>        2.2 Case maxlen &gt; 64: deduct the bytes previously read, align</em>
+<a id='L26' name='L26'></a>  26 <em class='comment'>        the pointer to 64 bytes and set up a counter to loop through</em>
+<a id='L27' name='L27'></a>  27 <em class='comment'>        reading in strides of 64 bytes. In case it finished the loop</em>
+<a id='L28' name='L28'></a>  28 <em class='comment'>        with null bytes not found, process the remainder bytes by</em>
+<a id='L29' name='L29'></a>  29 <em class='comment'>        switching to the loop to heuristic in 2.1.  */</em>
+<a id='L30' name='L30'></a>  30 
+<a id='L31' name='L31'></a>  31 <em class='sharp'>#include</em> &lt;<a href='../I/5967.html'>sysdep.h</a>&gt;
+<a id='L32' name='L32'></a>  32 
+<a id='L33' name='L33'></a>  33 <em class='comment'>/* Define default page size to 4KB.  */</em>
+<a id='L34' name='L34'></a>  34 <em class='sharp'>#define</em> <a href='../R/5915.html' title='Multiple referred from 22 places.'>PAGE_SIZE</a> 4096
+<a id='L35' name='L35'></a>  35 
+<a id='L36' name='L36'></a>  36 
+<a id='L37' name='L37'></a>  37 <em class='comment'>/* int [r3] strnlen (char *s [r3], size_t maxlen [r4])  */</em>
+<a id='L38' name='L38'></a>  38     .machine  power8
+<a id='L39' name='L39'></a>  39 ENTRY_TOCLESS (__strnlen)
+<a id='L40' name='L40'></a>  40     CALL_MCOUNT 2
+<a id='L41' name='L41'></a>  41     dcbt    0,r3
+<a id='L42' name='L42'></a>  42 
+<a id='L43' name='L43'></a>  43     cmpldi  r4,32           <em class='comment'>/* Check if maxlen &lt;= 32.  */</em>
+<a id='L44' name='L44'></a>  44     ble L(small_range)  <em class='comment'>/* If maxlen &lt;= 32.  */</em>
+<a id='L45' name='L45'></a>  45 
+<a id='L46' name='L46'></a>  46     <em class='comment'>/* Upcoming 16 bytes unaligned accesses cannot cross the page boundary</em>
+<a id='L47' name='L47'></a>  47 <em class='comment'>       otherwise the processor throws an memory access error.</em>
+<a id='L48' name='L48'></a>  48 <em class='comment'>       Use following code to check there is room for such as accesses:</em>
+<a id='L49' name='L49'></a>  49 <em class='comment'>         (((size_t) s) % PAGE_SIZE &gt; (PAGE_SIZE - 16)</em>
+<a id='L50' name='L50'></a>  50 <em class='comment'>       If it is disallowed then switch to the code that handles</em>
+<a id='L51' name='L51'></a>  51 <em class='comment'>       the string when maxlen &lt;= 32.  */</em>
+<a id='L52' name='L52'></a>  52     clrldi  r10,r3,52
+<a id='L53' name='L53'></a>  53     cmpldi  cr7,r10,PAGE_SIZE-16
+<a id='L54' name='L54'></a>  54     bgt     cr7,L(small_range)  <em class='comment'>/* If less than 16B of page end.  */</em>
+<a id='L55' name='L55'></a>  55 
+<a id='L56' name='L56'></a>  56     <em class='comment'>/* Compute our permute constant r8.  */</em>
+<a id='L57' name='L57'></a>  57     li  r7,0
+<a id='L58' name='L58'></a>  58     <em class='comment'>/* Compute a bpermd constant to move bit 0 of each word into</em>
+<a id='L59' name='L59'></a>  59 <em class='comment'>       a halfword value, and count trailing zeros.  */</em>
+<a id='L60' name='L60'></a>  60 <em class='sharp'>#ifdef</em> <a href='../Y/3238.html' title='Multiple used in 570 places.'>__LITTLE_ENDIAN__</a>
+<a id='L61' name='L61'></a>  61     li  r8,0x2820
+<a id='L62' name='L62'></a>  62     oris    r8,r8,0x3830
+<a id='L63' name='L63'></a>  63     sldi    r8,r8,32
+<a id='L64' name='L64'></a>  64     ori r8,r8,0x0800
+<a id='L65' name='L65'></a>  65     oris    r8,r8,0x1810
+<a id='L66' name='L66'></a>  66 <em class='sharp'>#else</em>
+<a id='L67' name='L67'></a>  67     li  r8,0x1018
+<a id='L68' name='L68'></a>  68     oris    r8,r8,0x0008
+<a id='L69' name='L69'></a>  69     sldi    r8,r8,32
+<a id='L70' name='L70'></a>  70     ori r8,r8,0x3038
+<a id='L71' name='L71'></a>  71     oris    r8,r8,0x2028
+<a id='L72' name='L72'></a>  72 <em class='sharp'>#endif</em>
+<a id='L73' name='L73'></a>  73 
+<a id='L74' name='L74'></a>  74     <em class='comment'>/* maxlen &gt; 32. Optimistically check for null bytes in the first</em>
+<a id='L75' name='L75'></a>  75 <em class='comment'>       16 bytes of the string using unaligned accesses.  */</em>
+<a id='L76' name='L76'></a>  76     ld  r5,0(r3)
+<a id='L77' name='L77'></a>  77     ld  r6,8(r3)
+<a id='L78' name='L78'></a>  78     cmpb    r10,r7,r5       <em class='comment'>/* Check for null bytes in DWORD1.  */</em>
+<a id='L79' name='L79'></a>  79     cmpb    r11,r7,r6       <em class='comment'>/* Check for null bytes in DWORD2.  */</em>
+<a id='L80' name='L80'></a>  80     or. r7,r10,r11
+<a id='L81' name='L81'></a>  81     bne cr0, L(early_find)  <em class='comment'>/* If found null bytes.  */</em>
+<a id='L82' name='L82'></a>  82 
+<a id='L83' name='L83'></a>  83     <em class='comment'>/* At this point maxlen &gt; 32 and null bytes were not found at first</em>
+<a id='L84' name='L84'></a>  84 <em class='comment'>       16 bytes. Prepare for loop using VMX.  */</em>
+<a id='L85' name='L85'></a>  85 
+<a id='L86' name='L86'></a>  86     <em class='comment'>/* r3 == s, r4 == maxlen. All other volatile regs are unused now.  */</em>
+<a id='L87' name='L87'></a>  87 
+<a id='L88' name='L88'></a>  88     addi    r5,r3,16    <em class='comment'>/* Align up, or just add the 16B we</em>
+<a id='L89' name='L89'></a>  89 <em class='comment'>                   already checked.  */</em>
+<a id='L90' name='L90'></a>  90     li  r0,15
+<a id='L91' name='L91'></a>  91     and r7,r5,r0    <em class='comment'>/* Find offset into 16B alignment.  */</em>
+<a id='L92' name='L92'></a>  92     andc    r5,r5,r0    <em class='comment'>/* Quadword align up s to the next quadword.  */</em>
+<a id='L93' name='L93'></a>  93     li  r0,16
+<a id='L94' name='L94'></a>  94     subf    r0,r7,r0
+<a id='L95' name='L95'></a>  95     subf    r4,r0,r4    <em class='comment'>/* Deduct unaligned bytes from maxlen.  */</em>
+<a id='L96' name='L96'></a>  96 
+<a id='L97' name='L97'></a>  97 
+<a id='L98' name='L98'></a>  98     <em class='comment'>/* Compute offsets for vmx loads, and precompute the vbpermq</em>
+<a id='L99' name='L99'></a>  99 <em class='comment'>       constants for both the 64B and 16B loops.  */</em>
+<a id='L100' name='L100'></a> 100     li  r6,0
+<a id='L101' name='L101'></a> 101     vspltisb  v0,0
+<a id='L102' name='L102'></a> 102     vspltisb  v10,3
+<a id='L103' name='L103'></a> 103     lvsl      v11,r6,r6
+<a id='L104' name='L104'></a> 104     vslb      v10,v11,v10
+<a id='L105' name='L105'></a> 105 
+<a id='L106' name='L106'></a> 106     cmpldi  r4,64       <em class='comment'>/* Check maxlen &lt; 64.  */</em>
+<a id='L107' name='L107'></a> 107     blt L(smaller)  <em class='comment'>/* If maxlen &lt; 64 */</em>
+<a id='L108' name='L108'></a> 108 
+<a id='L109' name='L109'></a> 109     <em class='comment'>/* In order to begin the 64B loop, it needs to be 64</em>
+<a id='L110' name='L110'></a> 110 <em class='comment'>       bytes aligned. So read quadwords until it is aligned or found null</em>
+<a id='L111' name='L111'></a> 111 <em class='comment'>       bytes. At worst case it will be aligned after the fourth iteration,</em>
+<a id='L112' name='L112'></a> 112 <em class='comment'>       so unroll the loop to avoid counter checking.  */</em>
+<a id='L113' name='L113'></a> 113     andi.   r7,r5,63        <em class='comment'>/* Check if is 64 bytes aligned.  */</em>
+<a id='L114' name='L114'></a> 114     beq     cr0,L(preloop_64B)  <em class='comment'>/* If it is already 64B aligned.  */</em>
+<a id='L115' name='L115'></a> 115     lvx     v1,r5,r6
+<a id='L116' name='L116'></a> 116     vcmpequb.       v1,v1,v0
+<a id='L117' name='L117'></a> 117     addi    r5,r5,16
+<a id='L118' name='L118'></a> 118     addi    r4,r4,-16       <em class='comment'>/* Decrement maxlen in 16 bytes. */</em>
+<a id='L119' name='L119'></a> 119     bne     cr6,L(found_aligning64B) <em class='comment'>/* If found null bytes.  */</em>
+<a id='L120' name='L120'></a> 120 
+<a id='L121' name='L121'></a> 121     <em class='comment'>/* Unroll 2x above code block until aligned or find null bytes.  */</em>
+<a id='L122' name='L122'></a> 122     andi.   r7,r5,63
+<a id='L123' name='L123'></a> 123     beq     cr0,L(preloop_64B)
+<a id='L124' name='L124'></a> 124     lvx     v1,r5,r6
+<a id='L125' name='L125'></a> 125     vcmpequb.      v1,v1,v0
+<a id='L126' name='L126'></a> 126     addi    r5,r5,16
+<a id='L127' name='L127'></a> 127     addi    r4,r4,-16
+<a id='L128' name='L128'></a> 128     bne     cr6,L(found_aligning64B)
+<a id='L129' name='L129'></a> 129 
+<a id='L130' name='L130'></a> 130     andi.   r7,r5,63
+<a id='L131' name='L131'></a> 131     beq     cr0,L(preloop_64B)
+<a id='L132' name='L132'></a> 132     lvx     v1,r5,r6
+<a id='L133' name='L133'></a> 133     vcmpequb.      v1,v1,v0
+<a id='L134' name='L134'></a> 134     addi    r5,r5,16
+<a id='L135' name='L135'></a> 135     addi    r4,r4,-16
+<a id='L136' name='L136'></a> 136     bne     cr6,L(found_aligning64B)
+<a id='L137' name='L137'></a> 137 
+<a id='L138' name='L138'></a> 138     <em class='comment'>/* At this point it should be 16 bytes aligned.</em>
+<a id='L139' name='L139'></a> 139 <em class='comment'>       Prepare for the 64B loop.  */</em>
+<a id='L140' name='L140'></a> 140     .p2align 4
+<a id='L141' name='L141'></a> 141 L(preloop_64B):
+<a id='L142' name='L142'></a> 142     <em class='comment'>/* Check if maxlen became is less than 64, therefore disallowing the</em>
+<a id='L143' name='L143'></a> 143 <em class='comment'>       64B loop. If it happened switch to the 16B loop code.  */</em>
+<a id='L144' name='L144'></a> 144     cmpldi  r4,64       <em class='comment'>/* Check if maxlen &lt; 64.  */</em>
+<a id='L145' name='L145'></a> 145     blt     L(smaller)  <em class='comment'>/* If maxlen &lt; 64.  */</em>
+<a id='L146' name='L146'></a> 146     <em class='comment'>/* Set some constant values.  */</em>
+<a id='L147' name='L147'></a> 147     li      r7,16
+<a id='L148' name='L148'></a> 148     li      r10,32
+<a id='L149' name='L149'></a> 149     li      r9,48
+<a id='L150' name='L150'></a> 150 
+<a id='L151' name='L151'></a> 151     <em class='comment'>/* Compute the number of 64 bytes iterations needed.  */</em>
+<a id='L152' name='L152'></a> 152     srdi    r11,r4,6    <em class='comment'>/* Compute loop count (maxlen / 64).  */</em>
+<a id='L153' name='L153'></a> 153     andi.   r4,r4,63    <em class='comment'>/* Set maxlen the remainder (maxlen % 64).  */</em>
+<a id='L154' name='L154'></a> 154     mtctr   r11     <em class='comment'>/* Move loop count to counter register.  */</em>
+<a id='L155' name='L155'></a> 155 
+<a id='L156' name='L156'></a> 156     <em class='comment'>/* Handle maxlen &gt; 64. Loop over the bytes in strides of 64B.  */</em>
+<a id='L157' name='L157'></a> 157     .p2align 4
+<a id='L158' name='L158'></a> 158 L(loop_64B):
+<a id='L159' name='L159'></a> 159     lvx v1,r5,r6    <em class='comment'>/* r5 is the pointer to s.  */</em>
+<a id='L160' name='L160'></a> 160     lvx v2,r5,r7
+<a id='L161' name='L161'></a> 161     lvx v3,r5,r10
+<a id='L162' name='L162'></a> 162     lvx v4,r5,r9
+<a id='L163' name='L163'></a> 163     <em class='comment'>/* Compare the four 16B vectors to obtain the least 16 values.</em>
+<a id='L164' name='L164'></a> 164 <em class='comment'>       Null bytes should emerge into v7, then check for null bytes.  */</em>
+<a id='L165' name='L165'></a> 165     vminub  v5,v1,v2
+<a id='L166' name='L166'></a> 166     vminub  v6,v3,v4
+<a id='L167' name='L167'></a> 167     vminub  v7,v5,v6
+<a id='L168' name='L168'></a> 168     vcmpequb. v7,v7,v0      <em class='comment'>/* Check for null bytes.  */</em>
+<a id='L169' name='L169'></a> 169     addi    r5,r5,64        <em class='comment'>/* Add pointer to next iteraction.  */</em>
+<a id='L170' name='L170'></a> 170     bne cr6,L(found_64B)    <em class='comment'>/* If found null bytes.  */</em>
+<a id='L171' name='L171'></a> 171     bdnz    L(loop_64B)     <em class='comment'>/* Continue the loop if count &gt; 0. */</em>
+<a id='L172' name='L172'></a> 172 
+<a id='L173' name='L173'></a> 173 <em class='comment'>/* Hit loop end without null match. So branch to handle the remainder.  */</em>
+<a id='L174' name='L174'></a> 174 
+<a id='L175' name='L175'></a> 175     <em class='comment'>/* Prepare a 16B loop to handle two cases:</em>
+<a id='L176' name='L176'></a> 176 <em class='comment'>        1. If 32 &gt; maxlen &lt; 64.</em>
+<a id='L177' name='L177'></a> 177 <em class='comment'>        2. If maxlen &gt;= 64, and reached end of the 64B loop with null</em>
+<a id='L178' name='L178'></a> 178 <em class='comment'>        bytes not found. Thus handle the remainder bytes here. */</em>
+<a id='L179' name='L179'></a> 179     .p2align 4
+<a id='L180' name='L180'></a> 180 L(smaller):
+<a id='L181' name='L181'></a> 181         cmpldi  r4,0            <em class='comment'>/* Check maxlen is zero.  */</em>
+<a id='L182' name='L182'></a> 182         beq     L(done)         <em class='comment'>/* If maxlen is zero.  */</em>
+<a id='L183' name='L183'></a> 183 
+<a id='L184' name='L184'></a> 184     <em class='comment'>/* Place rounded up number of qw's to check into a vmx</em>
+<a id='L185' name='L185'></a> 185 <em class='comment'>       register, and use some vector tricks to minimize</em>
+<a id='L186' name='L186'></a> 186 <em class='comment'>       branching.  */</em>
+<a id='L187' name='L187'></a> 187         mtvrd    v7,r4          <em class='comment'>/* copy maxlen from gpr to vector register. */</em>
+<a id='L188' name='L188'></a> 188         vspltisb v5,1
+<a id='L189' name='L189'></a> 189         vspltisb v6,15
+<a id='L190' name='L190'></a> 190         vspltb   v2,v7,7
+<a id='L191' name='L191'></a> 191         vaddubs  v3,v5,v6
+<a id='L192' name='L192'></a> 192 
+<a id='L193' name='L193'></a> 193 <em class='sharp'>#ifdef</em> <a href='../Y/3238.html' title='Multiple used in 570 places.'>__LITTLE_ENDIAN__</a>
+<a id='L194' name='L194'></a> 194     vspltish v5,1           <em class='comment'>/* Compute 16 in each byte.  */</em>
+<a id='L195' name='L195'></a> 195 <em class='sharp'>#endif</em>
+<a id='L196' name='L196'></a> 196 
+<a id='L197' name='L197'></a> 197     <em class='comment'>/* Loop in 16B aligned incremements now. */</em>
+<a id='L198' name='L198'></a> 198     .p2align 4
+<a id='L199' name='L199'></a> 199 L(loop_16B):
+<a id='L200' name='L200'></a> 200     lvx     v1,r5,r6        <em class='comment'>/* Load quadword into vector register.  */</em>
+<a id='L201' name='L201'></a> 201     addi    r5,r5,16        <em class='comment'>/* Increment address to next 16B block.  */</em>
+<a id='L202' name='L202'></a> 202     vor     v7,v2,v2        <em class='comment'>/* Save loop count (v2) into v7. */</em>
+<a id='L203' name='L203'></a> 203     vsububs v2,v2,v3        <em class='comment'>/* Subtract 16B from count, saturate at 0. */</em>
+<a id='L204' name='L204'></a> 204     vminub  v4,v1,v2
+<a id='L205' name='L205'></a> 205     vcmpequb. v4,v4,v0      <em class='comment'>/* Checking for null bytes.  */</em>
+<a id='L206' name='L206'></a> 206     beq     cr6,L(loop_16B) <em class='comment'>/* If null bytes not found.  */</em>
+<a id='L207' name='L207'></a> 207 
+<a id='L208' name='L208'></a> 208     vcmpequb  v1,v1,v0
+<a id='L209' name='L209'></a> 209     vbpermq   v1,v1,v10
+<a id='L210' name='L210'></a> 210 <em class='sharp'>#ifdef</em> <a href='../Y/3238.html' title='Multiple used in 570 places.'>__LITTLE_ENDIAN__</a>
+<a id='L211' name='L211'></a> 211     vsubuhm  v2,v1,v5       <em class='comment'>/* Form a mask of trailing zeros.  */</em>
+<a id='L212' name='L212'></a> 212     vandc    v2,v2,v1
+<a id='L213' name='L213'></a> 213     vpopcnth v1,v2          <em class='comment'>/* count of trailing zeros, 16 if none.  */</em>
+<a id='L214' name='L214'></a> 214 <em class='sharp'>#else</em>
+<a id='L215' name='L215'></a> 215     vclzh    v1,v1          <em class='comment'>/* count the leading zeros, 16 if none.  */</em>
+<a id='L216' name='L216'></a> 216 <em class='sharp'>#endif</em>
+<a id='L217' name='L217'></a> 217     <em class='comment'>/* Truncate to maximum allowable offset.  */</em>
+<a id='L218' name='L218'></a> 218     vcmpgtub v2,v1,v7       <em class='comment'>/* Compare and truncate for matches beyond</em>
+<a id='L219' name='L219'></a> 219 <em class='comment'>                   maxlen.  */</em>
+<a id='L220' name='L220'></a> 220     vsel     v1,v1,v7,v2    <em class='comment'>/* 0-16 is now in byte 7.  */</em>
+<a id='L221' name='L221'></a> 221 
+<a id='L222' name='L222'></a> 222     mfvrd   r0,v1
+<a id='L223' name='L223'></a> 223     addi    r5,r5,-16       <em class='comment'>/* Undo speculative bump.  */</em>
+<a id='L224' name='L224'></a> 224     extsb   r0,r0           <em class='comment'>/* Clear whatever gunk is in the high 56b.  */</em>
+<a id='L225' name='L225'></a> 225     add     r5,r5,r0        <em class='comment'>/* Add the offset of whatever was found.  */</em>
+<a id='L226' name='L226'></a> 226 L(done):
+<a id='L227' name='L227'></a> 227     subf    r3,r3,r5        <em class='comment'>/* Length is equal to the offset of null byte</em>
+<a id='L228' name='L228'></a> 228 <em class='comment'>                   matched minus the pointer to s.  */</em>
+<a id='L229' name='L229'></a> 229     blr                     <em class='comment'>/* Done.  */</em>
+<a id='L230' name='L230'></a> 230 
+<a id='L231' name='L231'></a> 231     <em class='comment'>/* Handle case of maxlen &gt; 64 and found null bytes in last block</em>
+<a id='L232' name='L232'></a> 232 <em class='comment'>       of 64 bytes read.  */</em>
+<a id='L233' name='L233'></a> 233     .p2align 4
+<a id='L234' name='L234'></a> 234 L(found_64B):
+<a id='L235' name='L235'></a> 235     <em class='comment'>/* A zero was found. Reduce the result.  */</em>
+<a id='L236' name='L236'></a> 236     vcmpequb  v1,v1,v0
+<a id='L237' name='L237'></a> 237     vcmpequb  v2,v2,v0
+<a id='L238' name='L238'></a> 238     vcmpequb  v3,v3,v0
+<a id='L239' name='L239'></a> 239     vcmpequb  v4,v4,v0
+<a id='L240' name='L240'></a> 240 
+<a id='L241' name='L241'></a> 241     <em class='comment'>/* Permute the first bit of each byte into bits 48-63.  */</em>
+<a id='L242' name='L242'></a> 242     vbpermq v1,v1,v10
+<a id='L243' name='L243'></a> 243     vbpermq v2,v2,v10
+<a id='L244' name='L244'></a> 244     vbpermq v3,v3,v10
+<a id='L245' name='L245'></a> 245     vbpermq v4,v4,v10
+<a id='L246' name='L246'></a> 246 
+<a id='L247' name='L247'></a> 247     <em class='comment'>/* Shift each component into its correct position for merging.  */</em>
+<a id='L248' name='L248'></a> 248 <em class='sharp'>#ifdef</em> <a href='../Y/3238.html' title='Multiple used in 570 places.'>__LITTLE_ENDIAN__</a>
+<a id='L249' name='L249'></a> 249     vsldoi  v2,v2,v2,2
+<a id='L250' name='L250'></a> 250     vsldoi  v3,v3,v3,4
+<a id='L251' name='L251'></a> 251     vsldoi  v4,v4,v4,6
+<a id='L252' name='L252'></a> 252 <em class='sharp'>#else</em>
+<a id='L253' name='L253'></a> 253     vsldoi  v1,v1,v1,6
+<a id='L254' name='L254'></a> 254     vsldoi  v2,v2,v2,4
+<a id='L255' name='L255'></a> 255     vsldoi  v3,v3,v3,2
+<a id='L256' name='L256'></a> 256 <em class='sharp'>#endif</em>
+<a id='L257' name='L257'></a> 257 
+<a id='L258' name='L258'></a> 258     <em class='comment'>/* Merge the results and move to a GPR.  */</em>
+<a id='L259' name='L259'></a> 259     vor v1,v2,v1
+<a id='L260' name='L260'></a> 260     vor v2,v3,v4
+<a id='L261' name='L261'></a> 261     vor v4,v1,v2
+<a id='L262' name='L262'></a> 262 
+<a id='L263' name='L263'></a> 263     <em class='comment'>/* Adjust address to the start of the current 64B block.  */</em>
+<a id='L264' name='L264'></a> 264     addi    r5,r5,-64
+<a id='L265' name='L265'></a> 265 
+<a id='L266' name='L266'></a> 266     mfvrd   r10,v4
+<a id='L267' name='L267'></a> 267 <em class='sharp'>#ifdef</em> <a href='../Y/3238.html' title='Multiple used in 570 places.'>__LITTLE_ENDIAN__</a>
+<a id='L268' name='L268'></a> 268     addi    r9,r10,-1   <em class='comment'>/* Form a mask from trailing zeros.  */</em>
+<a id='L269' name='L269'></a> 269     andc    r9,r9,r10
+<a id='L270' name='L270'></a> 270     popcntd r0,r9       <em class='comment'>/* Count the bits in the mask.  */</em>
+<a id='L271' name='L271'></a> 271 <em class='sharp'>#else</em>
+<a id='L272' name='L272'></a> 272     cntlzd  r0,r10      <em class='comment'>/* Count leading zeros before the match.  */</em>
+<a id='L273' name='L273'></a> 273 <em class='sharp'>#endif</em>
+<a id='L274' name='L274'></a> 274     subf    r5,r3,r5
+<a id='L275' name='L275'></a> 275     add r3,r5,r0    <em class='comment'>/* Compute final length.  */</em>
+<a id='L276' name='L276'></a> 276     blr                     <em class='comment'>/* Done.  */</em>
+<a id='L277' name='L277'></a> 277 
+<a id='L278' name='L278'></a> 278     <em class='comment'>/* Handle case where null bytes were found while aligning</em>
+<a id='L279' name='L279'></a> 279 <em class='comment'>       as a preparation for the 64B loop.  */</em>
+<a id='L280' name='L280'></a> 280     .p2align 4
+<a id='L281' name='L281'></a> 281 L(found_aligning64B):
+<a id='L282' name='L282'></a> 282     vbpermq v1,v1,v10
+<a id='L283' name='L283'></a> 283 <em class='sharp'>#ifdef</em> <a href='../Y/3238.html' title='Multiple used in 570 places.'>__LITTLE_ENDIAN__</a>
+<a id='L284' name='L284'></a> 284     mfvrd   r10,v1
+<a id='L285' name='L285'></a> 285     addi    r9,r10,-1       <em class='comment'>/* Form a mask from trailing zeros.  */</em>
+<a id='L286' name='L286'></a> 286     andc    r9,r9,r10
+<a id='L287' name='L287'></a> 287     popcntd r0,r9           <em class='comment'>/* Count the bits in the mask.  */</em>
+<a id='L288' name='L288'></a> 288 <em class='sharp'>#else</em>
+<a id='L289' name='L289'></a> 289     vsldoi  v1,v1,v1,6
+<a id='L290' name='L290'></a> 290     mfvrd   r10,v1
+<a id='L291' name='L291'></a> 291     cntlzd  r0,r10          <em class='comment'>/* Count leading zeros before the match.  */</em>
+<a id='L292' name='L292'></a> 292 <em class='sharp'>#endif</em>
+<a id='L293' name='L293'></a> 293     addi    r5,r5,-16   <em class='comment'>/* Adjust address to offset of last 16 bytes</em>
+<a id='L294' name='L294'></a> 294 <em class='comment'>                   read.  */</em>
+<a id='L295' name='L295'></a> 295     <em class='comment'>/* Calculate length as subtracted the pointer to s of last 16 bytes</em>
+<a id='L296' name='L296'></a> 296 <em class='comment'>       offset, added with the bytes before the match.  */</em>
+<a id='L297' name='L297'></a> 297     subf    r5,r3,r5
+<a id='L298' name='L298'></a> 298     add     r3,r5,r0
+<a id='L299' name='L299'></a> 299     blr         <em class='comment'>/* Done.  */</em>
+<a id='L300' name='L300'></a> 300 
+<a id='L301' name='L301'></a> 301     <em class='comment'>/* Handle case of maxlen &gt; 32 and found a null bytes within the first</em>
+<a id='L302' name='L302'></a> 302 <em class='comment'>       16 bytes of s.  */</em>
+<a id='L303' name='L303'></a> 303     .p2align 4
+<a id='L304' name='L304'></a> 304 L(early_find):
+<a id='L305' name='L305'></a> 305     bpermd  r5,r8,r10        <em class='comment'>/* r8 contains the bit permute constants.  */</em>
+<a id='L306' name='L306'></a> 306     bpermd  r6,r8,r11
+<a id='L307' name='L307'></a> 307     sldi    r5,r5,8
+<a id='L308' name='L308'></a> 308     or  r5,r5,r6    <em class='comment'>/* r5 should hold a 16B mask of</em>
+<a id='L309' name='L309'></a> 309 <em class='comment'>                   a potential 0.  */</em>
+<a id='L310' name='L310'></a> 310     cntlzd  r5,r5       <em class='comment'>/* Count leading zeros.  */</em>
+<a id='L311' name='L311'></a> 311     addi    r3,r5,-48   <em class='comment'>/* Deduct the 48 leading zeros always</em>
+<a id='L312' name='L312'></a> 312 <em class='comment'>                   present.  */</em>
+<a id='L313' name='L313'></a> 313     blr         <em class='comment'>/* Done.  */</em>
+<a id='L314' name='L314'></a> 314 
+<a id='L315' name='L315'></a> 315     <em class='comment'>/* Handle case of maxlen &lt;= 32. Use the POWER7 algorithm.  */</em>
+<a id='L316' name='L316'></a> 316     .p2align 4
+<a id='L317' name='L317'></a> 317 L(small_range):
+<a id='L318' name='L318'></a> 318     clrrdi  r8,r3,3     <em class='comment'>/* Align the pointer to 8B.  */</em>
+<a id='L319' name='L319'></a> 319     li  r0,0
+<a id='L320' name='L320'></a> 320     <em class='comment'>/* Register's content at this point:</em>
+<a id='L321' name='L321'></a> 321 <em class='comment'>       r3 == pointer to s, r4 == maxlen, r8 == pointer to s aligned to 8B,</em>
+<a id='L322' name='L322'></a> 322 <em class='comment'>       r7 == last acceptable address. */</em>
+<a id='L323' name='L323'></a> 323     cmpldi  r4,0                 <em class='comment'>/* Check if maxlen is zero.  */</em>
+<a id='L324' name='L324'></a> 324     beq L(end_max)       <em class='comment'>/* If maxlen is zero.  */</em>
+<a id='L325' name='L325'></a> 325 
+<a id='L326' name='L326'></a> 326     <em class='comment'>/* Calculate the last acceptable address and check for possible</em>
+<a id='L327' name='L327'></a> 327 <em class='comment'>       addition overflow by using satured math:</em>
+<a id='L328' name='L328'></a> 328 <em class='comment'>       r7 = r3 + r4</em>
+<a id='L329' name='L329'></a> 329 <em class='comment'>       r7 |= -(r7 &lt; x)  */</em>
+<a id='L330' name='L330'></a> 330     add     r7,r3,r4
+<a id='L331' name='L331'></a> 331     subfc   r6,r3,r7
+<a id='L332' name='L332'></a> 332     subfe   r9,r9,r9
+<a id='L333' name='L333'></a> 333     extsw   r6,r9
+<a id='L334' name='L334'></a> 334     or      r7,r7,r6
+<a id='L335' name='L335'></a> 335     addi    r7,r7,-1
+<a id='L336' name='L336'></a> 336 
+<a id='L337' name='L337'></a> 337     clrrdi  r7,r7,3              <em class='comment'>/* Align to 8B address of last</em>
+<a id='L338' name='L338'></a> 338 <em class='comment'>                    acceptable address.  */</em>
+<a id='L339' name='L339'></a> 339 
+<a id='L340' name='L340'></a> 340     rlwinm  r6,r3,3,26,28        <em class='comment'>/* Calculate padding.  */</em>
+<a id='L341' name='L341'></a> 341     ld  r12,0(r8)            <em class='comment'>/* Load aligned doubleword.  */</em>
+<a id='L342' name='L342'></a> 342     cmpb    r10,r12,r0           <em class='comment'>/* Check for null bytes. */</em>
+<a id='L343' name='L343'></a> 343 <em class='sharp'>#ifdef</em> <a href='../Y/3238.html' title='Multiple used in 570 places.'>__LITTLE_ENDIAN__</a>
+<a id='L344' name='L344'></a> 344     srd r10,r10,r6
+<a id='L345' name='L345'></a> 345     sld r10,r10,r6
+<a id='L346' name='L346'></a> 346 <em class='sharp'>#else</em>
+<a id='L347' name='L347'></a> 347     sld r10,r10,r6
+<a id='L348' name='L348'></a> 348     srd r10,r10,r6
+<a id='L349' name='L349'></a> 349 <em class='sharp'>#endif</em> <em class='comment'>/* __LITTLE_ENDIAN__  */</em>
+<a id='L350' name='L350'></a> 350     cmpldi  cr7,r10,0
+<a id='L351' name='L351'></a> 351     bne cr7,L(done_small)    <em class='comment'>/* If found null byte.  */</em>
+<a id='L352' name='L352'></a> 352 
+<a id='L353' name='L353'></a> 353     cmpld   r8,r7                <em class='comment'>/* Check if reached maxlen.  */</em>
+<a id='L354' name='L354'></a> 354     beq L(end_max)       <em class='comment'>/* If reached maxlen.  */</em>
+<a id='L355' name='L355'></a> 355 
+<a id='L356' name='L356'></a> 356     <em class='comment'>/* Still handling case of maxlen &lt;= 32. Read doubleword aligned until</em>
+<a id='L357' name='L357'></a> 357 <em class='comment'>       find null bytes or reach maxlen.  */</em>
+<a id='L358' name='L358'></a> 358     .p2align 4
+<a id='L359' name='L359'></a> 359 L(loop_small):
+<a id='L360' name='L360'></a> 360     ldu r12,8(r8)         <em class='comment'>/* Load next doubleword and update r8.  */</em>
+<a id='L361' name='L361'></a> 361     cmpb    r10,r12,r0        <em class='comment'>/* Check for null bytes.  */</em>
+<a id='L362' name='L362'></a> 362     cmpldi  cr6,r10,0
+<a id='L363' name='L363'></a> 363     bne cr6,L(done_small) <em class='comment'>/* If found null bytes.  */</em>
+<a id='L364' name='L364'></a> 364     cmpld   r8,r7             <em class='comment'>/* Check if reached maxlen. */</em>
+<a id='L365' name='L365'></a> 365     bne L(loop_small)     <em class='comment'>/* If it has more bytes to read.  */</em>
+<a id='L366' name='L366'></a> 366     mr  r3,r4             <em class='comment'>/* Reached maxlen with null bytes not found.</em>
+<a id='L367' name='L367'></a> 367 <em class='comment'>                     Length is equal to maxlen.  */</em>
+<a id='L368' name='L368'></a> 368     blr           <em class='comment'>/* Done.  */</em>
+<a id='L369' name='L369'></a> 369 
+<a id='L370' name='L370'></a> 370     <em class='comment'>/* Still handling case of maxlen &lt;= 32. Found null bytes.</em>
+<a id='L371' name='L371'></a> 371 <em class='comment'>       Registers: r10 == match bits within doubleword, r8 == address of</em>
+<a id='L372' name='L372'></a> 372 <em class='comment'>       last doubleword read, r3 == pointer to s, r4 == maxlen.  */</em>
+<a id='L373' name='L373'></a> 373     .p2align 4
+<a id='L374' name='L374'></a> 374 L(done_small):
+<a id='L375' name='L375'></a> 375 <em class='sharp'>#ifdef</em> <a href='../Y/3238.html' title='Multiple used in 570 places.'>__LITTLE_ENDIAN__</a>
+<a id='L376' name='L376'></a> 376     <em class='comment'>/* Count trailing zeros.  */</em>
+<a id='L377' name='L377'></a> 377     addi    r0,r10,-1
+<a id='L378' name='L378'></a> 378     andc    r0,r0,r10
+<a id='L379' name='L379'></a> 379     popcntd r0,r0
+<a id='L380' name='L380'></a> 380 <em class='sharp'>#else</em>
+<a id='L381' name='L381'></a> 381     cntlzd  r0,r10        <em class='comment'>/* Count leading zeros before the match.  */</em>
+<a id='L382' name='L382'></a> 382 <em class='sharp'>#endif</em>
+<a id='L383' name='L383'></a> 383     sub r3,r8,r3      <em class='comment'>/* Calculate total of bytes before the match.  */</em>
+<a id='L384' name='L384'></a> 384     srdi    r0,r0,3       <em class='comment'>/* Convert leading/trailing zeros to bytes.  */</em>
+<a id='L385' name='L385'></a> 385     add r3,r3,r0      <em class='comment'>/* Length until the match.  */</em>
+<a id='L386' name='L386'></a> 386     cmpld   r3,r4         <em class='comment'>/* Check length is greater than maxlen.  */</em>
+<a id='L387' name='L387'></a> 387     blelr
+<a id='L388' name='L388'></a> 388     mr  r3,r4         <em class='comment'>/* If length is greater than maxlen, return</em>
+<a id='L389' name='L389'></a> 389 <em class='comment'>                 maxlen.  */</em>
+<a id='L390' name='L390'></a> 390     blr
+<a id='L391' name='L391'></a> 391 
+<a id='L392' name='L392'></a> 392     <em class='comment'>/* Handle case of reached maxlen with null bytes not found.  */</em>
+<a id='L393' name='L393'></a> 393     .p2align 4
+<a id='L394' name='L394'></a> 394 L(end_max):
+<a id='L395' name='L395'></a> 395     mr  r3,r4   <em class='comment'>/* Length is equal to maxlen.  */</em>
+<a id='L396' name='L396'></a> 396     blr     <em class='comment'>/* Done.  */</em>
+<a id='L397' name='L397'></a> 397 
+<a id='L398' name='L398'></a> 398 
+<a id='L399' name='L399'></a> 399 END (__strnlen)
+<a id='L400' name='L400'></a> 400 libc_hidden_def (__strnlen)
+<a id='L401' name='L401'></a> 401 weak_alias (__strnlen, strnlen)
+<a id='L402' name='L402'></a> 402 libc_hidden_def (strnlen)
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;][^][v]<a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

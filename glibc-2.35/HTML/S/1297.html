@@ -1,0 +1,779 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>rt/aio_misc.c</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18952.html'>rt</a>/aio_misc.c</h2>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L49'>[^]</a><a href='#L713'>[v]</a>[top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<h2 class='header'>DEFINITIONS</h2>
+This source file includes following definitions.
+<ol>
+<li><a href='#L49' title='Defined at 49.'>__aio_create_helper_thread</a></li>
+<li><a href='#L123' title='Defined at 123.'>get_elem</a></li>
+<li><a href='#L175' title='Defined at 175.'>__aio_free_request</a></li>
+<li><a href='#L184' title='Defined at 184.'>__aio_find_req</a></li>
+<li><a href='#L206' title='Defined at 206.'>__aio_find_req_fd</a></li>
+<li><a href='#L219' title='Defined at 219.'>__aio_remove_request</a></li>
+<li><a href='#L284' title='Defined at 284.'>__aio_init</a></li>
+<li><a href='#L310' title='Defined at 310.'>__aio_enqueue_request</a></li>
+<li><a href='#L491' title='Defined at 491.'>handle_fildes_io</a></li>
+<li><a href='#L697' title='Defined at 697.'>libc_freeres_fn</a></li>
+<li><a href='#L713' title='Defined at 713.'>add_request_to_runlist</a></li>
+</ol>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* Handle general operations.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   Copyright (C) 1997-2022 Free Software Foundation, Inc.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'></em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'></em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'></em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   License along with the GNU C Library; if not, see</em>
+<a id='L17' name='L17'></a>  17 <em class='comment'>   &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L18' name='L18'></a>  18 
+<a id='L19' name='L19'></a>  19 <em class='sharp'>#include</em> &lt;<a href='../I/1725.html'>aio.h</a>&gt;
+<a id='L20' name='L20'></a>  20 <em class='sharp'>#include</em> &lt;<a href='../I/23.html'>assert.h</a>&gt;
+<a id='L21' name='L21'></a>  21 <em class='sharp'>#include</em> &lt;<a href='../I/116.html'>errno.h</a>&gt;
+<a id='L22' name='L22'></a>  22 <em class='sharp'>#include</em> &lt;<a href='18175.html'>limits.h</a>&gt;
+<a id='L23' name='L23'></a>  23 <em class='sharp'>#include</em> &lt;<a href='../I/6831.html'>pthreadP.h</a>&gt;
+<a id='L24' name='L24'></a>  24 <em class='sharp'>#include</em> &lt;<a href='../I/1780.html'>stdlib.h</a>&gt;
+<a id='L25' name='L25'></a>  25 <em class='sharp'>#include</em> &lt;<a href='../I/1819.html'>unistd.h</a>&gt;
+<a id='L26' name='L26'></a>  26 <em class='sharp'>#include</em> &lt;<a href='../I/144.html'>sys/param.h</a>&gt;
+<a id='L27' name='L27'></a>  27 <em class='sharp'>#include</em> &lt;<a href='../I/167.html'>sys/stat.h</a>&gt;
+<a id='L28' name='L28'></a>  28 <em class='sharp'>#include</em> &lt;<a href='../I/176.html'>sys/time.h</a>&gt;
+<a id='L29' name='L29'></a>  29 <em class='sharp'>#include</em> &lt;<a href='../I/6418.html'>aio_misc.h</a>&gt;
+<a id='L30' name='L30'></a>  30 
+<a id='L31' name='L31'></a>  31 <em class='sharp'>#if</em> !<a href='../Y/1463.html' title='Multiple used in 78 places.'>PTHREAD_IN_LIBC</a>
+<a id='L32' name='L32'></a>  32 <em class='comment'>/* The available function names differ outside of libc.  (In libc, we</em>
+<a id='L33' name='L33'></a>  33 <em class='comment'>   need to use hidden aliases to avoid the PLT.)  */</em>
+<a id='L34' name='L34'></a>  34 <em class='sharp'># define</em> <a href='../R/15435.html' title='Multiple referred from 13 places.'>__pread</a> <a href='../D/24636.html' title='Multiple defined in 4 places.'>__libc_pread</a>
+<a id='L35' name='L35'></a>  35 <em class='sharp'># define</em> <a href='../R/15466.html' title='Multiple referred from 21 places.'>__pthread_attr_destroy</a> <a href='../Y/22950.html' title='Multiple used in 39 places.'>pthread_attr_destroy</a>
+<a id='L36' name='L36'></a>  36 <em class='sharp'># define</em> <a href='../R/15480.html' title='Multiple referred from 20 places.'>__pthread_attr_init</a> <a href='../S/17100.html#L81' title='Defined at 81 in sysdeps/htl/pthread.h.'>pthread_attr_init</a>
+<a id='L37' name='L37'></a>  37 <em class='sharp'># define</em> <a href='../R/15482.html' title='Multiple referred from 15 places.'>__pthread_attr_setdetachstate</a> <a href='../Y/22964.html' title='Multiple used in 21 places.'>pthread_attr_setdetachstate</a>
+<a id='L38' name='L38'></a>  38 <em class='sharp'># define</em> <a href='../R/15523.html' title='Multiple referred from 15 places.'>__pthread_cond_signal</a> <a href='../Y/22975.html' title='Multiple used in 43 places.'>pthread_cond_signal</a>
+<a id='L39' name='L39'></a>  39 <em class='sharp'># define</em> <a href='../R/15525.html' title='Multiple referred from 13 places.'>__pthread_cond_timedwait</a> <a href='../S/17830.html#L1158' title='Defined at 1158 in sysdeps/nptl/pthread.h.'>pthread_cond_timedwait</a>
+<a id='L40' name='L40'></a>  40 <em class='sharp'># define</em> <a href='../R/15563.html' title='Multiple referred from 9 places.'>__pthread_getschedparam</a> <a href='../Y/22988.html' title='Multiple used in 7 places.'>pthread_getschedparam</a>
+<a id='L41' name='L41'></a>  41 <em class='sharp'># define</em> <a href='../R/15657.html' title='Multiple referred from 6 places.'>__pthread_setschedparam</a> <a href='../Y/23025.html' title='Multiple used in 9 places.'>pthread_setschedparam</a>
+<a id='L42' name='L42'></a>  42 <em class='sharp'># define</em> <a href='../R/15700.html' title='Multiple referred from 12 places.'>__pwrite</a> <a href='../D/24644.html' title='Multiple defined in 4 places.'>__libc_pwrite</a>
+<a id='L43' name='L43'></a>  43 <em class='sharp'>#endif</em>
+<a id='L44' name='L44'></a>  44 
+<a id='L45' name='L45'></a>  45 <em class='sharp'>#ifndef</em> <a href='../D/27612.html' title='Multiple defined in 2 places.'>aio_create_helper_thread</a>
+<a id='L46' name='L46'></a>  46 <em class='sharp'># define</em> <a href='../R/17131.html' title='Multiple referred from 2 places.'>aio_create_helper_thread</a> <a href='../D/23128.html' title='Multiple defined in 2 places.'>__aio_create_helper_thread</a>
+<a id='L47' name='L47'></a>  47 
+<a id='L48' name='L48'></a>  48 <strong class='reserved'>extern</strong> <strong class='reserved'>inline</strong> <strong class='reserved'>int</strong>
+<a id='L49' name='L49'></a>  49 <a href='../R/13538.html' title='Multiple referred from 2 places.'>__aio_create_helper_thread</a> (<a href='../D/35174.html' title='Multiple defined in 2 places.'>pthread_t</a> *<a href='../Y/27235.html' title='Multiple used in 10 places.'>threadp</a>, <strong class='reserved'>void</strong> *(*<a href='../D/37949.html' title='Multiple defined in 127 places.'>tf</a>) (<strong class='reserved'>void</strong> *), <strong class='reserved'>void</strong> *<a href='../D/27755.html' title='Multiple defined in 3 places.'>arg</a>)
+<a id='L50' name='L50'></a>  50 <em class='brace'>{</em>
+<a id='L51' name='L51'></a>  51   <a href='../D/35089.html' title='Multiple defined in 4 places.'>pthread_attr_t</a> <a href='../Y/10555.html' title='Multiple used in 1022 places.'>attr</a>;
+<a id='L52' name='L52'></a>  52 
+<a id='L53' name='L53'></a>  53   <em class='comment'>/* Make sure the thread is created detached.  */</em>
+<a id='L54' name='L54'></a>  54   <a href='../D/25476.html' title='Multiple defined in 6 places.'>__pthread_attr_init</a> (&amp;<a href='../Y/10555.html' title='Multiple used in 1022 places.'>attr</a>);
+<a id='L55' name='L55'></a>  55   <a href='../D/25478.html' title='Multiple defined in 6 places.'>__pthread_attr_setdetachstate</a> (&amp;<a href='../Y/10555.html' title='Multiple used in 1022 places.'>attr</a>, <a href='../D/10336.html' title='Multiple defined in 4 places.'>PTHREAD_CREATE_DETACHED</a>);
+<a id='L56' name='L56'></a>  56 
+<a id='L57' name='L57'></a>  57   <strong class='reserved'>int</strong> <a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a> = <a href='../D/25536.html' title='Multiple defined in 3 places.'>__pthread_create</a> (<a href='../Y/27235.html' title='Multiple used in 10 places.'>threadp</a>, &amp;<a href='../Y/10555.html' title='Multiple used in 1022 places.'>attr</a>, <a href='../D/37949.html' title='Multiple defined in 127 places.'>tf</a>, <a href='../D/27755.html' title='Multiple defined in 3 places.'>arg</a>);
+<a id='L58' name='L58'></a>  58 
+<a id='L59' name='L59'></a>  59   <a href='../D/25462.html' title='Multiple defined in 3 places.'>__pthread_attr_destroy</a> (&amp;<a href='../Y/10555.html' title='Multiple used in 1022 places.'>attr</a>);
+<a id='L60' name='L60'></a>  60   <strong class='reserved'>return</strong> <a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a>;
+<a id='L61' name='L61'></a>  61 <em class='brace'>}</em>
+<a id='L62' name='L62'></a>  62 <em class='sharp'>#endif</em>
+<a id='L63' name='L63'></a>  63 
+<a id='L64' name='L64'></a>  64 <strong class='reserved'>static</strong> <strong class='reserved'>void</strong> <a href='../S/1297.html#L713' title='Defined at 713 in rt/aio_misc.c.'>add_request_to_runlist</a> (<strong class='reserved'>struct</strong> <a href='../D/35954.html' title='Multiple defined in 2 places.'>requestlist</a> *<a href='../Y/20677.html' title='Multiple used in 7 places.'>newrequest</a>);
+<a id='L65' name='L65'></a>  65 
+<a id='L66' name='L66'></a>  66 <em class='comment'>/* Pool of request list entries.  */</em>
+<a id='L67' name='L67'></a>  67 <strong class='reserved'>static</strong> <strong class='reserved'>struct</strong> <a href='../D/35954.html' title='Multiple defined in 2 places.'>requestlist</a> **<a href='../Y/22529.html' title='Multiple used in 22 places.'>pool</a>;
+<a id='L68' name='L68'></a>  68 
+<a id='L69' name='L69'></a>  69 <em class='comment'>/* Number of total and allocated pool entries.  */</em>
+<a id='L70' name='L70'></a>  70 <strong class='reserved'>static</strong> <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/22530.html' title='Multiple used in 10 places.'>pool_max_size</a>;
+<a id='L71' name='L71'></a>  71 <strong class='reserved'>static</strong> <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/22531.html' title='Multiple used in 8 places.'>pool_size</a>;
+<a id='L72' name='L72'></a>  72 
+<a id='L73' name='L73'></a>  73 <em class='comment'>/* We implement a two dimensional array but allocate each row separately.</em>
+<a id='L74' name='L74'></a>  74 <em class='comment'>   The macro below determines how many entries should be used per row.</em>
+<a id='L75' name='L75'></a>  75 <em class='comment'>   It should better be a power of two.  */</em>
+<a id='L76' name='L76'></a>  76 <em class='sharp'>#define</em> <a href='../R/2125.html' title='Multiple referred from 6 places.'>ENTRIES_PER_ROW</a> 32
+<a id='L77' name='L77'></a>  77 
+<a id='L78' name='L78'></a>  78 <em class='comment'>/* How many rows we allocate at once.  */</em>
+<a id='L79' name='L79'></a>  79 <em class='sharp'>#define</em> <a href='../R/6959.html' title='Multiple referred from 2 places.'>ROWS_STEP</a>   8
+<a id='L80' name='L80'></a>  80 
+<a id='L81' name='L81'></a>  81 <em class='comment'>/* List of available entries.  */</em>
+<a id='L82' name='L82'></a>  82 <strong class='reserved'>static</strong> <strong class='reserved'>struct</strong> <a href='../D/35954.html' title='Multiple defined in 2 places.'>requestlist</a> *<a href='../S/6006.html#L122' title='Defined at 122 in dirent/tst-scandir.c.'>freelist</a>;
+<a id='L83' name='L83'></a>  83 
+<a id='L84' name='L84'></a>  84 <em class='comment'>/* List of request waiting to be processed.  */</em>
+<a id='L85' name='L85'></a>  85 <strong class='reserved'>static</strong> <strong class='reserved'>struct</strong> <a href='../D/35954.html' title='Multiple defined in 2 places.'>requestlist</a> *<a href='../Y/24401.html' title='Multiple used in 11 places.'>runlist</a>;
+<a id='L86' name='L86'></a>  86 
+<a id='L87' name='L87'></a>  87 <em class='comment'>/* Structure list of all currently processed requests.  */</em>
+<a id='L88' name='L88'></a>  88 <strong class='reserved'>static</strong> <strong class='reserved'>struct</strong> <a href='../D/35954.html' title='Multiple defined in 2 places.'>requestlist</a> *<a href='../Y/23832.html' title='Multiple used in 44 places.'>requests</a>;
+<a id='L89' name='L89'></a>  89 
+<a id='L90' name='L90'></a>  90 <em class='comment'>/* Number of threads currently running.  */</em>
+<a id='L91' name='L91'></a>  91 <strong class='reserved'>static</strong> <strong class='reserved'>int</strong> <a href='../Y/21296.html' title='Multiple used in 72 places.'>nthreads</a>;
+<a id='L92' name='L92'></a>  92 
+<a id='L93' name='L93'></a>  93 <em class='comment'>/* Number of threads waiting for work to arrive. */</em>
+<a id='L94' name='L94'></a>  94 <strong class='reserved'>static</strong> <strong class='reserved'>int</strong> <a href='../Y/16478.html' title='Multiple used in 12 places.'>idle_thread_count</a>;
+<a id='L95' name='L95'></a>  95 
+<a id='L96' name='L96'></a>  96 
+<a id='L97' name='L97'></a>  97 <em class='comment'>/* These are the values used to optimize the use of AIO.  The user can</em>
+<a id='L98' name='L98'></a>  98 <em class='comment'>   overwrite them by using the `aio_init' function.  */</em>
+<a id='L99' name='L99'></a>  99 <strong class='reserved'>static</strong> <strong class='reserved'>struct</strong> <a href='../S/1290.html#L86' title='Defined at 86 in rt/aio.h.'>aioinit</a> <a href='../Y/21776.html' title='Multiple used in 15 places.'>optim</a> =
+<a id='L100' name='L100'></a> 100 <em class='brace'>{</em>
+<a id='L101' name='L101'></a> 101   20,   <em class='comment'>/* int aio_threads; Maximal number of threads.  */</em>
+<a id='L102' name='L102'></a> 102   64,   <em class='comment'>/* int aio_num;     Number of expected simultaneous requests. */</em>
+<a id='L103' name='L103'></a> 103   0,
+<a id='L104' name='L104'></a> 104   0,
+<a id='L105' name='L105'></a> 105   0,
+<a id='L106' name='L106'></a> 106   0,
+<a id='L107' name='L107'></a> 107   1,
+<a id='L108' name='L108'></a> 108   0
+<a id='L109' name='L109'></a> 109 <em class='brace'>}</em>;
+<a id='L110' name='L110'></a> 110 
+<a id='L111' name='L111'></a> 111 
+<a id='L112' name='L112'></a> 112 <em class='comment'>/* Since the list is global we need a mutex protecting it.  */</em>
+<a id='L113' name='L113'></a> 113 <a href='../D/35134.html' title='Multiple defined in 2 places.'>pthread_mutex_t</a> <a href='../Y/3493.html' title='Multiple used in 28 places.'>__aio_requests_mutex</a> = <a href='../D/10414.html' title='Multiple defined in 2 places.'>PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP</a>;
+<a id='L114' name='L114'></a> 114 
+<a id='L115' name='L115'></a> 115 <em class='comment'>/* When you add a request to the list and there are idle threads present,</em>
+<a id='L116' name='L116'></a> 116 <em class='comment'>   you signal this condition variable. When a thread finishes work, it waits</em>
+<a id='L117' name='L117'></a> 117 <em class='comment'>   on this condition variable for a time before it actually exits. */</em>
+<a id='L118' name='L118'></a> 118 <a href='../D/35112.html' title='Multiple defined in 2 places.'>pthread_cond_t</a> <a href='../Y/3492.html' title='Multiple used in 4 places.'>__aio_new_request_notification</a> = <a href='../D/10335.html' title='Multiple defined in 2 places.'>PTHREAD_COND_INITIALIZER</a>;
+<a id='L119' name='L119'></a> 119 
+<a id='L120' name='L120'></a> 120 
+<a id='L121' name='L121'></a> 121 <em class='comment'>/* Functions to handle request list pool.  */</em>
+<a id='L122' name='L122'></a> 122 <strong class='reserved'>static</strong> <strong class='reserved'>struct</strong> <a href='../D/35954.html' title='Multiple defined in 2 places.'>requestlist</a> *
+<a id='L123' name='L123'></a> 123 <a href='../R/19925.html' title='Multiple referred from 2 places.'>get_elem</a> (<strong class='reserved'>void</strong>)
+<a id='L124' name='L124'></a> 124 <em class='brace'>{</em>
+<a id='L125' name='L125'></a> 125   <strong class='reserved'>struct</strong> <a href='../D/35954.html' title='Multiple defined in 2 places.'>requestlist</a> *<a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a>;
+<a id='L126' name='L126'></a> 126 
+<a id='L127' name='L127'></a> 127   <strong class='reserved'>if</strong> (<a href='../S/6006.html#L122' title='Defined at 122 in dirent/tst-scandir.c.'>freelist</a> == <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>)
+<a id='L128' name='L128'></a> 128     <em class='brace'>{</em>
+<a id='L129' name='L129'></a> 129       <strong class='reserved'>struct</strong> <a href='../D/35954.html' title='Multiple defined in 2 places.'>requestlist</a> *<a href='../Y/20582.html' title='Multiple used in 12 places.'>new_row</a>;
+<a id='L130' name='L130'></a> 130       <strong class='reserved'>int</strong> <a href='../D/28982.html' title='Multiple defined in 8 places.'>cnt</a>;
+<a id='L131' name='L131'></a> 131 
+<a id='L132' name='L132'></a> 132       <a href='../D/27838.html' title='Multiple defined in 9 places.'>assert</a> (<strong class='reserved'>sizeof</strong> (<strong class='reserved'>struct</strong> <a href='../S/1290.html#L34' title='Defined at 34 in rt/aio.h.'>aiocb</a>) == <strong class='reserved'>sizeof</strong> (<strong class='reserved'>struct</strong> <a href='../S/1290.html#L62' title='Defined at 62 in rt/aio.h.'>aiocb64</a>));
+<a id='L133' name='L133'></a> 133 
+<a id='L134' name='L134'></a> 134       <strong class='reserved'>if</strong> (<a href='../Y/22531.html' title='Multiple used in 8 places.'>pool_size</a> + 1 &gt;= <a href='../Y/22530.html' title='Multiple used in 10 places.'>pool_max_size</a>)
+<a id='L135' name='L135'></a> 135     <em class='brace'>{</em>
+<a id='L136' name='L136'></a> 136       <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/20541.html' title='Multiple used in 6 places.'>new_max_size</a> = <a href='../Y/22530.html' title='Multiple used in 10 places.'>pool_max_size</a> + <a href='../D/11454.html' title='Multiple defined in 2 places.'>ROWS_STEP</a>;
+<a id='L137' name='L137'></a> 137       <strong class='reserved'>struct</strong> <a href='../D/35954.html' title='Multiple defined in 2 places.'>requestlist</a> **<a href='../Y/20606.html' title='Multiple used in 8 places.'>new_tab</a>;
+<a id='L138' name='L138'></a> 138 
+<a id='L139' name='L139'></a> 139       <a href='../Y/20606.html' title='Multiple used in 8 places.'>new_tab</a> = (<strong class='reserved'>struct</strong> <a href='../D/35954.html' title='Multiple defined in 2 places.'>requestlist</a> **)
+<a id='L140' name='L140'></a> 140         <a href='../D/35623.html' title='Multiple defined in 6 places.'>realloc</a> (<a href='../Y/22529.html' title='Multiple used in 22 places.'>pool</a>, <a href='../Y/20541.html' title='Multiple used in 6 places.'>new_max_size</a> * <strong class='reserved'>sizeof</strong> (<strong class='reserved'>struct</strong> <a href='../D/35954.html' title='Multiple defined in 2 places.'>requestlist</a> *));
+<a id='L141' name='L141'></a> 141 
+<a id='L142' name='L142'></a> 142       <strong class='reserved'>if</strong> (<a href='../Y/20606.html' title='Multiple used in 8 places.'>new_tab</a> == <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>)
+<a id='L143' name='L143'></a> 143         <strong class='reserved'>return</strong> <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>;
+<a id='L144' name='L144'></a> 144 
+<a id='L145' name='L145'></a> 145       <a href='../Y/22530.html' title='Multiple used in 10 places.'>pool_max_size</a> = <a href='../Y/20541.html' title='Multiple used in 6 places.'>new_max_size</a>;
+<a id='L146' name='L146'></a> 146       <a href='../Y/22529.html' title='Multiple used in 22 places.'>pool</a> = <a href='../Y/20606.html' title='Multiple used in 8 places.'>new_tab</a>;
+<a id='L147' name='L147'></a> 147     <em class='brace'>}</em>
+<a id='L148' name='L148'></a> 148 
+<a id='L149' name='L149'></a> 149       <em class='comment'>/* Allocate the new row.  */</em>
+<a id='L150' name='L150'></a> 150       <a href='../D/28982.html' title='Multiple defined in 8 places.'>cnt</a> = <a href='../Y/22531.html' title='Multiple used in 8 places.'>pool_size</a> == 0 ? <a href='../Y/21776.html' title='Multiple used in 15 places.'>optim</a>.<a href='../Y/10072.html' title='Multiple used in 4 places.'>aio_num</a> : <a href='../D/3650.html' title='Multiple defined in 2 places.'>ENTRIES_PER_ROW</a>;
+<a id='L151' name='L151'></a> 151       <a href='../Y/20582.html' title='Multiple used in 12 places.'>new_row</a> = (<strong class='reserved'>struct</strong> <a href='../D/35954.html' title='Multiple defined in 2 places.'>requestlist</a> *) <a href='../D/28498.html' title='Multiple defined in 4 places.'>calloc</a> (<a href='../D/28982.html' title='Multiple defined in 8 places.'>cnt</a>,
+<a id='L152' name='L152'></a> 152                            <strong class='reserved'>sizeof</strong> (<strong class='reserved'>struct</strong> <a href='../D/35954.html' title='Multiple defined in 2 places.'>requestlist</a>));
+<a id='L153' name='L153'></a> 153       <strong class='reserved'>if</strong> (<a href='../Y/20582.html' title='Multiple used in 12 places.'>new_row</a> == <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>)
+<a id='L154' name='L154'></a> 154     <strong class='reserved'>return</strong> <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>;
+<a id='L155' name='L155'></a> 155 
+<a id='L156' name='L156'></a> 156       <a href='../Y/22529.html' title='Multiple used in 22 places.'>pool</a>[<a href='../Y/22531.html' title='Multiple used in 8 places.'>pool_size</a>++] = <a href='../Y/20582.html' title='Multiple used in 12 places.'>new_row</a>;
+<a id='L157' name='L157'></a> 157 
+<a id='L158' name='L158'></a> 158       <em class='comment'>/* Put all the new entries in the freelist.  */</em>
+<a id='L159' name='L159'></a> 159       <strong class='reserved'>do</strong>
+<a id='L160' name='L160'></a> 160     <em class='brace'>{</em>
+<a id='L161' name='L161'></a> 161       <a href='../Y/20582.html' title='Multiple used in 12 places.'>new_row</a>-&gt;<a href='../Y/20729.html' title='Multiple used in 26 places.'>next_prio</a> = <a href='../S/6006.html#L122' title='Defined at 122 in dirent/tst-scandir.c.'>freelist</a>;
+<a id='L162' name='L162'></a> 162       <a href='../S/6006.html#L122' title='Defined at 122 in dirent/tst-scandir.c.'>freelist</a> = <a href='../Y/20582.html' title='Multiple used in 12 places.'>new_row</a>++;
+<a id='L163' name='L163'></a> 163     <em class='brace'>}</em>
+<a id='L164' name='L164'></a> 164       <strong class='reserved'>while</strong> (--<a href='../D/28982.html' title='Multiple defined in 8 places.'>cnt</a> &gt; 0);
+<a id='L165' name='L165'></a> 165     <em class='brace'>}</em>
+<a id='L166' name='L166'></a> 166 
+<a id='L167' name='L167'></a> 167   <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a> = <a href='../S/6006.html#L122' title='Defined at 122 in dirent/tst-scandir.c.'>freelist</a>;
+<a id='L168' name='L168'></a> 168   <a href='../S/6006.html#L122' title='Defined at 122 in dirent/tst-scandir.c.'>freelist</a> = <a href='../S/6006.html#L122' title='Defined at 122 in dirent/tst-scandir.c.'>freelist</a>-&gt;<a href='../Y/20729.html' title='Multiple used in 26 places.'>next_prio</a>;
+<a id='L169' name='L169'></a> 169 
+<a id='L170' name='L170'></a> 170   <strong class='reserved'>return</strong> <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a>;
+<a id='L171' name='L171'></a> 171 <em class='brace'>}</em>
+<a id='L172' name='L172'></a> 172 
+<a id='L173' name='L173'></a> 173 
+<a id='L174' name='L174'></a> 174 <strong class='reserved'>void</strong>
+<a id='L175' name='L175'></a> 175 <a href='../R/13543.html' title='Multiple referred from 4 places.'>__aio_free_request</a> (<strong class='reserved'>struct</strong> <a href='../D/35954.html' title='Multiple defined in 2 places.'>requestlist</a> *<a href='../Y/13614.html' title='Multiple used in 265 places.'>elem</a>)
+<a id='L176' name='L176'></a> 176 <em class='brace'>{</em>
+<a id='L177' name='L177'></a> 177   <a href='../Y/13614.html' title='Multiple used in 265 places.'>elem</a>-&gt;<a href='../Y/24403.html' title='Multiple used in 46 places.'>running</a> = <a href='../S/12316.html#L63' title='Defined at 63 in sysdeps/generic/aio_misc.h.'>no</a>;
+<a id='L178' name='L178'></a> 178   <a href='../Y/13614.html' title='Multiple used in 265 places.'>elem</a>-&gt;<a href='../Y/20729.html' title='Multiple used in 26 places.'>next_prio</a> = <a href='../S/6006.html#L122' title='Defined at 122 in dirent/tst-scandir.c.'>freelist</a>;
+<a id='L179' name='L179'></a> 179   <a href='../S/6006.html#L122' title='Defined at 122 in dirent/tst-scandir.c.'>freelist</a> = <a href='../Y/13614.html' title='Multiple used in 265 places.'>elem</a>;
+<a id='L180' name='L180'></a> 180 <em class='brace'>}</em>
+<a id='L181' name='L181'></a> 181 
+<a id='L182' name='L182'></a> 182 
+<a id='L183' name='L183'></a> 183 <strong class='reserved'>struct</strong> <a href='../D/35954.html' title='Multiple defined in 2 places.'>requestlist</a> *
+<a id='L184' name='L184'></a> 184 <a href='../R/13541.html' title='Multiple referred from 2 places.'>__aio_find_req</a> (<a href='../S/12316.html#L40' title='Defined at 40 in sysdeps/generic/aio_misc.h.'>aiocb_union</a> *<a href='../Y/13614.html' title='Multiple used in 265 places.'>elem</a>)
+<a id='L185' name='L185'></a> 185 <em class='brace'>{</em>
+<a id='L186' name='L186'></a> 186   <strong class='reserved'>struct</strong> <a href='../D/35954.html' title='Multiple defined in 2 places.'>requestlist</a> *<a href='../Y/24405.html' title='Multiple used in 753 places.'>runp</a> = <a href='../Y/23832.html' title='Multiple used in 44 places.'>requests</a>;
+<a id='L187' name='L187'></a> 187   <strong class='reserved'>int</strong> <a href='../Y/14543.html' title='Multiple used in 54 places.'>fildes</a> = <a href='../Y/13614.html' title='Multiple used in 265 places.'>elem</a>-&gt;<a href='../S/1290.html#L34' title='Defined at 34 in rt/aio.h.'>aiocb</a>.<a href='../Y/10065.html' title='Multiple used in 31 places.'>aio_fildes</a>;
+<a id='L188' name='L188'></a> 188 
+<a id='L189' name='L189'></a> 189   <strong class='reserved'>while</strong> (<a href='../Y/24405.html' title='Multiple used in 753 places.'>runp</a> != <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a> &amp;&amp; <a href='../Y/24405.html' title='Multiple used in 753 places.'>runp</a>-&gt;<a href='../Y/10081.html' title='Multiple used in 97 places.'>aiocbp</a>-&gt;<a href='../S/1290.html#L34' title='Defined at 34 in rt/aio.h.'>aiocb</a>.<a href='../Y/10065.html' title='Multiple used in 31 places.'>aio_fildes</a> &lt; <a href='../Y/14543.html' title='Multiple used in 54 places.'>fildes</a>)
+<a id='L190' name='L190'></a> 190     <a href='../Y/24405.html' title='Multiple used in 753 places.'>runp</a> = <a href='../Y/24405.html' title='Multiple used in 753 places.'>runp</a>-&gt;<a href='../Y/20714.html' title='Multiple used in 17 places.'>next_fd</a>;
+<a id='L191' name='L191'></a> 191 
+<a id='L192' name='L192'></a> 192   <strong class='reserved'>if</strong> (<a href='../Y/24405.html' title='Multiple used in 753 places.'>runp</a> != <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>)
+<a id='L193' name='L193'></a> 193     <em class='brace'>{</em>
+<a id='L194' name='L194'></a> 194       <strong class='reserved'>if</strong> (<a href='../Y/24405.html' title='Multiple used in 753 places.'>runp</a>-&gt;<a href='../Y/10081.html' title='Multiple used in 97 places.'>aiocbp</a>-&gt;<a href='../S/1290.html#L34' title='Defined at 34 in rt/aio.h.'>aiocb</a>.<a href='../Y/10065.html' title='Multiple used in 31 places.'>aio_fildes</a> != <a href='../Y/14543.html' title='Multiple used in 54 places.'>fildes</a>)
+<a id='L195' name='L195'></a> 195     <a href='../Y/24405.html' title='Multiple used in 753 places.'>runp</a> = <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>;
+<a id='L196' name='L196'></a> 196       <strong class='reserved'>else</strong>
+<a id='L197' name='L197'></a> 197     <strong class='reserved'>while</strong> (<a href='../Y/24405.html' title='Multiple used in 753 places.'>runp</a> != <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a> &amp;&amp; <a href='../Y/24405.html' title='Multiple used in 753 places.'>runp</a>-&gt;<a href='../Y/10081.html' title='Multiple used in 97 places.'>aiocbp</a> != <a href='../Y/13614.html' title='Multiple used in 265 places.'>elem</a>)
+<a id='L198' name='L198'></a> 198       <a href='../Y/24405.html' title='Multiple used in 753 places.'>runp</a> = <a href='../Y/24405.html' title='Multiple used in 753 places.'>runp</a>-&gt;<a href='../Y/20729.html' title='Multiple used in 26 places.'>next_prio</a>;
+<a id='L199' name='L199'></a> 199     <em class='brace'>}</em>
+<a id='L200' name='L200'></a> 200 
+<a id='L201' name='L201'></a> 201   <strong class='reserved'>return</strong> <a href='../Y/24405.html' title='Multiple used in 753 places.'>runp</a>;
+<a id='L202' name='L202'></a> 202 <em class='brace'>}</em>
+<a id='L203' name='L203'></a> 203 
+<a id='L204' name='L204'></a> 204 
+<a id='L205' name='L205'></a> 205 <strong class='reserved'>struct</strong> <a href='../D/35954.html' title='Multiple defined in 2 places.'>requestlist</a> *
+<a id='L206' name='L206'></a> 206 <a href='../R/13542.html' title='Multiple referred from 3 places.'>__aio_find_req_fd</a> (<strong class='reserved'>int</strong> <a href='../Y/14543.html' title='Multiple used in 54 places.'>fildes</a>)
+<a id='L207' name='L207'></a> 207 <em class='brace'>{</em>
+<a id='L208' name='L208'></a> 208   <strong class='reserved'>struct</strong> <a href='../D/35954.html' title='Multiple defined in 2 places.'>requestlist</a> *<a href='../Y/24405.html' title='Multiple used in 753 places.'>runp</a> = <a href='../Y/23832.html' title='Multiple used in 44 places.'>requests</a>;
+<a id='L209' name='L209'></a> 209 
+<a id='L210' name='L210'></a> 210   <strong class='reserved'>while</strong> (<a href='../Y/24405.html' title='Multiple used in 753 places.'>runp</a> != <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a> &amp;&amp; <a href='../Y/24405.html' title='Multiple used in 753 places.'>runp</a>-&gt;<a href='../Y/10081.html' title='Multiple used in 97 places.'>aiocbp</a>-&gt;<a href='../S/1290.html#L34' title='Defined at 34 in rt/aio.h.'>aiocb</a>.<a href='../Y/10065.html' title='Multiple used in 31 places.'>aio_fildes</a> &lt; <a href='../Y/14543.html' title='Multiple used in 54 places.'>fildes</a>)
+<a id='L211' name='L211'></a> 211     <a href='../Y/24405.html' title='Multiple used in 753 places.'>runp</a> = <a href='../Y/24405.html' title='Multiple used in 753 places.'>runp</a>-&gt;<a href='../Y/20714.html' title='Multiple used in 17 places.'>next_fd</a>;
+<a id='L212' name='L212'></a> 212 
+<a id='L213' name='L213'></a> 213   <strong class='reserved'>return</strong> (<a href='../Y/24405.html' title='Multiple used in 753 places.'>runp</a> != <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a> &amp;&amp; <a href='../Y/24405.html' title='Multiple used in 753 places.'>runp</a>-&gt;<a href='../Y/10081.html' title='Multiple used in 97 places.'>aiocbp</a>-&gt;<a href='../S/1290.html#L34' title='Defined at 34 in rt/aio.h.'>aiocb</a>.<a href='../Y/10065.html' title='Multiple used in 31 places.'>aio_fildes</a> == <a href='../Y/14543.html' title='Multiple used in 54 places.'>fildes</a>
+<a id='L214' name='L214'></a> 214       ? <a href='../Y/24405.html' title='Multiple used in 753 places.'>runp</a> : <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>);
+<a id='L215' name='L215'></a> 215 <em class='brace'>}</em>
+<a id='L216' name='L216'></a> 216 
+<a id='L217' name='L217'></a> 217 
+<a id='L218' name='L218'></a> 218 <strong class='reserved'>void</strong>
+<a id='L219' name='L219'></a> 219 <a href='../R/13550.html' title='Multiple referred from 6 places.'>__aio_remove_request</a> (<strong class='reserved'>struct</strong> <a href='../D/35954.html' title='Multiple defined in 2 places.'>requestlist</a> *<a href='../D/32537.html' title='Multiple defined in 3 places.'>last</a>, <strong class='reserved'>struct</strong> <a href='../D/35954.html' title='Multiple defined in 2 places.'>requestlist</a> *<a href='../D/35950.html' title='Multiple defined in 4 places.'>req</a>,
+<a id='L220' name='L220'></a> 220               <strong class='reserved'>int</strong> <a href='../Y/10128.html' title='Multiple used in 11 places.'>all</a>)
+<a id='L221' name='L221'></a> 221 <em class='brace'>{</em>
+<a id='L222' name='L222'></a> 222   <a href='../D/27838.html' title='Multiple defined in 9 places.'>assert</a> (<a href='../D/35950.html' title='Multiple defined in 4 places.'>req</a>-&gt;<a href='../Y/24403.html' title='Multiple used in 46 places.'>running</a> == <a href='../S/12316.html#L65' title='Defined at 65 in sysdeps/generic/aio_misc.h.'>yes</a> || <a href='../D/35950.html' title='Multiple defined in 4 places.'>req</a>-&gt;<a href='../Y/24403.html' title='Multiple used in 46 places.'>running</a> == <a href='../S/12316.html#L64' title='Defined at 64 in sysdeps/generic/aio_misc.h.'>queued</a>
+<a id='L223' name='L223'></a> 223       || <a href='../D/35950.html' title='Multiple defined in 4 places.'>req</a>-&gt;<a href='../Y/24403.html' title='Multiple used in 46 places.'>running</a> == <a href='../D/29782.html' title='Multiple defined in 4 places.'>done</a>);
+<a id='L224' name='L224'></a> 224 
+<a id='L225' name='L225'></a> 225   <strong class='reserved'>if</strong> (<a href='../D/32537.html' title='Multiple defined in 3 places.'>last</a> != <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>)
+<a id='L226' name='L226'></a> 226     <a href='../D/32537.html' title='Multiple defined in 3 places.'>last</a>-&gt;<a href='../Y/20729.html' title='Multiple used in 26 places.'>next_prio</a> = <a href='../Y/10128.html' title='Multiple used in 11 places.'>all</a> ? <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a> : <a href='../D/35950.html' title='Multiple defined in 4 places.'>req</a>-&gt;<a href='../Y/20729.html' title='Multiple used in 26 places.'>next_prio</a>;
+<a id='L227' name='L227'></a> 227   <strong class='reserved'>else</strong>
+<a id='L228' name='L228'></a> 228     <em class='brace'>{</em>
+<a id='L229' name='L229'></a> 229       <strong class='reserved'>if</strong> (<a href='../Y/10128.html' title='Multiple used in 11 places.'>all</a> || <a href='../D/35950.html' title='Multiple defined in 4 places.'>req</a>-&gt;<a href='../Y/20729.html' title='Multiple used in 26 places.'>next_prio</a> == <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>)
+<a id='L230' name='L230'></a> 230     <em class='brace'>{</em>
+<a id='L231' name='L231'></a> 231       <strong class='reserved'>if</strong> (<a href='../D/35950.html' title='Multiple defined in 4 places.'>req</a>-&gt;<a href='../Y/17773.html' title='Multiple used in 12 places.'>last_fd</a> != <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>)
+<a id='L232' name='L232'></a> 232         <a href='../D/35950.html' title='Multiple defined in 4 places.'>req</a>-&gt;<a href='../Y/17773.html' title='Multiple used in 12 places.'>last_fd</a>-&gt;<a href='../Y/20714.html' title='Multiple used in 17 places.'>next_fd</a> = <a href='../D/35950.html' title='Multiple defined in 4 places.'>req</a>-&gt;<a href='../Y/20714.html' title='Multiple used in 17 places.'>next_fd</a>;
+<a id='L233' name='L233'></a> 233       <strong class='reserved'>else</strong>
+<a id='L234' name='L234'></a> 234         <a href='../Y/23832.html' title='Multiple used in 44 places.'>requests</a> = <a href='../D/35950.html' title='Multiple defined in 4 places.'>req</a>-&gt;<a href='../Y/20714.html' title='Multiple used in 17 places.'>next_fd</a>;
+<a id='L235' name='L235'></a> 235       <strong class='reserved'>if</strong> (<a href='../D/35950.html' title='Multiple defined in 4 places.'>req</a>-&gt;<a href='../Y/20714.html' title='Multiple used in 17 places.'>next_fd</a> != <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>)
+<a id='L236' name='L236'></a> 236         <a href='../D/35950.html' title='Multiple defined in 4 places.'>req</a>-&gt;<a href='../Y/20714.html' title='Multiple used in 17 places.'>next_fd</a>-&gt;<a href='../Y/17773.html' title='Multiple used in 12 places.'>last_fd</a> = <a href='../D/35950.html' title='Multiple defined in 4 places.'>req</a>-&gt;<a href='../Y/17773.html' title='Multiple used in 12 places.'>last_fd</a>;
+<a id='L237' name='L237'></a> 237     <em class='brace'>}</em>
+<a id='L238' name='L238'></a> 238       <strong class='reserved'>else</strong>
+<a id='L239' name='L239'></a> 239     <em class='brace'>{</em>
+<a id='L240' name='L240'></a> 240       <strong class='reserved'>if</strong> (<a href='../D/35950.html' title='Multiple defined in 4 places.'>req</a>-&gt;<a href='../Y/17773.html' title='Multiple used in 12 places.'>last_fd</a> != <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>)
+<a id='L241' name='L241'></a> 241         <a href='../D/35950.html' title='Multiple defined in 4 places.'>req</a>-&gt;<a href='../Y/17773.html' title='Multiple used in 12 places.'>last_fd</a>-&gt;<a href='../Y/20714.html' title='Multiple used in 17 places.'>next_fd</a> = <a href='../D/35950.html' title='Multiple defined in 4 places.'>req</a>-&gt;<a href='../Y/20729.html' title='Multiple used in 26 places.'>next_prio</a>;
+<a id='L242' name='L242'></a> 242       <strong class='reserved'>else</strong>
+<a id='L243' name='L243'></a> 243         <a href='../Y/23832.html' title='Multiple used in 44 places.'>requests</a> = <a href='../D/35950.html' title='Multiple defined in 4 places.'>req</a>-&gt;<a href='../Y/20729.html' title='Multiple used in 26 places.'>next_prio</a>;
+<a id='L244' name='L244'></a> 244 
+<a id='L245' name='L245'></a> 245       <strong class='reserved'>if</strong> (<a href='../D/35950.html' title='Multiple defined in 4 places.'>req</a>-&gt;<a href='../Y/20714.html' title='Multiple used in 17 places.'>next_fd</a> != <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>)
+<a id='L246' name='L246'></a> 246         <a href='../D/35950.html' title='Multiple defined in 4 places.'>req</a>-&gt;<a href='../Y/20714.html' title='Multiple used in 17 places.'>next_fd</a>-&gt;<a href='../Y/17773.html' title='Multiple used in 12 places.'>last_fd</a> = <a href='../D/35950.html' title='Multiple defined in 4 places.'>req</a>-&gt;<a href='../Y/20729.html' title='Multiple used in 26 places.'>next_prio</a>;
+<a id='L247' name='L247'></a> 247 
+<a id='L248' name='L248'></a> 248       <a href='../D/35950.html' title='Multiple defined in 4 places.'>req</a>-&gt;<a href='../Y/20729.html' title='Multiple used in 26 places.'>next_prio</a>-&gt;<a href='../Y/17773.html' title='Multiple used in 12 places.'>last_fd</a> = <a href='../D/35950.html' title='Multiple defined in 4 places.'>req</a>-&gt;<a href='../Y/17773.html' title='Multiple used in 12 places.'>last_fd</a>;
+<a id='L249' name='L249'></a> 249       <a href='../D/35950.html' title='Multiple defined in 4 places.'>req</a>-&gt;<a href='../Y/20729.html' title='Multiple used in 26 places.'>next_prio</a>-&gt;<a href='../Y/20714.html' title='Multiple used in 17 places.'>next_fd</a> = <a href='../D/35950.html' title='Multiple defined in 4 places.'>req</a>-&gt;<a href='../Y/20714.html' title='Multiple used in 17 places.'>next_fd</a>;
+<a id='L250' name='L250'></a> 250 
+<a id='L251' name='L251'></a> 251       <em class='comment'>/* Mark this entry as runnable.  */</em>
+<a id='L252' name='L252'></a> 252       <a href='../D/35950.html' title='Multiple defined in 4 places.'>req</a>-&gt;<a href='../Y/20729.html' title='Multiple used in 26 places.'>next_prio</a>-&gt;<a href='../Y/24403.html' title='Multiple used in 46 places.'>running</a> = <a href='../S/12316.html#L65' title='Defined at 65 in sysdeps/generic/aio_misc.h.'>yes</a>;
+<a id='L253' name='L253'></a> 253     <em class='brace'>}</em>
+<a id='L254' name='L254'></a> 254 
+<a id='L255' name='L255'></a> 255       <strong class='reserved'>if</strong> (<a href='../D/35950.html' title='Multiple defined in 4 places.'>req</a>-&gt;<a href='../Y/24403.html' title='Multiple used in 46 places.'>running</a> == <a href='../S/12316.html#L65' title='Defined at 65 in sysdeps/generic/aio_misc.h.'>yes</a>)
+<a id='L256' name='L256'></a> 256     <em class='brace'>{</em>
+<a id='L257' name='L257'></a> 257       <strong class='reserved'>struct</strong> <a href='../D/35954.html' title='Multiple defined in 2 places.'>requestlist</a> *<a href='../Y/24405.html' title='Multiple used in 753 places.'>runp</a> = <a href='../Y/24401.html' title='Multiple used in 11 places.'>runlist</a>;
+<a id='L258' name='L258'></a> 258 
+<a id='L259' name='L259'></a> 259       <a href='../D/32537.html' title='Multiple defined in 3 places.'>last</a> = <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>;
+<a id='L260' name='L260'></a> 260       <strong class='reserved'>while</strong> (<a href='../Y/24405.html' title='Multiple used in 753 places.'>runp</a> != <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>)
+<a id='L261' name='L261'></a> 261         <em class='brace'>{</em>
+<a id='L262' name='L262'></a> 262           <strong class='reserved'>if</strong> (<a href='../Y/24405.html' title='Multiple used in 753 places.'>runp</a> == <a href='../D/35950.html' title='Multiple defined in 4 places.'>req</a>)
+<a id='L263' name='L263'></a> 263         <em class='brace'>{</em>
+<a id='L264' name='L264'></a> 264           <strong class='reserved'>if</strong> (<a href='../D/32537.html' title='Multiple defined in 3 places.'>last</a> == <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>)
+<a id='L265' name='L265'></a> 265             <a href='../Y/24401.html' title='Multiple used in 11 places.'>runlist</a> = <a href='../Y/24405.html' title='Multiple used in 753 places.'>runp</a>-&gt;<a href='../Y/20731.html' title='Multiple used in 11 places.'>next_run</a>;
+<a id='L266' name='L266'></a> 266           <strong class='reserved'>else</strong>
+<a id='L267' name='L267'></a> 267             <a href='../D/32537.html' title='Multiple defined in 3 places.'>last</a>-&gt;<a href='../Y/20731.html' title='Multiple used in 11 places.'>next_run</a> = <a href='../Y/24405.html' title='Multiple used in 753 places.'>runp</a>-&gt;<a href='../Y/20731.html' title='Multiple used in 11 places.'>next_run</a>;
+<a id='L268' name='L268'></a> 268           <strong class='reserved'>break</strong>;
+<a id='L269' name='L269'></a> 269         <em class='brace'>}</em>
+<a id='L270' name='L270'></a> 270           <a href='../D/32537.html' title='Multiple defined in 3 places.'>last</a> = <a href='../Y/24405.html' title='Multiple used in 753 places.'>runp</a>;
+<a id='L271' name='L271'></a> 271           <a href='../Y/24405.html' title='Multiple used in 753 places.'>runp</a> = <a href='../Y/24405.html' title='Multiple used in 753 places.'>runp</a>-&gt;<a href='../Y/20731.html' title='Multiple used in 11 places.'>next_run</a>;
+<a id='L272' name='L272'></a> 272         <em class='brace'>}</em>
+<a id='L273' name='L273'></a> 273     <em class='brace'>}</em>
+<a id='L274' name='L274'></a> 274     <em class='brace'>}</em>
+<a id='L275' name='L275'></a> 275 <em class='brace'>}</em>
+<a id='L276' name='L276'></a> 276 
+<a id='L277' name='L277'></a> 277 
+<a id='L278' name='L278'></a> 278 <em class='comment'>/* The thread handler.  */</em>
+<a id='L279' name='L279'></a> 279 <strong class='reserved'>static</strong> <strong class='reserved'>void</strong> *<a href='../S/1297.html#L491' title='Defined at 491 in rt/aio_misc.c.'>handle_fildes_io</a> (<strong class='reserved'>void</strong> *<a href='../D/27755.html' title='Multiple defined in 3 places.'>arg</a>);
+<a id='L280' name='L280'></a> 280 
+<a id='L281' name='L281'></a> 281 
+<a id='L282' name='L282'></a> 282 <em class='comment'>/* User optimization.  */</em>
+<a id='L283' name='L283'></a> 283 <strong class='reserved'>void</strong>
+<a id='L284' name='L284'></a> 284 <a href='../R/13545.html' title='Multiple referred from 4 places.'>__aio_init</a> (<strong class='reserved'>const</strong> <strong class='reserved'>struct</strong> <a href='../S/1290.html#L86' title='Defined at 86 in rt/aio.h.'>aioinit</a> *<a href='../D/32009.html' title='Multiple defined in 27 places.'>init</a>)
+<a id='L285' name='L285'></a> 285 <em class='brace'>{</em>
+<a id='L286' name='L286'></a> 286   <em class='comment'>/* Get the mutex.  */</em>
+<a id='L287' name='L287'></a> 287   <a href='../S/14212.html#L27' title='Defined at 27 in sysdeps/mach/hurd/htl/pt-mutex-lock.c.'>__pthread_mutex_lock</a> (&amp;<a href='../Y/3493.html' title='Multiple used in 28 places.'>__aio_requests_mutex</a>);
+<a id='L288' name='L288'></a> 288 
+<a id='L289' name='L289'></a> 289   <em class='comment'>/* Only allow writing new values if the table is not yet allocated.  */</em>
+<a id='L290' name='L290'></a> 290   <strong class='reserved'>if</strong> (<a href='../Y/22529.html' title='Multiple used in 22 places.'>pool</a> == <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>)
+<a id='L291' name='L291'></a> 291     <em class='brace'>{</em>
+<a id='L292' name='L292'></a> 292       <a href='../Y/21776.html' title='Multiple used in 15 places.'>optim</a>.<a href='../Y/10079.html' title='Multiple used in 4 places.'>aio_threads</a> = <a href='../D/32009.html' title='Multiple defined in 27 places.'>init</a>-&gt;<a href='../Y/10079.html' title='Multiple used in 4 places.'>aio_threads</a> &lt; 1 ? 1 : <a href='../D/32009.html' title='Multiple defined in 27 places.'>init</a>-&gt;<a href='../Y/10079.html' title='Multiple used in 4 places.'>aio_threads</a>;
+<a id='L293' name='L293'></a> 293       <a href='../D/27838.html' title='Multiple defined in 9 places.'>assert</a> (<a href='../S/3870.html#L99' title='Defined at 99 in misc/sys/param.h.'>powerof2</a> (<a href='../D/3650.html' title='Multiple defined in 2 places.'>ENTRIES_PER_ROW</a>));
+<a id='L294' name='L294'></a> 294       <a href='../Y/21776.html' title='Multiple used in 15 places.'>optim</a>.<a href='../Y/10072.html' title='Multiple used in 4 places.'>aio_num</a> = (<a href='../D/32009.html' title='Multiple defined in 27 places.'>init</a>-&gt;<a href='../Y/10072.html' title='Multiple used in 4 places.'>aio_num</a> &lt; <a href='../D/3650.html' title='Multiple defined in 2 places.'>ENTRIES_PER_ROW</a>
+<a id='L295' name='L295'></a> 295                ? <a href='../D/3650.html' title='Multiple defined in 2 places.'>ENTRIES_PER_ROW</a>
+<a id='L296' name='L296'></a> 296                : <a href='../D/32009.html' title='Multiple defined in 27 places.'>init</a>-&gt;<a href='../Y/10072.html' title='Multiple used in 4 places.'>aio_num</a> &amp; ~(<a href='../D/3650.html' title='Multiple defined in 2 places.'>ENTRIES_PER_ROW</a> - 1));
+<a id='L297' name='L297'></a> 297     <em class='brace'>}</em>
+<a id='L298' name='L298'></a> 298 
+<a id='L299' name='L299'></a> 299   <strong class='reserved'>if</strong> (<a href='../D/32009.html' title='Multiple defined in 27 places.'>init</a>-&gt;<a href='../Y/10066.html' title='Multiple used in 5 places.'>aio_idle_time</a> != 0)
+<a id='L300' name='L300'></a> 300     <a href='../Y/21776.html' title='Multiple used in 15 places.'>optim</a>.<a href='../Y/10066.html' title='Multiple used in 5 places.'>aio_idle_time</a> = <a href='../D/32009.html' title='Multiple defined in 27 places.'>init</a>-&gt;<a href='../Y/10066.html' title='Multiple used in 5 places.'>aio_idle_time</a>;
+<a id='L301' name='L301'></a> 301 
+<a id='L302' name='L302'></a> 302   <em class='comment'>/* Release the mutex.  */</em>
+<a id='L303' name='L303'></a> 303   <a href='../S/14193.html#L27' title='Defined at 27 in sysdeps/mach/hurd/htl/pt-mutex-unlock.c.'>__pthread_mutex_unlock</a> (&amp;<a href='../Y/3493.html' title='Multiple used in 28 places.'>__aio_requests_mutex</a>);
+<a id='L304' name='L304'></a> 304 <em class='brace'>}</em>
+<a id='L305' name='L305'></a> 305 
+<a id='L306' name='L306'></a> 306 
+<a id='L307' name='L307'></a> 307 <em class='comment'>/* The main function of the async I/O handling.  It enqueues requests</em>
+<a id='L308' name='L308'></a> 308 <em class='comment'>   and if necessary starts and handles threads.  */</em>
+<a id='L309' name='L309'></a> 309 <strong class='reserved'>struct</strong> <a href='../D/35954.html' title='Multiple defined in 2 places.'>requestlist</a> *
+<a id='L310' name='L310'></a> 310 <a href='../R/13539.html' title='Multiple referred from 7 places.'>__aio_enqueue_request</a> (<a href='../S/12316.html#L40' title='Defined at 40 in sysdeps/generic/aio_misc.h.'>aiocb_union</a> *<a href='../Y/10081.html' title='Multiple used in 97 places.'>aiocbp</a>, <strong class='reserved'>int</strong> <a href='../S/18705.html#L77' title='Defined at 77 in nptl/tst-thread_local1.cc.'>operation</a>)
+<a id='L311' name='L311'></a> 311 <em class='brace'>{</em>
+<a id='L312' name='L312'></a> 312   <strong class='reserved'>int</strong> <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a> = 0;
+<a id='L313' name='L313'></a> 313   <strong class='reserved'>int</strong> <a href='../Y/22517.html' title='Multiple used in 47 places.'>policy</a>, <a href='../Y/22782.html' title='Multiple used in 42 places.'>prio</a>;
+<a id='L314' name='L314'></a> 314   <strong class='reserved'>struct</strong> <a href='../S/186.html#L23' title='Defined at 23 in bits/types/struct_sched_param.h.'>sched_param</a> <a href='../Y/22178.html' title='Multiple used in 113 places.'>param</a>;
+<a id='L315' name='L315'></a> 315   <strong class='reserved'>struct</strong> <a href='../D/35954.html' title='Multiple defined in 2 places.'>requestlist</a> *<a href='../D/32537.html' title='Multiple defined in 3 places.'>last</a>, *<a href='../Y/24405.html' title='Multiple used in 753 places.'>runp</a>, *<a href='../Y/20670.html' title='Multiple used in 670 places.'>newp</a>;
+<a id='L316' name='L316'></a> 316   <strong class='reserved'>int</strong> <a href='../Y/24403.html' title='Multiple used in 46 places.'>running</a> = <a href='../S/12316.html#L63' title='Defined at 63 in sysdeps/generic/aio_misc.h.'>no</a>;
+<a id='L317' name='L317'></a> 317 
+<a id='L318' name='L318'></a> 318   <strong class='reserved'>if</strong> (<a href='../S/18705.html#L77' title='Defined at 77 in nptl/tst-thread_local1.cc.'>operation</a> == <a href='../S/12316.html#L29' title='Defined at 29 in sysdeps/generic/aio_misc.h.'>LIO_SYNC</a> || <a href='../S/18705.html#L77' title='Defined at 77 in nptl/tst-thread_local1.cc.'>operation</a> == <a href='../S/12316.html#L28' title='Defined at 28 in sysdeps/generic/aio_misc.h.'>LIO_DSYNC</a>)
+<a id='L319' name='L319'></a> 319     <a href='../Y/10081.html' title='Multiple used in 97 places.'>aiocbp</a>-&gt;<a href='../S/1290.html#L34' title='Defined at 34 in rt/aio.h.'>aiocb</a>.<a href='../Y/10075.html' title='Multiple used in 20 places.'>aio_reqprio</a> = 0;
+<a id='L320' name='L320'></a> 320   <strong class='reserved'>else</strong> <strong class='reserved'>if</strong> (<a href='../Y/10081.html' title='Multiple used in 97 places.'>aiocbp</a>-&gt;<a href='../S/1290.html#L34' title='Defined at 34 in rt/aio.h.'>aiocb</a>.<a href='../Y/10075.html' title='Multiple used in 20 places.'>aio_reqprio</a> &lt; 0
+<a id='L321' name='L321'></a> 321 <em class='sharp'>#ifdef</em> <a href='../S/9822.html#L78' title='Defined at 78 in sysdeps/unix/sysv/linux/bits/local_lim.h.'>AIO_PRIO_DELTA_MAX</a>
+<a id='L322' name='L322'></a> 322        || <a href='../Y/10081.html' title='Multiple used in 97 places.'>aiocbp</a>-&gt;<a href='../S/1290.html#L34' title='Defined at 34 in rt/aio.h.'>aiocb</a>.<a href='../Y/10075.html' title='Multiple used in 20 places.'>aio_reqprio</a> &gt; <a href='../S/9822.html#L78' title='Defined at 78 in sysdeps/unix/sysv/linux/bits/local_lim.h.'>AIO_PRIO_DELTA_MAX</a>
+<a id='L323' name='L323'></a> 323 <em class='sharp'>#endif</em>
+<a id='L324' name='L324'></a> 324        )
+<a id='L325' name='L325'></a> 325     <em class='brace'>{</em>
+<a id='L326' name='L326'></a> 326       <em class='comment'>/* Invalid priority value.  */</em>
+<a id='L327' name='L327'></a> 327       <a href='../D/25959.html' title='Multiple defined in 8 places.'>__set_errno</a> (<a href='../D/3156.html' title='Multiple defined in 3 places.'>EINVAL</a>);
+<a id='L328' name='L328'></a> 328       <a href='../Y/10081.html' title='Multiple used in 97 places.'>aiocbp</a>-&gt;<a href='../S/1290.html#L34' title='Defined at 34 in rt/aio.h.'>aiocb</a>.<a href='../Y/4346.html' title='Multiple used in 14 places.'>__error_code</a> = <a href='../D/3156.html' title='Multiple defined in 3 places.'>EINVAL</a>;
+<a id='L329' name='L329'></a> 329       <a href='../Y/10081.html' title='Multiple used in 97 places.'>aiocbp</a>-&gt;<a href='../S/1290.html#L34' title='Defined at 34 in rt/aio.h.'>aiocb</a>.<a href='../Y/7218.html' title='Multiple used in 20 places.'>__return_value</a> = -1;
+<a id='L330' name='L330'></a> 330       <strong class='reserved'>return</strong> <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>;
+<a id='L331' name='L331'></a> 331     <em class='brace'>}</em>
+<a id='L332' name='L332'></a> 332 
+<a id='L333' name='L333'></a> 333   <em class='comment'>/* Compute priority for this request.  */</em>
+<a id='L334' name='L334'></a> 334   <a href='../D/25559.html' title='Multiple defined in 3 places.'>__pthread_getschedparam</a> (<a href='../D/25645.html' title='Multiple defined in 2 places.'>__pthread_self</a> (), &amp;<a href='../Y/22517.html' title='Multiple used in 47 places.'>policy</a>, &amp;<a href='../Y/22178.html' title='Multiple used in 113 places.'>param</a>);
+<a id='L335' name='L335'></a> 335   <a href='../Y/22782.html' title='Multiple used in 42 places.'>prio</a> = <a href='../Y/22178.html' title='Multiple used in 113 places.'>param</a>.<a href='../S/977.html#L47' title='Defined at 47 in posix/sched.h.'>sched_priority</a> - <a href='../Y/10081.html' title='Multiple used in 97 places.'>aiocbp</a>-&gt;<a href='../S/1290.html#L34' title='Defined at 34 in rt/aio.h.'>aiocb</a>.<a href='../Y/10075.html' title='Multiple used in 20 places.'>aio_reqprio</a>;
+<a id='L336' name='L336'></a> 336 
+<a id='L337' name='L337'></a> 337   <em class='comment'>/* Get the mutex.  */</em>
+<a id='L338' name='L338'></a> 338   <a href='../S/14212.html#L27' title='Defined at 27 in sysdeps/mach/hurd/htl/pt-mutex-lock.c.'>__pthread_mutex_lock</a> (&amp;<a href='../Y/3493.html' title='Multiple used in 28 places.'>__aio_requests_mutex</a>);
+<a id='L339' name='L339'></a> 339 
+<a id='L340' name='L340'></a> 340   <a href='../D/32537.html' title='Multiple defined in 3 places.'>last</a> = <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>;
+<a id='L341' name='L341'></a> 341   <a href='../Y/24405.html' title='Multiple used in 753 places.'>runp</a> = <a href='../Y/23832.html' title='Multiple used in 44 places.'>requests</a>;
+<a id='L342' name='L342'></a> 342   <em class='comment'>/* First look whether the current file descriptor is currently</em>
+<a id='L343' name='L343'></a> 343 <em class='comment'>     worked with.  */</em>
+<a id='L344' name='L344'></a> 344   <strong class='reserved'>while</strong> (<a href='../Y/24405.html' title='Multiple used in 753 places.'>runp</a> != <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>
+<a id='L345' name='L345'></a> 345      &amp;&amp; <a href='../Y/24405.html' title='Multiple used in 753 places.'>runp</a>-&gt;<a href='../Y/10081.html' title='Multiple used in 97 places.'>aiocbp</a>-&gt;<a href='../S/1290.html#L34' title='Defined at 34 in rt/aio.h.'>aiocb</a>.<a href='../Y/10065.html' title='Multiple used in 31 places.'>aio_fildes</a> &lt; <a href='../Y/10081.html' title='Multiple used in 97 places.'>aiocbp</a>-&gt;<a href='../S/1290.html#L34' title='Defined at 34 in rt/aio.h.'>aiocb</a>.<a href='../Y/10065.html' title='Multiple used in 31 places.'>aio_fildes</a>)
+<a id='L346' name='L346'></a> 346     <em class='brace'>{</em>
+<a id='L347' name='L347'></a> 347       <a href='../D/32537.html' title='Multiple defined in 3 places.'>last</a> = <a href='../Y/24405.html' title='Multiple used in 753 places.'>runp</a>;
+<a id='L348' name='L348'></a> 348       <a href='../Y/24405.html' title='Multiple used in 753 places.'>runp</a> = <a href='../Y/24405.html' title='Multiple used in 753 places.'>runp</a>-&gt;<a href='../Y/20714.html' title='Multiple used in 17 places.'>next_fd</a>;
+<a id='L349' name='L349'></a> 349     <em class='brace'>}</em>
+<a id='L350' name='L350'></a> 350 
+<a id='L351' name='L351'></a> 351   <em class='comment'>/* Get a new element for the waiting list.  */</em>
+<a id='L352' name='L352'></a> 352   <a href='../Y/20670.html' title='Multiple used in 670 places.'>newp</a> = <a href='../D/31093.html' title='Multiple defined in 2 places.'>get_elem</a> ();
+<a id='L353' name='L353'></a> 353   <strong class='reserved'>if</strong> (<a href='../Y/20670.html' title='Multiple used in 670 places.'>newp</a> == <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>)
+<a id='L354' name='L354'></a> 354     <em class='brace'>{</em>
+<a id='L355' name='L355'></a> 355       <a href='../S/14193.html#L27' title='Defined at 27 in sysdeps/mach/hurd/htl/pt-mutex-unlock.c.'>__pthread_mutex_unlock</a> (&amp;<a href='../Y/3493.html' title='Multiple used in 28 places.'>__aio_requests_mutex</a>);
+<a id='L356' name='L356'></a> 356       <a href='../D/25959.html' title='Multiple defined in 8 places.'>__set_errno</a> (<a href='../D/2896.html' title='Multiple defined in 3 places.'>EAGAIN</a>);
+<a id='L357' name='L357'></a> 357       <strong class='reserved'>return</strong> <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>;
+<a id='L358' name='L358'></a> 358     <em class='brace'>}</em>
+<a id='L359' name='L359'></a> 359   <a href='../Y/20670.html' title='Multiple used in 670 places.'>newp</a>-&gt;<a href='../Y/10081.html' title='Multiple used in 97 places.'>aiocbp</a> = <a href='../Y/10081.html' title='Multiple used in 97 places.'>aiocbp</a>;
+<a id='L360' name='L360'></a> 360   <a href='../Y/20670.html' title='Multiple used in 670 places.'>newp</a>-&gt;<a href='../Y/28829.html' title='Multiple used in 21 places.'>waiting</a> = <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>;
+<a id='L361' name='L361'></a> 361 
+<a id='L362' name='L362'></a> 362   <a href='../Y/10081.html' title='Multiple used in 97 places.'>aiocbp</a>-&gt;<a href='../S/1290.html#L34' title='Defined at 34 in rt/aio.h.'>aiocb</a>.<a href='../Y/3436.html' title='Multiple used in 9 places.'>__abs_prio</a> = <a href='../Y/22782.html' title='Multiple used in 42 places.'>prio</a>;
+<a id='L363' name='L363'></a> 363   <a href='../Y/10081.html' title='Multiple used in 97 places.'>aiocbp</a>-&gt;<a href='../S/1290.html#L34' title='Defined at 34 in rt/aio.h.'>aiocb</a>.<a href='../Y/6520.html' title='Multiple used in 20 places.'>__policy</a> = <a href='../Y/22517.html' title='Multiple used in 47 places.'>policy</a>;
+<a id='L364' name='L364'></a> 364   <a href='../Y/10081.html' title='Multiple used in 97 places.'>aiocbp</a>-&gt;<a href='../S/1290.html#L34' title='Defined at 34 in rt/aio.h.'>aiocb</a>.<a href='../Y/10068.html' title='Multiple used in 22 places.'>aio_lio_opcode</a> = <a href='../S/18705.html#L77' title='Defined at 77 in nptl/tst-thread_local1.cc.'>operation</a>;
+<a id='L365' name='L365'></a> 365   <a href='../Y/10081.html' title='Multiple used in 97 places.'>aiocbp</a>-&gt;<a href='../S/1290.html#L34' title='Defined at 34 in rt/aio.h.'>aiocb</a>.<a href='../Y/4346.html' title='Multiple used in 14 places.'>__error_code</a> = <a href='../D/3154.html' title='Multiple defined in 2 places.'>EINPROGRESS</a>;
+<a id='L366' name='L366'></a> 366   <a href='../Y/10081.html' title='Multiple used in 97 places.'>aiocbp</a>-&gt;<a href='../S/1290.html#L34' title='Defined at 34 in rt/aio.h.'>aiocb</a>.<a href='../Y/7218.html' title='Multiple used in 20 places.'>__return_value</a> = 0;
+<a id='L367' name='L367'></a> 367 
+<a id='L368' name='L368'></a> 368   <strong class='reserved'>if</strong> (<a href='../Y/24405.html' title='Multiple used in 753 places.'>runp</a> != <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>
+<a id='L369' name='L369'></a> 369       &amp;&amp; <a href='../Y/24405.html' title='Multiple used in 753 places.'>runp</a>-&gt;<a href='../Y/10081.html' title='Multiple used in 97 places.'>aiocbp</a>-&gt;<a href='../S/1290.html#L34' title='Defined at 34 in rt/aio.h.'>aiocb</a>.<a href='../Y/10065.html' title='Multiple used in 31 places.'>aio_fildes</a> == <a href='../Y/10081.html' title='Multiple used in 97 places.'>aiocbp</a>-&gt;<a href='../S/1290.html#L34' title='Defined at 34 in rt/aio.h.'>aiocb</a>.<a href='../Y/10065.html' title='Multiple used in 31 places.'>aio_fildes</a>)
+<a id='L370' name='L370'></a> 370     <em class='brace'>{</em>
+<a id='L371' name='L371'></a> 371       <em class='comment'>/* The current file descriptor is worked on.  It makes no sense</em>
+<a id='L372' name='L372'></a> 372 <em class='comment'>     to start another thread since this new thread would fight</em>
+<a id='L373' name='L373'></a> 373 <em class='comment'>     with the running thread for the resources.  But we also cannot</em>
+<a id='L374' name='L374'></a> 374 <em class='comment'>     say that the thread processing this desriptor shall immediately</em>
+<a id='L375' name='L375'></a> 375 <em class='comment'>     after finishing the current job process this request if there</em>
+<a id='L376' name='L376'></a> 376 <em class='comment'>     are other threads in the running queue which have a higher</em>
+<a id='L377' name='L377'></a> 377 <em class='comment'>     priority.  */</em>
+<a id='L378' name='L378'></a> 378 
+<a id='L379' name='L379'></a> 379       <em class='comment'>/* Simply enqueue it after the running one according to the</em>
+<a id='L380' name='L380'></a> 380 <em class='comment'>     priority.  */</em>
+<a id='L381' name='L381'></a> 381       <a href='../D/32537.html' title='Multiple defined in 3 places.'>last</a> = <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>;
+<a id='L382' name='L382'></a> 382       <strong class='reserved'>while</strong> (<a href='../Y/24405.html' title='Multiple used in 753 places.'>runp</a>-&gt;<a href='../Y/20729.html' title='Multiple used in 26 places.'>next_prio</a> != <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>
+<a id='L383' name='L383'></a> 383          &amp;&amp; <a href='../Y/24405.html' title='Multiple used in 753 places.'>runp</a>-&gt;<a href='../Y/20729.html' title='Multiple used in 26 places.'>next_prio</a>-&gt;<a href='../Y/10081.html' title='Multiple used in 97 places.'>aiocbp</a>-&gt;<a href='../S/1290.html#L34' title='Defined at 34 in rt/aio.h.'>aiocb</a>.<a href='../Y/3436.html' title='Multiple used in 9 places.'>__abs_prio</a> &gt;= <a href='../Y/22782.html' title='Multiple used in 42 places.'>prio</a>)
+<a id='L384' name='L384'></a> 384     <em class='brace'>{</em>
+<a id='L385' name='L385'></a> 385       <a href='../D/32537.html' title='Multiple defined in 3 places.'>last</a> = <a href='../Y/24405.html' title='Multiple used in 753 places.'>runp</a>;
+<a id='L386' name='L386'></a> 386       <a href='../Y/24405.html' title='Multiple used in 753 places.'>runp</a> = <a href='../Y/24405.html' title='Multiple used in 753 places.'>runp</a>-&gt;<a href='../Y/20729.html' title='Multiple used in 26 places.'>next_prio</a>;
+<a id='L387' name='L387'></a> 387     <em class='brace'>}</em>
+<a id='L388' name='L388'></a> 388 
+<a id='L389' name='L389'></a> 389       <a href='../Y/20670.html' title='Multiple used in 670 places.'>newp</a>-&gt;<a href='../Y/20729.html' title='Multiple used in 26 places.'>next_prio</a> = <a href='../Y/24405.html' title='Multiple used in 753 places.'>runp</a>-&gt;<a href='../Y/20729.html' title='Multiple used in 26 places.'>next_prio</a>;
+<a id='L390' name='L390'></a> 390       <a href='../Y/24405.html' title='Multiple used in 753 places.'>runp</a>-&gt;<a href='../Y/20729.html' title='Multiple used in 26 places.'>next_prio</a> = <a href='../Y/20670.html' title='Multiple used in 670 places.'>newp</a>;
+<a id='L391' name='L391'></a> 391 
+<a id='L392' name='L392'></a> 392       <a href='../Y/24403.html' title='Multiple used in 46 places.'>running</a> = <a href='../S/12316.html#L64' title='Defined at 64 in sysdeps/generic/aio_misc.h.'>queued</a>;
+<a id='L393' name='L393'></a> 393     <em class='brace'>}</em>
+<a id='L394' name='L394'></a> 394   <strong class='reserved'>else</strong>
+<a id='L395' name='L395'></a> 395     <em class='brace'>{</em>
+<a id='L396' name='L396'></a> 396       <a href='../Y/24403.html' title='Multiple used in 46 places.'>running</a> = <a href='../S/12316.html#L65' title='Defined at 65 in sysdeps/generic/aio_misc.h.'>yes</a>;
+<a id='L397' name='L397'></a> 397       <em class='comment'>/* Enqueue this request for a new descriptor.  */</em>
+<a id='L398' name='L398'></a> 398       <strong class='reserved'>if</strong> (<a href='../D/32537.html' title='Multiple defined in 3 places.'>last</a> == <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>)
+<a id='L399' name='L399'></a> 399     <em class='brace'>{</em>
+<a id='L400' name='L400'></a> 400       <a href='../Y/20670.html' title='Multiple used in 670 places.'>newp</a>-&gt;<a href='../Y/17773.html' title='Multiple used in 12 places.'>last_fd</a> = <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>;
+<a id='L401' name='L401'></a> 401       <a href='../Y/20670.html' title='Multiple used in 670 places.'>newp</a>-&gt;<a href='../Y/20714.html' title='Multiple used in 17 places.'>next_fd</a> = <a href='../Y/23832.html' title='Multiple used in 44 places.'>requests</a>;
+<a id='L402' name='L402'></a> 402       <strong class='reserved'>if</strong> (<a href='../Y/23832.html' title='Multiple used in 44 places.'>requests</a> != <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>)
+<a id='L403' name='L403'></a> 403         <a href='../Y/23832.html' title='Multiple used in 44 places.'>requests</a>-&gt;<a href='../Y/17773.html' title='Multiple used in 12 places.'>last_fd</a> = <a href='../Y/20670.html' title='Multiple used in 670 places.'>newp</a>;
+<a id='L404' name='L404'></a> 404       <a href='../Y/23832.html' title='Multiple used in 44 places.'>requests</a> = <a href='../Y/20670.html' title='Multiple used in 670 places.'>newp</a>;
+<a id='L405' name='L405'></a> 405     <em class='brace'>}</em>
+<a id='L406' name='L406'></a> 406       <strong class='reserved'>else</strong>
+<a id='L407' name='L407'></a> 407     <em class='brace'>{</em>
+<a id='L408' name='L408'></a> 408       <a href='../Y/20670.html' title='Multiple used in 670 places.'>newp</a>-&gt;<a href='../Y/20714.html' title='Multiple used in 17 places.'>next_fd</a> = <a href='../D/32537.html' title='Multiple defined in 3 places.'>last</a>-&gt;<a href='../Y/20714.html' title='Multiple used in 17 places.'>next_fd</a>;
+<a id='L409' name='L409'></a> 409       <a href='../Y/20670.html' title='Multiple used in 670 places.'>newp</a>-&gt;<a href='../Y/17773.html' title='Multiple used in 12 places.'>last_fd</a> = <a href='../D/32537.html' title='Multiple defined in 3 places.'>last</a>;
+<a id='L410' name='L410'></a> 410       <a href='../D/32537.html' title='Multiple defined in 3 places.'>last</a>-&gt;<a href='../Y/20714.html' title='Multiple used in 17 places.'>next_fd</a> = <a href='../Y/20670.html' title='Multiple used in 670 places.'>newp</a>;
+<a id='L411' name='L411'></a> 411       <strong class='reserved'>if</strong> (<a href='../Y/20670.html' title='Multiple used in 670 places.'>newp</a>-&gt;<a href='../Y/20714.html' title='Multiple used in 17 places.'>next_fd</a> != <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>)
+<a id='L412' name='L412'></a> 412         <a href='../Y/20670.html' title='Multiple used in 670 places.'>newp</a>-&gt;<a href='../Y/20714.html' title='Multiple used in 17 places.'>next_fd</a>-&gt;<a href='../Y/17773.html' title='Multiple used in 12 places.'>last_fd</a> = <a href='../Y/20670.html' title='Multiple used in 670 places.'>newp</a>;
+<a id='L413' name='L413'></a> 413     <em class='brace'>}</em>
+<a id='L414' name='L414'></a> 414 
+<a id='L415' name='L415'></a> 415       <a href='../Y/20670.html' title='Multiple used in 670 places.'>newp</a>-&gt;<a href='../Y/20729.html' title='Multiple used in 26 places.'>next_prio</a> = <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>;
+<a id='L416' name='L416'></a> 416       <a href='../D/32537.html' title='Multiple defined in 3 places.'>last</a> = <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>;
+<a id='L417' name='L417'></a> 417     <em class='brace'>}</em>
+<a id='L418' name='L418'></a> 418 
+<a id='L419' name='L419'></a> 419   <strong class='reserved'>if</strong> (<a href='../Y/24403.html' title='Multiple used in 46 places.'>running</a> == <a href='../S/12316.html#L65' title='Defined at 65 in sysdeps/generic/aio_misc.h.'>yes</a>)
+<a id='L420' name='L420'></a> 420     <em class='brace'>{</em>
+<a id='L421' name='L421'></a> 421       <em class='comment'>/* We try to create a new thread for this file descriptor.  The</em>
+<a id='L422' name='L422'></a> 422 <em class='comment'>     function which gets called will handle all available requests</em>
+<a id='L423' name='L423'></a> 423 <em class='comment'>     for this descriptor and when all are processed it will</em>
+<a id='L424' name='L424'></a> 424 <em class='comment'>     terminate.</em>
+<a id='L425' name='L425'></a> 425 <em class='comment'></em>
+<a id='L426' name='L426'></a> 426 <em class='comment'>     If no new thread can be created or if the specified limit of</em>
+<a id='L427' name='L427'></a> 427 <em class='comment'>     threads for AIO is reached we queue the request.  */</em>
+<a id='L428' name='L428'></a> 428 
+<a id='L429' name='L429'></a> 429       <em class='comment'>/* See if we need to and are able to create a thread.  */</em>
+<a id='L430' name='L430'></a> 430       <strong class='reserved'>if</strong> (<a href='../Y/21296.html' title='Multiple used in 72 places.'>nthreads</a> &lt; <a href='../Y/21776.html' title='Multiple used in 15 places.'>optim</a>.<a href='../Y/10079.html' title='Multiple used in 4 places.'>aio_threads</a> &amp;&amp; <a href='../Y/16478.html' title='Multiple used in 12 places.'>idle_thread_count</a> == 0)
+<a id='L431' name='L431'></a> 431     <em class='brace'>{</em>
+<a id='L432' name='L432'></a> 432       <a href='../D/35174.html' title='Multiple defined in 2 places.'>pthread_t</a> <a href='../Y/27126.html' title='Multiple used in 8 places.'>thid</a>;
+<a id='L433' name='L433'></a> 433 
+<a id='L434' name='L434'></a> 434       <a href='../Y/24403.html' title='Multiple used in 46 places.'>running</a> = <a href='../Y/20670.html' title='Multiple used in 670 places.'>newp</a>-&gt;<a href='../Y/24403.html' title='Multiple used in 46 places.'>running</a> = <a href='../S/12316.html#L66' title='Defined at 66 in sysdeps/generic/aio_misc.h.'>allocated</a>;
+<a id='L435' name='L435'></a> 435 
+<a id='L436' name='L436'></a> 436       <em class='comment'>/* Now try to start a thread.  */</em>
+<a id='L437' name='L437'></a> 437       <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a> = <a href='../D/27612.html' title='Multiple defined in 2 places.'>aio_create_helper_thread</a> (&amp;<a href='../Y/27126.html' title='Multiple used in 8 places.'>thid</a>, <a href='../S/1297.html#L491' title='Defined at 491 in rt/aio_misc.c.'>handle_fildes_io</a>, <a href='../Y/20670.html' title='Multiple used in 670 places.'>newp</a>);
+<a id='L438' name='L438'></a> 438       <strong class='reserved'>if</strong> (<a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a> == 0)
+<a id='L439' name='L439'></a> 439         <em class='comment'>/* We managed to enqueue the request.  All errors which can</em>
+<a id='L440' name='L440'></a> 440 <em class='comment'>           happen now can be recognized by calls to `aio_return' and</em>
+<a id='L441' name='L441'></a> 441 <em class='comment'>           `aio_error'.  */</em>
+<a id='L442' name='L442'></a> 442         ++<a href='../Y/21296.html' title='Multiple used in 72 places.'>nthreads</a>;
+<a id='L443' name='L443'></a> 443       <strong class='reserved'>else</strong>
+<a id='L444' name='L444'></a> 444         <em class='brace'>{</em>
+<a id='L445' name='L445'></a> 445           <em class='comment'>/* Reset the running flag.  The new request is not running.  */</em>
+<a id='L446' name='L446'></a> 446           <a href='../Y/24403.html' title='Multiple used in 46 places.'>running</a> = <a href='../Y/20670.html' title='Multiple used in 670 places.'>newp</a>-&gt;<a href='../Y/24403.html' title='Multiple used in 46 places.'>running</a> = <a href='../S/12316.html#L65' title='Defined at 65 in sysdeps/generic/aio_misc.h.'>yes</a>;
+<a id='L447' name='L447'></a> 447 
+<a id='L448' name='L448'></a> 448           <strong class='reserved'>if</strong> (<a href='../Y/21296.html' title='Multiple used in 72 places.'>nthreads</a> == 0)
+<a id='L449' name='L449'></a> 449         <em class='brace'>{</em>
+<a id='L450' name='L450'></a> 450           <em class='comment'>/* We cannot create a thread in the moment and there is</em>
+<a id='L451' name='L451'></a> 451 <em class='comment'>             also no thread running.  This is a problem.  `errno' is</em>
+<a id='L452' name='L452'></a> 452 <em class='comment'>             set to EAGAIN if this is only a temporary problem.  */</em>
+<a id='L453' name='L453'></a> 453           <a href='../S/1297.html#L219' title='Defined at 219 in rt/aio_misc.c.'>__aio_remove_request</a> (<a href='../D/32537.html' title='Multiple defined in 3 places.'>last</a>, <a href='../Y/20670.html' title='Multiple used in 670 places.'>newp</a>, 0);
+<a id='L454' name='L454'></a> 454         <em class='brace'>}</em>
+<a id='L455' name='L455'></a> 455           <strong class='reserved'>else</strong>
+<a id='L456' name='L456'></a> 456         <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a> = 0;
+<a id='L457' name='L457'></a> 457         <em class='brace'>}</em>
+<a id='L458' name='L458'></a> 458     <em class='brace'>}</em>
+<a id='L459' name='L459'></a> 459     <em class='brace'>}</em>
+<a id='L460' name='L460'></a> 460 
+<a id='L461' name='L461'></a> 461   <em class='comment'>/* Enqueue the request in the run queue if it is not yet running.  */</em>
+<a id='L462' name='L462'></a> 462   <strong class='reserved'>if</strong> (<a href='../Y/24403.html' title='Multiple used in 46 places.'>running</a> == <a href='../S/12316.html#L65' title='Defined at 65 in sysdeps/generic/aio_misc.h.'>yes</a> &amp;&amp; <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a> == 0)
+<a id='L463' name='L463'></a> 463     <em class='brace'>{</em>
+<a id='L464' name='L464'></a> 464       <a href='../S/1297.html#L713' title='Defined at 713 in rt/aio_misc.c.'>add_request_to_runlist</a> (<a href='../Y/20670.html' title='Multiple used in 670 places.'>newp</a>);
+<a id='L465' name='L465'></a> 465 
+<a id='L466' name='L466'></a> 466       <em class='comment'>/* If there is a thread waiting for work, then let it know that we</em>
+<a id='L467' name='L467'></a> 467 <em class='comment'>     have just given it something to do. */</em>
+<a id='L468' name='L468'></a> 468       <strong class='reserved'>if</strong> (<a href='../Y/16478.html' title='Multiple used in 12 places.'>idle_thread_count</a> &gt; 0)
+<a id='L469' name='L469'></a> 469     <a href='../D/25519.html' title='Multiple defined in 4 places.'>__pthread_cond_signal</a> (&amp;<a href='../Y/3492.html' title='Multiple used in 4 places.'>__aio_new_request_notification</a>);
+<a id='L470' name='L470'></a> 470     <em class='brace'>}</em>
+<a id='L471' name='L471'></a> 471 
+<a id='L472' name='L472'></a> 472   <strong class='reserved'>if</strong> (<a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a> == 0)
+<a id='L473' name='L473'></a> 473     <a href='../Y/20670.html' title='Multiple used in 670 places.'>newp</a>-&gt;<a href='../Y/24403.html' title='Multiple used in 46 places.'>running</a> = <a href='../Y/24403.html' title='Multiple used in 46 places.'>running</a>;
+<a id='L474' name='L474'></a> 474   <strong class='reserved'>else</strong>
+<a id='L475' name='L475'></a> 475     <em class='brace'>{</em>
+<a id='L476' name='L476'></a> 476       <em class='comment'>/* Something went wrong.  */</em>
+<a id='L477' name='L477'></a> 477       <a href='../S/1297.html#L175' title='Defined at 175 in rt/aio_misc.c.'>__aio_free_request</a> (<a href='../Y/20670.html' title='Multiple used in 670 places.'>newp</a>);
+<a id='L478' name='L478'></a> 478       <a href='../Y/10081.html' title='Multiple used in 97 places.'>aiocbp</a>-&gt;<a href='../S/1290.html#L34' title='Defined at 34 in rt/aio.h.'>aiocb</a>.<a href='../Y/4346.html' title='Multiple used in 14 places.'>__error_code</a> = <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a>;
+<a id='L479' name='L479'></a> 479       <a href='../D/25959.html' title='Multiple defined in 8 places.'>__set_errno</a> (<a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a>);
+<a id='L480' name='L480'></a> 480       <a href='../Y/20670.html' title='Multiple used in 670 places.'>newp</a> = <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>;
+<a id='L481' name='L481'></a> 481     <em class='brace'>}</em>
+<a id='L482' name='L482'></a> 482 
+<a id='L483' name='L483'></a> 483   <em class='comment'>/* Release the mutex.  */</em>
+<a id='L484' name='L484'></a> 484   <a href='../S/14193.html#L27' title='Defined at 27 in sysdeps/mach/hurd/htl/pt-mutex-unlock.c.'>__pthread_mutex_unlock</a> (&amp;<a href='../Y/3493.html' title='Multiple used in 28 places.'>__aio_requests_mutex</a>);
+<a id='L485' name='L485'></a> 485 
+<a id='L486' name='L486'></a> 486   <strong class='reserved'>return</strong> <a href='../Y/20670.html' title='Multiple used in 670 places.'>newp</a>;
+<a id='L487' name='L487'></a> 487 <em class='brace'>}</em>
+<a id='L488' name='L488'></a> 488 
+<a id='L489' name='L489'></a> 489 
+<a id='L490' name='L490'></a> 490 <strong class='reserved'>static</strong> <strong class='reserved'>void</strong> *
+<a id='L491' name='L491'></a> 491 <a href='../R/20250.html' title='Multiple referred from 3 places.'>handle_fildes_io</a> (<strong class='reserved'>void</strong> *<a href='../D/27755.html' title='Multiple defined in 3 places.'>arg</a>)
+<a id='L492' name='L492'></a> 492 <em class='brace'>{</em>
+<a id='L493' name='L493'></a> 493   <a href='../D/35174.html' title='Multiple defined in 2 places.'>pthread_t</a> <a href='../Y/24928.html' title='Multiple used in 377 places.'>self</a> = <a href='../D/25645.html' title='Multiple defined in 2 places.'>__pthread_self</a> ();
+<a id='L494' name='L494'></a> 494   <strong class='reserved'>struct</strong> <a href='../S/186.html#L23' title='Defined at 23 in bits/types/struct_sched_param.h.'>sched_param</a> <a href='../Y/22178.html' title='Multiple used in 113 places.'>param</a>;
+<a id='L495' name='L495'></a> 495   <strong class='reserved'>struct</strong> <a href='../D/35954.html' title='Multiple defined in 2 places.'>requestlist</a> *<a href='../Y/24405.html' title='Multiple used in 753 places.'>runp</a> = (<strong class='reserved'>struct</strong> <a href='../D/35954.html' title='Multiple defined in 2 places.'>requestlist</a> *) <a href='../D/27755.html' title='Multiple defined in 3 places.'>arg</a>;
+<a id='L496' name='L496'></a> 496   <a href='../S/12316.html#L40' title='Defined at 40 in sysdeps/generic/aio_misc.h.'>aiocb_union</a> *<a href='../Y/10081.html' title='Multiple used in 97 places.'>aiocbp</a>;
+<a id='L497' name='L497'></a> 497   <strong class='reserved'>int</strong> <a href='../Y/22517.html' title='Multiple used in 47 places.'>policy</a>;
+<a id='L498' name='L498'></a> 498   <strong class='reserved'>int</strong> <a href='../Y/14543.html' title='Multiple used in 54 places.'>fildes</a>;
+<a id='L499' name='L499'></a> 499 
+<a id='L500' name='L500'></a> 500   <a href='../D/25559.html' title='Multiple defined in 3 places.'>__pthread_getschedparam</a> (<a href='../Y/24928.html' title='Multiple used in 377 places.'>self</a>, &amp;<a href='../Y/22517.html' title='Multiple used in 47 places.'>policy</a>, &amp;<a href='../Y/22178.html' title='Multiple used in 113 places.'>param</a>);
+<a id='L501' name='L501'></a> 501 
+<a id='L502' name='L502'></a> 502   <strong class='reserved'>do</strong>
+<a id='L503' name='L503'></a> 503     <em class='brace'>{</em>
+<a id='L504' name='L504'></a> 504       <em class='comment'>/* If runp is NULL, then we were created to service the work queue</em>
+<a id='L505' name='L505'></a> 505 <em class='comment'>     in general, not to handle any particular request. In that case we</em>
+<a id='L506' name='L506'></a> 506 <em class='comment'>     skip the "do work" stuff on the first pass, and go directly to the</em>
+<a id='L507' name='L507'></a> 507 <em class='comment'>     "get work off the work queue" part of this loop, which is near the</em>
+<a id='L508' name='L508'></a> 508 <em class='comment'>     end. */</em>
+<a id='L509' name='L509'></a> 509       <strong class='reserved'>if</strong> (<a href='../Y/24405.html' title='Multiple used in 753 places.'>runp</a> == <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>)
+<a id='L510' name='L510'></a> 510     <a href='../S/14212.html#L27' title='Defined at 27 in sysdeps/mach/hurd/htl/pt-mutex-lock.c.'>__pthread_mutex_lock</a> (&amp;<a href='../Y/3493.html' title='Multiple used in 28 places.'>__aio_requests_mutex</a>);
+<a id='L511' name='L511'></a> 511       <strong class='reserved'>else</strong>
+<a id='L512' name='L512'></a> 512     <em class='brace'>{</em>
+<a id='L513' name='L513'></a> 513       <em class='comment'>/* Hopefully this request is marked as running.  */</em>
+<a id='L514' name='L514'></a> 514       <a href='../D/27838.html' title='Multiple defined in 9 places.'>assert</a> (<a href='../Y/24405.html' title='Multiple used in 753 places.'>runp</a>-&gt;<a href='../Y/24403.html' title='Multiple used in 46 places.'>running</a> == <a href='../S/12316.html#L66' title='Defined at 66 in sysdeps/generic/aio_misc.h.'>allocated</a>);
+<a id='L515' name='L515'></a> 515 
+<a id='L516' name='L516'></a> 516       <em class='comment'>/* Update our variables.  */</em>
+<a id='L517' name='L517'></a> 517       <a href='../Y/10081.html' title='Multiple used in 97 places.'>aiocbp</a> = <a href='../Y/24405.html' title='Multiple used in 753 places.'>runp</a>-&gt;<a href='../Y/10081.html' title='Multiple used in 97 places.'>aiocbp</a>;
+<a id='L518' name='L518'></a> 518       <a href='../Y/14543.html' title='Multiple used in 54 places.'>fildes</a> = <a href='../Y/10081.html' title='Multiple used in 97 places.'>aiocbp</a>-&gt;<a href='../S/1290.html#L34' title='Defined at 34 in rt/aio.h.'>aiocb</a>.<a href='../Y/10065.html' title='Multiple used in 31 places.'>aio_fildes</a>;
+<a id='L519' name='L519'></a> 519 
+<a id='L520' name='L520'></a> 520       <em class='comment'>/* Change the priority to the requested value (if necessary).  */</em>
+<a id='L521' name='L521'></a> 521       <strong class='reserved'>if</strong> (<a href='../Y/10081.html' title='Multiple used in 97 places.'>aiocbp</a>-&gt;<a href='../S/1290.html#L34' title='Defined at 34 in rt/aio.h.'>aiocb</a>.<a href='../Y/3436.html' title='Multiple used in 9 places.'>__abs_prio</a> != <a href='../Y/22178.html' title='Multiple used in 113 places.'>param</a>.<a href='../S/977.html#L47' title='Defined at 47 in posix/sched.h.'>sched_priority</a>
+<a id='L522' name='L522'></a> 522           || <a href='../Y/10081.html' title='Multiple used in 97 places.'>aiocbp</a>-&gt;<a href='../S/1290.html#L34' title='Defined at 34 in rt/aio.h.'>aiocb</a>.<a href='../Y/6520.html' title='Multiple used in 20 places.'>__policy</a> != <a href='../Y/22517.html' title='Multiple used in 47 places.'>policy</a>)
+<a id='L523' name='L523'></a> 523         <em class='brace'>{</em>
+<a id='L524' name='L524'></a> 524           <a href='../Y/22178.html' title='Multiple used in 113 places.'>param</a>.<a href='../S/977.html#L47' title='Defined at 47 in posix/sched.h.'>sched_priority</a> = <a href='../Y/10081.html' title='Multiple used in 97 places.'>aiocbp</a>-&gt;<a href='../S/1290.html#L34' title='Defined at 34 in rt/aio.h.'>aiocb</a>.<a href='../Y/3436.html' title='Multiple used in 9 places.'>__abs_prio</a>;
+<a id='L525' name='L525'></a> 525           <a href='../Y/22517.html' title='Multiple used in 47 places.'>policy</a> = <a href='../Y/10081.html' title='Multiple used in 97 places.'>aiocbp</a>-&gt;<a href='../S/1290.html#L34' title='Defined at 34 in rt/aio.h.'>aiocb</a>.<a href='../Y/6520.html' title='Multiple used in 20 places.'>__policy</a>;
+<a id='L526' name='L526'></a> 526           <a href='../D/25654.html' title='Multiple defined in 3 places.'>__pthread_setschedparam</a> (<a href='../Y/24928.html' title='Multiple used in 377 places.'>self</a>, <a href='../Y/22517.html' title='Multiple used in 47 places.'>policy</a>, &amp;<a href='../Y/22178.html' title='Multiple used in 113 places.'>param</a>);
+<a id='L527' name='L527'></a> 527         <em class='brace'>}</em>
+<a id='L528' name='L528'></a> 528 
+<a id='L529' name='L529'></a> 529       <em class='comment'>/* Process request pointed to by RUNP.  We must not be disturbed</em>
+<a id='L530' name='L530'></a> 530 <em class='comment'>         by signals.  */</em>
+<a id='L531' name='L531'></a> 531       <strong class='reserved'>if</strong> ((<a href='../Y/10081.html' title='Multiple used in 97 places.'>aiocbp</a>-&gt;<a href='../S/1290.html#L34' title='Defined at 34 in rt/aio.h.'>aiocb</a>.<a href='../Y/10068.html' title='Multiple used in 22 places.'>aio_lio_opcode</a> &amp; 127) == <a href='../D/7168.html' title='Multiple defined in 3 places.'>LIO_READ</a>)
+<a id='L532' name='L532'></a> 532         <em class='brace'>{</em>
+<a id='L533' name='L533'></a> 533           <strong class='reserved'>if</strong> (<strong class='reserved'>sizeof</strong> (<a href='../D/34492.html' title='Multiple defined in 12 places.'>off_t</a>) != <strong class='reserved'>sizeof</strong> (<a href='../D/34491.html' title='Multiple defined in 4 places.'>off64_t</a>)
+<a id='L534' name='L534'></a> 534           &amp;&amp; <a href='../Y/10081.html' title='Multiple used in 97 places.'>aiocbp</a>-&gt;<a href='../S/1290.html#L34' title='Defined at 34 in rt/aio.h.'>aiocb</a>.<a href='../Y/10068.html' title='Multiple used in 22 places.'>aio_lio_opcode</a> &amp; 128)
+<a id='L535' name='L535'></a> 535         <a href='../Y/10081.html' title='Multiple used in 97 places.'>aiocbp</a>-&gt;<a href='../S/1290.html#L34' title='Defined at 34 in rt/aio.h.'>aiocb</a>.<a href='../Y/7218.html' title='Multiple used in 20 places.'>__return_value</a> =
+<a id='L536' name='L536'></a> 536           <a href='../S/1192.html#L1134' title='Defined at 1134 in posix/unistd.h.'>TEMP_FAILURE_RETRY</a> (<a href='../Y/6551.html' title='Multiple used in 22 places.'>__pread64</a> (<a href='../Y/14543.html' title='Multiple used in 54 places.'>fildes</a>, (<strong class='reserved'>void</strong> *)
+<a id='L537' name='L537'></a> 537                          <a href='../Y/10081.html' title='Multiple used in 97 places.'>aiocbp</a>-&gt;<a href='../S/1290.html#L62' title='Defined at 62 in rt/aio.h.'>aiocb64</a>.<a href='../Y/10063.html' title='Multiple used in 24 places.'>aio_buf</a>,
+<a id='L538' name='L538'></a> 538                          <a href='../Y/10081.html' title='Multiple used in 97 places.'>aiocbp</a>-&gt;<a href='../S/1290.html#L62' title='Defined at 62 in rt/aio.h.'>aiocb64</a>.<a href='../Y/10071.html' title='Multiple used in 24 places.'>aio_nbytes</a>,
+<a id='L539' name='L539'></a> 539                          <a href='../Y/10081.html' title='Multiple used in 97 places.'>aiocbp</a>-&gt;<a href='../S/1290.html#L62' title='Defined at 62 in rt/aio.h.'>aiocb64</a>.<a href='../Y/10074.html' title='Multiple used in 21 places.'>aio_offset</a>));
+<a id='L540' name='L540'></a> 540           <strong class='reserved'>else</strong>
+<a id='L541' name='L541'></a> 541         <a href='../Y/10081.html' title='Multiple used in 97 places.'>aiocbp</a>-&gt;<a href='../S/1290.html#L34' title='Defined at 34 in rt/aio.h.'>aiocb</a>.<a href='../Y/7218.html' title='Multiple used in 20 places.'>__return_value</a> =
+<a id='L542' name='L542'></a> 542           <a href='../S/1192.html#L1134' title='Defined at 1134 in posix/unistd.h.'>TEMP_FAILURE_RETRY</a> (<a href='../S/1297.html#L34' title='Defined at 34 in rt/aio_misc.c.'>__pread</a> (<a href='../Y/14543.html' title='Multiple used in 54 places.'>fildes</a>,
+<a id='L543' name='L543'></a> 543                            (<strong class='reserved'>void</strong> *)
+<a id='L544' name='L544'></a> 544                            <a href='../Y/10081.html' title='Multiple used in 97 places.'>aiocbp</a>-&gt;<a href='../S/1290.html#L34' title='Defined at 34 in rt/aio.h.'>aiocb</a>.<a href='../Y/10063.html' title='Multiple used in 24 places.'>aio_buf</a>,
+<a id='L545' name='L545'></a> 545                            <a href='../Y/10081.html' title='Multiple used in 97 places.'>aiocbp</a>-&gt;<a href='../S/1290.html#L34' title='Defined at 34 in rt/aio.h.'>aiocb</a>.<a href='../Y/10071.html' title='Multiple used in 24 places.'>aio_nbytes</a>,
+<a id='L546' name='L546'></a> 546                            <a href='../Y/10081.html' title='Multiple used in 97 places.'>aiocbp</a>-&gt;<a href='../S/1290.html#L34' title='Defined at 34 in rt/aio.h.'>aiocb</a>.<a href='../Y/10074.html' title='Multiple used in 21 places.'>aio_offset</a>));
+<a id='L547' name='L547'></a> 547 
+<a id='L548' name='L548'></a> 548           <strong class='reserved'>if</strong> (<a href='../Y/10081.html' title='Multiple used in 97 places.'>aiocbp</a>-&gt;<a href='../S/1290.html#L34' title='Defined at 34 in rt/aio.h.'>aiocb</a>.<a href='../Y/7218.html' title='Multiple used in 20 places.'>__return_value</a> == -1 &amp;&amp; <a href='../D/30023.html' title='Multiple defined in 13 places.'>errno</a> == <a href='../D/3764.html' title='Multiple defined in 2 places.'>ESPIPE</a>)
+<a id='L549' name='L549'></a> 549         <em class='comment'>/* The Linux kernel is different from others.  It returns</em>
+<a id='L550' name='L550'></a> 550 <em class='comment'>           ESPIPE if using pread on a socket.  Other platforms</em>
+<a id='L551' name='L551'></a> 551 <em class='comment'>           simply ignore the offset parameter and behave like</em>
+<a id='L552' name='L552'></a> 552 <em class='comment'>           read.  */</em>
+<a id='L553' name='L553'></a> 553         <a href='../Y/10081.html' title='Multiple used in 97 places.'>aiocbp</a>-&gt;<a href='../S/1290.html#L34' title='Defined at 34 in rt/aio.h.'>aiocb</a>.<a href='../Y/7218.html' title='Multiple used in 20 places.'>__return_value</a> =
+<a id='L554' name='L554'></a> 554           <a href='../S/1192.html#L1134' title='Defined at 1134 in posix/unistd.h.'>TEMP_FAILURE_RETRY</a> (<a href='../S/284.html#L450' title='Defined at 450 in intl/loadmsgcat.c.'>read</a> (<a href='../Y/14543.html' title='Multiple used in 54 places.'>fildes</a>,
+<a id='L555' name='L555'></a> 555                         (<strong class='reserved'>void</strong> *) <a href='../Y/10081.html' title='Multiple used in 97 places.'>aiocbp</a>-&gt;<a href='../S/1290.html#L62' title='Defined at 62 in rt/aio.h.'>aiocb64</a>.<a href='../Y/10063.html' title='Multiple used in 24 places.'>aio_buf</a>,
+<a id='L556' name='L556'></a> 556                         <a href='../Y/10081.html' title='Multiple used in 97 places.'>aiocbp</a>-&gt;<a href='../S/1290.html#L62' title='Defined at 62 in rt/aio.h.'>aiocb64</a>.<a href='../Y/10071.html' title='Multiple used in 24 places.'>aio_nbytes</a>));
+<a id='L557' name='L557'></a> 557         <em class='brace'>}</em>
+<a id='L558' name='L558'></a> 558       <strong class='reserved'>else</strong> <strong class='reserved'>if</strong> ((<a href='../Y/10081.html' title='Multiple used in 97 places.'>aiocbp</a>-&gt;<a href='../S/1290.html#L34' title='Defined at 34 in rt/aio.h.'>aiocb</a>.<a href='../Y/10068.html' title='Multiple used in 22 places.'>aio_lio_opcode</a> &amp; 127) == <a href='../D/7172.html' title='Multiple defined in 3 places.'>LIO_WRITE</a>)
+<a id='L559' name='L559'></a> 559         <em class='brace'>{</em>
+<a id='L560' name='L560'></a> 560           <strong class='reserved'>if</strong> (<strong class='reserved'>sizeof</strong> (<a href='../D/34492.html' title='Multiple defined in 12 places.'>off_t</a>) != <strong class='reserved'>sizeof</strong> (<a href='../D/34491.html' title='Multiple defined in 4 places.'>off64_t</a>)
+<a id='L561' name='L561'></a> 561           &amp;&amp; <a href='../Y/10081.html' title='Multiple used in 97 places.'>aiocbp</a>-&gt;<a href='../S/1290.html#L34' title='Defined at 34 in rt/aio.h.'>aiocb</a>.<a href='../Y/10068.html' title='Multiple used in 22 places.'>aio_lio_opcode</a> &amp; 128)
+<a id='L562' name='L562'></a> 562         <a href='../Y/10081.html' title='Multiple used in 97 places.'>aiocbp</a>-&gt;<a href='../S/1290.html#L34' title='Defined at 34 in rt/aio.h.'>aiocb</a>.<a href='../Y/7218.html' title='Multiple used in 20 places.'>__return_value</a> =
+<a id='L563' name='L563'></a> 563           <a href='../S/1192.html#L1134' title='Defined at 1134 in posix/unistd.h.'>TEMP_FAILURE_RETRY</a> (<a href='../Y/6696.html' title='Multiple used in 15 places.'>__pwrite64</a> (<a href='../Y/14543.html' title='Multiple used in 54 places.'>fildes</a>, (<strong class='reserved'>const</strong> <strong class='reserved'>void</strong> *)
+<a id='L564' name='L564'></a> 564                           <a href='../Y/10081.html' title='Multiple used in 97 places.'>aiocbp</a>-&gt;<a href='../S/1290.html#L62' title='Defined at 62 in rt/aio.h.'>aiocb64</a>.<a href='../Y/10063.html' title='Multiple used in 24 places.'>aio_buf</a>,
+<a id='L565' name='L565'></a> 565                           <a href='../Y/10081.html' title='Multiple used in 97 places.'>aiocbp</a>-&gt;<a href='../S/1290.html#L62' title='Defined at 62 in rt/aio.h.'>aiocb64</a>.<a href='../Y/10071.html' title='Multiple used in 24 places.'>aio_nbytes</a>,
+<a id='L566' name='L566'></a> 566                           <a href='../Y/10081.html' title='Multiple used in 97 places.'>aiocbp</a>-&gt;<a href='../S/1290.html#L62' title='Defined at 62 in rt/aio.h.'>aiocb64</a>.<a href='../Y/10074.html' title='Multiple used in 21 places.'>aio_offset</a>));
+<a id='L567' name='L567'></a> 567           <strong class='reserved'>else</strong>
+<a id='L568' name='L568'></a> 568         <a href='../Y/10081.html' title='Multiple used in 97 places.'>aiocbp</a>-&gt;<a href='../S/1290.html#L34' title='Defined at 34 in rt/aio.h.'>aiocb</a>.<a href='../Y/7218.html' title='Multiple used in 20 places.'>__return_value</a> =
+<a id='L569' name='L569'></a> 569           <a href='../S/1192.html#L1134' title='Defined at 1134 in posix/unistd.h.'>TEMP_FAILURE_RETRY</a> (<a href='../S/1297.html#L42' title='Defined at 42 in rt/aio_misc.c.'>__pwrite</a> (<a href='../Y/14543.html' title='Multiple used in 54 places.'>fildes</a>, (<strong class='reserved'>const</strong> <strong class='reserved'>void</strong> *)
+<a id='L570' name='L570'></a> 570                         <a href='../Y/10081.html' title='Multiple used in 97 places.'>aiocbp</a>-&gt;<a href='../S/1290.html#L34' title='Defined at 34 in rt/aio.h.'>aiocb</a>.<a href='../Y/10063.html' title='Multiple used in 24 places.'>aio_buf</a>,
+<a id='L571' name='L571'></a> 571                         <a href='../Y/10081.html' title='Multiple used in 97 places.'>aiocbp</a>-&gt;<a href='../S/1290.html#L34' title='Defined at 34 in rt/aio.h.'>aiocb</a>.<a href='../Y/10071.html' title='Multiple used in 24 places.'>aio_nbytes</a>,
+<a id='L572' name='L572'></a> 572                         <a href='../Y/10081.html' title='Multiple used in 97 places.'>aiocbp</a>-&gt;<a href='../S/1290.html#L34' title='Defined at 34 in rt/aio.h.'>aiocb</a>.<a href='../Y/10074.html' title='Multiple used in 21 places.'>aio_offset</a>));
+<a id='L573' name='L573'></a> 573 
+<a id='L574' name='L574'></a> 574           <strong class='reserved'>if</strong> (<a href='../Y/10081.html' title='Multiple used in 97 places.'>aiocbp</a>-&gt;<a href='../S/1290.html#L34' title='Defined at 34 in rt/aio.h.'>aiocb</a>.<a href='../Y/7218.html' title='Multiple used in 20 places.'>__return_value</a> == -1 &amp;&amp; <a href='../D/30023.html' title='Multiple defined in 13 places.'>errno</a> == <a href='../D/3764.html' title='Multiple defined in 2 places.'>ESPIPE</a>)
+<a id='L575' name='L575'></a> 575         <em class='comment'>/* The Linux kernel is different from others.  It returns</em>
+<a id='L576' name='L576'></a> 576 <em class='comment'>           ESPIPE if using pwrite on a socket.  Other platforms</em>
+<a id='L577' name='L577'></a> 577 <em class='comment'>           simply ignore the offset parameter and behave like</em>
+<a id='L578' name='L578'></a> 578 <em class='comment'>           write.  */</em>
+<a id='L579' name='L579'></a> 579         <a href='../Y/10081.html' title='Multiple used in 97 places.'>aiocbp</a>-&gt;<a href='../S/1290.html#L34' title='Defined at 34 in rt/aio.h.'>aiocb</a>.<a href='../Y/7218.html' title='Multiple used in 20 places.'>__return_value</a> =
+<a id='L580' name='L580'></a> 580           <a href='../S/1192.html#L1134' title='Defined at 1134 in posix/unistd.h.'>TEMP_FAILURE_RETRY</a> (<a href='../Y/29153.html' title='Multiple used in 258 places.'>write</a> (<a href='../Y/14543.html' title='Multiple used in 54 places.'>fildes</a>,
+<a id='L581' name='L581'></a> 581                          (<strong class='reserved'>void</strong> *) <a href='../Y/10081.html' title='Multiple used in 97 places.'>aiocbp</a>-&gt;<a href='../S/1290.html#L62' title='Defined at 62 in rt/aio.h.'>aiocb64</a>.<a href='../Y/10063.html' title='Multiple used in 24 places.'>aio_buf</a>,
+<a id='L582' name='L582'></a> 582                          <a href='../Y/10081.html' title='Multiple used in 97 places.'>aiocbp</a>-&gt;<a href='../S/1290.html#L62' title='Defined at 62 in rt/aio.h.'>aiocb64</a>.<a href='../Y/10071.html' title='Multiple used in 24 places.'>aio_nbytes</a>));
+<a id='L583' name='L583'></a> 583         <em class='brace'>}</em>
+<a id='L584' name='L584'></a> 584       <strong class='reserved'>else</strong> <strong class='reserved'>if</strong> (<a href='../Y/10081.html' title='Multiple used in 97 places.'>aiocbp</a>-&gt;<a href='../S/1290.html#L34' title='Defined at 34 in rt/aio.h.'>aiocb</a>.<a href='../Y/10068.html' title='Multiple used in 22 places.'>aio_lio_opcode</a> == <a href='../S/12316.html#L28' title='Defined at 28 in sysdeps/generic/aio_misc.h.'>LIO_DSYNC</a>)
+<a id='L585' name='L585'></a> 585         <a href='../Y/10081.html' title='Multiple used in 97 places.'>aiocbp</a>-&gt;<a href='../S/1290.html#L34' title='Defined at 34 in rt/aio.h.'>aiocb</a>.<a href='../Y/7218.html' title='Multiple used in 20 places.'>__return_value</a> =
+<a id='L586' name='L586'></a> 586           <a href='../S/1192.html#L1134' title='Defined at 1134 in posix/unistd.h.'>TEMP_FAILURE_RETRY</a> (<a href='../D/30386.html' title='Multiple defined in 3 places.'>fdatasync</a> (<a href='../Y/14543.html' title='Multiple used in 54 places.'>fildes</a>));
+<a id='L587' name='L587'></a> 587       <strong class='reserved'>else</strong> <strong class='reserved'>if</strong> (<a href='../Y/10081.html' title='Multiple used in 97 places.'>aiocbp</a>-&gt;<a href='../S/1290.html#L34' title='Defined at 34 in rt/aio.h.'>aiocb</a>.<a href='../Y/10068.html' title='Multiple used in 22 places.'>aio_lio_opcode</a> == <a href='../S/12316.html#L29' title='Defined at 29 in sysdeps/generic/aio_misc.h.'>LIO_SYNC</a>)
+<a id='L588' name='L588'></a> 588         <a href='../Y/10081.html' title='Multiple used in 97 places.'>aiocbp</a>-&gt;<a href='../S/1290.html#L34' title='Defined at 34 in rt/aio.h.'>aiocb</a>.<a href='../Y/7218.html' title='Multiple used in 20 places.'>__return_value</a> =
+<a id='L589' name='L589'></a> 589           <a href='../S/1192.html#L1134' title='Defined at 1134 in posix/unistd.h.'>TEMP_FAILURE_RETRY</a> (<a href='../D/30892.html' title='Multiple defined in 3 places.'>fsync</a> (<a href='../Y/14543.html' title='Multiple used in 54 places.'>fildes</a>));
+<a id='L590' name='L590'></a> 590       <strong class='reserved'>else</strong>
+<a id='L591' name='L591'></a> 591         <em class='brace'>{</em>
+<a id='L592' name='L592'></a> 592           <em class='comment'>/* This is an invalid opcode.  */</em>
+<a id='L593' name='L593'></a> 593           <a href='../Y/10081.html' title='Multiple used in 97 places.'>aiocbp</a>-&gt;<a href='../S/1290.html#L34' title='Defined at 34 in rt/aio.h.'>aiocb</a>.<a href='../Y/7218.html' title='Multiple used in 20 places.'>__return_value</a> = -1;
+<a id='L594' name='L594'></a> 594           <a href='../D/25959.html' title='Multiple defined in 8 places.'>__set_errno</a> (<a href='../D/3156.html' title='Multiple defined in 3 places.'>EINVAL</a>);
+<a id='L595' name='L595'></a> 595         <em class='brace'>}</em>
+<a id='L596' name='L596'></a> 596 
+<a id='L597' name='L597'></a> 597       <em class='comment'>/* Get the mutex.  */</em>
+<a id='L598' name='L598'></a> 598       <a href='../S/14212.html#L27' title='Defined at 27 in sysdeps/mach/hurd/htl/pt-mutex-lock.c.'>__pthread_mutex_lock</a> (&amp;<a href='../Y/3493.html' title='Multiple used in 28 places.'>__aio_requests_mutex</a>);
+<a id='L599' name='L599'></a> 599 
+<a id='L600' name='L600'></a> 600       <strong class='reserved'>if</strong> (<a href='../Y/10081.html' title='Multiple used in 97 places.'>aiocbp</a>-&gt;<a href='../S/1290.html#L34' title='Defined at 34 in rt/aio.h.'>aiocb</a>.<a href='../Y/7218.html' title='Multiple used in 20 places.'>__return_value</a> == -1)
+<a id='L601' name='L601'></a> 601         <a href='../Y/10081.html' title='Multiple used in 97 places.'>aiocbp</a>-&gt;<a href='../S/1290.html#L34' title='Defined at 34 in rt/aio.h.'>aiocb</a>.<a href='../Y/4346.html' title='Multiple used in 14 places.'>__error_code</a> = <a href='../D/30023.html' title='Multiple defined in 13 places.'>errno</a>;
+<a id='L602' name='L602'></a> 602       <strong class='reserved'>else</strong>
+<a id='L603' name='L603'></a> 603         <a href='../Y/10081.html' title='Multiple used in 97 places.'>aiocbp</a>-&gt;<a href='../S/1290.html#L34' title='Defined at 34 in rt/aio.h.'>aiocb</a>.<a href='../Y/4346.html' title='Multiple used in 14 places.'>__error_code</a> = 0;
+<a id='L604' name='L604'></a> 604 
+<a id='L605' name='L605'></a> 605       <em class='comment'>/* Send the signal to notify about finished processing of the</em>
+<a id='L606' name='L606'></a> 606 <em class='comment'>         request.  */</em>
+<a id='L607' name='L607'></a> 607       <a href='../S/1308.html#L115' title='Defined at 115 in rt/aio_notify.c.'>__aio_notify</a> (<a href='../Y/24405.html' title='Multiple used in 753 places.'>runp</a>);
+<a id='L608' name='L608'></a> 608 
+<a id='L609' name='L609'></a> 609       <em class='comment'>/* For debugging purposes we reset the running flag of the</em>
+<a id='L610' name='L610'></a> 610 <em class='comment'>         finished request.  */</em>
+<a id='L611' name='L611'></a> 611       <a href='../D/27838.html' title='Multiple defined in 9 places.'>assert</a> (<a href='../Y/24405.html' title='Multiple used in 753 places.'>runp</a>-&gt;<a href='../Y/24403.html' title='Multiple used in 46 places.'>running</a> == <a href='../S/12316.html#L66' title='Defined at 66 in sysdeps/generic/aio_misc.h.'>allocated</a>);
+<a id='L612' name='L612'></a> 612       <a href='../Y/24405.html' title='Multiple used in 753 places.'>runp</a>-&gt;<a href='../Y/24403.html' title='Multiple used in 46 places.'>running</a> = <a href='../D/29782.html' title='Multiple defined in 4 places.'>done</a>;
+<a id='L613' name='L613'></a> 613 
+<a id='L614' name='L614'></a> 614       <em class='comment'>/* Now dequeue the current request.  */</em>
+<a id='L615' name='L615'></a> 615       <a href='../S/1297.html#L219' title='Defined at 219 in rt/aio_misc.c.'>__aio_remove_request</a> (<a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>, <a href='../Y/24405.html' title='Multiple used in 753 places.'>runp</a>, 0);
+<a id='L616' name='L616'></a> 616       <strong class='reserved'>if</strong> (<a href='../Y/24405.html' title='Multiple used in 753 places.'>runp</a>-&gt;<a href='../Y/20729.html' title='Multiple used in 26 places.'>next_prio</a> != <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>)
+<a id='L617' name='L617'></a> 617         <a href='../S/1297.html#L713' title='Defined at 713 in rt/aio_misc.c.'>add_request_to_runlist</a> (<a href='../Y/24405.html' title='Multiple used in 753 places.'>runp</a>-&gt;<a href='../Y/20729.html' title='Multiple used in 26 places.'>next_prio</a>);
+<a id='L618' name='L618'></a> 618 
+<a id='L619' name='L619'></a> 619       <em class='comment'>/* Free the old element.  */</em>
+<a id='L620' name='L620'></a> 620       <a href='../S/1297.html#L175' title='Defined at 175 in rt/aio_misc.c.'>__aio_free_request</a> (<a href='../Y/24405.html' title='Multiple used in 753 places.'>runp</a>);
+<a id='L621' name='L621'></a> 621     <em class='brace'>}</em>
+<a id='L622' name='L622'></a> 622 
+<a id='L623' name='L623'></a> 623       <a href='../Y/24405.html' title='Multiple used in 753 places.'>runp</a> = <a href='../Y/24401.html' title='Multiple used in 11 places.'>runlist</a>;
+<a id='L624' name='L624'></a> 624 
+<a id='L625' name='L625'></a> 625       <em class='comment'>/* If the runlist is empty, then we sleep for a while, waiting for</em>
+<a id='L626' name='L626'></a> 626 <em class='comment'>     something to arrive in it. */</em>
+<a id='L627' name='L627'></a> 627       <strong class='reserved'>if</strong> (<a href='../Y/24405.html' title='Multiple used in 753 places.'>runp</a> == <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a> &amp;&amp; <a href='../Y/21776.html' title='Multiple used in 15 places.'>optim</a>.<a href='../Y/10066.html' title='Multiple used in 5 places.'>aio_idle_time</a> &gt;= 0)
+<a id='L628' name='L628'></a> 628     <em class='brace'>{</em>
+<a id='L629' name='L629'></a> 629       <strong class='reserved'>struct</strong> <a href='../D/38153.html' title='Multiple defined in 6 places.'>timespec</a> <a href='../Y/21123.html' title='Multiple used in 635 places.'>now</a>;
+<a id='L630' name='L630'></a> 630       <strong class='reserved'>struct</strong> <a href='../D/38153.html' title='Multiple defined in 6 places.'>timespec</a> <a href='../Y/28839.html' title='Multiple used in 24 places.'>wakeup_time</a>;
+<a id='L631' name='L631'></a> 631 
+<a id='L632' name='L632'></a> 632       ++<a href='../Y/16478.html' title='Multiple used in 12 places.'>idle_thread_count</a>;
+<a id='L633' name='L633'></a> 633       <a href='../D/23489.html' title='Multiple defined in 2 places.'>__clock_gettime</a> (<a href='../D/1328.html' title='Multiple defined in 2 places.'>CLOCK_REALTIME</a>, &amp;<a href='../Y/21123.html' title='Multiple used in 635 places.'>now</a>);
+<a id='L634' name='L634'></a> 634       <a href='../Y/28839.html' title='Multiple used in 24 places.'>wakeup_time</a>.<a href='../Y/27976.html' title='Multiple used in 803 places.'>tv_sec</a> = <a href='../Y/21123.html' title='Multiple used in 635 places.'>now</a>.<a href='../Y/27976.html' title='Multiple used in 803 places.'>tv_sec</a> + <a href='../Y/21776.html' title='Multiple used in 15 places.'>optim</a>.<a href='../Y/10066.html' title='Multiple used in 5 places.'>aio_idle_time</a>;
+<a id='L635' name='L635'></a> 635       <a href='../Y/28839.html' title='Multiple used in 24 places.'>wakeup_time</a>.<a href='../Y/27975.html' title='Multiple used in 531 places.'>tv_nsec</a> = <a href='../Y/21123.html' title='Multiple used in 635 places.'>now</a>.<a href='../Y/27975.html' title='Multiple used in 531 places.'>tv_nsec</a>;
+<a id='L636' name='L636'></a> 636       <strong class='reserved'>if</strong> (<a href='../Y/28839.html' title='Multiple used in 24 places.'>wakeup_time</a>.<a href='../Y/27975.html' title='Multiple used in 531 places.'>tv_nsec</a> &gt;= 1000000000)
+<a id='L637' name='L637'></a> 637         <em class='brace'>{</em>
+<a id='L638' name='L638'></a> 638           <a href='../Y/28839.html' title='Multiple used in 24 places.'>wakeup_time</a>.<a href='../Y/27975.html' title='Multiple used in 531 places.'>tv_nsec</a> -= 1000000000;
+<a id='L639' name='L639'></a> 639           ++<a href='../Y/28839.html' title='Multiple used in 24 places.'>wakeup_time</a>.<a href='../Y/27976.html' title='Multiple used in 803 places.'>tv_sec</a>;
+<a id='L640' name='L640'></a> 640         <em class='brace'>}</em>
+<a id='L641' name='L641'></a> 641       <a href='../D/25521.html' title='Multiple defined in 4 places.'>__pthread_cond_timedwait</a> (&amp;<a href='../Y/3492.html' title='Multiple used in 4 places.'>__aio_new_request_notification</a>,
+<a id='L642' name='L642'></a> 642                     &amp;<a href='../Y/3493.html' title='Multiple used in 28 places.'>__aio_requests_mutex</a>,
+<a id='L643' name='L643'></a> 643                     &amp;<a href='../Y/28839.html' title='Multiple used in 24 places.'>wakeup_time</a>);
+<a id='L644' name='L644'></a> 644       --<a href='../Y/16478.html' title='Multiple used in 12 places.'>idle_thread_count</a>;
+<a id='L645' name='L645'></a> 645       <a href='../Y/24405.html' title='Multiple used in 753 places.'>runp</a> = <a href='../Y/24401.html' title='Multiple used in 11 places.'>runlist</a>;
+<a id='L646' name='L646'></a> 646     <em class='brace'>}</em>
+<a id='L647' name='L647'></a> 647 
+<a id='L648' name='L648'></a> 648       <strong class='reserved'>if</strong> (<a href='../Y/24405.html' title='Multiple used in 753 places.'>runp</a> == <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>)
+<a id='L649' name='L649'></a> 649     --<a href='../Y/21296.html' title='Multiple used in 72 places.'>nthreads</a>;
+<a id='L650' name='L650'></a> 650       <strong class='reserved'>else</strong>
+<a id='L651' name='L651'></a> 651     <em class='brace'>{</em>
+<a id='L652' name='L652'></a> 652       <a href='../D/27838.html' title='Multiple defined in 9 places.'>assert</a> (<a href='../Y/24405.html' title='Multiple used in 753 places.'>runp</a>-&gt;<a href='../Y/24403.html' title='Multiple used in 46 places.'>running</a> == <a href='../S/12316.html#L65' title='Defined at 65 in sysdeps/generic/aio_misc.h.'>yes</a>);
+<a id='L653' name='L653'></a> 653       <a href='../Y/24405.html' title='Multiple used in 753 places.'>runp</a>-&gt;<a href='../Y/24403.html' title='Multiple used in 46 places.'>running</a> = <a href='../S/12316.html#L66' title='Defined at 66 in sysdeps/generic/aio_misc.h.'>allocated</a>;
+<a id='L654' name='L654'></a> 654       <a href='../Y/24401.html' title='Multiple used in 11 places.'>runlist</a> = <a href='../Y/24405.html' title='Multiple used in 753 places.'>runp</a>-&gt;<a href='../Y/20731.html' title='Multiple used in 11 places.'>next_run</a>;
+<a id='L655' name='L655'></a> 655 
+<a id='L656' name='L656'></a> 656       <em class='comment'>/* If we have a request to process, and there's still another in</em>
+<a id='L657' name='L657'></a> 657 <em class='comment'>         the run list, then we need to either wake up or create a new</em>
+<a id='L658' name='L658'></a> 658 <em class='comment'>         thread to service the request that is still in the run list. */</em>
+<a id='L659' name='L659'></a> 659       <strong class='reserved'>if</strong> (<a href='../Y/24401.html' title='Multiple used in 11 places.'>runlist</a> != <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>)
+<a id='L660' name='L660'></a> 660         <em class='brace'>{</em>
+<a id='L661' name='L661'></a> 661           <em class='comment'>/* There are at least two items in the work queue to work on.</em>
+<a id='L662' name='L662'></a> 662 <em class='comment'>         If there are other idle threads, then we should wake them</em>
+<a id='L663' name='L663'></a> 663 <em class='comment'>         up for these other work elements; otherwise, we should try</em>
+<a id='L664' name='L664'></a> 664 <em class='comment'>         to create a new thread. */</em>
+<a id='L665' name='L665'></a> 665           <strong class='reserved'>if</strong> (<a href='../Y/16478.html' title='Multiple used in 12 places.'>idle_thread_count</a> &gt; 0)
+<a id='L666' name='L666'></a> 666         <a href='../D/25519.html' title='Multiple defined in 4 places.'>__pthread_cond_signal</a> (&amp;<a href='../Y/3492.html' title='Multiple used in 4 places.'>__aio_new_request_notification</a>);
+<a id='L667' name='L667'></a> 667           <strong class='reserved'>else</strong> <strong class='reserved'>if</strong> (<a href='../Y/21296.html' title='Multiple used in 72 places.'>nthreads</a> &lt; <a href='../Y/21776.html' title='Multiple used in 15 places.'>optim</a>.<a href='../Y/10079.html' title='Multiple used in 4 places.'>aio_threads</a>)
+<a id='L668' name='L668'></a> 668         <em class='brace'>{</em>
+<a id='L669' name='L669'></a> 669           <a href='../D/35174.html' title='Multiple defined in 2 places.'>pthread_t</a> <a href='../Y/27126.html' title='Multiple used in 8 places.'>thid</a>;
+<a id='L670' name='L670'></a> 670           <a href='../D/35089.html' title='Multiple defined in 4 places.'>pthread_attr_t</a> <a href='../Y/10555.html' title='Multiple used in 1022 places.'>attr</a>;
+<a id='L671' name='L671'></a> 671 
+<a id='L672' name='L672'></a> 672           <em class='comment'>/* Make sure the thread is created detached.  */</em>
+<a id='L673' name='L673'></a> 673           <a href='../D/25476.html' title='Multiple defined in 6 places.'>__pthread_attr_init</a> (&amp;<a href='../Y/10555.html' title='Multiple used in 1022 places.'>attr</a>);
+<a id='L674' name='L674'></a> 674           <a href='../D/25478.html' title='Multiple defined in 6 places.'>__pthread_attr_setdetachstate</a> (&amp;<a href='../Y/10555.html' title='Multiple used in 1022 places.'>attr</a>,
+<a id='L675' name='L675'></a> 675                          <a href='../D/10336.html' title='Multiple defined in 4 places.'>PTHREAD_CREATE_DETACHED</a>);
+<a id='L676' name='L676'></a> 676 
+<a id='L677' name='L677'></a> 677           <em class='comment'>/* Now try to start a thread. If we fail, no big deal,</em>
+<a id='L678' name='L678'></a> 678 <em class='comment'>             because we know that there is at least one thread (us)</em>
+<a id='L679' name='L679'></a> 679 <em class='comment'>             that is working on AIO operations. */</em>
+<a id='L680' name='L680'></a> 680           <strong class='reserved'>if</strong> (<a href='../D/25536.html' title='Multiple defined in 3 places.'>__pthread_create</a> (&amp;<a href='../Y/27126.html' title='Multiple used in 8 places.'>thid</a>, &amp;<a href='../Y/10555.html' title='Multiple used in 1022 places.'>attr</a>, <a href='../S/1297.html#L491' title='Defined at 491 in rt/aio_misc.c.'>handle_fildes_io</a>, <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>)
+<a id='L681' name='L681'></a> 681               == 0)
+<a id='L682' name='L682'></a> 682             ++<a href='../Y/21296.html' title='Multiple used in 72 places.'>nthreads</a>;
+<a id='L683' name='L683'></a> 683         <em class='brace'>}</em>
+<a id='L684' name='L684'></a> 684         <em class='brace'>}</em>
+<a id='L685' name='L685'></a> 685     <em class='brace'>}</em>
+<a id='L686' name='L686'></a> 686 
+<a id='L687' name='L687'></a> 687       <em class='comment'>/* Release the mutex.  */</em>
+<a id='L688' name='L688'></a> 688       <a href='../S/14193.html#L27' title='Defined at 27 in sysdeps/mach/hurd/htl/pt-mutex-unlock.c.'>__pthread_mutex_unlock</a> (&amp;<a href='../Y/3493.html' title='Multiple used in 28 places.'>__aio_requests_mutex</a>);
+<a id='L689' name='L689'></a> 689     <em class='brace'>}</em>
+<a id='L690' name='L690'></a> 690   <strong class='reserved'>while</strong> (<a href='../Y/24405.html' title='Multiple used in 753 places.'>runp</a> != <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>);
+<a id='L691' name='L691'></a> 691 
+<a id='L692' name='L692'></a> 692   <strong class='reserved'>return</strong> <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>;
+<a id='L693' name='L693'></a> 693 <em class='brace'>}</em>
+<a id='L694' name='L694'></a> 694 
+<a id='L695' name='L695'></a> 695 
+<a id='L696' name='L696'></a> 696 <em class='comment'>/* Free allocated resources.  */</em>
+<a id='L697' name='L697'></a> 697 <a href='../R/21248.html' title='Multiple referred from 4 places.'>libc_freeres_fn</a> (<a href='../Y/14996.html' title='Multiple used in 2 places.'>free_res</a>)
+<a id='L698' name='L698'></a> 698 <em class='brace'>{</em>
+<a id='L699' name='L699'></a> 699   <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/24183.html' title='Multiple used in 20 places.'>row</a>;
+<a id='L700' name='L700'></a> 700 
+<a id='L701' name='L701'></a> 701   <strong class='reserved'>for</strong> (<a href='../Y/24183.html' title='Multiple used in 20 places.'>row</a> = 0; <a href='../Y/24183.html' title='Multiple used in 20 places.'>row</a> &lt; <a href='../Y/22530.html' title='Multiple used in 10 places.'>pool_max_size</a>; ++<a href='../Y/24183.html' title='Multiple used in 20 places.'>row</a>)
+<a id='L702' name='L702'></a> 702     <a href='../D/30785.html' title='Multiple defined in 5 places.'>free</a> (<a href='../Y/22529.html' title='Multiple used in 22 places.'>pool</a>[<a href='../Y/24183.html' title='Multiple used in 20 places.'>row</a>]);
+<a id='L703' name='L703'></a> 703 
+<a id='L704' name='L704'></a> 704   <a href='../D/30785.html' title='Multiple defined in 5 places.'>free</a> (<a href='../Y/22529.html' title='Multiple used in 22 places.'>pool</a>);
+<a id='L705' name='L705'></a> 705 <em class='brace'>}</em>
+<a id='L706' name='L706'></a> 706 
+<a id='L707' name='L707'></a> 707 
+<a id='L708' name='L708'></a> 708 <em class='comment'>/* Add newrequest to the runlist. The __abs_prio flag of newrequest must</em>
+<a id='L709' name='L709'></a> 709 <em class='comment'>   be correctly set to do this. Also, you had better set newrequest's</em>
+<a id='L710' name='L710'></a> 710 <em class='comment'>   "running" flag to "yes" before you release your lock or you'll throw an</em>
+<a id='L711' name='L711'></a> 711 <em class='comment'>   assertion. */</em>
+<a id='L712' name='L712'></a> 712 <strong class='reserved'>static</strong> <strong class='reserved'>void</strong>
+<a id='L713' name='L713'></a> 713 <a href='../R/17051.html' title='Multiple referred from 3 places.'>add_request_to_runlist</a> (<strong class='reserved'>struct</strong> <a href='../D/35954.html' title='Multiple defined in 2 places.'>requestlist</a> *<a href='../Y/20677.html' title='Multiple used in 7 places.'>newrequest</a>)
+<a id='L714' name='L714'></a> 714 <em class='brace'>{</em>
+<a id='L715' name='L715'></a> 715   <strong class='reserved'>int</strong> <a href='../Y/22782.html' title='Multiple used in 42 places.'>prio</a> = <a href='../Y/20677.html' title='Multiple used in 7 places.'>newrequest</a>-&gt;<a href='../Y/10081.html' title='Multiple used in 97 places.'>aiocbp</a>-&gt;<a href='../S/1290.html#L34' title='Defined at 34 in rt/aio.h.'>aiocb</a>.<a href='../Y/3436.html' title='Multiple used in 9 places.'>__abs_prio</a>;
+<a id='L716' name='L716'></a> 716   <strong class='reserved'>struct</strong> <a href='../D/35954.html' title='Multiple defined in 2 places.'>requestlist</a> *<a href='../Y/24405.html' title='Multiple used in 753 places.'>runp</a>;
+<a id='L717' name='L717'></a> 717 
+<a id='L718' name='L718'></a> 718   <strong class='reserved'>if</strong> (<a href='../Y/24401.html' title='Multiple used in 11 places.'>runlist</a> == <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a> || <a href='../Y/24401.html' title='Multiple used in 11 places.'>runlist</a>-&gt;<a href='../Y/10081.html' title='Multiple used in 97 places.'>aiocbp</a>-&gt;<a href='../S/1290.html#L34' title='Defined at 34 in rt/aio.h.'>aiocb</a>.<a href='../Y/3436.html' title='Multiple used in 9 places.'>__abs_prio</a> &lt; <a href='../Y/22782.html' title='Multiple used in 42 places.'>prio</a>)
+<a id='L719' name='L719'></a> 719     <em class='brace'>{</em>
+<a id='L720' name='L720'></a> 720       <a href='../Y/20677.html' title='Multiple used in 7 places.'>newrequest</a>-&gt;<a href='../Y/20731.html' title='Multiple used in 11 places.'>next_run</a> = <a href='../Y/24401.html' title='Multiple used in 11 places.'>runlist</a>;
+<a id='L721' name='L721'></a> 721       <a href='../Y/24401.html' title='Multiple used in 11 places.'>runlist</a> = <a href='../Y/20677.html' title='Multiple used in 7 places.'>newrequest</a>;
+<a id='L722' name='L722'></a> 722     <em class='brace'>}</em>
+<a id='L723' name='L723'></a> 723   <strong class='reserved'>else</strong>
+<a id='L724' name='L724'></a> 724     <em class='brace'>{</em>
+<a id='L725' name='L725'></a> 725       <a href='../Y/24405.html' title='Multiple used in 753 places.'>runp</a> = <a href='../Y/24401.html' title='Multiple used in 11 places.'>runlist</a>;
+<a id='L726' name='L726'></a> 726 
+<a id='L727' name='L727'></a> 727       <strong class='reserved'>while</strong> (<a href='../Y/24405.html' title='Multiple used in 753 places.'>runp</a>-&gt;<a href='../Y/20731.html' title='Multiple used in 11 places.'>next_run</a> != <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>
+<a id='L728' name='L728'></a> 728          &amp;&amp; <a href='../Y/24405.html' title='Multiple used in 753 places.'>runp</a>-&gt;<a href='../Y/20731.html' title='Multiple used in 11 places.'>next_run</a>-&gt;<a href='../Y/10081.html' title='Multiple used in 97 places.'>aiocbp</a>-&gt;<a href='../S/1290.html#L34' title='Defined at 34 in rt/aio.h.'>aiocb</a>.<a href='../Y/3436.html' title='Multiple used in 9 places.'>__abs_prio</a> &gt;= <a href='../Y/22782.html' title='Multiple used in 42 places.'>prio</a>)
+<a id='L729' name='L729'></a> 729     <a href='../Y/24405.html' title='Multiple used in 753 places.'>runp</a> = <a href='../Y/24405.html' title='Multiple used in 753 places.'>runp</a>-&gt;<a href='../Y/20731.html' title='Multiple used in 11 places.'>next_run</a>;
+<a id='L730' name='L730'></a> 730 
+<a id='L731' name='L731'></a> 731       <a href='../Y/20677.html' title='Multiple used in 7 places.'>newrequest</a>-&gt;<a href='../Y/20731.html' title='Multiple used in 11 places.'>next_run</a> = <a href='../Y/24405.html' title='Multiple used in 753 places.'>runp</a>-&gt;<a href='../Y/20731.html' title='Multiple used in 11 places.'>next_run</a>;
+<a id='L732' name='L732'></a> 732       <a href='../Y/24405.html' title='Multiple used in 753 places.'>runp</a>-&gt;<a href='../Y/20731.html' title='Multiple used in 11 places.'>next_run</a> = <a href='../Y/20677.html' title='Multiple used in 7 places.'>newrequest</a>;
+<a id='L733' name='L733'></a> 733     <em class='brace'>}</em>
+<a id='L734' name='L734'></a> 734 <em class='brace'>}</em>
+<a id='L735' name='L735'></a> 735 
+<a id='L736' name='L736'></a> 736 <em class='sharp'>#if</em> <a href='../Y/1463.html' title='Multiple used in 78 places.'>PTHREAD_IN_LIBC</a>
+<a id='L737' name='L737'></a> 737 <a href='../D/38964.html' title='Multiple defined in 2 places.'>versioned_symbol</a> (<a href='../D/32623.html' title='Multiple defined in 2 places.'>libc</a>, <a href='../S/1297.html#L284' title='Defined at 284 in rt/aio_misc.c.'>__aio_init</a>, <a href='../Y/10067.html' title='Multiple used in 6 places.'>aio_init</a>, <a href='../Y/703.html' title='Multiple used in 509 places.'>GLIBC_2_34</a>);
+<a id='L738' name='L738'></a> 738 <em class='sharp'># if</em> <a href='../D/9586.html' title='Multiple defined in 2 places.'>OTHER_SHLIB_COMPAT</a> (<a href='../Y/18194.html' title='Multiple used in 124 places.'>librt</a>, <a href='../Y/670.html' title='Multiple used in 533 places.'>GLIBC_2_1</a>, <a href='../Y/703.html' title='Multiple used in 509 places.'>GLIBC_2_34</a>)
+<a id='L739' name='L739'></a> 739 <a href='../D/29028.html' title='Multiple defined in 14 places.'>compat_symbol</a> (<a href='../Y/18194.html' title='Multiple used in 124 places.'>librt</a>, <a href='../S/1297.html#L284' title='Defined at 284 in rt/aio_misc.c.'>__aio_init</a>, <a href='../Y/10067.html' title='Multiple used in 6 places.'>aio_init</a>, <a href='../Y/670.html' title='Multiple used in 533 places.'>GLIBC_2_1</a>);
+<a id='L740' name='L740'></a> 740 <em class='sharp'># endif</em>
+<a id='L741' name='L741'></a> 741 <em class='sharp'>#else</em> <em class='comment'>/* !PTHREAD_IN_LIBC */</em>
+<a id='L742' name='L742'></a> 742 <a href='../D/39088.html' title='Multiple defined in 375 places.'>weak_alias</a> (<a href='../S/1297.html#L284' title='Defined at 284 in rt/aio_misc.c.'>__aio_init</a>, <a href='../Y/10067.html' title='Multiple used in 6 places.'>aio_init</a>)
+<a id='L743' name='L743'></a> 743 <em class='sharp'>#endif</em> <em class='comment'>/* !PTHREAD_IN_LIBC */</em>
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L49'>[^]</a><a href='#L713'>[v]</a><a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

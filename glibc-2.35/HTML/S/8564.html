@@ -1,0 +1,118 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>sysdeps/ieee754/flt-32/e_sqrtf.c</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18977.html'>sysdeps</a>/<a href='../files/19058.html'>ieee754</a>/<a href='../files/19061.html'>flt-32</a>/e_sqrtf.c</h2>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L21'>[^]</a>[v][top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<h2 class='header'>DEFINITIONS</h2>
+This source file includes following definitions.
+<ol>
+<li><a href='#L21' title='Defined at 21.'>__ieee754_sqrtf</a></li>
+</ol>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* e_sqrtf.c -- float version of e_sqrt.c.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'> */</em>
+<a id='L3' name='L3'></a>   3 
+<a id='L4' name='L4'></a>   4 <em class='comment'>/*</em>
+<a id='L5' name='L5'></a>   5 <em class='comment'> * ====================================================</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'> * Copyright (C) 1993 by Sun Microsystems, Inc. All rights reserved.</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'> *</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'> * Developed at SunPro, a Sun Microsystems, Inc. business.</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'> * Permission to use, copy, modify, and distribute this</em>
+<a id='L10' name='L10'></a>  10 <em class='comment'> * software is freely granted, provided that this notice</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'> * is preserved.</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'> * ====================================================</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'> */</em>
+<a id='L14' name='L14'></a>  14 
+<a id='L15' name='L15'></a>  15 <em class='sharp'>#include</em> &lt;<a href='../I/1890.html'>math.h</a>&gt;
+<a id='L16' name='L16'></a>  16 <em class='sharp'>#include</em> &lt;<a href='../I/5892.html'>math_private.h</a>&gt;
+<a id='L17' name='L17'></a>  17 <em class='sharp'>#include</em> &lt;<a href='9438.html'>libm-alias-finite.h</a>&gt;
+<a id='L18' name='L18'></a>  18 <em class='sharp'>#include</em> &lt;<a href='12337.html'>math-use-builtins.h</a>&gt;
+<a id='L19' name='L19'></a>  19 
+<a id='L20' name='L20'></a>  20 <strong class='reserved'>float</strong>
+<a id='L21' name='L21'></a>  21 <a href='../R/14465.html' title='Multiple referred from 7 places.'>__ieee754_sqrtf</a>(<strong class='reserved'>float</strong> <a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a>)
+<a id='L22' name='L22'></a>  22 <em class='brace'>{</em>
+<a id='L23' name='L23'></a>  23 <em class='sharp'>#if</em> <a href='../D/16867.html' title='Multiple defined in 15 places.'>USE_SQRTF_BUILTIN</a>
+<a id='L24' name='L24'></a>  24     <strong class='reserved'>return</strong> <a href='../Y/3848.html' title='Multiple used in 2 places.'>__builtin_sqrtf</a> (<a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a>);
+<a id='L25' name='L25'></a>  25 <em class='sharp'>#else</em>
+<a id='L26' name='L26'></a>  26     <em class='comment'>/* Use generic implementation.  */</em>
+<a id='L27' name='L27'></a>  27     <strong class='reserved'>float</strong> <a href='../D/39723.html' title='Multiple defined in 4 places.'>z</a>;
+<a id='L28' name='L28'></a>  28     <a href='../S/137.html#L26' title='Defined at 26 in bits/stdint-intn.h.'>int32_t</a> <a href='../Y/25400.html' title='Multiple used in 334 places.'>sign</a> = (<strong class='reserved'>int</strong>)0x80000000;
+<a id='L29' name='L29'></a>  29     <a href='../S/137.html#L26' title='Defined at 26 in bits/stdint-intn.h.'>int32_t</a> <a href='../Y/17332.html' title='Multiple used in 1266 places.'>ix</a>,<a href='../D/36247.html' title='Multiple defined in 13 places.'>s</a>,<a href='../Y/23199.html' title='Multiple used in 945 places.'>q</a>,<a href='../D/33231.html' title='Multiple defined in 2 places.'>m</a>,<a href='../S/4165.html#L39' title='Defined at 39 in wcsmbs/tst-mbrtowc2.c.'>t</a>,<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>;
+<a id='L30' name='L30'></a>  30     <a href='../S/223.html#L26' title='Defined at 26 in bits/stdint-uintn.h.'>uint32_t</a> <a href='../Y/23316.html' title='Multiple used in 3267 places.'>r</a>;
+<a id='L31' name='L31'></a>  31 
+<a id='L32' name='L32'></a>  32     <a href='../S/18168.html#L71' title='Defined at 71 in include/math.h.'>GET_FLOAT_WORD</a>(<a href='../Y/17332.html' title='Multiple used in 1266 places.'>ix</a>,<a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a>);
+<a id='L33' name='L33'></a>  33 
+<a id='L34' name='L34'></a>  34     <em class='comment'>/* take care of Inf and NaN */</em>
+<a id='L35' name='L35'></a>  35     <strong class='reserved'>if</strong>((<a href='../Y/17332.html' title='Multiple used in 1266 places.'>ix</a>&amp;0x7f800000)==0x7f800000) <em class='brace'>{</em>
+<a id='L36' name='L36'></a>  36         <strong class='reserved'>return</strong> <a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a>*<a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a>+<a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a>;       <em class='comment'>/* sqrt(NaN)=NaN, sqrt(+inf)=+inf</em>
+<a id='L37' name='L37'></a>  37 <em class='comment'>                       sqrt(-inf)=sNaN */</em>
+<a id='L38' name='L38'></a>  38     <em class='brace'>}</em>
+<a id='L39' name='L39'></a>  39     <em class='comment'>/* take care of zero */</em>
+<a id='L40' name='L40'></a>  40     <strong class='reserved'>if</strong>(<a href='../Y/17332.html' title='Multiple used in 1266 places.'>ix</a>&lt;=0) <em class='brace'>{</em>
+<a id='L41' name='L41'></a>  41         <strong class='reserved'>if</strong>((<a href='../Y/17332.html' title='Multiple used in 1266 places.'>ix</a>&amp;(~<a href='../Y/25400.html' title='Multiple used in 334 places.'>sign</a>))==0) <strong class='reserved'>return</strong> <a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a>;<em class='comment'>/* sqrt(+-0) = +-0 */</em>
+<a id='L42' name='L42'></a>  42         <strong class='reserved'>else</strong> <strong class='reserved'>if</strong>(<a href='../Y/17332.html' title='Multiple used in 1266 places.'>ix</a>&lt;0)
+<a id='L43' name='L43'></a>  43         <strong class='reserved'>return</strong> (<a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a>-<a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a>)/(<a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a>-<a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a>);     <em class='comment'>/* sqrt(-ve) = sNaN */</em>
+<a id='L44' name='L44'></a>  44     <em class='brace'>}</em>
+<a id='L45' name='L45'></a>  45     <em class='comment'>/* normalize x */</em>
+<a id='L46' name='L46'></a>  46     <a href='../D/33231.html' title='Multiple defined in 2 places.'>m</a> = (<a href='../Y/17332.html' title='Multiple used in 1266 places.'>ix</a>&gt;&gt;23);
+<a id='L47' name='L47'></a>  47     <strong class='reserved'>if</strong>(<a href='../D/33231.html' title='Multiple defined in 2 places.'>m</a>==0) <em class='brace'>{</em>              <em class='comment'>/* subnormal x */</em>
+<a id='L48' name='L48'></a>  48         <strong class='reserved'>for</strong>(<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>=0;(<a href='../Y/17332.html' title='Multiple used in 1266 places.'>ix</a>&amp;0x00800000)==0;<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>++) <a href='../Y/17332.html' title='Multiple used in 1266 places.'>ix</a>&lt;&lt;=1;
+<a id='L49' name='L49'></a>  49         <a href='../D/33231.html' title='Multiple defined in 2 places.'>m</a> -= <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>-1;
+<a id='L50' name='L50'></a>  50     <em class='brace'>}</em>
+<a id='L51' name='L51'></a>  51     <a href='../D/33231.html' title='Multiple defined in 2 places.'>m</a> -= 127;   <em class='comment'>/* unbias exponent */</em>
+<a id='L52' name='L52'></a>  52     <a href='../Y/17332.html' title='Multiple used in 1266 places.'>ix</a> = (<a href='../Y/17332.html' title='Multiple used in 1266 places.'>ix</a>&amp;0x007fffff)|0x00800000;
+<a id='L53' name='L53'></a>  53     <strong class='reserved'>if</strong>(<a href='../D/33231.html' title='Multiple defined in 2 places.'>m</a>&amp;1) <em class='comment'>/* odd m, double x to make it even */</em>
+<a id='L54' name='L54'></a>  54         <a href='../Y/17332.html' title='Multiple used in 1266 places.'>ix</a> += <a href='../Y/17332.html' title='Multiple used in 1266 places.'>ix</a>;
+<a id='L55' name='L55'></a>  55     <a href='../D/33231.html' title='Multiple defined in 2 places.'>m</a> &gt;&gt;= 1;    <em class='comment'>/* m = [m/2] */</em>
+<a id='L56' name='L56'></a>  56 
+<a id='L57' name='L57'></a>  57     <em class='comment'>/* generate sqrt(x) bit by bit */</em>
+<a id='L58' name='L58'></a>  58     <a href='../Y/17332.html' title='Multiple used in 1266 places.'>ix</a> += <a href='../Y/17332.html' title='Multiple used in 1266 places.'>ix</a>;
+<a id='L59' name='L59'></a>  59     <a href='../Y/23199.html' title='Multiple used in 945 places.'>q</a> = <a href='../D/36247.html' title='Multiple defined in 13 places.'>s</a> = 0;      <em class='comment'>/* q = sqrt(x) */</em>
+<a id='L60' name='L60'></a>  60     <a href='../Y/23316.html' title='Multiple used in 3267 places.'>r</a> = 0x01000000;     <em class='comment'>/* r = moving bit from right to left */</em>
+<a id='L61' name='L61'></a>  61 
+<a id='L62' name='L62'></a>  62     <strong class='reserved'>while</strong>(<a href='../Y/23316.html' title='Multiple used in 3267 places.'>r</a>!=0) <em class='brace'>{</em>
+<a id='L63' name='L63'></a>  63         <a href='../S/4165.html#L39' title='Defined at 39 in wcsmbs/tst-mbrtowc2.c.'>t</a> = <a href='../D/36247.html' title='Multiple defined in 13 places.'>s</a>+<a href='../Y/23316.html' title='Multiple used in 3267 places.'>r</a>;
+<a id='L64' name='L64'></a>  64         <strong class='reserved'>if</strong>(<a href='../S/4165.html#L39' title='Defined at 39 in wcsmbs/tst-mbrtowc2.c.'>t</a>&lt;=<a href='../Y/17332.html' title='Multiple used in 1266 places.'>ix</a>) <em class='brace'>{</em>
+<a id='L65' name='L65'></a>  65         <a href='../D/36247.html' title='Multiple defined in 13 places.'>s</a>    = <a href='../S/4165.html#L39' title='Defined at 39 in wcsmbs/tst-mbrtowc2.c.'>t</a>+<a href='../Y/23316.html' title='Multiple used in 3267 places.'>r</a>;
+<a id='L66' name='L66'></a>  66         <a href='../Y/17332.html' title='Multiple used in 1266 places.'>ix</a>  -= <a href='../S/4165.html#L39' title='Defined at 39 in wcsmbs/tst-mbrtowc2.c.'>t</a>;
+<a id='L67' name='L67'></a>  67         <a href='../Y/23199.html' title='Multiple used in 945 places.'>q</a>   += <a href='../Y/23316.html' title='Multiple used in 3267 places.'>r</a>;
+<a id='L68' name='L68'></a>  68         <em class='brace'>}</em>
+<a id='L69' name='L69'></a>  69         <a href='../Y/17332.html' title='Multiple used in 1266 places.'>ix</a> += <a href='../Y/17332.html' title='Multiple used in 1266 places.'>ix</a>;
+<a id='L70' name='L70'></a>  70         <a href='../Y/23316.html' title='Multiple used in 3267 places.'>r</a>&gt;&gt;=1;
+<a id='L71' name='L71'></a>  71     <em class='brace'>}</em>
+<a id='L72' name='L72'></a>  72 
+<a id='L73' name='L73'></a>  73     <em class='comment'>/* use floating add to find out rounding direction */</em>
+<a id='L74' name='L74'></a>  74     <strong class='reserved'>if</strong>(<a href='../Y/17332.html' title='Multiple used in 1266 places.'>ix</a>!=0) <em class='brace'>{</em>
+<a id='L75' name='L75'></a>  75         <a href='../D/39723.html' title='Multiple defined in 4 places.'>z</a> = 0x1p0 - 0x1.4484cp-100; <em class='comment'>/* trigger inexact flag.  */</em>
+<a id='L76' name='L76'></a>  76         <strong class='reserved'>if</strong> (<a href='../D/39723.html' title='Multiple defined in 4 places.'>z</a> &gt;= 0x1p0) <em class='brace'>{</em>
+<a id='L77' name='L77'></a>  77         <a href='../D/39723.html' title='Multiple defined in 4 places.'>z</a> = 0x1p0 + 0x1.4484cp-100;
+<a id='L78' name='L78'></a>  78         <strong class='reserved'>if</strong> (<a href='../D/39723.html' title='Multiple defined in 4 places.'>z</a> &gt; 0x1p0)
+<a id='L79' name='L79'></a>  79             <a href='../Y/23199.html' title='Multiple used in 945 places.'>q</a> += 2;
+<a id='L80' name='L80'></a>  80         <strong class='reserved'>else</strong>
+<a id='L81' name='L81'></a>  81             <a href='../Y/23199.html' title='Multiple used in 945 places.'>q</a> += (<a href='../Y/23199.html' title='Multiple used in 945 places.'>q</a>&amp;1);
+<a id='L82' name='L82'></a>  82         <em class='brace'>}</em>
+<a id='L83' name='L83'></a>  83     <em class='brace'>}</em>
+<a id='L84' name='L84'></a>  84     <a href='../Y/17332.html' title='Multiple used in 1266 places.'>ix</a> = (<a href='../Y/23199.html' title='Multiple used in 945 places.'>q</a>&gt;&gt;1)+0x3f000000;
+<a id='L85' name='L85'></a>  85     <a href='../Y/17332.html' title='Multiple used in 1266 places.'>ix</a> += (<a href='../D/33231.html' title='Multiple defined in 2 places.'>m</a> &lt;&lt;23);
+<a id='L86' name='L86'></a>  86     <a href='../S/18168.html#L81' title='Defined at 81 in include/math.h.'>SET_FLOAT_WORD</a>(<a href='../D/39723.html' title='Multiple defined in 4 places.'>z</a>,<a href='../Y/17332.html' title='Multiple used in 1266 places.'>ix</a>);
+<a id='L87' name='L87'></a>  87     <strong class='reserved'>return</strong> <a href='../D/39723.html' title='Multiple defined in 4 places.'>z</a>;
+<a id='L88' name='L88'></a>  88 <em class='sharp'>#endif</em> <em class='comment'>/* ! USE_SQRTF_BUILTIN  */</em>
+<a id='L89' name='L89'></a>  89 <em class='brace'>}</em>
+<a id='L90' name='L90'></a>  90 <em class='sharp'>#ifndef</em> <a href='../D/24351.html' title='Multiple defined in 3 places.'>__ieee754_sqrtf</a>
+<a id='L91' name='L91'></a>  91 <a href='../D/32834.html' title='Multiple defined in 12 places.'>libm_alias_finite</a> (<a href='../D/24351.html' title='Multiple defined in 3 places.'>__ieee754_sqrtf</a>, <a href='../S/3397.html#L28' title='Defined at 28 in math/w_sqrtf_compat.c.'>__sqrtf</a>)
+<a id='L92' name='L92'></a>  92 <em class='sharp'>#endif</em>
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;][^]<a href='#L21'>[v]</a><a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

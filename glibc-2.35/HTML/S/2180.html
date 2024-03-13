@@ -1,0 +1,343 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>hurd/dtable.c</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18878.html'>hurd</a>/dtable.c</h2>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L40'>[^]</a><a href='#L256'>[v]</a>[top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<h2 class='header'>DEFINITIONS</h2>
+This source file includes following definitions.
+<ol>
+<li><a href='#L40' title='Defined at 40.'>init_dtable</a></li>
+<li><a href='#L105' title='Defined at 105.'>get_dtable_port</a></li>
+<li><a href='#L146' title='Defined at 146.'>fork_child_dtable</a></li>
+<li><a href='#L186' title='Defined at 186.'>ctty_new_pgrp</a></li>
+<li><a href='#L256' title='Defined at 256.'>reauth_dtable</a></li>
+</ol>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* Copyright (C) 1991-2022 Free Software Foundation, Inc.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'></em>
+<a id='L4' name='L4'></a>   4 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'></em>
+<a id='L9' name='L9'></a>   9 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'></em>
+<a id='L14' name='L14'></a>  14 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   License along with the GNU C Library; if not, see</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L17' name='L17'></a>  17 
+<a id='L18' name='L18'></a>  18 <em class='sharp'>#include</em> &lt;<a href='../I/1257.html'>hurd.h</a>&gt;
+<a id='L19' name='L19'></a>  19 <em class='sharp'>#include</em> &lt;hurd/term.h&gt;
+<a id='L20' name='L20'></a>  20 <em class='sharp'>#include</em> &lt;<a href='../I/1258.html'>hurd/fd.h</a>&gt;
+<a id='L21' name='L21'></a>  21 <em class='sharp'>#include</em> &lt;<a href='../I/1780.html'>stdlib.h</a>&gt;
+<a id='L22' name='L22'></a>  22 <em class='sharp'>#include</em> &lt;<a href='../I/1776.html'>stdio.h</a>&gt;
+<a id='L23' name='L23'></a>  23 <em class='sharp'>#include</em> &lt;<a href='../I/117.html'>fcntl.h</a>&gt;
+<a id='L24' name='L24'></a>  24 <em class='sharp'>#include</em> &lt;<a href='18175.html'>limits.h</a>&gt;
+<a id='L25' name='L25'></a>  25 <em class='sharp'>#include</em> &lt;<a href='../I/2909.html'>lock-intern.h</a>&gt;    <em class='comment'>/* For `struct mutex'.  */</em>
+<a id='L26' name='L26'></a>  26 <em class='sharp'>#include</em> "<a href='17864.html'>set-hooks.h</a>"
+<a id='L27' name='L27'></a>  27 <em class='sharp'>#include</em> "<a href='2159.html'>hurdmalloc.h</a>"     <em class='comment'>/* XXX */</em>
+<a id='L28' name='L28'></a>  28 
+<a id='L29' name='L29'></a>  29 
+<a id='L30' name='L30'></a>  30 <strong class='reserved'>struct</strong> <a href='../S/5207.html#L98' title='Defined at 98 in mach/lock-intern.h.'>mutex</a> <a href='../Y/9122.html' title='Multiple used in 41 places.'>_hurd_dtable_lock</a> = <a href='../S/5207.html#L106' title='Defined at 106 in mach/lock-intern.h.'>MUTEX_INITIALIZER</a>; <em class='comment'>/* XXX ld bug; must init */</em>
+<a id='L31' name='L31'></a>  31 <strong class='reserved'>struct</strong> <a href='../S/2122.html#L34' title='Defined at 34 in hurd/hurd/fd.h.'>hurd_fd</a> **<a href='../Y/9121.html' title='Multiple used in 35 places.'>_hurd_dtable</a>;
+<a id='L32' name='L32'></a>  32 <strong class='reserved'>int</strong> <a href='../Y/9123.html' title='Multiple used in 35 places.'>_hurd_dtablesize</a>;
+<a id='L33' name='L33'></a>  33 
+<a id='L34' name='L34'></a>  34 
+<a id='L35' name='L35'></a>  35 <a href='../D/1960.html' title='Multiple defined in 2 places.'>DEFINE_HOOK</a> (<a href='../Y/9125.html' title='Multiple used in 3 places.'>_hurd_fd_subinit</a>, (<strong class='reserved'>void</strong>));
+<a id='L36' name='L36'></a>  36 
+<a id='L37' name='L37'></a>  37 <em class='comment'>/* Initialize the file descriptor table at startup.  */</em>
+<a id='L38' name='L38'></a>  38 
+<a id='L39' name='L39'></a>  39 <strong class='reserved'>static</strong> <strong class='reserved'>void</strong> <a href='../D/27950.html' title='Multiple defined in 2 places.'>attribute_used_retain</a>
+<a id='L40' name='L40'></a>  40 <a href='../S/2180.html#L97' title='Referred from 97 in hurd/dtable.c.'>init_dtable</a> (<strong class='reserved'>void</strong>)
+<a id='L41' name='L41'></a>  41 <em class='brace'>{</em>
+<a id='L42' name='L42'></a>  42   <strong class='reserved'>int</strong> <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>;
+<a id='L43' name='L43'></a>  43 
+<a id='L44' name='L44'></a>  44   <a href='../S/5173.html#L23' title='Defined at 23 in mach/mutex-init.c.'>__mutex_init</a> (&amp;<a href='../Y/9122.html' title='Multiple used in 41 places.'>_hurd_dtable_lock</a>);
+<a id='L45' name='L45'></a>  45 
+<a id='L46' name='L46'></a>  46   <em class='comment'>/* The initial size of the descriptor table is that of the passed-in</em>
+<a id='L47' name='L47'></a>  47 <em class='comment'>     table.  It will be expanded as necessary up to _hurd_dtable_rlimit.  */</em>
+<a id='L48' name='L48'></a>  48   <a href='../Y/9123.html' title='Multiple used in 35 places.'>_hurd_dtablesize</a> = <a href='../Y/9138.html' title='Multiple used in 14 places.'>_hurd_init_dtablesize</a>;
+<a id='L49' name='L49'></a>  49 
+<a id='L50' name='L50'></a>  50   <em class='comment'>/* Allocate the vector of pointers.  */</em>
+<a id='L51' name='L51'></a>  51   <a href='../Y/9121.html' title='Multiple used in 35 places.'>_hurd_dtable</a> = <a href='../D/33276.html' title='Multiple defined in 8 places.'>malloc</a> (<a href='../Y/9123.html' title='Multiple used in 35 places.'>_hurd_dtablesize</a> * <strong class='reserved'>sizeof</strong> (*<a href='../Y/9121.html' title='Multiple used in 35 places.'>_hurd_dtable</a>));
+<a id='L52' name='L52'></a>  52   <strong class='reserved'>if</strong> (<a href='../Y/9123.html' title='Multiple used in 35 places.'>_hurd_dtablesize</a> != 0 &amp;&amp; <a href='../Y/9121.html' title='Multiple used in 35 places.'>_hurd_dtable</a> == <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>)
+<a id='L53' name='L53'></a>  53     <a href='../D/24579.html' title='Multiple defined in 3 places.'>__libc_fatal</a> ("hurd: Can't allocate file descriptor table\n");
+<a id='L54' name='L54'></a>  54 
+<a id='L55' name='L55'></a>  55   <em class='comment'>/* Initialize the descriptor table.  */</em>
+<a id='L56' name='L56'></a>  56   <strong class='reserved'>for</strong> (<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> = 0; (<strong class='reserved'>unsigned</strong> <strong class='reserved'>int</strong>) <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> &lt; <a href='../Y/9138.html' title='Multiple used in 14 places.'>_hurd_init_dtablesize</a>; ++<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>)
+<a id='L57' name='L57'></a>  57     <em class='brace'>{</em>
+<a id='L58' name='L58'></a>  58       <strong class='reserved'>if</strong> (<a href='../Y/9137.html' title='Multiple used in 28 places.'>_hurd_init_dtable</a>[<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>] == <a href='../Y/1165.html' title='Multiple used in 414 places.'>MACH_PORT_NULL</a>)
+<a id='L59' name='L59'></a>  59     <em class='comment'>/* An unused descriptor is marked by a null pointer.  */</em>
+<a id='L60' name='L60'></a>  60     <a href='../Y/9121.html' title='Multiple used in 35 places.'>_hurd_dtable</a>[<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>] = <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>;
+<a id='L61' name='L61'></a>  61       <strong class='reserved'>else</strong>
+<a id='L62' name='L62'></a>  62     <em class='brace'>{</em>
+<a id='L63' name='L63'></a>  63       <em class='comment'>/* Allocate a new file descriptor structure.  */</em>
+<a id='L64' name='L64'></a>  64       <strong class='reserved'>struct</strong> <a href='../S/2122.html#L34' title='Defined at 34 in hurd/hurd/fd.h.'>hurd_fd</a> *<a href='../Y/20433.html' title='Multiple used in 561 places.'>new</a> = <a href='../D/33276.html' title='Multiple defined in 8 places.'>malloc</a> (<strong class='reserved'>sizeof</strong> (<strong class='reserved'>struct</strong> <a href='../S/2122.html#L34' title='Defined at 34 in hurd/hurd/fd.h.'>hurd_fd</a>));
+<a id='L65' name='L65'></a>  65       <strong class='reserved'>if</strong> (<a href='../Y/20433.html' title='Multiple used in 561 places.'>new</a> == <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>)
+<a id='L66' name='L66'></a>  66         <a href='../D/24579.html' title='Multiple defined in 3 places.'>__libc_fatal</a> ("hurd: Can't allocate initial file descriptors\n");
+<a id='L67' name='L67'></a>  67 
+<a id='L68' name='L68'></a>  68       <em class='comment'>/* Initialize the port cells.  */</em>
+<a id='L69' name='L69'></a>  69       <a href='../S/2119.html#L68' title='Defined at 68 in hurd/hurd/port.h.'>_hurd_port_init</a> (&amp;<a href='../Y/20433.html' title='Multiple used in 561 places.'>new</a>-&gt;<a href='../Y/22541.html' title='Multiple used in 781 places.'>port</a>, <a href='../Y/1165.html' title='Multiple used in 414 places.'>MACH_PORT_NULL</a>);
+<a id='L70' name='L70'></a>  70       <a href='../S/2119.html#L68' title='Defined at 68 in hurd/hurd/port.h.'>_hurd_port_init</a> (&amp;<a href='../Y/20433.html' title='Multiple used in 561 places.'>new</a>-&gt;<a href='../Y/12245.html' title='Multiple used in 67 places.'>ctty</a>, <a href='../Y/1165.html' title='Multiple used in 414 places.'>MACH_PORT_NULL</a>);
+<a id='L71' name='L71'></a>  71 
+<a id='L72' name='L72'></a>  72       <em class='comment'>/* Install the port in the descriptor.</em>
+<a id='L73' name='L73'></a>  73 <em class='comment'>         This sets up all the ctty magic.  */</em>
+<a id='L74' name='L74'></a>  74       <a href='../S/2144.html#L29' title='Defined at 29 in hurd/port2fd.c.'>_hurd_port2fd</a> (<a href='../Y/20433.html' title='Multiple used in 561 places.'>new</a>, <a href='../Y/9137.html' title='Multiple used in 28 places.'>_hurd_init_dtable</a>[<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>], 0);
+<a id='L75' name='L75'></a>  75 
+<a id='L76' name='L76'></a>  76       <a href='../Y/9121.html' title='Multiple used in 35 places.'>_hurd_dtable</a>[<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>] = <a href='../Y/20433.html' title='Multiple used in 561 places.'>new</a>;
+<a id='L77' name='L77'></a>  77     <em class='brace'>}</em>
+<a id='L78' name='L78'></a>  78     <em class='brace'>}</em>
+<a id='L79' name='L79'></a>  79 
+<a id='L80' name='L80'></a>  80   <em class='comment'>/* Clear out the initial descriptor table.</em>
+<a id='L81' name='L81'></a>  81 <em class='comment'>     Everything must use _hurd_dtable now.  */</em>
+<a id='L82' name='L82'></a>  82   <a href='../Y/8423.html' title='Multiple used in 70 places.'>__vm_deallocate</a> (<a href='../S/5183.html#L31' title='Defined at 31 in mach/mach_init.h.'>__mach_task_self</a> (),
+<a id='L83' name='L83'></a>  83            (<a href='../Y/28709.html' title='Multiple used in 147 places.'>vm_address_t</a>) <a href='../Y/9137.html' title='Multiple used in 28 places.'>_hurd_init_dtable</a>,
+<a id='L84' name='L84'></a>  84            <a href='../Y/9138.html' title='Multiple used in 14 places.'>_hurd_init_dtablesize</a> * <strong class='reserved'>sizeof</strong> (<a href='../Y/9137.html' title='Multiple used in 28 places.'>_hurd_init_dtable</a>[0]));
+<a id='L85' name='L85'></a>  85   <a href='../Y/9137.html' title='Multiple used in 28 places.'>_hurd_init_dtable</a> = <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>;
+<a id='L86' name='L86'></a>  86   <a href='../Y/9138.html' title='Multiple used in 14 places.'>_hurd_init_dtablesize</a> = 0;
+<a id='L87' name='L87'></a>  87 
+<a id='L88' name='L88'></a>  88   <em class='comment'>/* Initialize the remaining empty slots in the table.  */</em>
+<a id='L89' name='L89'></a>  89   <strong class='reserved'>for</strong> (; <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> &lt; <a href='../Y/9123.html' title='Multiple used in 35 places.'>_hurd_dtablesize</a>; ++<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>)
+<a id='L90' name='L90'></a>  90     <a href='../Y/9121.html' title='Multiple used in 35 places.'>_hurd_dtable</a>[<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>] = <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>;
+<a id='L91' name='L91'></a>  91 
+<a id='L92' name='L92'></a>  92   <em class='comment'>/* Run things that want to run after the file descriptor table</em>
+<a id='L93' name='L93'></a>  93 <em class='comment'>     is initialized.  */</em>
+<a id='L94' name='L94'></a>  94   <a href='../D/11632.html' title='Multiple defined in 3 places.'>RUN_RELHOOK</a> (<a href='../Y/9125.html' title='Multiple used in 3 places.'>_hurd_fd_subinit</a>, ());
+<a id='L95' name='L95'></a>  95 <em class='brace'>}</em>
+<a id='L96' name='L96'></a>  96 
+<a id='L97' name='L97'></a>  97 <a href='../D/13838.html' title='Multiple defined in 3 places.'>SET_RELHOOK</a> (<a href='../Y/9194.html' title='Multiple used in 3 places.'>_hurd_subinit</a>, <a href='../S/2180.html#L40' title='Defined at 40 in hurd/dtable.c.'>init_dtable</a>);
+<a id='L98' name='L98'></a>  98 
+<a id='L99' name='L99'></a>  99 <em class='comment'>/* XXX when the linker supports it, the following functions should all be</em>
+<a id='L100' name='L100'></a> 100 <em class='comment'>   elsewhere and just have text_set_elements here.  */</em>
+<a id='L101' name='L101'></a> 101 
+<a id='L102' name='L102'></a> 102 <em class='comment'>/* Called by `getdport' to do its work.  */</em>
+<a id='L103' name='L103'></a> 103 
+<a id='L104' name='L104'></a> 104 <strong class='reserved'>static</strong> <a href='../Y/14572.html' title='Multiple used in 192 places.'>file_t</a>
+<a id='L105' name='L105'></a> 105 <a href='../R/19924.html' title='Multiple referred from 23 places.'>get_dtable_port</a> (<strong class='reserved'>int</strong> <a href='../S/1663.html#L52' title='Defined at 52 in nscd/initgrcache.c.'>fd</a>)
+<a id='L106' name='L106'></a> 106 <em class='brace'>{</em>
+<a id='L107' name='L107'></a> 107   <strong class='reserved'>struct</strong> <a href='../S/2122.html#L34' title='Defined at 34 in hurd/hurd/fd.h.'>hurd_fd</a> *<a href='../D/29259.html' title='Multiple defined in 3 places.'>d</a> = <a href='../S/2122.html#L70' title='Defined at 70 in hurd/hurd/fd.h.'>_hurd_fd_get</a> (<a href='../S/1663.html#L52' title='Defined at 52 in nscd/initgrcache.c.'>fd</a>);
+<a id='L108' name='L108'></a> 108   <a href='../Y/14572.html' title='Multiple used in 192 places.'>file_t</a> <a href='../Y/13251.html' title='Multiple used in 7 places.'>dport</a>;
+<a id='L109' name='L109'></a> 109 
+<a id='L110' name='L110'></a> 110   <strong class='reserved'>if</strong> (!<a href='../D/29259.html' title='Multiple defined in 3 places.'>d</a>)
+<a id='L111' name='L111'></a> 111     <strong class='reserved'>return</strong> <a href='../S/2110.html#L55' title='Defined at 55 in hurd/hurd.h.'>__hurd_fail</a> (<a href='../D/2928.html' title='Multiple defined in 2 places.'>EBADF</a>), <a href='../Y/1165.html' title='Multiple used in 414 places.'>MACH_PORT_NULL</a>;
+<a id='L112' name='L112'></a> 112 
+<a id='L113' name='L113'></a> 113   <a href='../S/2121.html#L276' title='Defined at 276 in hurd/hurd/signal.h.'>HURD_CRITICAL_BEGIN</a>;
+<a id='L114' name='L114'></a> 114 
+<a id='L115' name='L115'></a> 115   <a href='../Y/13251.html' title='Multiple used in 7 places.'>dport</a> = <a href='../S/2119.html#L47' title='Defined at 47 in hurd/hurd/port.h.'>HURD_PORT_USE</a> (&amp;<a href='../D/29259.html' title='Multiple defined in 3 places.'>d</a>-&gt;<a href='../Y/22541.html' title='Multiple used in 781 places.'>port</a>,
+<a id='L116' name='L116'></a> 116              (<em class='brace'>{</em>
+<a id='L117' name='L117'></a> 117                <a href='../D/30030.html' title='Multiple defined in 4 places.'>error_t</a> <a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a>;
+<a id='L118' name='L118'></a> 118                <a href='../Y/18811.html' title='Multiple used in 330 places.'>mach_port_t</a> <a href='../Y/21992.html' title='Multiple used in 4 places.'>outport</a>;
+<a id='L119' name='L119'></a> 119                <a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a> = <a href='../Y/5593.html' title='Multiple used in 31 places.'>__mach_port_mod_refs</a> (<a href='../S/5183.html#L31' title='Defined at 31 in mach/mach_init.h.'>__mach_task_self</a> (),
+<a id='L120' name='L120'></a> 120                                <a href='../Y/22541.html' title='Multiple used in 781 places.'>port</a>,
+<a id='L121' name='L121'></a> 121                                <a href='../Y/1171.html' title='Multiple used in 31 places.'>MACH_PORT_RIGHT_SEND</a>,
+<a id='L122' name='L122'></a> 122                                1);
+<a id='L123' name='L123'></a> 123                <strong class='reserved'>if</strong> (<a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a>)
+<a id='L124' name='L124'></a> 124                  <em class='brace'>{</em>
+<a id='L125' name='L125'></a> 125                    <a href='../D/30023.html' title='Multiple defined in 13 places.'>errno</a> = <a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a>;
+<a id='L126' name='L126'></a> 126                    <a href='../Y/21992.html' title='Multiple used in 4 places.'>outport</a> = <a href='../Y/1165.html' title='Multiple used in 414 places.'>MACH_PORT_NULL</a>;
+<a id='L127' name='L127'></a> 127                  <em class='brace'>}</em>
+<a id='L128' name='L128'></a> 128                <strong class='reserved'>else</strong>
+<a id='L129' name='L129'></a> 129                  <a href='../Y/21992.html' title='Multiple used in 4 places.'>outport</a> = <a href='../Y/22541.html' title='Multiple used in 781 places.'>port</a>;
+<a id='L130' name='L130'></a> 130                <a href='../Y/21992.html' title='Multiple used in 4 places.'>outport</a>;
+<a id='L131' name='L131'></a> 131              <em class='brace'>}</em>));
+<a id='L132' name='L132'></a> 132 
+<a id='L133' name='L133'></a> 133   <a href='../S/2121.html#L278' title='Defined at 278 in hurd/hurd/signal.h.'>HURD_CRITICAL_END</a>;
+<a id='L134' name='L134'></a> 134 
+<a id='L135' name='L135'></a> 135   <strong class='reserved'>return</strong> <a href='../Y/13251.html' title='Multiple used in 7 places.'>dport</a>;
+<a id='L136' name='L136'></a> 136 <em class='brace'>}</em>
+<a id='L137' name='L137'></a> 137 
+<a id='L138' name='L138'></a> 138 <a href='../Y/14572.html' title='Multiple used in 192 places.'>file_t</a> (*<a href='../Y/9132.html' title='Multiple used in 4 places.'>_hurd_getdport_fn</a>) (<strong class='reserved'>int</strong> <a href='../S/1663.html#L52' title='Defined at 52 in nscd/initgrcache.c.'>fd</a>) = <a href='../S/2180.html#L105' title='Defined at 105 in hurd/dtable.c.'>get_dtable_port</a>;
+<a id='L139' name='L139'></a> 139 
+<a id='L140' name='L140'></a> 140 <em class='sharp'>#include</em> &lt;<a href='../I/1264.html'>hurd/signal.h</a>&gt;
+<a id='L141' name='L141'></a> 141 
+<a id='L142' name='L142'></a> 142 <em class='comment'>/* We are in the child fork; the dtable lock is still held.</em>
+<a id='L143' name='L143'></a> 143 <em class='comment'>   The parent has inserted send rights for all the normal io ports,</em>
+<a id='L144' name='L144'></a> 144 <em class='comment'>   but we must recover ctty-special ports for ourselves.  */</em>
+<a id='L145' name='L145'></a> 145 <strong class='reserved'>static</strong> <a href='../D/30030.html' title='Multiple defined in 4 places.'>error_t</a>
+<a id='L146' name='L146'></a> 146 <a href='../R/19602.html' title='Multiple referred from 2 places.'>fork_child_dtable</a> (<strong class='reserved'>void</strong>)
+<a id='L147' name='L147'></a> 147 <em class='brace'>{</em>
+<a id='L148' name='L148'></a> 148   <a href='../D/30030.html' title='Multiple defined in 4 places.'>error_t</a> <a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a>;
+<a id='L149' name='L149'></a> 149   <strong class='reserved'>int</strong> <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>;
+<a id='L150' name='L150'></a> 150 
+<a id='L151' name='L151'></a> 151   <a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a> = 0;
+<a id='L152' name='L152'></a> 152 
+<a id='L153' name='L153'></a> 153   <strong class='reserved'>for</strong> (<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> = 0; !<a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a> &amp;&amp; <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> &lt; <a href='../Y/9123.html' title='Multiple used in 35 places.'>_hurd_dtablesize</a>; ++<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>)
+<a id='L154' name='L154'></a> 154     <em class='brace'>{</em>
+<a id='L155' name='L155'></a> 155       <strong class='reserved'>struct</strong> <a href='../S/2122.html#L34' title='Defined at 34 in hurd/hurd/fd.h.'>hurd_fd</a> *<a href='../D/29259.html' title='Multiple defined in 3 places.'>d</a> = <a href='../Y/9121.html' title='Multiple used in 35 places.'>_hurd_dtable</a>[<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>];
+<a id='L156' name='L156'></a> 156       <strong class='reserved'>if</strong> (<a href='../D/29259.html' title='Multiple defined in 3 places.'>d</a> == <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>)
+<a id='L157' name='L157'></a> 157     <strong class='reserved'>continue</strong>;
+<a id='L158' name='L158'></a> 158 
+<a id='L159' name='L159'></a> 159       <em class='comment'>/* No other thread is using the send rights in the child task.  */</em>
+<a id='L160' name='L160'></a> 160       <a href='../D/29259.html' title='Multiple defined in 3 places.'>d</a>-&gt;<a href='../Y/22541.html' title='Multiple used in 781 places.'>port</a>.<a href='../Y/28469.html' title='Multiple used in 16 places.'>users</a> = <a href='../D/29259.html' title='Multiple defined in 3 places.'>d</a>-&gt;<a href='../Y/12245.html' title='Multiple used in 67 places.'>ctty</a>.<a href='../Y/28469.html' title='Multiple used in 16 places.'>users</a> = <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>;
+<a id='L161' name='L161'></a> 161 
+<a id='L162' name='L162'></a> 162       <strong class='reserved'>if</strong> (<a href='../D/29259.html' title='Multiple defined in 3 places.'>d</a>-&gt;<a href='../Y/12245.html' title='Multiple used in 67 places.'>ctty</a>.<a href='../Y/22541.html' title='Multiple used in 781 places.'>port</a> != <a href='../Y/1165.html' title='Multiple used in 414 places.'>MACH_PORT_NULL</a>)
+<a id='L163' name='L163'></a> 163     <em class='brace'>{</em>
+<a id='L164' name='L164'></a> 164       <em class='comment'>/* There was a ctty-special port in the parent.</em>
+<a id='L165' name='L165'></a> 165 <em class='comment'>         We need to get one for ourselves too.  */</em>
+<a id='L166' name='L166'></a> 166       <a href='../Y/5588.html' title='Multiple used in 258 places.'>__mach_port_deallocate</a> (<a href='../S/5183.html#L31' title='Defined at 31 in mach/mach_init.h.'>__mach_task_self</a> (), <a href='../D/29259.html' title='Multiple defined in 3 places.'>d</a>-&gt;<a href='../Y/12245.html' title='Multiple used in 67 places.'>ctty</a>.<a href='../Y/22541.html' title='Multiple used in 781 places.'>port</a>);
+<a id='L167' name='L167'></a> 167       <a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a> = <a href='../Y/8085.html' title='Multiple used in 4 places.'>__term_open_ctty</a> (<a href='../D/29259.html' title='Multiple defined in 3 places.'>d</a>-&gt;<a href='../Y/22541.html' title='Multiple used in 781 places.'>port</a>.<a href='../Y/22541.html' title='Multiple used in 781 places.'>port</a>, <a href='../Y/9167.html' title='Multiple used in 15 places.'>_hurd_pid</a>, <a href='../Y/9165.html' title='Multiple used in 16 places.'>_hurd_pgrp</a>,
+<a id='L168' name='L168'></a> 168                   &amp;<a href='../D/29259.html' title='Multiple defined in 3 places.'>d</a>-&gt;<a href='../Y/12245.html' title='Multiple used in 67 places.'>ctty</a>.<a href='../Y/22541.html' title='Multiple used in 781 places.'>port</a>);
+<a id='L169' name='L169'></a> 169       <strong class='reserved'>if</strong> (<a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a>)
+<a id='L170' name='L170'></a> 170         <a href='../D/29259.html' title='Multiple defined in 3 places.'>d</a>-&gt;<a href='../Y/12245.html' title='Multiple used in 67 places.'>ctty</a>.<a href='../Y/22541.html' title='Multiple used in 781 places.'>port</a> = <a href='../Y/1165.html' title='Multiple used in 414 places.'>MACH_PORT_NULL</a>;
+<a id='L171' name='L171'></a> 171     <em class='brace'>}</em>
+<a id='L172' name='L172'></a> 172 
+<a id='L173' name='L173'></a> 173       <em class='comment'>/* XXX for each fd with a cntlmap, reauth and re-map_cntl.  */</em>
+<a id='L174' name='L174'></a> 174     <em class='brace'>}</em>
+<a id='L175' name='L175'></a> 175   <strong class='reserved'>return</strong> <a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a>;
+<a id='L176' name='L176'></a> 176 
+<a id='L177' name='L177'></a> 177   (<strong class='reserved'>void</strong>) &amp;<a href='../S/2180.html#L146' title='Defined at 146 in hurd/dtable.c.'>fork_child_dtable</a>;    <em class='comment'>/* Avoid "defined but not used" warning.  */</em>
+<a id='L178' name='L178'></a> 178 <em class='brace'>}</em>
+<a id='L179' name='L179'></a> 179 
+<a id='L180' name='L180'></a> 180 <a href='../S/18012.html#L366' title='Defined at 366 in include/libc-symbols.h.'>data_set_element</a> (<a href='../Y/9127.html' title='Multiple used in 6 places.'>_hurd_fork_locks</a>, <a href='../Y/9122.html' title='Multiple used in 41 places.'>_hurd_dtable_lock</a>); <em class='comment'>/* XXX ld bug: bss */</em>
+<a id='L181' name='L181'></a> 181 <a href='../S/18012.html#L364' title='Defined at 364 in include/libc-symbols.h.'>text_set_element</a> (<a href='../Y/9126.html' title='Multiple used in 5 places.'>_hurd_fork_child_hook</a>, <a href='../S/2180.html#L146' title='Defined at 146 in hurd/dtable.c.'>fork_child_dtable</a>);
+<a id='L182' name='L182'></a> 182 
+<a id='L183' name='L183'></a> 183 <em class='comment'>/* Called when our process group has changed.  */</em>
+<a id='L184' name='L184'></a> 184 
+<a id='L185' name='L185'></a> 185 <strong class='reserved'>static</strong> <strong class='reserved'>void</strong>
+<a id='L186' name='L186'></a> 186 <a href='../R/18408.html' title='Multiple referred from 2 places.'>ctty_new_pgrp</a> (<strong class='reserved'>void</strong>)
+<a id='L187' name='L187'></a> 187 <em class='brace'>{</em>
+<a id='L188' name='L188'></a> 188   <strong class='reserved'>int</strong> <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>;
+<a id='L189' name='L189'></a> 189 
+<a id='L190' name='L190'></a> 190 <a href='../Y/23999.html' title='Multiple used in 130 places.'>retry</a>:
+<a id='L191' name='L191'></a> 191   <a href='../S/2121.html#L276' title='Defined at 276 in hurd/hurd/signal.h.'>HURD_CRITICAL_BEGIN</a>;
+<a id='L192' name='L192'></a> 192   <a href='../S/5207.html#L117' title='Defined at 117 in mach/lock-intern.h.'>__mutex_lock</a> (&amp;<a href='../Y/9122.html' title='Multiple used in 41 places.'>_hurd_dtable_lock</a>);
+<a id='L193' name='L193'></a> 193 
+<a id='L194' name='L194'></a> 194   <strong class='reserved'>if</strong> (<a href='../S/2110.html#L98' title='Defined at 98 in hurd/hurd.h.'>__USEPORT</a> (<a href='../Y/227.html' title='Multiple used in 7 places.'>CTTYID</a>, <a href='../Y/22541.html' title='Multiple used in 781 places.'>port</a> == <a href='../Y/1165.html' title='Multiple used in 414 places.'>MACH_PORT_NULL</a>))
+<a id='L195' name='L195'></a> 195     <em class='brace'>{</em>
+<a id='L196' name='L196'></a> 196       <em class='comment'>/* We have no controlling terminal.  If we haven't had one recently,</em>
+<a id='L197' name='L197'></a> 197 <em class='comment'>     but our pgrp is being pointlessly diddled anyway, then we will</em>
+<a id='L198' name='L198'></a> 198 <em class='comment'>     have nothing to do in the loop below because no fd will have a</em>
+<a id='L199' name='L199'></a> 199 <em class='comment'>     ctty port at all.</em>
+<a id='L200' name='L200'></a> 200 <em class='comment'></em>
+<a id='L201' name='L201'></a> 201 <em class='comment'>     More likely, a setsid call is responsible both for the change</em>
+<a id='L202' name='L202'></a> 202 <em class='comment'>     in pgrp and for clearing the cttyid port.  In that case, setsid</em>
+<a id='L203' name='L203'></a> 203 <em class='comment'>     held the dtable lock while updating the dtable to clear all the</em>
+<a id='L204' name='L204'></a> 204 <em class='comment'>     ctty ports, and ergo must have finished doing so before we run here.</em>
+<a id='L205' name='L205'></a> 205 <em class='comment'>     So we can be sure, again, that the loop below has no work to do.  */</em>
+<a id='L206' name='L206'></a> 206     <em class='brace'>}</em>
+<a id='L207' name='L207'></a> 207   <strong class='reserved'>else</strong>
+<a id='L208' name='L208'></a> 208     <strong class='reserved'>for</strong> (<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> = 0; <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> &lt; <a href='../Y/9123.html' title='Multiple used in 35 places.'>_hurd_dtablesize</a>; ++<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>)
+<a id='L209' name='L209'></a> 209       <em class='brace'>{</em>
+<a id='L210' name='L210'></a> 210     <strong class='reserved'>struct</strong> <a href='../S/2122.html#L34' title='Defined at 34 in hurd/hurd/fd.h.'>hurd_fd</a> *<strong class='reserved'>const</strong> <a href='../D/29259.html' title='Multiple defined in 3 places.'>d</a> = <a href='../Y/9121.html' title='Multiple used in 35 places.'>_hurd_dtable</a>[<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>];
+<a id='L211' name='L211'></a> 211     <strong class='reserved'>struct</strong> <a href='../S/2127.html#L62' title='Defined at 62 in hurd/hurd/userlink.h.'>hurd_userlink</a> <a href='../Y/28247.html' title='Multiple used in 33 places.'>ulink</a>, <a href='../Y/12247.html' title='Multiple used in 12 places.'>ctty_ulink</a>;
+<a id='L212' name='L212'></a> 212     <a href='../Y/17059.html' title='Multiple used in 51 places.'>io_t</a> <a href='../Y/22541.html' title='Multiple used in 781 places.'>port</a>, <a href='../Y/12245.html' title='Multiple used in 67 places.'>ctty</a>;
+<a id='L213' name='L213'></a> 213 
+<a id='L214' name='L214'></a> 214     <strong class='reserved'>if</strong> (<a href='../D/29259.html' title='Multiple defined in 3 places.'>d</a> == <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>)
+<a id='L215' name='L215'></a> 215       <em class='comment'>/* Nothing to do for an unused descriptor cell.  */</em>
+<a id='L216' name='L216'></a> 216       <strong class='reserved'>continue</strong>;
+<a id='L217' name='L217'></a> 217 
+<a id='L218' name='L218'></a> 218     <a href='../Y/22541.html' title='Multiple used in 781 places.'>port</a> = <a href='../S/2119.html#L117' title='Defined at 117 in hurd/hurd/port.h.'>_hurd_port_get</a> (&amp;<a href='../D/29259.html' title='Multiple defined in 3 places.'>d</a>-&gt;<a href='../Y/22541.html' title='Multiple used in 781 places.'>port</a>, &amp;<a href='../Y/28247.html' title='Multiple used in 33 places.'>ulink</a>);
+<a id='L219' name='L219'></a> 219     <a href='../Y/12245.html' title='Multiple used in 67 places.'>ctty</a> = <a href='../S/2119.html#L117' title='Defined at 117 in hurd/hurd/port.h.'>_hurd_port_get</a> (&amp;<a href='../D/29259.html' title='Multiple defined in 3 places.'>d</a>-&gt;<a href='../Y/12245.html' title='Multiple used in 67 places.'>ctty</a>, &amp;<a href='../Y/12247.html' title='Multiple used in 12 places.'>ctty_ulink</a>);
+<a id='L220' name='L220'></a> 220 
+<a id='L221' name='L221'></a> 221     <strong class='reserved'>if</strong> (<a href='../Y/12245.html' title='Multiple used in 67 places.'>ctty</a> != <a href='../Y/1165.html' title='Multiple used in 414 places.'>MACH_PORT_NULL</a>)
+<a id='L222' name='L222'></a> 222       <em class='brace'>{</em>
+<a id='L223' name='L223'></a> 223         <em class='comment'>/* This fd has a ctty-special port.  We need a new one, to tell</em>
+<a id='L224' name='L224'></a> 224 <em class='comment'>           the io server of our different process group.  */</em>
+<a id='L225' name='L225'></a> 225         <a href='../Y/17059.html' title='Multiple used in 51 places.'>io_t</a> <a href='../Y/20433.html' title='Multiple used in 561 places.'>new</a>;
+<a id='L226' name='L226'></a> 226         <a href='../D/30030.html' title='Multiple defined in 4 places.'>error_t</a> <a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a>;
+<a id='L227' name='L227'></a> 227         <strong class='reserved'>if</strong> ((<a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a> = <a href='../Y/8085.html' title='Multiple used in 4 places.'>__term_open_ctty</a> (<a href='../Y/22541.html' title='Multiple used in 781 places.'>port</a>, <a href='../Y/9167.html' title='Multiple used in 15 places.'>_hurd_pid</a>, <a href='../Y/9165.html' title='Multiple used in 16 places.'>_hurd_pgrp</a>, &amp;<a href='../Y/20433.html' title='Multiple used in 561 places.'>new</a>)))
+<a id='L228' name='L228'></a> 228           <em class='brace'>{</em>
+<a id='L229' name='L229'></a> 229         <strong class='reserved'>if</strong> (<a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a> == <a href='../D/3155.html' title='Multiple defined in 2 places.'>EINTR</a>)
+<a id='L230' name='L230'></a> 230           <em class='brace'>{</em>
+<a id='L231' name='L231'></a> 231             <em class='comment'>/* Got a signal while inside an RPC of the critical section, retry again */</em>
+<a id='L232' name='L232'></a> 232             <a href='../S/5207.html#L129' title='Defined at 129 in mach/lock-intern.h.'>__mutex_unlock</a> (&amp;<a href='../Y/9122.html' title='Multiple used in 41 places.'>_hurd_dtable_lock</a>);
+<a id='L233' name='L233'></a> 233             <a href='../S/2121.html#L282' title='Defined at 282 in hurd/hurd/signal.h.'>HURD_CRITICAL_UNLOCK</a>;
+<a id='L234' name='L234'></a> 234             <strong class='reserved'>goto</strong> <a href='../Y/23999.html' title='Multiple used in 130 places.'>retry</a>;
+<a id='L235' name='L235'></a> 235           <em class='brace'>}</em>
+<a id='L236' name='L236'></a> 236         <a href='../Y/20433.html' title='Multiple used in 561 places.'>new</a> = <a href='../Y/1165.html' title='Multiple used in 414 places.'>MACH_PORT_NULL</a>;
+<a id='L237' name='L237'></a> 237           <em class='brace'>}</em>
+<a id='L238' name='L238'></a> 238         <a href='../S/2119.html#L215' title='Defined at 215 in hurd/hurd/port.h.'>_hurd_port_set</a> (&amp;<a href='../D/29259.html' title='Multiple defined in 3 places.'>d</a>-&gt;<a href='../Y/12245.html' title='Multiple used in 67 places.'>ctty</a>, <a href='../Y/20433.html' title='Multiple used in 561 places.'>new</a>);
+<a id='L239' name='L239'></a> 239       <em class='brace'>}</em>
+<a id='L240' name='L240'></a> 240 
+<a id='L241' name='L241'></a> 241     <a href='../S/2119.html#L166' title='Defined at 166 in hurd/hurd/port.h.'>_hurd_port_free</a> (&amp;<a href='../D/29259.html' title='Multiple defined in 3 places.'>d</a>-&gt;<a href='../Y/22541.html' title='Multiple used in 781 places.'>port</a>, &amp;<a href='../Y/28247.html' title='Multiple used in 33 places.'>ulink</a>, <a href='../Y/22541.html' title='Multiple used in 781 places.'>port</a>);
+<a id='L242' name='L242'></a> 242     <a href='../S/2119.html#L166' title='Defined at 166 in hurd/hurd/port.h.'>_hurd_port_free</a> (&amp;<a href='../D/29259.html' title='Multiple defined in 3 places.'>d</a>-&gt;<a href='../Y/12245.html' title='Multiple used in 67 places.'>ctty</a>, &amp;<a href='../Y/12247.html' title='Multiple used in 12 places.'>ctty_ulink</a>, <a href='../Y/12245.html' title='Multiple used in 67 places.'>ctty</a>);
+<a id='L243' name='L243'></a> 243       <em class='brace'>}</em>
+<a id='L244' name='L244'></a> 244 
+<a id='L245' name='L245'></a> 245   <a href='../S/5207.html#L129' title='Defined at 129 in mach/lock-intern.h.'>__mutex_unlock</a> (&amp;<a href='../Y/9122.html' title='Multiple used in 41 places.'>_hurd_dtable_lock</a>);
+<a id='L246' name='L246'></a> 246   <a href='../S/2121.html#L278' title='Defined at 278 in hurd/hurd/signal.h.'>HURD_CRITICAL_END</a>;
+<a id='L247' name='L247'></a> 247 
+<a id='L248' name='L248'></a> 248   (<strong class='reserved'>void</strong>) &amp;<a href='../S/2180.html#L186' title='Defined at 186 in hurd/dtable.c.'>ctty_new_pgrp</a>;    <em class='comment'>/* Avoid "defined but not used" warning.  */</em>
+<a id='L249' name='L249'></a> 249 <em class='brace'>}</em>
+<a id='L250' name='L250'></a> 250 
+<a id='L251' name='L251'></a> 251 <a href='../S/18012.html#L364' title='Defined at 364 in include/libc-symbols.h.'>text_set_element</a> (<a href='../Y/9166.html' title='Multiple used in 5 places.'>_hurd_pgrp_changed_hook</a>, <a href='../S/2180.html#L186' title='Defined at 186 in hurd/dtable.c.'>ctty_new_pgrp</a>);
+<a id='L252' name='L252'></a> 252 
+<a id='L253' name='L253'></a> 253 <em class='comment'>/* Called to reauthenticate the dtable when the auth port changes.  */</em>
+<a id='L254' name='L254'></a> 254 
+<a id='L255' name='L255'></a> 255 <strong class='reserved'>static</strong> <strong class='reserved'>void</strong>
+<a id='L256' name='L256'></a> 256 <a href='../R/23648.html' title='Multiple referred from 2 places.'>reauth_dtable</a> (<strong class='reserved'>void</strong>)
+<a id='L257' name='L257'></a> 257 <em class='brace'>{</em>
+<a id='L258' name='L258'></a> 258   <strong class='reserved'>int</strong> <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>;
+<a id='L259' name='L259'></a> 259 
+<a id='L260' name='L260'></a> 260   <a href='../S/2121.html#L276' title='Defined at 276 in hurd/hurd/signal.h.'>HURD_CRITICAL_BEGIN</a>;
+<a id='L261' name='L261'></a> 261   <a href='../S/5207.html#L117' title='Defined at 117 in mach/lock-intern.h.'>__mutex_lock</a> (&amp;<a href='../Y/9122.html' title='Multiple used in 41 places.'>_hurd_dtable_lock</a>);
+<a id='L262' name='L262'></a> 262 
+<a id='L263' name='L263'></a> 263   <strong class='reserved'>for</strong> (<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> = 0; <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> &lt; <a href='../Y/9123.html' title='Multiple used in 35 places.'>_hurd_dtablesize</a>; ++<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>)
+<a id='L264' name='L264'></a> 264     <em class='brace'>{</em>
+<a id='L265' name='L265'></a> 265       <strong class='reserved'>struct</strong> <a href='../S/2122.html#L34' title='Defined at 34 in hurd/hurd/fd.h.'>hurd_fd</a> *<strong class='reserved'>const</strong> <a href='../D/29259.html' title='Multiple defined in 3 places.'>d</a> = <a href='../Y/9121.html' title='Multiple used in 35 places.'>_hurd_dtable</a>[<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>];
+<a id='L266' name='L266'></a> 266       <a href='../Y/18811.html' title='Multiple used in 330 places.'>mach_port_t</a> <a href='../Y/20433.html' title='Multiple used in 561 places.'>new</a>, <a href='../Y/20634.html' title='Multiple used in 7 places.'>newctty</a>, <a href='../Y/23646.html' title='Multiple used in 211 places.'>ref</a>;
+<a id='L267' name='L267'></a> 267 
+<a id='L268' name='L268'></a> 268       <strong class='reserved'>if</strong> (<a href='../D/29259.html' title='Multiple defined in 3 places.'>d</a> == <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>)
+<a id='L269' name='L269'></a> 269     <em class='comment'>/* Nothing to do for an unused descriptor cell.  */</em>
+<a id='L270' name='L270'></a> 270     <strong class='reserved'>continue</strong>;
+<a id='L271' name='L271'></a> 271 
+<a id='L272' name='L272'></a> 272       <a href='../Y/23646.html' title='Multiple used in 211 places.'>ref</a> = <a href='../Y/5598.html' title='Multiple used in 27 places.'>__mach_reply_port</a> ();
+<a id='L273' name='L273'></a> 273 
+<a id='L274' name='L274'></a> 274       <em class='comment'>/* Take the descriptor cell's lock.  */</em>
+<a id='L275' name='L275'></a> 275       <a href='../S/5207.html#L58' title='Defined at 58 in mach/lock-intern.h.'>__spin_lock</a> (&amp;<a href='../D/29259.html' title='Multiple defined in 3 places.'>d</a>-&gt;<a href='../Y/22541.html' title='Multiple used in 781 places.'>port</a>.<a href='../S/1874.html#L71' title='Defined at 71 in malloc/tst-interpose-aux.c.'>lock</a>);
+<a id='L276' name='L276'></a> 276 
+<a id='L277' name='L277'></a> 277       <em class='comment'>/* Reauthenticate the descriptor's port.  */</em>
+<a id='L278' name='L278'></a> 278       <strong class='reserved'>if</strong> (<a href='../D/29259.html' title='Multiple defined in 3 places.'>d</a>-&gt;<a href='../Y/22541.html' title='Multiple used in 781 places.'>port</a>.<a href='../Y/22541.html' title='Multiple used in 781 places.'>port</a> != <a href='../Y/1165.html' title='Multiple used in 414 places.'>MACH_PORT_NULL</a>
+<a id='L279' name='L279'></a> 279       &amp;&amp; ! <a href='../Y/5196.html' title='Multiple used in 13 places.'>__io_reauthenticate</a> (<a href='../D/29259.html' title='Multiple defined in 3 places.'>d</a>-&gt;<a href='../Y/22541.html' title='Multiple used in 781 places.'>port</a>.<a href='../Y/22541.html' title='Multiple used in 781 places.'>port</a>,
+<a id='L280' name='L280'></a> 280                     <a href='../Y/23646.html' title='Multiple used in 211 places.'>ref</a>, <a href='../Y/1156.html' title='Multiple used in 42 places.'>MACH_MSG_TYPE_MAKE_SEND</a>)
+<a id='L281' name='L281'></a> 281       &amp;&amp; ! <a href='../S/2110.html#L98' title='Defined at 98 in hurd/hurd.h.'>__USEPORT</a> (<a href='../D/617.html' title='Multiple defined in 2 places.'>AUTH</a>, <a href='../Y/3668.html' title='Multiple used in 15 places.'>__auth_user_authenticate</a>
+<a id='L282' name='L282'></a> 282               (<a href='../Y/22541.html' title='Multiple used in 781 places.'>port</a>,
+<a id='L283' name='L283'></a> 283                <a href='../Y/23646.html' title='Multiple used in 211 places.'>ref</a>, <a href='../Y/1156.html' title='Multiple used in 42 places.'>MACH_MSG_TYPE_MAKE_SEND</a>,
+<a id='L284' name='L284'></a> 284                &amp;<a href='../Y/20433.html' title='Multiple used in 561 places.'>new</a>)))
+<a id='L285' name='L285'></a> 285     <em class='brace'>{</em>
+<a id='L286' name='L286'></a> 286       <em class='comment'>/* Replace the port in the descriptor cell</em>
+<a id='L287' name='L287'></a> 287 <em class='comment'>         with the newly reauthenticated port.  */</em>
+<a id='L288' name='L288'></a> 288 
+<a id='L289' name='L289'></a> 289       <strong class='reserved'>if</strong> (<a href='../D/29259.html' title='Multiple defined in 3 places.'>d</a>-&gt;<a href='../Y/12245.html' title='Multiple used in 67 places.'>ctty</a>.<a href='../Y/22541.html' title='Multiple used in 781 places.'>port</a> != <a href='../Y/1165.html' title='Multiple used in 414 places.'>MACH_PORT_NULL</a>
+<a id='L290' name='L290'></a> 290           &amp;&amp; ! <a href='../Y/5196.html' title='Multiple used in 13 places.'>__io_reauthenticate</a> (<a href='../D/29259.html' title='Multiple defined in 3 places.'>d</a>-&gt;<a href='../Y/12245.html' title='Multiple used in 67 places.'>ctty</a>.<a href='../Y/22541.html' title='Multiple used in 781 places.'>port</a>,
+<a id='L291' name='L291'></a> 291                     <a href='../Y/23646.html' title='Multiple used in 211 places.'>ref</a>, <a href='../Y/1156.html' title='Multiple used in 42 places.'>MACH_MSG_TYPE_MAKE_SEND</a>)
+<a id='L292' name='L292'></a> 292           &amp;&amp; ! <a href='../S/2110.html#L98' title='Defined at 98 in hurd/hurd.h.'>__USEPORT</a> (<a href='../D/617.html' title='Multiple defined in 2 places.'>AUTH</a>, <a href='../Y/3668.html' title='Multiple used in 15 places.'>__auth_user_authenticate</a>
+<a id='L293' name='L293'></a> 293                   (<a href='../Y/22541.html' title='Multiple used in 781 places.'>port</a>,
+<a id='L294' name='L294'></a> 294                    <a href='../Y/23646.html' title='Multiple used in 211 places.'>ref</a>, <a href='../Y/1156.html' title='Multiple used in 42 places.'>MACH_MSG_TYPE_MAKE_SEND</a>,
+<a id='L295' name='L295'></a> 295                    &amp;<a href='../Y/20634.html' title='Multiple used in 7 places.'>newctty</a>)))
+<a id='L296' name='L296'></a> 296         <a href='../S/2119.html#L215' title='Defined at 215 in hurd/hurd/port.h.'>_hurd_port_set</a> (&amp;<a href='../D/29259.html' title='Multiple defined in 3 places.'>d</a>-&gt;<a href='../Y/12245.html' title='Multiple used in 67 places.'>ctty</a>, <a href='../Y/20634.html' title='Multiple used in 7 places.'>newctty</a>);
+<a id='L297' name='L297'></a> 297 
+<a id='L298' name='L298'></a> 298       <a href='../S/2119.html#L196' title='Defined at 196 in hurd/hurd/port.h.'>_hurd_port_locked_set</a> (&amp;<a href='../D/29259.html' title='Multiple defined in 3 places.'>d</a>-&gt;<a href='../Y/22541.html' title='Multiple used in 781 places.'>port</a>, <a href='../Y/20433.html' title='Multiple used in 561 places.'>new</a>);
+<a id='L299' name='L299'></a> 299     <em class='brace'>}</em>
+<a id='L300' name='L300'></a> 300       <strong class='reserved'>else</strong>
+<a id='L301' name='L301'></a> 301     <em class='comment'>/* Lost.  Leave this descriptor cell alone.  */</em>
+<a id='L302' name='L302'></a> 302     <a href='../D/26105.html' title='Multiple defined in 3 places.'>__spin_unlock</a> (&amp;<a href='../D/29259.html' title='Multiple defined in 3 places.'>d</a>-&gt;<a href='../Y/22541.html' title='Multiple used in 781 places.'>port</a>.<a href='../S/1874.html#L71' title='Defined at 71 in malloc/tst-interpose-aux.c.'>lock</a>);
+<a id='L303' name='L303'></a> 303 
+<a id='L304' name='L304'></a> 304       <a href='../Y/5589.html' title='Multiple used in 30 places.'>__mach_port_destroy</a> (<a href='../S/5183.html#L31' title='Defined at 31 in mach/mach_init.h.'>__mach_task_self</a> (), <a href='../Y/23646.html' title='Multiple used in 211 places.'>ref</a>);
+<a id='L305' name='L305'></a> 305     <em class='brace'>}</em>
+<a id='L306' name='L306'></a> 306 
+<a id='L307' name='L307'></a> 307   <a href='../S/5207.html#L129' title='Defined at 129 in mach/lock-intern.h.'>__mutex_unlock</a> (&amp;<a href='../Y/9122.html' title='Multiple used in 41 places.'>_hurd_dtable_lock</a>);
+<a id='L308' name='L308'></a> 308   <a href='../S/2121.html#L278' title='Defined at 278 in hurd/hurd/signal.h.'>HURD_CRITICAL_END</a>;
+<a id='L309' name='L309'></a> 309 
+<a id='L310' name='L310'></a> 310   (<strong class='reserved'>void</strong>) &amp;<a href='../S/2180.html#L256' title='Defined at 256 in hurd/dtable.c.'>reauth_dtable</a>;    <em class='comment'>/* Avoid "defined but not used" warning.  */</em>
+<a id='L311' name='L311'></a> 311 <em class='brace'>}</em>
+<a id='L312' name='L312'></a> 312 
+<a id='L313' name='L313'></a> 313 <a href='../S/18012.html#L364' title='Defined at 364 in include/libc-symbols.h.'>text_set_element</a> (<a href='../Y/9179.html' title='Multiple used in 4 places.'>_hurd_reauth_hook</a>, <a href='../S/2180.html#L256' title='Defined at 256 in hurd/dtable.c.'>reauth_dtable</a>);
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L40'>[^]</a><a href='#L256'>[v]</a><a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

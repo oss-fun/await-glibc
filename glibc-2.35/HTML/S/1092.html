@@ -1,0 +1,100 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>posix/bug-regex6.c</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18938.html'>posix</a>/bug-regex6.c</h2>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L27'>[^]</a>[v][top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<h2 class='header'>DEFINITIONS</h2>
+This source file includes following definitions.
+<ol>
+<li><a href='#L27' title='Defined at 27.'>main</a></li>
+</ol>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* Test for regexec.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   Copyright (C) 2002-2022 Free Software Foundation, Inc.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'></em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'></em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'></em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   License along with the GNU C Library; if not, see</em>
+<a id='L17' name='L17'></a>  17 <em class='comment'>   &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L18' name='L18'></a>  18 
+<a id='L19' name='L19'></a>  19 <em class='sharp'>#include</em> &lt;<a href='../I/1758.html'>locale.h</a>&gt;
+<a id='L20' name='L20'></a>  20 <em class='sharp'>#include</em> &lt;<a href='../I/1776.html'>stdio.h</a>&gt;
+<a id='L21' name='L21'></a>  21 <em class='sharp'>#include</em> &lt;<a href='../I/1973.html'>string.h</a>&gt;
+<a id='L22' name='L22'></a>  22 <em class='sharp'>#include</em> &lt;<a href='../I/1786.html'>sys/types.h</a>&gt;
+<a id='L23' name='L23'></a>  23 <em class='sharp'>#include</em> &lt;<a href='../I/1924.html'>regex.h</a>&gt;
+<a id='L24' name='L24'></a>  24 
+<a id='L25' name='L25'></a>  25 
+<a id='L26' name='L26'></a>  26 <strong class='reserved'>int</strong>
+<a id='L27' name='L27'></a>  27 <a href='../R/21622.html' title='Multiple referred from 22 places.'>main</a> (<strong class='reserved'>int</strong> <a href='../Y/10354.html' title='Multiple used in 866 places.'>argc</a>, <strong class='reserved'>char</strong> *<a href='../Y/10408.html' title='Multiple used in 1144 places.'>argv</a>[])
+<a id='L28' name='L28'></a>  28 <em class='brace'>{</em>
+<a id='L29' name='L29'></a>  29   <a href='../S/971.html#L478' title='Defined at 478 in posix/regex.h.'>regex_t</a> <a href='../Y/23520.html' title='Multiple used in 184 places.'>re</a>;
+<a id='L30' name='L30'></a>  30   <a href='../S/971.html#L521' title='Defined at 521 in posix/regex.h.'>regmatch_t</a> <a href='../Y/18982.html' title='Multiple used in 10 places.'>mat</a>[10];
+<a id='L31' name='L31'></a>  31   <strong class='reserved'>int</strong> <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>, <a href='../Y/17344.html' title='Multiple used in 1543 places.'>j</a>, <a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a> = 0;
+<a id='L32' name='L32'></a>  32   <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../Y/18386.html' title='Multiple used in 26 places.'>locales</a>[] = <em class='brace'>{</em> "C", "C.UTF-8", "de_DE.UTF-8" <em class='brace'>}</em>;
+<a id='L33' name='L33'></a>  33   <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../S/2281.html#L117' title='Defined at 117 in locale/localeinfo.h.'>string</a> = "http://www.regex.com/pattern/matching.html#intro";
+<a id='L34' name='L34'></a>  34   <a href='../S/971.html#L521' title='Defined at 521 in posix/regex.h.'>regmatch_t</a> <a href='../Y/14136.html' title='Multiple used in 81 places.'>expect</a>[10] = <em class='brace'>{</em>
+<a id='L35' name='L35'></a>  35     <em class='brace'>{</em> 0, 48 <em class='brace'>}</em>, <em class='brace'>{</em> 0, 5 <em class='brace'>}</em>, <em class='brace'>{</em> 0, 4 <em class='brace'>}</em>, <em class='brace'>{</em> 5, 20 <em class='brace'>}</em>, <em class='brace'>{</em> 7, 20 <em class='brace'>}</em>, <em class='brace'>{</em> 20, 42 <em class='brace'>}</em>,
+<a id='L36' name='L36'></a>  36     <em class='brace'>{</em> -1, -1 <em class='brace'>}</em>, <em class='brace'>{</em> -1, -1 <em class='brace'>}</em>, <em class='brace'>{</em> 42, 48 <em class='brace'>}</em>, <em class='brace'>{</em> 43, 48 <em class='brace'>}</em> <em class='brace'>}</em>;
+<a id='L37' name='L37'></a>  37 
+<a id='L38' name='L38'></a>  38   <strong class='reserved'>for</strong> (<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> = 0; <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> &lt; <strong class='reserved'>sizeof</strong> (<a href='../Y/18386.html' title='Multiple used in 26 places.'>locales</a>) / <strong class='reserved'>sizeof</strong> (<a href='../Y/18386.html' title='Multiple used in 26 places.'>locales</a>[0]); ++<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>)
+<a id='L39' name='L39'></a>  39     <em class='brace'>{</em>
+<a id='L40' name='L40'></a>  40       <strong class='reserved'>if</strong> (<a href='../S/2220.html#L217' title='Defined at 217 in locale/setlocale.c.'>setlocale</a> (<a href='../S/2285.html#L41' title='Defined at 41 in locale/locale.h.'>LC_ALL</a>, <a href='../Y/18386.html' title='Multiple used in 26 places.'>locales</a>[<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>]) == <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>)
+<a id='L41' name='L41'></a>  41     <em class='brace'>{</em>
+<a id='L42' name='L42'></a>  42       <a href='../Y/23144.html' title='Multiple used in 3983 places.'>puts</a> ("cannot set locale");
+<a id='L43' name='L43'></a>  43       <a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a> = 1;
+<a id='L44' name='L44'></a>  44     <em class='brace'>}</em>
+<a id='L45' name='L45'></a>  45       <strong class='reserved'>else</strong> <strong class='reserved'>if</strong> (<a href='../D/35862.html' title='Multiple defined in 2 places.'>regcomp</a> (&amp;<a href='../Y/23520.html' title='Multiple used in 184 places.'>re</a>,
+<a id='L46' name='L46'></a>  46             "^(([^:/?#]+):)?(//([^/?#]*))?([^?#]*)(\\?([^#]*))?(#(.*))?",
+<a id='L47' name='L47'></a>  47             <a href='../S/971.html#L310' title='Defined at 310 in posix/regex.h.'>REG_EXTENDED</a>) != <a href='../S/971.html#L376' title='Defined at 376 in posix/regex.h.'>REG_NOERROR</a>)
+<a id='L48' name='L48'></a>  48     <em class='brace'>{</em>
+<a id='L49' name='L49'></a>  49       <a href='../Y/23144.html' title='Multiple used in 3983 places.'>puts</a> ("cannot compile the regular expression");
+<a id='L50' name='L50'></a>  50       <a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a> = 1;
+<a id='L51' name='L51'></a>  51     <em class='brace'>}</em>
+<a id='L52' name='L52'></a>  52       <strong class='reserved'>else</strong> <strong class='reserved'>if</strong> (<a href='../D/35865.html' title='Multiple defined in 2 places.'>regexec</a> (&amp;<a href='../Y/23520.html' title='Multiple used in 184 places.'>re</a>, <a href='../S/2281.html#L117' title='Defined at 117 in locale/localeinfo.h.'>string</a>, 10, <a href='../Y/18982.html' title='Multiple used in 10 places.'>mat</a>, 0) == <a href='../S/971.html#L377' title='Defined at 377 in posix/regex.h.'>REG_NOMATCH</a>)
+<a id='L53' name='L53'></a>  53     <em class='brace'>{</em>
+<a id='L54' name='L54'></a>  54       <a href='../Y/23144.html' title='Multiple used in 3983 places.'>puts</a> ("no match");
+<a id='L55' name='L55'></a>  55       <a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a> = 1;
+<a id='L56' name='L56'></a>  56     <em class='brace'>}</em>
+<a id='L57' name='L57'></a>  57       <strong class='reserved'>else</strong>
+<a id='L58' name='L58'></a>  58     <em class='brace'>{</em>
+<a id='L59' name='L59'></a>  59       <strong class='reserved'>if</strong> (! <a href='../D/33446.html' title='Multiple defined in 22 places.'>memcmp</a> (<a href='../Y/18982.html' title='Multiple used in 10 places.'>mat</a>, <a href='../Y/14136.html' title='Multiple used in 81 places.'>expect</a>, <strong class='reserved'>sizeof</strong> (<a href='../Y/18982.html' title='Multiple used in 10 places.'>mat</a>)))
+<a id='L60' name='L60'></a>  60         <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("matching ok for %s locale\n", <a href='../Y/18386.html' title='Multiple used in 26 places.'>locales</a>[<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>]);
+<a id='L61' name='L61'></a>  61       <strong class='reserved'>else</strong>
+<a id='L62' name='L62'></a>  62         <em class='brace'>{</em>
+<a id='L63' name='L63'></a>  63           <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("matching failed for %s locale:\n", <a href='../Y/18386.html' title='Multiple used in 26 places.'>locales</a>[<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>]);
+<a id='L64' name='L64'></a>  64           <a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a> = 1;
+<a id='L65' name='L65'></a>  65           <strong class='reserved'>for</strong> (<a href='../Y/17344.html' title='Multiple used in 1543 places.'>j</a> = 0; <a href='../Y/17344.html' title='Multiple used in 1543 places.'>j</a> &lt; 9; ++<a href='../Y/17344.html' title='Multiple used in 1543 places.'>j</a>)
+<a id='L66' name='L66'></a>  66         <strong class='reserved'>if</strong> (<a href='../Y/18982.html' title='Multiple used in 10 places.'>mat</a>[<a href='../Y/17344.html' title='Multiple used in 1543 places.'>j</a>].<a href='../Y/24113.html' title='Multiple used in 85 places.'>rm_so</a> != -1)
+<a id='L67' name='L67'></a>  67           <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("%d: %.*s\n", <a href='../Y/17344.html' title='Multiple used in 1543 places.'>j</a>, <a href='../Y/18982.html' title='Multiple used in 10 places.'>mat</a>[<a href='../Y/17344.html' title='Multiple used in 1543 places.'>j</a>].<a href='../Y/24112.html' title='Multiple used in 70 places.'>rm_eo</a> - <a href='../Y/18982.html' title='Multiple used in 10 places.'>mat</a>[<a href='../Y/17344.html' title='Multiple used in 1543 places.'>j</a>].<a href='../Y/24113.html' title='Multiple used in 85 places.'>rm_so</a>,
+<a id='L68' name='L68'></a>  68               <a href='../S/2281.html#L117' title='Defined at 117 in locale/localeinfo.h.'>string</a> + <a href='../Y/18982.html' title='Multiple used in 10 places.'>mat</a>[<a href='../Y/17344.html' title='Multiple used in 1543 places.'>j</a>].<a href='../Y/24113.html' title='Multiple used in 85 places.'>rm_so</a>);
+<a id='L69' name='L69'></a>  69         <em class='brace'>}</em>
+<a id='L70' name='L70'></a>  70     <em class='brace'>}</em>
+<a id='L71' name='L71'></a>  71     <em class='brace'>}</em>
+<a id='L72' name='L72'></a>  72 
+<a id='L73' name='L73'></a>  73   <strong class='reserved'>return</strong> <a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a>;
+<a id='L74' name='L74'></a>  74 <em class='brace'>}</em>
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;][^]<a href='#L27'>[v]</a><a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

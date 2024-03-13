@@ -1,0 +1,137 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>sysdeps/mach/hurd/i386/htl/pt-setup.c</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18977.html'>sysdeps</a>/<a href='../files/19091.html'>mach</a>/<a href='../files/19095.html'>hurd</a>/<a href='../files/19101.html'>i386</a>/<a href='../files/19103.html'>htl</a>/pt-setup.c</h2>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L40'>[^]</a><a href='#L74'>[v]</a>[top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<h2 class='header'>DEFINITIONS</h2>
+This source file includes following definitions.
+<ol>
+<li><a href='#L40' title='Defined at 40.'>stack_setup</a></li>
+<li><a href='#L74' title='Defined at 74.'>__pthread_setup</a></li>
+</ol>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* Setup thread stack.  Hurd/i386 version.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   Copyright (C) 2000-2022 Free Software Foundation, Inc.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'></em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'></em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'></em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   License along with the GNU C Library;  if not, see</em>
+<a id='L17' name='L17'></a>  17 <em class='comment'>   &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L18' name='L18'></a>  18 
+<a id='L19' name='L19'></a>  19 <em class='sharp'>#include</em> &lt;<a href='../I/1969.html'>stdint.h</a>&gt;
+<a id='L20' name='L20'></a>  20 <em class='sharp'>#include</em> &lt;<a href='../I/23.html'>assert.h</a>&gt;
+<a id='L21' name='L21'></a>  21 <em class='sharp'>#include</em> &lt;<a href='../I/2911.html'>mach.h</a>&gt;
+<a id='L22' name='L22'></a>  22 
+<a id='L23' name='L23'></a>  23 <em class='sharp'>#include</em> &lt;<a href='18323.html'>pt-internal.h</a>&gt;
+<a id='L24' name='L24'></a>  24 
+<a id='L25' name='L25'></a>  25 <em class='comment'>/* The stack layout used on the i386 is:</em>
+<a id='L26' name='L26'></a>  26 <em class='comment'></em>
+<a id='L27' name='L27'></a>  27 <em class='comment'>    -----------------</em>
+<a id='L28' name='L28'></a>  28 <em class='comment'>   |  ARG            |</em>
+<a id='L29' name='L29'></a>  29 <em class='comment'>    -----------------</em>
+<a id='L30' name='L30'></a>  30 <em class='comment'>   |  START_ROUTINE  |</em>
+<a id='L31' name='L31'></a>  31 <em class='comment'>    -----------------</em>
+<a id='L32' name='L32'></a>  32 <em class='comment'>   |  0              |</em>
+<a id='L33' name='L33'></a>  33 <em class='comment'>    -----------------</em>
+<a id='L34' name='L34'></a>  34 <em class='comment'> */</em>
+<a id='L35' name='L35'></a>  35 
+<a id='L36' name='L36'></a>  36 <em class='comment'>/* Set up the stack for THREAD, such that it appears as if</em>
+<a id='L37' name='L37'></a>  37 <em class='comment'>   START_ROUTINE and ARG were passed to the new thread's entry-point.</em>
+<a id='L38' name='L38'></a>  38 <em class='comment'>   Return the stack pointer for the new thread.  */</em>
+<a id='L39' name='L39'></a>  39 <strong class='reserved'>static</strong> <strong class='reserved'>void</strong> *
+<a id='L40' name='L40'></a>  40 <a href='../S/14033.html#L84' title='Referred from 84 in sysdeps/mach/hurd/i386/htl/pt-setup.c.'>stack_setup</a> (<strong class='reserved'>struct</strong> <a href='../S/18323.html#L62' title='Defined at 62 in htl/pt-internal.h.'>__pthread</a> *<a href='../D/38045.html' title='Multiple defined in 2 places.'>thread</a>,
+<a id='L41' name='L41'></a>  41          <strong class='reserved'>void</strong> *(*<a href='../D/37000.html' title='Multiple defined in 2 places.'>start_routine</a>) (<strong class='reserved'>void</strong> *), <strong class='reserved'>void</strong> *<a href='../D/27755.html' title='Multiple defined in 3 places.'>arg</a>)
+<a id='L42' name='L42'></a>  42 <em class='brace'>{</em>
+<a id='L43' name='L43'></a>  43   <a href='../D/30030.html' title='Multiple defined in 4 places.'>error_t</a> <a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a>;
+<a id='L44' name='L44'></a>  44   <a href='../D/38692.html' title='Multiple defined in 2 places.'>uintptr_t</a> *<a href='../Y/10979.html' title='Multiple used in 19 places.'>bottom</a>, *<a href='../S/1920.html#L69' title='Defined at 69 in malloc/arena.c.'>top</a>;
+<a id='L45' name='L45'></a>  45 
+<a id='L46' name='L46'></a>  46   <em class='comment'>/* Calculate the top of the new stack.  */</em>
+<a id='L47' name='L47'></a>  47   <a href='../Y/10979.html' title='Multiple used in 19 places.'>bottom</a> = <a href='../D/38045.html' title='Multiple defined in 2 places.'>thread</a>-&gt;<a href='../Y/26054.html' title='Multiple used in 86 places.'>stackaddr</a>;
+<a id='L48' name='L48'></a>  48   <a href='../S/1920.html#L69' title='Defined at 69 in malloc/arena.c.'>top</a> = (<a href='../D/38692.html' title='Multiple defined in 2 places.'>uintptr_t</a> *) ((<a href='../D/38692.html' title='Multiple defined in 2 places.'>uintptr_t</a>) <a href='../Y/10979.html' title='Multiple used in 19 places.'>bottom</a> + <a href='../D/38045.html' title='Multiple defined in 2 places.'>thread</a>-&gt;<a href='../Y/26060.html' title='Multiple used in 144 places.'>stacksize</a>
+<a id='L49' name='L49'></a>  49                + ((<a href='../D/38045.html' title='Multiple defined in 2 places.'>thread</a>-&gt;<a href='../Y/15863.html' title='Multiple used in 98 places.'>guardsize</a> + <a href='../Y/8427.html' title='Multiple used in 38 places.'>__vm_page_size</a> - 1)
+<a id='L50' name='L50'></a>  50               / <a href='../Y/8427.html' title='Multiple used in 38 places.'>__vm_page_size</a>) * <a href='../Y/8427.html' title='Multiple used in 38 places.'>__vm_page_size</a>);
+<a id='L51' name='L51'></a>  51 
+<a id='L52' name='L52'></a>  52   <strong class='reserved'>if</strong> (<a href='../D/37000.html' title='Multiple defined in 2 places.'>start_routine</a> != <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>)
+<a id='L53' name='L53'></a>  53     <em class='brace'>{</em>
+<a id='L54' name='L54'></a>  54       <em class='comment'>/* And then the call frame.  */</em>
+<a id='L55' name='L55'></a>  55       <a href='../S/1920.html#L69' title='Defined at 69 in malloc/arena.c.'>top</a> -= 3;
+<a id='L56' name='L56'></a>  56       <a href='../S/1920.html#L69' title='Defined at 69 in malloc/arena.c.'>top</a> = (<a href='../D/38692.html' title='Multiple defined in 2 places.'>uintptr_t</a> *) ((<a href='../D/38692.html' title='Multiple defined in 2 places.'>uintptr_t</a>) <a href='../S/1920.html#L69' title='Defined at 69 in malloc/arena.c.'>top</a> &amp; ~0xf);
+<a id='L57' name='L57'></a>  57       <a href='../S/1920.html#L69' title='Defined at 69 in malloc/arena.c.'>top</a>[2] = (<a href='../D/38692.html' title='Multiple defined in 2 places.'>uintptr_t</a>) <a href='../D/27755.html' title='Multiple defined in 3 places.'>arg</a>; <em class='comment'>/* Argument to START_ROUTINE.  */</em>
+<a id='L58' name='L58'></a>  58       <a href='../S/1920.html#L69' title='Defined at 69 in malloc/arena.c.'>top</a>[1] = (<a href='../D/38692.html' title='Multiple defined in 2 places.'>uintptr_t</a>) <a href='../D/37000.html' title='Multiple defined in 2 places.'>start_routine</a>;
+<a id='L59' name='L59'></a>  59       <a href='../S/1920.html#L69' title='Defined at 69 in malloc/arena.c.'>top</a>[0] = (<a href='../D/38692.html' title='Multiple defined in 2 places.'>uintptr_t</a>) <a href='../D/38045.html' title='Multiple defined in 2 places.'>thread</a>;
+<a id='L60' name='L60'></a>  60       *--<a href='../S/1920.html#L69' title='Defined at 69 in malloc/arena.c.'>top</a> = 0;       <em class='comment'>/* Fake return address.  */</em>
+<a id='L61' name='L61'></a>  61     <em class='brace'>}</em>
+<a id='L62' name='L62'></a>  62 
+<a id='L63' name='L63'></a>  63   <strong class='reserved'>if</strong> (<a href='../D/38045.html' title='Multiple defined in 2 places.'>thread</a>-&gt;<a href='../Y/15863.html' title='Multiple used in 98 places.'>guardsize</a>)
+<a id='L64' name='L64'></a>  64     <em class='brace'>{</em>
+<a id='L65' name='L65'></a>  65       <a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a> = <a href='../Y/8428.html' title='Multiple used in 5 places.'>__vm_protect</a> (<a href='../S/5183.html#L31' title='Defined at 31 in mach/mach_init.h.'>__mach_task_self</a> (), (<a href='../Y/28709.html' title='Multiple used in 147 places.'>vm_address_t</a>) <a href='../Y/10979.html' title='Multiple used in 19 places.'>bottom</a>,
+<a id='L66' name='L66'></a>  66               <a href='../D/38045.html' title='Multiple defined in 2 places.'>thread</a>-&gt;<a href='../Y/15863.html' title='Multiple used in 98 places.'>guardsize</a>, 0, 0);
+<a id='L67' name='L67'></a>  67       <a href='../D/27843.html' title='Multiple defined in 3 places.'>assert_perror</a> (<a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a>);
+<a id='L68' name='L68'></a>  68     <em class='brace'>}</em>
+<a id='L69' name='L69'></a>  69 
+<a id='L70' name='L70'></a>  70   <strong class='reserved'>return</strong> <a href='../S/1920.html#L69' title='Defined at 69 in malloc/arena.c.'>top</a>;
+<a id='L71' name='L71'></a>  71 <em class='brace'>}</em>
+<a id='L72' name='L72'></a>  72 
+<a id='L73' name='L73'></a>  73 <strong class='reserved'>int</strong>
+<a id='L74' name='L74'></a>  74 <a href='../R/15660.html' title='Multiple referred from 2 places.'>__pthread_setup</a> (<strong class='reserved'>struct</strong> <a href='../S/18323.html#L62' title='Defined at 62 in htl/pt-internal.h.'>__pthread</a> *<a href='../D/38045.html' title='Multiple defined in 2 places.'>thread</a>,
+<a id='L75' name='L75'></a>  75          <strong class='reserved'>void</strong> (*<a href='../S/18287.html#L47' title='Defined at 47 in htl/pt-create.c.'>entry_point</a>) (<strong class='reserved'>struct</strong> <a href='../S/18323.html#L62' title='Defined at 62 in htl/pt-internal.h.'>__pthread</a> *, <strong class='reserved'>void</strong> *(*)(<strong class='reserved'>void</strong> *),
+<a id='L76' name='L76'></a>  76                       <strong class='reserved'>void</strong> *), <strong class='reserved'>void</strong> *(*<a href='../D/37000.html' title='Multiple defined in 2 places.'>start_routine</a>) (<strong class='reserved'>void</strong> *),
+<a id='L77' name='L77'></a>  77          <strong class='reserved'>void</strong> *<a href='../D/27755.html' title='Multiple defined in 3 places.'>arg</a>)
+<a id='L78' name='L78'></a>  78 <em class='brace'>{</em>
+<a id='L79' name='L79'></a>  79   <a href='../D/37478.html' title='Multiple defined in 20 places.'>tcbhead_t</a> *<a href='../Y/26868.html' title='Multiple used in 56 places.'>tcb</a>;
+<a id='L80' name='L80'></a>  80   <a href='../D/30030.html' title='Multiple defined in 4 places.'>error_t</a> <a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a>;
+<a id='L81' name='L81'></a>  81   <a href='../Y/18811.html' title='Multiple used in 330 places.'>mach_port_t</a> <a href='../Y/17558.html' title='Multiple used in 13 places.'>ktid</a>;
+<a id='L82' name='L82'></a>  82 
+<a id='L83' name='L83'></a>  83   <a href='../D/38045.html' title='Multiple defined in 2 places.'>thread</a>-&gt;<a href='../Y/19197.html' title='Multiple used in 5 places.'>mcontext</a>.<a href='../Y/22283.html' title='Multiple used in 188 places.'>pc</a> = <a href='../S/18287.html#L47' title='Defined at 47 in htl/pt-create.c.'>entry_point</a>;
+<a id='L84' name='L84'></a>  84   <a href='../D/38045.html' title='Multiple defined in 2 places.'>thread</a>-&gt;<a href='../Y/19197.html' title='Multiple used in 5 places.'>mcontext</a>.<a href='../D/36879.html' title='Multiple defined in 2 places.'>sp</a> = <a href='../S/14033.html#L40' title='Defined at 40 in sysdeps/mach/hurd/i386/htl/pt-setup.c.'>stack_setup</a> (<a href='../D/38045.html' title='Multiple defined in 2 places.'>thread</a>, <a href='../D/37000.html' title='Multiple defined in 2 places.'>start_routine</a>, <a href='../D/27755.html' title='Multiple defined in 3 places.'>arg</a>);
+<a id='L85' name='L85'></a>  85 
+<a id='L86' name='L86'></a>  86   <a href='../Y/17558.html' title='Multiple used in 13 places.'>ktid</a> = <a href='../Y/5601.html' title='Multiple used in 12 places.'>__mach_thread_self</a> ();
+<a id='L87' name='L87'></a>  87   <strong class='reserved'>if</strong> (<a href='../D/38045.html' title='Multiple defined in 2 places.'>thread</a>-&gt;<a href='../Y/17450.html' title='Multiple used in 28 places.'>kernel_thread</a> == <a href='../Y/17558.html' title='Multiple used in 13 places.'>ktid</a>)
+<a id='L88' name='L88'></a>  88     <em class='comment'>/* Fix up the TCB for the main thread.  The C library has already</em>
+<a id='L89' name='L89'></a>  89 <em class='comment'>       installed a TCB, which we want to keep using.  This TCB must not</em>
+<a id='L90' name='L90'></a>  90 <em class='comment'>       be freed so don't register it in the thread structure.  On the</em>
+<a id='L91' name='L91'></a>  91 <em class='comment'>       other hand, it's not yet possible to reliably release a TCB.</em>
+<a id='L92' name='L92'></a>  92 <em class='comment'>       Leave the unused one registered so that it doesn't leak.  The</em>
+<a id='L93' name='L93'></a>  93 <em class='comment'>       only thing left to do is to correctly set the `self' member in</em>
+<a id='L94' name='L94'></a>  94 <em class='comment'>       the already existing TCB.  */</em>
+<a id='L95' name='L95'></a>  95     <a href='../Y/26868.html' title='Multiple used in 56 places.'>tcb</a> = <a href='../D/15913.html' title='Multiple defined in 23 places.'>THREAD_SELF</a>;
+<a id='L96' name='L96'></a>  96   <strong class='reserved'>else</strong>
+<a id='L97' name='L97'></a>  97     <em class='brace'>{</em>
+<a id='L98' name='L98'></a>  98       <a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a> = <a href='../S/14035.html#L41' title='Defined at 41 in sysdeps/mach/hurd/i386/htl/pt-machdep.c.'>__thread_set_pcsptp</a> (<a href='../D/38045.html' title='Multiple defined in 2 places.'>thread</a>-&gt;<a href='../Y/17450.html' title='Multiple used in 28 places.'>kernel_thread</a>,
+<a id='L99' name='L99'></a>  99                  1, <a href='../D/38045.html' title='Multiple defined in 2 places.'>thread</a>-&gt;<a href='../Y/19197.html' title='Multiple used in 5 places.'>mcontext</a>.<a href='../Y/22283.html' title='Multiple used in 188 places.'>pc</a>,
+<a id='L100' name='L100'></a> 100                  1, <a href='../D/38045.html' title='Multiple defined in 2 places.'>thread</a>-&gt;<a href='../Y/19197.html' title='Multiple used in 5 places.'>mcontext</a>.<a href='../D/36879.html' title='Multiple defined in 2 places.'>sp</a>,
+<a id='L101' name='L101'></a> 101                  1, <a href='../D/38045.html' title='Multiple defined in 2 places.'>thread</a>-&gt;<a href='../Y/26868.html' title='Multiple used in 56 places.'>tcb</a>);
+<a id='L102' name='L102'></a> 102       <a href='../D/27843.html' title='Multiple defined in 3 places.'>assert_perror</a> (<a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a>);
+<a id='L103' name='L103'></a> 103       <a href='../Y/26868.html' title='Multiple used in 56 places.'>tcb</a> = <a href='../D/38045.html' title='Multiple defined in 2 places.'>thread</a>-&gt;<a href='../Y/26868.html' title='Multiple used in 56 places.'>tcb</a>;
+<a id='L104' name='L104'></a> 104     <em class='brace'>}</em>
+<a id='L105' name='L105'></a> 105   <a href='../Y/5588.html' title='Multiple used in 258 places.'>__mach_port_deallocate</a> (<a href='../S/5183.html#L31' title='Defined at 31 in mach/mach_init.h.'>__mach_task_self</a> (), <a href='../Y/17558.html' title='Multiple used in 13 places.'>ktid</a>);
+<a id='L106' name='L106'></a> 106 
+<a id='L107' name='L107'></a> 107   <a href='../Y/26868.html' title='Multiple used in 56 places.'>tcb</a>-&gt;<a href='../Y/24928.html' title='Multiple used in 377 places.'>self</a> = <a href='../D/38045.html' title='Multiple defined in 2 places.'>thread</a>-&gt;<a href='../Y/17450.html' title='Multiple used in 28 places.'>kernel_thread</a>;
+<a id='L108' name='L108'></a> 108 
+<a id='L109' name='L109'></a> 109   <strong class='reserved'>return</strong> 0;
+<a id='L110' name='L110'></a> 110 <em class='brace'>}</em>
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L40'>[^]</a><a href='#L74'>[v]</a><a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

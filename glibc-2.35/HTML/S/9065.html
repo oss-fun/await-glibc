@@ -1,0 +1,116 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>sysdeps/ieee754/dbl-64/e_log10.c</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18977.html'>sysdeps</a>/<a href='../files/19058.html'>ieee754</a>/<a href='../files/19059.html'>dbl-64</a>/e_log10.c</h2>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L58'>[^]</a>[v][top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<h2 class='header'>DEFINITIONS</h2>
+This source file includes following definitions.
+<ol>
+<li><a href='#L58' title='Defined at 58.'>__ieee754_log10</a></li>
+</ol>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* @(#)e_log10.c 5.1 93/09/24 */</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>/*</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'> * ====================================================</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'> * Copyright (C) 1993 by Sun Microsystems, Inc. All rights reserved.</em>
+<a id='L5' name='L5'></a>   5 <em class='comment'> *</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'> * Developed at SunPro, a Sun Microsystems, Inc. business.</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'> * Permission to use, copy, modify, and distribute this</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'> * software is freely granted, provided that this notice</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'> * is preserved.</em>
+<a id='L10' name='L10'></a>  10 <em class='comment'> * ====================================================</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'> */</em>
+<a id='L12' name='L12'></a>  12 
+<a id='L13' name='L13'></a>  13 <em class='comment'>/* __ieee754_log10(x)</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'> * Return the base 10 logarithm of x</em>
+<a id='L15' name='L15'></a>  15 <em class='comment'> *</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'> * Method :</em>
+<a id='L17' name='L17'></a>  17 <em class='comment'> *  Let log10_2hi = leading 40 bits of log10(2) and</em>
+<a id='L18' name='L18'></a>  18 <em class='comment'> *      log10_2lo = log10(2) - log10_2hi,</em>
+<a id='L19' name='L19'></a>  19 <em class='comment'> *      ivln10   = 1/log(10) rounded.</em>
+<a id='L20' name='L20'></a>  20 <em class='comment'> *  Then</em>
+<a id='L21' name='L21'></a>  21 <em class='comment'> *      n = ilogb(x),</em>
+<a id='L22' name='L22'></a>  22 <em class='comment'> *      if(n&lt;0)  n = n+1;</em>
+<a id='L23' name='L23'></a>  23 <em class='comment'> *      x = scalbn(x,-n);</em>
+<a id='L24' name='L24'></a>  24 <em class='comment'> *      log10(x) := n*log10_2hi + (n*log10_2lo + ivln10*log(x))</em>
+<a id='L25' name='L25'></a>  25 <em class='comment'> *</em>
+<a id='L26' name='L26'></a>  26 <em class='comment'> * Note 1:</em>
+<a id='L27' name='L27'></a>  27 <em class='comment'> *  To guarantee log10(10**n)=n, where 10**n is normal, the rounding</em>
+<a id='L28' name='L28'></a>  28 <em class='comment'> *  mode must set to Round-to-Nearest.</em>
+<a id='L29' name='L29'></a>  29 <em class='comment'> * Note 2:</em>
+<a id='L30' name='L30'></a>  30 <em class='comment'> *  [1/log(10)] rounded to 53 bits has error  .198   ulps;</em>
+<a id='L31' name='L31'></a>  31 <em class='comment'> *  log10 is monotonic at all binary break points.</em>
+<a id='L32' name='L32'></a>  32 <em class='comment'> *</em>
+<a id='L33' name='L33'></a>  33 <em class='comment'> * Special cases:</em>
+<a id='L34' name='L34'></a>  34 <em class='comment'> *  log10(x) is NaN with signal if x &lt; 0;</em>
+<a id='L35' name='L35'></a>  35 <em class='comment'> *  log10(+INF) is +INF with no signal; log10(0) is -INF with signal;</em>
+<a id='L36' name='L36'></a>  36 <em class='comment'> *  log10(NaN) is that NaN with no signal;</em>
+<a id='L37' name='L37'></a>  37 <em class='comment'> *  log10(10**N) = N  for N=0,1,...,22.</em>
+<a id='L38' name='L38'></a>  38 <em class='comment'> *</em>
+<a id='L39' name='L39'></a>  39 <em class='comment'> * Constants:</em>
+<a id='L40' name='L40'></a>  40 <em class='comment'> * The hexadecimal values are the intended ones for the following constants.</em>
+<a id='L41' name='L41'></a>  41 <em class='comment'> * The decimal values may be used, provided that the compiler will convert</em>
+<a id='L42' name='L42'></a>  42 <em class='comment'> * from decimal to binary accurately enough to produce the hexadecimal values</em>
+<a id='L43' name='L43'></a>  43 <em class='comment'> * shown.</em>
+<a id='L44' name='L44'></a>  44 <em class='comment'> */</em>
+<a id='L45' name='L45'></a>  45 
+<a id='L46' name='L46'></a>  46 <em class='sharp'>#include</em> &lt;<a href='../I/1890.html'>math.h</a>&gt;
+<a id='L47' name='L47'></a>  47 <em class='sharp'>#include</em> &lt;<a href='../I/6477.html'>fix-int-fp-convert-zero.h</a>&gt;
+<a id='L48' name='L48'></a>  48 <em class='sharp'>#include</em> &lt;<a href='../I/5892.html'>math_private.h</a>&gt;
+<a id='L49' name='L49'></a>  49 <em class='sharp'>#include</em> &lt;<a href='../I/1969.html'>stdint.h</a>&gt;
+<a id='L50' name='L50'></a>  50 <em class='sharp'>#include</em> &lt;<a href='9438.html'>libm-alias-finite.h</a>&gt;
+<a id='L51' name='L51'></a>  51 
+<a id='L52' name='L52'></a>  52 <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <strong class='reserved'>double</strong> <a href='../Y/28000.html' title='Multiple used in 20 places.'>two54</a> = 1.80143985094819840000e+16;     <em class='comment'>/* 0x4350000000000000 */</em>
+<a id='L53' name='L53'></a>  53 <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <strong class='reserved'>double</strong> <a href='../Y/17329.html' title='Multiple used in 4 places.'>ivln10</a> = 4.34294481903251816668e-01;    <em class='comment'>/* 0x3FDBCB7B1526E50E */</em>
+<a id='L54' name='L54'></a>  54 <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <strong class='reserved'>double</strong> <a href='../Y/18419.html' title='Multiple used in 4 places.'>log10_2hi</a> = 3.01029995663611771306e-01; <em class='comment'>/* 0x3FD34413509F6000 */</em>
+<a id='L55' name='L55'></a>  55 <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <strong class='reserved'>double</strong> <a href='../Y/18420.html' title='Multiple used in 4 places.'>log10_2lo</a> = 3.69423907715893078616e-13; <em class='comment'>/* 0x3D59FEF311F12B36 */</em>
+<a id='L56' name='L56'></a>  56 
+<a id='L57' name='L57'></a>  57 <strong class='reserved'>double</strong>
+<a id='L58' name='L58'></a>  58 <a href='../R/14446.html' title='Multiple referred from 7 places.'>__ieee754_log10</a> (<strong class='reserved'>double</strong> <a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a>)
+<a id='L59' name='L59'></a>  59 <em class='brace'>{</em>
+<a id='L60' name='L60'></a>  60   <strong class='reserved'>double</strong> <a href='../D/39646.html' title='Multiple defined in 4 places.'>y</a>, <a href='../D/39723.html' title='Multiple defined in 4 places.'>z</a>;
+<a id='L61' name='L61'></a>  61   <a href='../S/137.html#L27' title='Defined at 27 in bits/stdint-intn.h.'>int64_t</a> <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>, <a href='../Y/16275.html' title='Multiple used in 1116 places.'>hx</a>;
+<a id='L62' name='L62'></a>  62   <a href='../S/137.html#L26' title='Defined at 26 in bits/stdint-intn.h.'>int32_t</a> <a href='../Y/17420.html' title='Multiple used in 684 places.'>k</a>;
+<a id='L63' name='L63'></a>  63 
+<a id='L64' name='L64'></a>  64   <a href='../D/3932.html' title='Multiple defined in 2 places.'>EXTRACT_WORDS64</a> (<a href='../Y/16275.html' title='Multiple used in 1116 places.'>hx</a>, <a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a>);
+<a id='L65' name='L65'></a>  65 
+<a id='L66' name='L66'></a>  66   <a href='../Y/17420.html' title='Multiple used in 684 places.'>k</a> = 0;
+<a id='L67' name='L67'></a>  67   <strong class='reserved'>if</strong> (<a href='../Y/16275.html' title='Multiple used in 1116 places.'>hx</a> &lt; <a href='../D/6140.html' title='Multiple defined in 2 places.'>INT64_C</a>(0x0010000000000000))
+<a id='L68' name='L68'></a>  68     <em class='brace'>{</em>               <em class='comment'>/* x &lt; 2**-1022  */</em>
+<a id='L69' name='L69'></a>  69       <strong class='reserved'>if</strong> (<a href='../D/24205.html' title='Multiple defined in 2 places.'>__glibc_unlikely</a> ((<a href='../Y/16275.html' title='Multiple used in 1116 places.'>hx</a> &amp; <a href='../D/16629.html' title='Multiple defined in 2 places.'>UINT64_C</a>(0x7fffffffffffffff)) == 0))
+<a id='L70' name='L70'></a>  70     <strong class='reserved'>return</strong> -<a href='../Y/28000.html' title='Multiple used in 20 places.'>two54</a> / <a href='../S/3342.html#L815' title='Defined at 815 in math/tgmath.h.'>fabs</a> (<a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a>);   <em class='comment'>/* log(+-0)=-inf */</em>
+<a id='L71' name='L71'></a>  71       <strong class='reserved'>if</strong> (<a href='../D/24205.html' title='Multiple defined in 2 places.'>__glibc_unlikely</a> (<a href='../Y/16275.html' title='Multiple used in 1116 places.'>hx</a> &lt; 0))
+<a id='L72' name='L72'></a>  72     <strong class='reserved'>return</strong> (<a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a> - <a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a>) / (<a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a> - <a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a>);   <em class='comment'>/* log(-#) = NaN */</em>
+<a id='L73' name='L73'></a>  73       <a href='../Y/17420.html' title='Multiple used in 684 places.'>k</a> -= 54;
+<a id='L74' name='L74'></a>  74       <a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a> *= <a href='../Y/28000.html' title='Multiple used in 20 places.'>two54</a>;       <em class='comment'>/* subnormal number, scale up x */</em>
+<a id='L75' name='L75'></a>  75       <a href='../D/3932.html' title='Multiple defined in 2 places.'>EXTRACT_WORDS64</a> (<a href='../Y/16275.html' title='Multiple used in 1116 places.'>hx</a>, <a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a>);
+<a id='L76' name='L76'></a>  76     <em class='brace'>}</em>
+<a id='L77' name='L77'></a>  77   <em class='comment'>/* scale up resulted in a NaN number  */</em>
+<a id='L78' name='L78'></a>  78   <strong class='reserved'>if</strong> (<a href='../D/24205.html' title='Multiple defined in 2 places.'>__glibc_unlikely</a> (<a href='../Y/16275.html' title='Multiple used in 1116 places.'>hx</a> &gt;= <a href='../D/16629.html' title='Multiple defined in 2 places.'>UINT64_C</a>(0x7ff0000000000000)))
+<a id='L79' name='L79'></a>  79     <strong class='reserved'>return</strong> <a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a> + <a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a>;
+<a id='L80' name='L80'></a>  80   <a href='../Y/17420.html' title='Multiple used in 684 places.'>k</a> += (<a href='../Y/16275.html' title='Multiple used in 1116 places.'>hx</a> &gt;&gt; 52) - 1023;
+<a id='L81' name='L81'></a>  81   <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> = ((<a href='../S/223.html#L27' title='Defined at 27 in bits/stdint-uintn.h.'>uint64_t</a>) <a href='../Y/17420.html' title='Multiple used in 684 places.'>k</a> &amp; <a href='../D/16629.html' title='Multiple defined in 2 places.'>UINT64_C</a>(0x8000000000000000)) &gt;&gt; 63;
+<a id='L82' name='L82'></a>  82   <a href='../Y/16275.html' title='Multiple used in 1116 places.'>hx</a> = (<a href='../Y/16275.html' title='Multiple used in 1116 places.'>hx</a> &amp; <a href='../D/16629.html' title='Multiple defined in 2 places.'>UINT64_C</a>(0x000fffffffffffff)) | ((0x3ff - <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>) &lt;&lt; 52);
+<a id='L83' name='L83'></a>  83   <a href='../D/39646.html' title='Multiple defined in 4 places.'>y</a> = (<strong class='reserved'>double</strong>) (<a href='../Y/17420.html' title='Multiple used in 684 places.'>k</a> + <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>);
+<a id='L84' name='L84'></a>  84   <strong class='reserved'>if</strong> (<a href='../D/4216.html' title='Multiple defined in 2 places.'>FIX_INT_FP_CONVERT_ZERO</a> &amp;&amp; <a href='../D/39646.html' title='Multiple defined in 4 places.'>y</a> == 0.0)
+<a id='L85' name='L85'></a>  85     <a href='../D/39646.html' title='Multiple defined in 4 places.'>y</a> = 0.0;
+<a id='L86' name='L86'></a>  86   <a href='../S/12155.html#L126' title='Defined at 126 in sysdeps/generic/math_private.h.'>INSERT_WORDS64</a> (<a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a>, <a href='../Y/16275.html' title='Multiple used in 1116 places.'>hx</a>);
+<a id='L87' name='L87'></a>  87   <a href='../D/39723.html' title='Multiple defined in 4 places.'>z</a> = <a href='../D/39646.html' title='Multiple defined in 4 places.'>y</a> * <a href='../Y/18420.html' title='Multiple used in 4 places.'>log10_2lo</a> + <a href='../Y/17329.html' title='Multiple used in 4 places.'>ivln10</a> * <a href='../D/24331.html' title='Multiple defined in 2 places.'>__ieee754_log</a> (<a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a>);
+<a id='L88' name='L88'></a>  88   <strong class='reserved'>return</strong> <a href='../D/39723.html' title='Multiple defined in 4 places.'>z</a> + <a href='../D/39646.html' title='Multiple defined in 4 places.'>y</a> * <a href='../Y/18419.html' title='Multiple used in 4 places.'>log10_2hi</a>;
+<a id='L89' name='L89'></a>  89 <em class='brace'>}</em>
+<a id='L90' name='L90'></a>  90 <a href='../D/32834.html' title='Multiple defined in 12 places.'>libm_alias_finite</a> (<a href='../D/24332.html' title='Multiple defined in 2 places.'>__ieee754_log10</a>, <a href='../S/3720.html#L28' title='Defined at 28 in math/w_log10_compat.c.'>__log10</a>)
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;][^]<a href='#L58'>[v]</a><a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

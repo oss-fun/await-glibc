@@ -1,0 +1,356 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>sysdeps/powerpc/powerpc64/power8/memrchr.S</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18977.html'>sysdeps</a>/<a href='../files/19149.html'>powerpc</a>/<a href='../files/19172.html'>powerpc64</a>/<a href='../files/19189.html'>power8</a>/memrchr.S</h2>
+<em class='comment'>/* [&lt;][&gt;][^][v][top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* Optimized memrchr implementation for PowerPC64/POWER8.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   Copyright (C) 2017-2022 Free Software Foundation, Inc.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'></em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'></em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'></em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   License along with the GNU C Library; if not, see</em>
+<a id='L17' name='L17'></a>  17 <em class='comment'>   &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L18' name='L18'></a>  18 
+<a id='L19' name='L19'></a>  19 <em class='sharp'>#include</em> &lt;<a href='../I/5967.html'>sysdep.h</a>&gt;
+<a id='L20' name='L20'></a>  20 
+<a id='L21' name='L21'></a>  21 <em class='comment'>/* int [r3] memrchr (char *s [r3], int byte [r4], int size [r5])  */</em>
+<a id='L22' name='L22'></a>  22 
+<a id='L23' name='L23'></a>  23 <em class='sharp'>#ifndef</em> <a href='../D/7909.html' title='Multiple defined in 10 places.'>MEMRCHR</a>
+<a id='L24' name='L24'></a>  24 <em class='sharp'># define</em> <a href='../R/4851.html' title='Multiple referred from 7 places.'>MEMRCHR</a> __memrchr
+<a id='L25' name='L25'></a>  25 <em class='sharp'>#endif</em>
+<a id='L26' name='L26'></a>  26     .machine  power8
+<a id='L27' name='L27'></a>  27 ENTRY_TOCLESS (MEMRCHR)
+<a id='L28' name='L28'></a>  28     CALL_MCOUNT 3
+<a id='L29' name='L29'></a>  29     add r7, r3, r5      <em class='comment'>/* Calculate the last acceptable address.  */</em>
+<a id='L30' name='L30'></a>  30     neg r0, r7
+<a id='L31' name='L31'></a>  31     addi    r7, r7, -1
+<a id='L32' name='L32'></a>  32     mr  r10, r3
+<a id='L33' name='L33'></a>  33     clrrdi  r6, r7, 7
+<a id='L34' name='L34'></a>  34     li  r9, 3&lt;&lt;5
+<a id='L35' name='L35'></a>  35     dcbt    r9, r6, 8       <em class='comment'>/* Stream hint, decreasing addresses.  */</em>
+<a id='L36' name='L36'></a>  36 
+<a id='L37' name='L37'></a>  37     <em class='comment'>/* Replicate BYTE to doubleword.  */</em>
+<a id='L38' name='L38'></a>  38     insrdi  r4, r4, 8, 48
+<a id='L39' name='L39'></a>  39     insrdi  r4, r4, 16, 32
+<a id='L40' name='L40'></a>  40     insrdi  r4, r4, 32, 0
+<a id='L41' name='L41'></a>  41     li  r6, -8
+<a id='L42' name='L42'></a>  42     li  r9, -1
+<a id='L43' name='L43'></a>  43     rlwinm  r0, r0, 3, 26, 28 <em class='comment'>/* Calculate padding.  */</em>
+<a id='L44' name='L44'></a>  44     clrrdi  r8, r7, 3
+<a id='L45' name='L45'></a>  45     srd r9, r9, r0
+<a id='L46' name='L46'></a>  46     cmpldi  r5, 32
+<a id='L47' name='L47'></a>  47     clrrdi  r0, r10, 3
+<a id='L48' name='L48'></a>  48     ble L(small_range)
+<a id='L49' name='L49'></a>  49 
+<a id='L50' name='L50'></a>  50 <em class='sharp'>#ifdef</em> <a href='../Y/3238.html' title='Multiple used in 570 places.'>__LITTLE_ENDIAN__</a>
+<a id='L51' name='L51'></a>  51     ldx r12, 0, r8
+<a id='L52' name='L52'></a>  52 <em class='sharp'>#else</em>
+<a id='L53' name='L53'></a>  53     ldbrx   r12, 0, r8      <em class='comment'>/* Load reversed doubleword from memory.  */</em>
+<a id='L54' name='L54'></a>  54 <em class='sharp'>#endif</em>
+<a id='L55' name='L55'></a>  55     cmpb    r3, r12, r4     <em class='comment'>/* Check for BYTE in DWORD1.  */</em>
+<a id='L56' name='L56'></a>  56     and r3, r3, r9
+<a id='L57' name='L57'></a>  57     cmpldi  cr7, r3, 0      <em class='comment'>/* If r3 == 0, no BYTEs have been found.  */</em>
+<a id='L58' name='L58'></a>  58     bne cr7, L(done)
+<a id='L59' name='L59'></a>  59 
+<a id='L60' name='L60'></a>  60     <em class='comment'>/* Are we now aligned to a quadword boundary?  If so, skip to</em>
+<a id='L61' name='L61'></a>  61 <em class='comment'>       the main loop.  Otherwise, go through the alignment code.  */</em>
+<a id='L62' name='L62'></a>  62     andi.   r12, r8, 15
+<a id='L63' name='L63'></a>  63     beq cr0, L(align_qw)
+<a id='L64' name='L64'></a>  64 
+<a id='L65' name='L65'></a>  65     <em class='comment'>/* Handle DWORD2 of pair.  */</em>
+<a id='L66' name='L66'></a>  66 <em class='sharp'>#ifdef</em> <a href='../Y/3238.html' title='Multiple used in 570 places.'>__LITTLE_ENDIAN__</a>
+<a id='L67' name='L67'></a>  67     ldx r12, r8, r6
+<a id='L68' name='L68'></a>  68 <em class='sharp'>#else</em>
+<a id='L69' name='L69'></a>  69     ldbrx   r12, r8, r6
+<a id='L70' name='L70'></a>  70 <em class='sharp'>#endif</em>
+<a id='L71' name='L71'></a>  71     addi    r8, r8, -8
+<a id='L72' name='L72'></a>  72     cmpb    r3, r12, r4
+<a id='L73' name='L73'></a>  73     cmpldi  cr7, r3, 0
+<a id='L74' name='L74'></a>  74     bne cr7, L(done)
+<a id='L75' name='L75'></a>  75 
+<a id='L76' name='L76'></a>  76     .align  4
+<a id='L77' name='L77'></a>  77     <em class='comment'>/* At this point, r8 is 16B aligned.  */</em>
+<a id='L78' name='L78'></a>  78 L(align_qw):
+<a id='L79' name='L79'></a>  79     sub r5, r8, r0
+<a id='L80' name='L80'></a>  80     vspltisb    v0, 0
+<a id='L81' name='L81'></a>  81     <em class='comment'>/* Precompute vbpermq constant.  */</em>
+<a id='L82' name='L82'></a>  82     vspltisb    v10, 3
+<a id='L83' name='L83'></a>  83     li  r0, 0
+<a id='L84' name='L84'></a>  84     lvsl    v11, r0, r0
+<a id='L85' name='L85'></a>  85     vslb    v10, v11, v10
+<a id='L86' name='L86'></a>  86     mtvrd   v1, r4
+<a id='L87' name='L87'></a>  87     vspltb  v1, v1, 7
+<a id='L88' name='L88'></a>  88     cmpldi  r5, 64
+<a id='L89' name='L89'></a>  89     ble L(tail64)
+<a id='L90' name='L90'></a>  90     <em class='comment'>/* Are we 64-byte aligned? If so, jump to the vectorized loop.</em>
+<a id='L91' name='L91'></a>  91 <em class='comment'>       Note: aligning to 64-byte will necessarily slow down performance for</em>
+<a id='L92' name='L92'></a>  92 <em class='comment'>       strings around 64 bytes in length due to the extra comparisons</em>
+<a id='L93' name='L93'></a>  93 <em class='comment'>       required to check alignment for the vectorized loop.  This is a</em>
+<a id='L94' name='L94'></a>  94 <em class='comment'>       necessary tradeoff we are willing to take in order to speed up the</em>
+<a id='L95' name='L95'></a>  95 <em class='comment'>       calculation for larger strings.  */</em>
+<a id='L96' name='L96'></a>  96     andi.   r11, r8, 63
+<a id='L97' name='L97'></a>  97     beq cr0, L(preloop_64B)
+<a id='L98' name='L98'></a>  98     <em class='comment'>/* In order to begin the 64B loop, it needs to be 64</em>
+<a id='L99' name='L99'></a>  99 <em class='comment'>       bytes aligned.  So read until it is 64B aligned.  */</em>
+<a id='L100' name='L100'></a> 100     addi    r8, r8, -16
+<a id='L101' name='L101'></a> 101     lvx v4, 0, r8
+<a id='L102' name='L102'></a> 102     vcmpequb    v6, v1, v4
+<a id='L103' name='L103'></a> 103     vcmpequb.   v11, v0, v6
+<a id='L104' name='L104'></a> 104     bnl cr6, L(found_16B)
+<a id='L105' name='L105'></a> 105     addi    r5, r5, -16
+<a id='L106' name='L106'></a> 106 
+<a id='L107' name='L107'></a> 107     andi.   r11, r8, 63
+<a id='L108' name='L108'></a> 108     beq cr0, L(preloop_64B)
+<a id='L109' name='L109'></a> 109     addi    r8, r8, -16
+<a id='L110' name='L110'></a> 110     lvx v4, 0, r8
+<a id='L111' name='L111'></a> 111     vcmpequb    v6, v1, v4
+<a id='L112' name='L112'></a> 112     vcmpequb.   v11, v0, v6
+<a id='L113' name='L113'></a> 113     bnl cr6, L(found_16B)
+<a id='L114' name='L114'></a> 114     addi    r5, r5, -16
+<a id='L115' name='L115'></a> 115 
+<a id='L116' name='L116'></a> 116     andi.   r11, r8, 63
+<a id='L117' name='L117'></a> 117     beq cr0, L(preloop_64B)
+<a id='L118' name='L118'></a> 118     addi    r8, r8, -16
+<a id='L119' name='L119'></a> 119     lvx v4, 0, r8
+<a id='L120' name='L120'></a> 120     vcmpequb    v6, v1, v4
+<a id='L121' name='L121'></a> 121     vcmpequb.   v11, v0, v6
+<a id='L122' name='L122'></a> 122     bnl cr6, L(found_16B)
+<a id='L123' name='L123'></a> 123     addi    r5, r5, -16
+<a id='L124' name='L124'></a> 124     <em class='comment'>/* At this point it should be 64B aligned.</em>
+<a id='L125' name='L125'></a> 125 <em class='comment'>       Prepare for the 64B loop.  */</em>
+<a id='L126' name='L126'></a> 126 L(preloop_64B):
+<a id='L127' name='L127'></a> 127     cmpldi  r5, 64      <em class='comment'>/* Check if r5 &lt; 64.  */</em>
+<a id='L128' name='L128'></a> 128     ble L(tail64)
+<a id='L129' name='L129'></a> 129     srdi    r9, r5, 6   <em class='comment'>/* Number of loop iterations.  */</em>
+<a id='L130' name='L130'></a> 130     mtctr   r9      <em class='comment'>/* Setup the counter.  */</em>
+<a id='L131' name='L131'></a> 131     li  r11, 16     <em class='comment'>/* Load required offsets.  */</em>
+<a id='L132' name='L132'></a> 132     li  r9, 32
+<a id='L133' name='L133'></a> 133     li  r7, 48
+<a id='L134' name='L134'></a> 134 
+<a id='L135' name='L135'></a> 135     <em class='comment'>/* Handle r5 &gt; 64.  Loop over the bytes in strides of 64B.  */</em>
+<a id='L136' name='L136'></a> 136     .align 4
+<a id='L137' name='L137'></a> 137 L(loop):
+<a id='L138' name='L138'></a> 138     addi    r8, r8, -64 <em class='comment'>/* Adjust address for the next iteration.  */</em>
+<a id='L139' name='L139'></a> 139     lvx v2, 0, r8   <em class='comment'>/* Load 4 quadwords.  */</em>
+<a id='L140' name='L140'></a> 140     lvx v3, r8, r11
+<a id='L141' name='L141'></a> 141     lvx v4, v8, r9
+<a id='L142' name='L142'></a> 142     lvx v5, v8, r7
+<a id='L143' name='L143'></a> 143     vcmpequb    v6, v1, v2
+<a id='L144' name='L144'></a> 144     vcmpequb    v7, v1, v3
+<a id='L145' name='L145'></a> 145     vcmpequb    v8, v1, v4
+<a id='L146' name='L146'></a> 146     vcmpequb    v9, v1, v5
+<a id='L147' name='L147'></a> 147     vor v11, v6, v7
+<a id='L148' name='L148'></a> 148     vor v12, v8, v9
+<a id='L149' name='L149'></a> 149     vor v11, v11, v12   <em class='comment'>/* Compare and merge into one VR for speed.  */</em>
+<a id='L150' name='L150'></a> 150     vcmpequb.   v11, v0, v11
+<a id='L151' name='L151'></a> 151     bnl cr6, L(found)
+<a id='L152' name='L152'></a> 152     bdnz    L(loop)
+<a id='L153' name='L153'></a> 153     clrldi  r5, r5, 58
+<a id='L154' name='L154'></a> 154 
+<a id='L155' name='L155'></a> 155     <em class='comment'>/* Handle remainder of 64B loop or r5 &gt; 64.  */</em>
+<a id='L156' name='L156'></a> 156     .align  4
+<a id='L157' name='L157'></a> 157 L(tail64):
+<a id='L158' name='L158'></a> 158     cmpldi  r5, 0
+<a id='L159' name='L159'></a> 159     beq L(null)
+<a id='L160' name='L160'></a> 160     addi    r8, r8, -16
+<a id='L161' name='L161'></a> 161     lvx v4, 0, r8
+<a id='L162' name='L162'></a> 162     vcmpequb    v6, v1, v4
+<a id='L163' name='L163'></a> 163     vcmpequb.   v11, v0, v6
+<a id='L164' name='L164'></a> 164     bnl cr6, L(found_16B)
+<a id='L165' name='L165'></a> 165     cmpldi  cr6, r5, 16
+<a id='L166' name='L166'></a> 166     ble cr6, L(null)
+<a id='L167' name='L167'></a> 167     addi    r5, r5, -16
+<a id='L168' name='L168'></a> 168 
+<a id='L169' name='L169'></a> 169     addi    r8, r8, -16
+<a id='L170' name='L170'></a> 170     lvx v4, 0, r8
+<a id='L171' name='L171'></a> 171     vcmpequb    v6, v1, v4
+<a id='L172' name='L172'></a> 172     vcmpequb.   v11, v0, v6
+<a id='L173' name='L173'></a> 173     bnl cr6, L(found_16B)
+<a id='L174' name='L174'></a> 174     cmpldi  cr6, r5, 16
+<a id='L175' name='L175'></a> 175     ble cr6, L(null)
+<a id='L176' name='L176'></a> 176     addi    r5, r5, -16
+<a id='L177' name='L177'></a> 177 
+<a id='L178' name='L178'></a> 178     addi    r8, r8, -16
+<a id='L179' name='L179'></a> 179     lvx v4, 0, r8
+<a id='L180' name='L180'></a> 180     vcmpequb    v6, v1, v4
+<a id='L181' name='L181'></a> 181     vcmpequb.   v11, v0, v6
+<a id='L182' name='L182'></a> 182     bnl cr6, L(found_16B)
+<a id='L183' name='L183'></a> 183     cmpldi  cr6, r5, 16
+<a id='L184' name='L184'></a> 184     ble cr6, L(null)
+<a id='L185' name='L185'></a> 185     addi    r5, r5, -16
+<a id='L186' name='L186'></a> 186 
+<a id='L187' name='L187'></a> 187     addi    r8, r8, -16
+<a id='L188' name='L188'></a> 188     lvx v4, 0, r8
+<a id='L189' name='L189'></a> 189     vcmpequb    v6, v1, v4
+<a id='L190' name='L190'></a> 190     vcmpequb.   v11, v0, v6
+<a id='L191' name='L191'></a> 191     bnl cr6, L(found_16B)
+<a id='L192' name='L192'></a> 192     li  r3, 0
+<a id='L193' name='L193'></a> 193     blr
+<a id='L194' name='L194'></a> 194 
+<a id='L195' name='L195'></a> 195     <em class='comment'>/* Found a match in 64B loop.  */</em>
+<a id='L196' name='L196'></a> 196     .align  4
+<a id='L197' name='L197'></a> 197 L(found):
+<a id='L198' name='L198'></a> 198     <em class='comment'>/* Permute the first bit of each byte into bits 48-63.  */</em>
+<a id='L199' name='L199'></a> 199     vbpermq v6, v6, v10
+<a id='L200' name='L200'></a> 200     vbpermq v7, v7, v10
+<a id='L201' name='L201'></a> 201     vbpermq v8, v8, v10
+<a id='L202' name='L202'></a> 202     vbpermq v9, v9, v10
+<a id='L203' name='L203'></a> 203     <em class='comment'>/* Shift each component into its correct position for merging.  */</em>
+<a id='L204' name='L204'></a> 204 <em class='sharp'>#ifdef</em> <a href='../Y/3238.html' title='Multiple used in 570 places.'>__LITTLE_ENDIAN__</a>
+<a id='L205' name='L205'></a> 205     vsldoi  v7, v7, v7, 2
+<a id='L206' name='L206'></a> 206     vsldoi  v8, v8, v8, 4
+<a id='L207' name='L207'></a> 207     vsldoi  v9, v9, v9, 6
+<a id='L208' name='L208'></a> 208 <em class='sharp'>#else</em>
+<a id='L209' name='L209'></a> 209     vsldoi  v6, v6, v6, 6
+<a id='L210' name='L210'></a> 210     vsldoi  v7, v7, v7, 4
+<a id='L211' name='L211'></a> 211     vsldoi  v8, v8, v8, 2
+<a id='L212' name='L212'></a> 212 <em class='sharp'>#endif</em>
+<a id='L213' name='L213'></a> 213     <em class='comment'>/* Merge the results and move to a GPR.  */</em>
+<a id='L214' name='L214'></a> 214     vor v11, v6, v7
+<a id='L215' name='L215'></a> 215     vor v4, v9, v8
+<a id='L216' name='L216'></a> 216     vor v4, v11, v4
+<a id='L217' name='L217'></a> 217     mfvrd   r5, v4
+<a id='L218' name='L218'></a> 218 <em class='sharp'>#ifdef</em> <a href='../Y/3238.html' title='Multiple used in 570 places.'>__LITTLE_ENDIAN__</a>
+<a id='L219' name='L219'></a> 219     cntlzd  r6, r5  <em class='comment'>/* Count leading zeros before the match.  */</em>
+<a id='L220' name='L220'></a> 220 <em class='sharp'>#else</em>
+<a id='L221' name='L221'></a> 221     addi    r6, r5, -1
+<a id='L222' name='L222'></a> 222     andc    r6, r6, r5
+<a id='L223' name='L223'></a> 223     popcntd r6, r6
+<a id='L224' name='L224'></a> 224 <em class='sharp'>#endif</em>
+<a id='L225' name='L225'></a> 225     addi    r8, r8, 63
+<a id='L226' name='L226'></a> 226     sub r3, r8, r6  <em class='comment'>/* Compute final address.  */</em>
+<a id='L227' name='L227'></a> 227     cmpld   cr7, r3, r10
+<a id='L228' name='L228'></a> 228     bgelr   cr7
+<a id='L229' name='L229'></a> 229     li  r3, 0
+<a id='L230' name='L230'></a> 230     blr
+<a id='L231' name='L231'></a> 231 
+<a id='L232' name='L232'></a> 232     <em class='comment'>/* Found a match in last 16 bytes.  */</em>
+<a id='L233' name='L233'></a> 233     .align  4
+<a id='L234' name='L234'></a> 234 L(found_16B):
+<a id='L235' name='L235'></a> 235     cmpld   r8, r10     <em class='comment'>/* Are we on the last QW?  */</em>
+<a id='L236' name='L236'></a> 236     bge L(last)
+<a id='L237' name='L237'></a> 237     <em class='comment'>/* Now discard bytes before starting address.  */</em>
+<a id='L238' name='L238'></a> 238     sub r9, r10, r8
+<a id='L239' name='L239'></a> 239     mtvrd   v9, r9
+<a id='L240' name='L240'></a> 240     vspltisb    v8, 3
+<a id='L241' name='L241'></a> 241     <em class='comment'>/* Mask unwanted bytes.  */</em>
+<a id='L242' name='L242'></a> 242 <em class='sharp'>#ifdef</em> <a href='../Y/3238.html' title='Multiple used in 570 places.'>__LITTLE_ENDIAN__</a>
+<a id='L243' name='L243'></a> 243     lvsr    v7, 0, r10
+<a id='L244' name='L244'></a> 244     vperm   v6, v0, v6, v7
+<a id='L245' name='L245'></a> 245     vsldoi  v9, v0, v9, 8
+<a id='L246' name='L246'></a> 246     vsl v9, v9, v8
+<a id='L247' name='L247'></a> 247     vslo    v6, v6, v9
+<a id='L248' name='L248'></a> 248 <em class='sharp'>#else</em>
+<a id='L249' name='L249'></a> 249     lvsl    v7, 0, r10
+<a id='L250' name='L250'></a> 250     vperm   v6, v6, v0, v7
+<a id='L251' name='L251'></a> 251     vsldoi  v9, v0, v9, 8
+<a id='L252' name='L252'></a> 252     vsl v9, v9, v8
+<a id='L253' name='L253'></a> 253     vsro    v6, v6, v9
+<a id='L254' name='L254'></a> 254 <em class='sharp'>#endif</em>
+<a id='L255' name='L255'></a> 255 L(last):
+<a id='L256' name='L256'></a> 256     <em class='comment'>/* Permute the first bit of each byte into bits 48-63.  */</em>
+<a id='L257' name='L257'></a> 257     vbpermq v6, v6, v10
+<a id='L258' name='L258'></a> 258     <em class='comment'>/* Shift each component into its correct position for merging.  */</em>
+<a id='L259' name='L259'></a> 259 <em class='sharp'>#ifdef</em> <a href='../Y/3238.html' title='Multiple used in 570 places.'>__LITTLE_ENDIAN__</a>
+<a id='L260' name='L260'></a> 260     vsldoi  v6, v6, v6, 6
+<a id='L261' name='L261'></a> 261     mfvrd   r7, v6
+<a id='L262' name='L262'></a> 262     cntlzd  r6, r7  <em class='comment'>/* Count leading zeros before the match.  */</em>
+<a id='L263' name='L263'></a> 263 <em class='sharp'>#else</em>
+<a id='L264' name='L264'></a> 264     mfvrd   r7, v6
+<a id='L265' name='L265'></a> 265     addi    r6, r7, -1
+<a id='L266' name='L266'></a> 266     andc    r6, r6, r7
+<a id='L267' name='L267'></a> 267     popcntd r6, r6
+<a id='L268' name='L268'></a> 268 <em class='sharp'>#endif</em>
+<a id='L269' name='L269'></a> 269     addi    r8, r8, 15
+<a id='L270' name='L270'></a> 270     sub r3, r8, r6  <em class='comment'>/* Compute final address.  */</em>
+<a id='L271' name='L271'></a> 271     cmpld   r6, r5
+<a id='L272' name='L272'></a> 272     bltlr
+<a id='L273' name='L273'></a> 273     li  r3, 0
+<a id='L274' name='L274'></a> 274     blr
+<a id='L275' name='L275'></a> 275 
+<a id='L276' name='L276'></a> 276     <em class='comment'>/* r3 has the output of the cmpb instruction, that is, it contains</em>
+<a id='L277' name='L277'></a> 277 <em class='comment'>       0xff in the same position as BYTE in the original</em>
+<a id='L278' name='L278'></a> 278 <em class='comment'>       word from the string.  Use that to calculate the pointer.</em>
+<a id='L279' name='L279'></a> 279 <em class='comment'>       We need to make sure BYTE is *before* the end of the</em>
+<a id='L280' name='L280'></a> 280 <em class='comment'>       range.  */</em>
+<a id='L281' name='L281'></a> 281 L(done):
+<a id='L282' name='L282'></a> 282     cntlzd  r9, r3        <em class='comment'>/* Count leading zeros before the match.  */</em>
+<a id='L283' name='L283'></a> 283     cmpld   r8, r0         <em class='comment'>/* Are we on the last word?  */</em>
+<a id='L284' name='L284'></a> 284     srdi    r6, r9, 3         <em class='comment'>/* Convert leading zeros to bytes.  */</em>
+<a id='L285' name='L285'></a> 285     addi    r0, r6, -7
+<a id='L286' name='L286'></a> 286     sub r3, r8, r0
+<a id='L287' name='L287'></a> 287     cmpld   cr7, r3, r10
+<a id='L288' name='L288'></a> 288     bnelr
+<a id='L289' name='L289'></a> 289     bgelr   cr7
+<a id='L290' name='L290'></a> 290     li  r3, 0
+<a id='L291' name='L291'></a> 291     blr
+<a id='L292' name='L292'></a> 292 
+<a id='L293' name='L293'></a> 293     .align  4
+<a id='L294' name='L294'></a> 294 L(null):
+<a id='L295' name='L295'></a> 295     li  r3, 0
+<a id='L296' name='L296'></a> 296     blr
+<a id='L297' name='L297'></a> 297 
+<a id='L298' name='L298'></a> 298 <em class='comment'>/* Deals with size &lt;= 32.  */</em>
+<a id='L299' name='L299'></a> 299     .align  4
+<a id='L300' name='L300'></a> 300 L(small_range):
+<a id='L301' name='L301'></a> 301     cmpldi  r5, 0
+<a id='L302' name='L302'></a> 302     beq L(null)
+<a id='L303' name='L303'></a> 303 
+<a id='L304' name='L304'></a> 304 <em class='sharp'>#ifdef</em> <a href='../Y/3238.html' title='Multiple used in 570 places.'>__LITTLE_ENDIAN__</a>
+<a id='L305' name='L305'></a> 305     ldx r12, 0, r8
+<a id='L306' name='L306'></a> 306 <em class='sharp'>#else</em>
+<a id='L307' name='L307'></a> 307     ldbrx   r12, 0, r8      <em class='comment'>/* Load reversed doubleword from memory.  */</em>
+<a id='L308' name='L308'></a> 308 <em class='sharp'>#endif</em>
+<a id='L309' name='L309'></a> 309     cmpb    r3, r12, r4     <em class='comment'>/* Check for BYTE in DWORD1.  */</em>
+<a id='L310' name='L310'></a> 310     and r3, r3, r9
+<a id='L311' name='L311'></a> 311     cmpldi  cr7, r3, 0
+<a id='L312' name='L312'></a> 312     bne cr7, L(done)
+<a id='L313' name='L313'></a> 313 
+<a id='L314' name='L314'></a> 314     <em class='comment'>/* Are we done already?  */</em>
+<a id='L315' name='L315'></a> 315     cmpld   r8, r0
+<a id='L316' name='L316'></a> 316     addi    r8, r8, -8
+<a id='L317' name='L317'></a> 317     beqlr
+<a id='L318' name='L318'></a> 318 
+<a id='L319' name='L319'></a> 319     .align  5
+<a id='L320' name='L320'></a> 320 L(loop_small):
+<a id='L321' name='L321'></a> 321 <em class='sharp'>#ifdef</em> <a href='../Y/3238.html' title='Multiple used in 570 places.'>__LITTLE_ENDIAN__</a>
+<a id='L322' name='L322'></a> 322     ldx r12, 0, r8
+<a id='L323' name='L323'></a> 323 <em class='sharp'>#else</em>
+<a id='L324' name='L324'></a> 324     ldbrx   r12, 0, r8
+<a id='L325' name='L325'></a> 325 <em class='sharp'>#endif</em>
+<a id='L326' name='L326'></a> 326     cmpb    r3, r12, r4
+<a id='L327' name='L327'></a> 327     cmpld   r8, r0
+<a id='L328' name='L328'></a> 328     cmpldi  cr7, r3, 0
+<a id='L329' name='L329'></a> 329     bne cr7, L(done)
+<a id='L330' name='L330'></a> 330     addi    r8, r8, -8
+<a id='L331' name='L331'></a> 331     bne L(loop_small)
+<a id='L332' name='L332'></a> 332     blr
+<a id='L333' name='L333'></a> 333 
+<a id='L334' name='L334'></a> 334 END (MEMRCHR)
+<a id='L335' name='L335'></a> 335 weak_alias (__memrchr, memrchr)
+<a id='L336' name='L336'></a> 336 libc_hidden_builtin_def (memrchr)
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;][^][v]<a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

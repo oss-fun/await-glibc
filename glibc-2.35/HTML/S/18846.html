@@ -1,0 +1,158 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>nptl_db/td_thr_get_info.c</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18932.html'>nptl_db</a>/td_thr_get_info.c</h2>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L26'>[^]</a>[v][top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<h2 class='header'>DEFINITIONS</h2>
+This source file includes following definitions.
+<ol>
+<li><a href='#L26' title='Defined at 26.'>td_thr_get_info</a></li>
+</ol>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* Get thread information.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   Copyright (C) 1999-2022 Free Software Foundation, Inc.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'></em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'></em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'></em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   License along with the GNU C Library; if not, see</em>
+<a id='L17' name='L17'></a>  17 <em class='comment'>   &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L18' name='L18'></a>  18 
+<a id='L19' name='L19'></a>  19 <em class='sharp'>#include</em> &lt;stddef.h&gt;
+<a id='L20' name='L20'></a>  20 <em class='sharp'>#include</em> &lt;<a href='../I/1973.html'>string.h</a>&gt;
+<a id='L21' name='L21'></a>  21 <em class='sharp'>#include</em> &lt;<a href='../I/1969.html'>stdint.h</a>&gt;
+<a id='L22' name='L22'></a>  22 <em class='sharp'>#include</em> "<a href='18811.html'>thread_dbP.h</a>"
+<a id='L23' name='L23'></a>  23 
+<a id='L24' name='L24'></a>  24 
+<a id='L25' name='L25'></a>  25 <a href='../S/17829.html#L59' title='Defined at 59 in sysdeps/nptl/thread_db.h.'>td_err_e</a>
+<a id='L26' name='L26'></a>  26 <a href='../S/17829.html#L377' title='Referred from 377 in sysdeps/nptl/thread_db.h.'>td_thr_get_info</a> (<strong class='reserved'>const</strong> <a href='../S/17829.html#L96' title='Defined at 96 in sysdeps/nptl/thread_db.h.'>td_thrhandle_t</a> *<a href='../S/16383.html#L33' title='Defined at 33 in sysdeps/pthread/tst-abstime.c.'>th</a>, <a href='../S/17829.html#L288' title='Defined at 288 in sysdeps/nptl/thread_db.h.'>td_thrinfo_t</a> *<a href='../Y/16789.html' title='Multiple used in 45 places.'>infop</a>)
+<a id='L27' name='L27'></a>  27 <em class='brace'>{</em>
+<a id='L28' name='L28'></a>  28   <a href='../S/17829.html#L59' title='Defined at 59 in sysdeps/nptl/thread_db.h.'>td_err_e</a> <a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a>;
+<a id='L29' name='L29'></a>  29   <strong class='reserved'>void</strong> *<a href='../Y/12002.html' title='Multiple used in 200 places.'>copy</a>;
+<a id='L30' name='L30'></a>  30   <a href='../D/35063.html' title='Multiple defined in 2 places.'>psaddr_t</a> <a href='../Y/27370.html' title='Multiple used in 15 places.'>tls</a>, <a href='../Y/24798.html' title='Multiple used in 40 places.'>schedpolicy</a>, <a href='../Y/24799.html' title='Multiple used in 7 places.'>schedprio</a>, <a href='../Y/11283.html' title='Multiple used in 46 places.'>cancelhandling</a>, <a href='../Y/27281.html' title='Multiple used in 178 places.'>tid</a>, <a href='../Y/23812.html' title='Multiple used in 11 places.'>report_events</a>;
+<a id='L31' name='L31'></a>  31 
+<a id='L32' name='L32'></a>  32   <a href='../D/7311.html' title='Multiple defined in 2 places.'>LOG</a> ("td_thr_get_info");
+<a id='L33' name='L33'></a>  33 
+<a id='L34' name='L34'></a>  34   <strong class='reserved'>if</strong> (<a href='../S/16383.html#L33' title='Defined at 33 in sysdeps/pthread/tst-abstime.c.'>th</a>-&gt;<a href='../Y/27105.html' title='Multiple used in 36 places.'>th_unique</a> == 0)
+<a id='L35' name='L35'></a>  35     <em class='brace'>{</em>
+<a id='L36' name='L36'></a>  36       <em class='comment'>/* Special case for the main thread before initialization.  */</em>
+<a id='L37' name='L37'></a>  37       <a href='../Y/12002.html' title='Multiple used in 200 places.'>copy</a> = <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>;
+<a id='L38' name='L38'></a>  38       <a href='../Y/27370.html' title='Multiple used in 15 places.'>tls</a> = 0;
+<a id='L39' name='L39'></a>  39       <a href='../Y/11283.html' title='Multiple used in 46 places.'>cancelhandling</a> = 0;
+<a id='L40' name='L40'></a>  40       <a href='../Y/24798.html' title='Multiple used in 40 places.'>schedpolicy</a> = <a href='../D/13565.html' title='Multiple defined in 2 places.'>SCHED_OTHER</a>;
+<a id='L41' name='L41'></a>  41       <a href='../Y/24799.html' title='Multiple used in 7 places.'>schedprio</a> = 0;
+<a id='L42' name='L42'></a>  42       <a href='../Y/27281.html' title='Multiple used in 178 places.'>tid</a> = 0;
+<a id='L43' name='L43'></a>  43 
+<a id='L44' name='L44'></a>  44       <em class='comment'>/* Ignore errors to obtain the __nptl_initial_report_events</em>
+<a id='L45' name='L45'></a>  45 <em class='comment'>     value because GDB no longer uses the events interface, and</em>
+<a id='L46' name='L46'></a>  46 <em class='comment'>     other libthread_db consumers hopefully can handle different</em>
+<a id='L47' name='L47'></a>  47 <em class='comment'>     libpthread/lds.o load orders.  */</em>
+<a id='L48' name='L48'></a>  48       <a href='../Y/23812.html' title='Multiple used in 11 places.'>report_events</a> = 0;
+<a id='L49' name='L49'></a>  49       (<strong class='reserved'>void</strong>) <a href='../S/18811.html#L199' title='Defined at 199 in nptl_db/thread_dbP.h.'>DB_GET_VALUE</a> (<a href='../Y/23812.html' title='Multiple used in 11 places.'>report_events</a>, <a href='../S/16383.html#L33' title='Defined at 33 in sysdeps/pthread/tst-abstime.c.'>th</a>-&gt;<a href='../Y/27101.html' title='Multiple used in 85 places.'>th_ta_p</a>,
+<a id='L50' name='L50'></a>  50                <a href='../Y/6204.html' title='Multiple used in 7 places.'>__nptl_initial_report_events</a>, 0);
+<a id='L51' name='L51'></a>  51       <a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a> = <a href='../S/17829.html#L34' title='Defined at 34 in sysdeps/nptl/thread_db.h.'>TD_OK</a>;
+<a id='L52' name='L52'></a>  52     <em class='brace'>}</em>
+<a id='L53' name='L53'></a>  53   <strong class='reserved'>else</strong>
+<a id='L54' name='L54'></a>  54     <em class='brace'>{</em>
+<a id='L55' name='L55'></a>  55       <em class='comment'>/* Copy the whole descriptor in once so we can access the several</em>
+<a id='L56' name='L56'></a>  56 <em class='comment'>     fields locally.  Excess copying in one go is much better than</em>
+<a id='L57' name='L57'></a>  57 <em class='comment'>     multiple ps_pdread calls.  */</em>
+<a id='L58' name='L58'></a>  58       <a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a> = <a href='../S/18811.html#L248' title='Defined at 248 in nptl_db/thread_dbP.h.'>DB_GET_STRUCT</a> (<a href='../Y/12002.html' title='Multiple used in 200 places.'>copy</a>, <a href='../S/16383.html#L33' title='Defined at 33 in sysdeps/pthread/tst-abstime.c.'>th</a>-&gt;<a href='../Y/27101.html' title='Multiple used in 85 places.'>th_ta_p</a>, <a href='../S/16383.html#L33' title='Defined at 33 in sysdeps/pthread/tst-abstime.c.'>th</a>-&gt;<a href='../Y/27105.html' title='Multiple used in 36 places.'>th_unique</a>, <a href='../D/35082.html' title='Multiple defined in 2 places.'>pthread</a>);
+<a id='L59' name='L59'></a>  59       <strong class='reserved'>if</strong> (<a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a> != <a href='../S/17829.html#L34' title='Defined at 34 in sysdeps/nptl/thread_db.h.'>TD_OK</a>)
+<a id='L60' name='L60'></a>  60     <strong class='reserved'>return</strong> <a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a>;
+<a id='L61' name='L61'></a>  61 
+<a id='L62' name='L62'></a>  62       <a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a> = <a href='../S/18811.html#L178' title='Defined at 178 in nptl_db/thread_dbP.h.'>DB_GET_FIELD_ADDRESS</a> (<a href='../Y/27370.html' title='Multiple used in 15 places.'>tls</a>, <a href='../S/16383.html#L33' title='Defined at 33 in sysdeps/pthread/tst-abstime.c.'>th</a>-&gt;<a href='../Y/27101.html' title='Multiple used in 85 places.'>th_ta_p</a>, <a href='../S/16383.html#L33' title='Defined at 33 in sysdeps/pthread/tst-abstime.c.'>th</a>-&gt;<a href='../Y/27105.html' title='Multiple used in 36 places.'>th_unique</a>,
+<a id='L63' name='L63'></a>  63                   <a href='../D/35082.html' title='Multiple defined in 2 places.'>pthread</a>, <a href='../Y/25799.html' title='Multiple used in 27 places.'>specific</a>, 0);
+<a id='L64' name='L64'></a>  64       <strong class='reserved'>if</strong> (<a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a> != <a href='../S/17829.html#L34' title='Defined at 34 in sysdeps/nptl/thread_db.h.'>TD_OK</a>)
+<a id='L65' name='L65'></a>  65     <strong class='reserved'>return</strong> <a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a>;
+<a id='L66' name='L66'></a>  66 
+<a id='L67' name='L67'></a>  67       <a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a> = <a href='../S/18811.html#L192' title='Defined at 192 in nptl_db/thread_dbP.h.'>DB_GET_FIELD_LOCAL</a> (<a href='../Y/24798.html' title='Multiple used in 40 places.'>schedpolicy</a>, <a href='../S/16383.html#L33' title='Defined at 33 in sysdeps/pthread/tst-abstime.c.'>th</a>-&gt;<a href='../Y/27101.html' title='Multiple used in 85 places.'>th_ta_p</a>, <a href='../Y/12002.html' title='Multiple used in 200 places.'>copy</a>, <a href='../D/35082.html' title='Multiple defined in 2 places.'>pthread</a>,
+<a id='L68' name='L68'></a>  68                 <a href='../Y/24798.html' title='Multiple used in 40 places.'>schedpolicy</a>, 0);
+<a id='L69' name='L69'></a>  69       <strong class='reserved'>if</strong> (<a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a> != <a href='../S/17829.html#L34' title='Defined at 34 in sysdeps/nptl/thread_db.h.'>TD_OK</a>)
+<a id='L70' name='L70'></a>  70     <strong class='reserved'>return</strong> <a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a>;
+<a id='L71' name='L71'></a>  71       <a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a> = <a href='../S/18811.html#L192' title='Defined at 192 in nptl_db/thread_dbP.h.'>DB_GET_FIELD_LOCAL</a> (<a href='../Y/24799.html' title='Multiple used in 7 places.'>schedprio</a>, <a href='../S/16383.html#L33' title='Defined at 33 in sysdeps/pthread/tst-abstime.c.'>th</a>-&gt;<a href='../Y/27101.html' title='Multiple used in 85 places.'>th_ta_p</a>, <a href='../Y/12002.html' title='Multiple used in 200 places.'>copy</a>, <a href='../D/35082.html' title='Multiple defined in 2 places.'>pthread</a>,
+<a id='L72' name='L72'></a>  72                 <a href='../S/18821.html#L45' title='Defined at 45 in nptl_db/db_info.c.'>schedparam_sched_priority</a>, 0);
+<a id='L73' name='L73'></a>  73       <strong class='reserved'>if</strong> (<a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a> != <a href='../S/17829.html#L34' title='Defined at 34 in sysdeps/nptl/thread_db.h.'>TD_OK</a>)
+<a id='L74' name='L74'></a>  74     <strong class='reserved'>return</strong> <a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a>;
+<a id='L75' name='L75'></a>  75       <a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a> = <a href='../S/18811.html#L192' title='Defined at 192 in nptl_db/thread_dbP.h.'>DB_GET_FIELD_LOCAL</a> (<a href='../Y/27281.html' title='Multiple used in 178 places.'>tid</a>, <a href='../S/16383.html#L33' title='Defined at 33 in sysdeps/pthread/tst-abstime.c.'>th</a>-&gt;<a href='../Y/27101.html' title='Multiple used in 85 places.'>th_ta_p</a>, <a href='../Y/12002.html' title='Multiple used in 200 places.'>copy</a>, <a href='../D/35082.html' title='Multiple defined in 2 places.'>pthread</a>, <a href='../Y/27281.html' title='Multiple used in 178 places.'>tid</a>, 0);
+<a id='L76' name='L76'></a>  76       <strong class='reserved'>if</strong> (<a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a> != <a href='../S/17829.html#L34' title='Defined at 34 in sysdeps/nptl/thread_db.h.'>TD_OK</a>)
+<a id='L77' name='L77'></a>  77     <strong class='reserved'>return</strong> <a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a>;
+<a id='L78' name='L78'></a>  78       <a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a> = <a href='../S/18811.html#L192' title='Defined at 192 in nptl_db/thread_dbP.h.'>DB_GET_FIELD_LOCAL</a> (<a href='../Y/11283.html' title='Multiple used in 46 places.'>cancelhandling</a>, <a href='../S/16383.html#L33' title='Defined at 33 in sysdeps/pthread/tst-abstime.c.'>th</a>-&gt;<a href='../Y/27101.html' title='Multiple used in 85 places.'>th_ta_p</a>, <a href='../Y/12002.html' title='Multiple used in 200 places.'>copy</a>, <a href='../D/35082.html' title='Multiple defined in 2 places.'>pthread</a>,
+<a id='L79' name='L79'></a>  79                 <a href='../Y/11283.html' title='Multiple used in 46 places.'>cancelhandling</a>, 0);
+<a id='L80' name='L80'></a>  80       <strong class='reserved'>if</strong> (<a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a> != <a href='../S/17829.html#L34' title='Defined at 34 in sysdeps/nptl/thread_db.h.'>TD_OK</a>)
+<a id='L81' name='L81'></a>  81     <strong class='reserved'>return</strong> <a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a>;
+<a id='L82' name='L82'></a>  82       <a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a> = <a href='../S/18811.html#L192' title='Defined at 192 in nptl_db/thread_dbP.h.'>DB_GET_FIELD_LOCAL</a> (<a href='../Y/23812.html' title='Multiple used in 11 places.'>report_events</a>, <a href='../S/16383.html#L33' title='Defined at 33 in sysdeps/pthread/tst-abstime.c.'>th</a>-&gt;<a href='../Y/27101.html' title='Multiple used in 85 places.'>th_ta_p</a>, <a href='../Y/12002.html' title='Multiple used in 200 places.'>copy</a>, <a href='../D/35082.html' title='Multiple defined in 2 places.'>pthread</a>,
+<a id='L83' name='L83'></a>  83                 <a href='../Y/23812.html' title='Multiple used in 11 places.'>report_events</a>, 0);
+<a id='L84' name='L84'></a>  84     <em class='brace'>}</em>
+<a id='L85' name='L85'></a>  85   <strong class='reserved'>if</strong> (<a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a> != <a href='../S/17829.html#L34' title='Defined at 34 in sysdeps/nptl/thread_db.h.'>TD_OK</a>)
+<a id='L86' name='L86'></a>  86     <strong class='reserved'>return</strong> <a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a>;
+<a id='L87' name='L87'></a>  87 
+<a id='L88' name='L88'></a>  88   <em class='comment'>/* Fill in information.  Clear first to provide reproducable</em>
+<a id='L89' name='L89'></a>  89 <em class='comment'>     results for the fields we do not fill in.  */</em>
+<a id='L90' name='L90'></a>  90   <a href='../D/33462.html' title='Multiple defined in 30 places.'>memset</a> (<a href='../Y/16789.html' title='Multiple used in 45 places.'>infop</a>, '\0', <strong class='reserved'>sizeof</strong> (<a href='../S/17829.html#L288' title='Defined at 288 in sysdeps/nptl/thread_db.h.'>td_thrinfo_t</a>));
+<a id='L91' name='L91'></a>  91 
+<a id='L92' name='L92'></a>  92   <a href='../Y/16789.html' title='Multiple used in 45 places.'>infop</a>-&gt;<a href='../Y/27272.html' title='Multiple used in 2 places.'>ti_tid</a> = (<a href='../S/17829.html#L242' title='Defined at 242 in sysdeps/nptl/thread_db.h.'>thread_t</a>) <a href='../S/16383.html#L33' title='Defined at 33 in sysdeps/pthread/tst-abstime.c.'>th</a>-&gt;<a href='../Y/27105.html' title='Multiple used in 36 places.'>th_unique</a>;
+<a id='L93' name='L93'></a>  93   <a href='../Y/16789.html' title='Multiple used in 45 places.'>infop</a>-&gt;<a href='../Y/27273.html' title='Multiple used in 2 places.'>ti_tls</a> = (<strong class='reserved'>char</strong> *) <a href='../Y/27370.html' title='Multiple used in 15 places.'>tls</a>;
+<a id='L94' name='L94'></a>  94   <a href='../Y/16789.html' title='Multiple used in 45 places.'>infop</a>-&gt;<a href='../Y/27261.html' title='Multiple used in 7 places.'>ti_pri</a> = ((<a href='../D/38692.html' title='Multiple defined in 2 places.'>uintptr_t</a>) <a href='../Y/24798.html' title='Multiple used in 40 places.'>schedpolicy</a> == <a href='../D/13565.html' title='Multiple defined in 2 places.'>SCHED_OTHER</a>
+<a id='L95' name='L95'></a>  95            ? 0 : (<a href='../D/38692.html' title='Multiple defined in 2 places.'>uintptr_t</a>) <a href='../Y/24799.html' title='Multiple used in 7 places.'>schedprio</a>);
+<a id='L96' name='L96'></a>  96   <a href='../Y/16789.html' title='Multiple used in 45 places.'>infop</a>-&gt;<a href='../Y/27275.html' title='Multiple used in 2 places.'>ti_type</a> = <a href='../S/17829.html#L81' title='Defined at 81 in sysdeps/nptl/thread_db.h.'>TD_THR_USER</a>;
+<a id='L97' name='L97'></a>  97 
+<a id='L98' name='L98'></a>  98   <strong class='reserved'>if</strong> ((((<strong class='reserved'>int</strong>) (<a href='../D/38692.html' title='Multiple defined in 2 places.'>uintptr_t</a>) <a href='../Y/11283.html' title='Multiple used in 46 places.'>cancelhandling</a>) &amp; <a href='../S/18700.html#L287' title='Defined at 287 in nptl/descr.h.'>EXITING_BITMASK</a>) == 0)
+<a id='L99' name='L99'></a>  99     <em class='comment'>/* XXX For now there is no way to get more information.  */</em>
+<a id='L100' name='L100'></a> 100     <a href='../Y/16789.html' title='Multiple used in 45 places.'>infop</a>-&gt;<a href='../Y/27268.html' title='Multiple used in 4 places.'>ti_state</a> = <a href='../S/17829.html#L70' title='Defined at 70 in sysdeps/nptl/thread_db.h.'>TD_THR_ACTIVE</a>;
+<a id='L101' name='L101'></a> 101   <strong class='reserved'>else</strong> <strong class='reserved'>if</strong> ((((<strong class='reserved'>int</strong>) (<a href='../D/38692.html' title='Multiple defined in 2 places.'>uintptr_t</a>) <a href='../Y/11283.html' title='Multiple used in 46 places.'>cancelhandling</a>) &amp; <a href='../S/18700.html#L290' title='Defined at 290 in nptl/descr.h.'>TERMINATED_BITMASK</a>) == 0)
+<a id='L102' name='L102'></a> 102     <a href='../Y/16789.html' title='Multiple used in 45 places.'>infop</a>-&gt;<a href='../Y/27268.html' title='Multiple used in 4 places.'>ti_state</a> = <a href='../S/17829.html#L71' title='Defined at 71 in sysdeps/nptl/thread_db.h.'>TD_THR_ZOMBIE</a>;
+<a id='L103' name='L103'></a> 103   <strong class='reserved'>else</strong>
+<a id='L104' name='L104'></a> 104     <a href='../Y/16789.html' title='Multiple used in 45 places.'>infop</a>-&gt;<a href='../Y/27268.html' title='Multiple used in 4 places.'>ti_state</a> = <a href='../S/17829.html#L67' title='Defined at 67 in sysdeps/nptl/thread_db.h.'>TD_THR_UNKNOWN</a>;
+<a id='L105' name='L105'></a> 105 
+<a id='L106' name='L106'></a> 106   <em class='comment'>/* Initialization which are the same in both cases.  */</em>
+<a id='L107' name='L107'></a> 107   <a href='../Y/16789.html' title='Multiple used in 45 places.'>infop</a>-&gt;<a href='../Y/27271.html' title='Multiple used in 2 places.'>ti_ta_p</a> = <a href='../S/16383.html#L33' title='Defined at 33 in sysdeps/pthread/tst-abstime.c.'>th</a>-&gt;<a href='../Y/27101.html' title='Multiple used in 85 places.'>th_ta_p</a>;
+<a id='L108' name='L108'></a> 108   <a href='../Y/16789.html' title='Multiple used in 45 places.'>infop</a>-&gt;<a href='../Y/27254.html' title='Multiple used in 2 places.'>ti_lid</a> = <a href='../Y/27281.html' title='Multiple used in 178 places.'>tid</a> == 0 ? <a href='../Y/22907.html' title='Multiple used in 8 places.'>ps_getpid</a> (<a href='../S/16383.html#L33' title='Defined at 33 in sysdeps/pthread/tst-abstime.c.'>th</a>-&gt;<a href='../Y/27101.html' title='Multiple used in 85 places.'>th_ta_p</a>-&gt;<a href='../Y/22375.html' title='Multiple used in 211 places.'>ph</a>) : (<a href='../D/38692.html' title='Multiple defined in 2 places.'>uintptr_t</a>) <a href='../Y/27281.html' title='Multiple used in 178 places.'>tid</a>;
+<a id='L109' name='L109'></a> 109   <a href='../Y/16789.html' title='Multiple used in 45 places.'>infop</a>-&gt;<a href='../Y/27274.html' title='Multiple used in 2 places.'>ti_traceme</a> = <a href='../Y/23812.html' title='Multiple used in 11 places.'>report_events</a> != 0;
+<a id='L110' name='L110'></a> 110 
+<a id='L111' name='L111'></a> 111   <strong class='reserved'>if</strong> (<a href='../Y/12002.html' title='Multiple used in 200 places.'>copy</a> != <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>)
+<a id='L112' name='L112'></a> 112     <a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a> = <a href='../S/18811.html#L192' title='Defined at 192 in nptl_db/thread_dbP.h.'>DB_GET_FIELD_LOCAL</a> (<a href='../Y/16789.html' title='Multiple used in 45 places.'>infop</a>-&gt;<a href='../Y/27267.html' title='Multiple used in 2 places.'>ti_startfunc</a>, <a href='../S/16383.html#L33' title='Defined at 33 in sysdeps/pthread/tst-abstime.c.'>th</a>-&gt;<a href='../Y/27101.html' title='Multiple used in 85 places.'>th_ta_p</a>, <a href='../Y/12002.html' title='Multiple used in 200 places.'>copy</a>, <a href='../D/35082.html' title='Multiple defined in 2 places.'>pthread</a>,
+<a id='L113' name='L113'></a> 113                   <a href='../D/37000.html' title='Multiple defined in 2 places.'>start_routine</a>, 0);
+<a id='L114' name='L114'></a> 114   <strong class='reserved'>if</strong> (<a href='../Y/12002.html' title='Multiple used in 200 places.'>copy</a> != <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a> &amp;&amp; <a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a> == <a href='../S/17829.html#L34' title='Defined at 34 in sysdeps/nptl/thread_db.h.'>TD_OK</a>)
+<a id='L115' name='L115'></a> 115     <em class='brace'>{</em>
+<a id='L116' name='L116'></a> 116       <a href='../S/223.html#L26' title='Defined at 26 in bits/stdint-uintn.h.'>uint32_t</a> <a href='../Y/16490.html' title='Multiple used in 24848 places.'>idx</a>;
+<a id='L117' name='L117'></a> 117       <strong class='reserved'>for</strong> (<a href='../Y/16490.html' title='Multiple used in 24848 places.'>idx</a> = 0; <a href='../Y/16490.html' title='Multiple used in 24848 places.'>idx</a> &lt; <a href='../S/17829.html#L109' title='Defined at 109 in sysdeps/nptl/thread_db.h.'>TD_EVENTSIZE</a>; ++<a href='../Y/16490.html' title='Multiple used in 24848 places.'>idx</a>)
+<a id='L118' name='L118'></a> 118     <em class='brace'>{</em>
+<a id='L119' name='L119'></a> 119       <a href='../D/35063.html' title='Multiple defined in 2 places.'>psaddr_t</a> <a href='../D/39126.html' title='Multiple defined in 3 places.'>word</a>;
+<a id='L120' name='L120'></a> 120       <a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a> = <a href='../S/18811.html#L192' title='Defined at 192 in nptl_db/thread_dbP.h.'>DB_GET_FIELD_LOCAL</a> (<a href='../D/39126.html' title='Multiple defined in 3 places.'>word</a>, <a href='../S/16383.html#L33' title='Defined at 33 in sysdeps/pthread/tst-abstime.c.'>th</a>-&gt;<a href='../Y/27101.html' title='Multiple used in 85 places.'>th_ta_p</a>, <a href='../Y/12002.html' title='Multiple used in 200 places.'>copy</a>, <a href='../D/35082.html' title='Multiple defined in 2 places.'>pthread</a>,
+<a id='L121' name='L121'></a> 121                     <a href='../S/18821.html#L48' title='Defined at 48 in nptl_db/db_info.c.'>eventbuf_eventmask_event_bits</a>, <a href='../Y/16490.html' title='Multiple used in 24848 places.'>idx</a>);
+<a id='L122' name='L122'></a> 122       <strong class='reserved'>if</strong> (<a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a> != <a href='../S/17829.html#L34' title='Defined at 34 in sysdeps/nptl/thread_db.h.'>TD_OK</a>)
+<a id='L123' name='L123'></a> 123         <strong class='reserved'>break</strong>;
+<a id='L124' name='L124'></a> 124       <a href='../Y/16789.html' title='Multiple used in 45 places.'>infop</a>-&gt;<a href='../Y/27252.html' title='Multiple used in 4 places.'>ti_events</a>.<a href='../Y/14007.html' title='Multiple used in 31 places.'>event_bits</a>[<a href='../Y/16490.html' title='Multiple used in 24848 places.'>idx</a>] = (<a href='../D/38692.html' title='Multiple defined in 2 places.'>uintptr_t</a>) <a href='../D/39126.html' title='Multiple defined in 3 places.'>word</a>;
+<a id='L125' name='L125'></a> 125     <em class='brace'>}</em>
+<a id='L126' name='L126'></a> 126       <strong class='reserved'>if</strong> (<a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a> == <a href='../S/17829.html#L50' title='Defined at 50 in sysdeps/nptl/thread_db.h.'>TD_NOAPLIC</a>)
+<a id='L127' name='L127'></a> 127     <a href='../D/33462.html' title='Multiple defined in 30 places.'>memset</a> (&amp;<a href='../Y/16789.html' title='Multiple used in 45 places.'>infop</a>-&gt;<a href='../Y/27252.html' title='Multiple used in 4 places.'>ti_events</a>.<a href='../Y/14007.html' title='Multiple used in 31 places.'>event_bits</a>[<a href='../Y/16490.html' title='Multiple used in 24848 places.'>idx</a>], 0,
+<a id='L128' name='L128'></a> 128         (<a href='../S/17829.html#L109' title='Defined at 109 in sysdeps/nptl/thread_db.h.'>TD_EVENTSIZE</a> - <a href='../Y/16490.html' title='Multiple used in 24848 places.'>idx</a>) * <strong class='reserved'>sizeof</strong> <a href='../Y/16789.html' title='Multiple used in 45 places.'>infop</a>-&gt;<a href='../Y/27252.html' title='Multiple used in 4 places.'>ti_events</a>.<a href='../Y/14007.html' title='Multiple used in 31 places.'>event_bits</a>[0]);
+<a id='L129' name='L129'></a> 129     <em class='brace'>}</em>
+<a id='L130' name='L130'></a> 130 
+<a id='L131' name='L131'></a> 131   <strong class='reserved'>return</strong> <a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a>;
+<a id='L132' name='L132'></a> 132 <em class='brace'>}</em>
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;][^]<a href='#L26'>[v]</a><a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

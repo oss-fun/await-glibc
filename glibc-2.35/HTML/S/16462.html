@@ -1,0 +1,172 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>sysdeps/sparc/sparc32/memset.S</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18977.html'>sysdeps</a>/<a href='../files/19227.html'>sparc</a>/<a href='../files/19233.html'>sparc32</a>/memset.S</h2>
+<em class='comment'>/* [&lt;][&gt;][^][v][top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* Set a block of memory to some byte value.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   For SPARC v7.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'>   Copyright (C) 1996-2022 Free Software Foundation, Inc.</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L5' name='L5'></a>   5 <em class='comment'></em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L10' name='L10'></a>  10 <em class='comment'></em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L15' name='L15'></a>  15 <em class='comment'></em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L17' name='L17'></a>  17 <em class='comment'>   License along with the GNU C Library; if not, see</em>
+<a id='L18' name='L18'></a>  18 <em class='comment'>   &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L19' name='L19'></a>  19 
+<a id='L20' name='L20'></a>  20 <em class='sharp'>#include</em> &lt;<a href='../I/5967.html'>sysdep.h</a>&gt;
+<a id='L21' name='L21'></a>  21 
+<a id='L22' name='L22'></a>  22     <em class='comment'>/* Store 64 bytes at (BASE + OFFSET) using value SOURCE. */</em>
+<a id='L23' name='L23'></a>  23 <em class='sharp'>#define</em> ZERO_BIG_BLOCK(base, offset, source)        \
+<a id='L24' name='L24'></a>  24     std     source, [base + offset + 0x00]; \
+<a id='L25' name='L25'></a>  25     std     source, [base + offset + 0x08]; \
+<a id='L26' name='L26'></a>  26     std     source, [base + offset + 0x10]; \
+<a id='L27' name='L27'></a>  27     std     source, [base + offset + 0x18]; \
+<a id='L28' name='L28'></a>  28     std     source, [base + offset + 0x20]; \
+<a id='L29' name='L29'></a>  29     std     source, [base + offset + 0x28]; \
+<a id='L30' name='L30'></a>  30     std     source, [base + offset + 0x30]; \
+<a id='L31' name='L31'></a>  31     std     source, [base + offset + 0x38];
+<a id='L32' name='L32'></a>  32 
+<a id='L33' name='L33'></a>  33 <em class='sharp'>#define</em> ZERO_LAST_BLOCKS(base, offset, source)      \
+<a id='L34' name='L34'></a>  34     std     source, [base - offset - 0x38]; \
+<a id='L35' name='L35'></a>  35     std     source, [base - offset - 0x30]; \
+<a id='L36' name='L36'></a>  36     std     source, [base - offset - 0x28]; \
+<a id='L37' name='L37'></a>  37     std     source, [base - offset - 0x20]; \
+<a id='L38' name='L38'></a>  38     std     source, [base - offset - 0x18]; \
+<a id='L39' name='L39'></a>  39     std     source, [base - offset - 0x10]; \
+<a id='L40' name='L40'></a>  40     std     source, [base - offset - 0x08]; \
+<a id='L41' name='L41'></a>  41     std     source, [base - offset - 0x00];
+<a id='L42' name='L42'></a>  42 
+<a id='L43' name='L43'></a>  43     .text
+<a id='L44' name='L44'></a>  44     .align 4
+<a id='L45' name='L45'></a>  45 <a href='../D/3651.html' title='Multiple defined in 54 places.'>ENTRY</a>(<a href='../R/13753.html' title='Multiple referred from 20 places.'>__bzero</a>)
+<a id='L46' name='L46'></a>  46     b       1f
+<a id='L47' name='L47'></a>  47      mov        %g0, %g3
+<a id='L48' name='L48'></a>  48 
+<a id='L49' name='L49'></a>  49 3:  cmp     %o2, 3
+<a id='L50' name='L50'></a>  50     be      2f
+<a id='L51' name='L51'></a>  51      stb        %g3, [%o0]
+<a id='L52' name='L52'></a>  52 
+<a id='L53' name='L53'></a>  53     cmp     %o2, 2
+<a id='L54' name='L54'></a>  54     be      2f
+<a id='L55' name='L55'></a>  55      stb        %g3, [%o0 + 0x01]
+<a id='L56' name='L56'></a>  56 
+<a id='L57' name='L57'></a>  57     stb     %g3, [%o0 + 0x02]
+<a id='L58' name='L58'></a>  58 2:  sub     %o2, 4, %o2
+<a id='L59' name='L59'></a>  59     add     %o1, %o2, %o1
+<a id='L60' name='L60'></a>  60     b       4f
+<a id='L61' name='L61'></a>  61      sub        %o0, %o2, %o0
+<a id='L62' name='L62'></a>  62 END(__bzero)
+<a id='L63' name='L63'></a>  63 
+<a id='L64' name='L64'></a>  64 <a href='../D/3651.html' title='Multiple defined in 54 places.'>ENTRY</a>(<a href='../R/21824.html' title='Multiple referred from 951 places.'>memset</a>)
+<a id='L65' name='L65'></a>  65     and     %o1, 0xff, %g3
+<a id='L66' name='L66'></a>  66     sll     %g3, 8, %g2
+<a id='L67' name='L67'></a>  67     or      %g3, %g2, %g3
+<a id='L68' name='L68'></a>  68     sll     %g3, 16, %g2
+<a id='L69' name='L69'></a>  69     or      %g3, %g2, %g3
+<a id='L70' name='L70'></a>  70     orcc        %o2, %g0, %o1
+<a id='L71' name='L71'></a>  71 1:  cmp     %o1, 7
+<a id='L72' name='L72'></a>  72     bleu        7f
+<a id='L73' name='L73'></a>  73      mov        %o0, %g1
+<a id='L74' name='L74'></a>  74 
+<a id='L75' name='L75'></a>  75     andcc       %o0, 3, %o2
+<a id='L76' name='L76'></a>  76     bne     3b
+<a id='L77' name='L77'></a>  77 4:   andcc      %o0, 4, %g0
+<a id='L78' name='L78'></a>  78 
+<a id='L79' name='L79'></a>  79     be      2f
+<a id='L80' name='L80'></a>  80      mov        %g3, %g2
+<a id='L81' name='L81'></a>  81 
+<a id='L82' name='L82'></a>  82     st      %g3, [%o0]
+<a id='L83' name='L83'></a>  83     sub     %o1, 4, %o1
+<a id='L84' name='L84'></a>  84     add     %o0, 4, %o0
+<a id='L85' name='L85'></a>  85 2:  andcc       %o1, 0xffffff80, %o3
+<a id='L86' name='L86'></a>  86     be      9f
+<a id='L87' name='L87'></a>  87      andcc      %o1, 0x78, %o2
+<a id='L88' name='L88'></a>  88 4:  ZERO_BIG_BLOCK  (%o0, 0x00, %g2)
+<a id='L89' name='L89'></a>  89     subcc       %o3, 128, %o3
+<a id='L90' name='L90'></a>  90     ZERO_BIG_BLOCK  (%o0, 0x40, %g2)
+<a id='L91' name='L91'></a>  91     bne     4b
+<a id='L92' name='L92'></a>  92      add        %o0, 128, %o0
+<a id='L93' name='L93'></a>  93 
+<a id='L94' name='L94'></a>  94     orcc        %o2, %g0, %g0
+<a id='L95' name='L95'></a>  95 9:  be      6f
+<a id='L96' name='L96'></a>  96      andcc      %o1, 7, %o1
+<a id='L97' name='L97'></a>  97 
+<a id='L98' name='L98'></a>  98     mov     %o7, %g4
+<a id='L99' name='L99'></a>  99 101:    call        100f
+<a id='L100' name='L100'></a> 100      srl        %o2, 1, %o3
+<a id='L101' name='L101'></a> 101     mov     %g4, %o7
+<a id='L102' name='L102'></a> 102     jmpl        %o4 + (20f + 64 - 101b), %g0
+<a id='L103' name='L103'></a> 103      add        %o0, %o2, %o0
+<a id='L104' name='L104'></a> 104 
+<a id='L105' name='L105'></a> 105 100:    retl
+<a id='L106' name='L106'></a> 106      sub        %o7, %o3, %o4
+<a id='L107' name='L107'></a> 107 
+<a id='L108' name='L108'></a> 108 20: ZERO_LAST_BLOCKS(%o0, 0x48, %g2)
+<a id='L109' name='L109'></a> 109     ZERO_LAST_BLOCKS(%o0, 0x08, %g2)
+<a id='L110' name='L110'></a> 110 
+<a id='L111' name='L111'></a> 111 6:  be      8f
+<a id='L112' name='L112'></a> 112      andcc      %o1, 4, %g0
+<a id='L113' name='L113'></a> 113     be      1f
+<a id='L114' name='L114'></a> 114      andcc      %o1, 2, %g0
+<a id='L115' name='L115'></a> 115     st      %g3, [%o0]
+<a id='L116' name='L116'></a> 116     add     %o0, 4, %o0
+<a id='L117' name='L117'></a> 117 1:  be      1f
+<a id='L118' name='L118'></a> 118      andcc      %o1, 1, %g0
+<a id='L119' name='L119'></a> 119     sth     %g3, [%o0]
+<a id='L120' name='L120'></a> 120     add     %o0, 2, %o0
+<a id='L121' name='L121'></a> 121 1:  bne,a       8f
+<a id='L122' name='L122'></a> 122      stb        %g3, [%o0]
+<a id='L123' name='L123'></a> 123 8:  retl
+<a id='L124' name='L124'></a> 124      mov        %g1, %o0
+<a id='L125' name='L125'></a> 125 7:  orcc        %o1, 0, %g0
+<a id='L126' name='L126'></a> 126     be      0f
+<a id='L127' name='L127'></a> 127      subcc      %o1, 1, %o1
+<a id='L128' name='L128'></a> 128     stb     %g3, [%o0]
+<a id='L129' name='L129'></a> 129     be      0f
+<a id='L130' name='L130'></a> 130      subcc      %o1, 1, %o1
+<a id='L131' name='L131'></a> 131     stb     %g3, [%o0 + 1]
+<a id='L132' name='L132'></a> 132     be      0f
+<a id='L133' name='L133'></a> 133      subcc      %o1, 1, %o1
+<a id='L134' name='L134'></a> 134     stb     %g3, [%o0 + 2]
+<a id='L135' name='L135'></a> 135     be      0f
+<a id='L136' name='L136'></a> 136      subcc      %o1, 1, %o1
+<a id='L137' name='L137'></a> 137     stb     %g3, [%o0 + 3]
+<a id='L138' name='L138'></a> 138     be      0f
+<a id='L139' name='L139'></a> 139      subcc      %o1, 1, %o1
+<a id='L140' name='L140'></a> 140     stb     %g3, [%o0 + 4]
+<a id='L141' name='L141'></a> 141     be      0f
+<a id='L142' name='L142'></a> 142      subcc      %o1, 1, %o1
+<a id='L143' name='L143'></a> 143     stb     %g3, [%o0 + 5]
+<a id='L144' name='L144'></a> 144     be      0f
+<a id='L145' name='L145'></a> 145      subcc      %o1, 1, %o1
+<a id='L146' name='L146'></a> 146     stb     %g3, [%o0 + 6]
+<a id='L147' name='L147'></a> 147 0:  retl
+<a id='L148' name='L148'></a> 148      nop
+<a id='L149' name='L149'></a> 149 END(memset)
+<a id='L150' name='L150'></a> 150 libc_hidden_builtin_def (memset)
+<a id='L151' name='L151'></a> 151 
+<a id='L152' name='L152'></a> 152 weak_alias (__bzero, bzero)
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;][^][v]<a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

@@ -1,0 +1,154 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>elf/tlsdeschtab.h</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18868.html'>elf</a>/tlsdeschtab.h</h2>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L29'>[^]</a><a href='#L85'>[v]</a>[top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<h2 class='header'><a href='../J/716.html' title='Multiple included from 4 places.'>INCLUDED FROM</a></h2>
+<hr />
+<h2 class='header'>DEFINITIONS</h2>
+This source file includes following definitions.
+<ol>
+<li><a href='#L29' title='Defined at 29.'>hash_tlsdesc</a></li>
+<li><a href='#L39' title='Defined at 39.'>eq_tlsdesc</a></li>
+<li><a href='#L47' title='Defined at 47.'>map_generation</a></li>
+<li><a href='#L85' title='Defined at 85.'>_dl_make_tlsdesc_dynamic</a></li>
+</ol>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* Hash table for TLS descriptors.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   Copyright (C) 2005-2022 Free Software Foundation, Inc.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'></em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'></em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'></em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   License along with the GNU C Library; if not, see</em>
+<a id='L17' name='L17'></a>  17 <em class='comment'>   &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L18' name='L18'></a>  18 
+<a id='L19' name='L19'></a>  19 <em class='sharp'>#ifndef</em> <a href='../S/3176.html#L20' title='Defined at 20 in elf/tlsdeschtab.h.'>TLSDESCHTAB_H</a>
+<a id='L20' name='L20'></a>  20 <em class='sharp'># define</em> <a href='../S/3176.html#L19' title='Referred from 19 in elf/tlsdeschtab.h.'>TLSDESCHTAB_H</a> 1
+<a id='L21' name='L21'></a>  21 
+<a id='L22' name='L22'></a>  22 <em class='sharp'>#include</em> &lt;<a href='17870.html'>atomic.h</a>&gt;
+<a id='L23' name='L23'></a>  23 
+<a id='L24' name='L24'></a>  24 <em class='sharp'># ifdef</em> <a href='../D/13935.html' title='Multiple defined in 2 places.'>SHARED</a>
+<a id='L25' name='L25'></a>  25 
+<a id='L26' name='L26'></a>  26 <em class='sharp'>#  include</em> &lt;<a href='18182.html'>inline-hashtab.h</a>&gt;
+<a id='L27' name='L27'></a>  27 
+<a id='L28' name='L28'></a>  28 <strong class='reserved'>inline</strong> <strong class='reserved'>static</strong> <strong class='reserved'>int</strong>
+<a id='L29' name='L29'></a>  29 <a href='../S/3176.html#L102' title='Referred from 102 in elf/tlsdeschtab.h.'>hash_tlsdesc</a> (<strong class='reserved'>void</strong> *<a href='../S/2562.html#L29' title='Defined at 29 in elf/testobj2.c.'>p</a>)
+<a id='L30' name='L30'></a>  30 <em class='brace'>{</em>
+<a id='L31' name='L31'></a>  31   <strong class='reserved'>struct</strong> <a href='../D/38185.html' title='Multiple defined in 4 places.'>tlsdesc_dynamic_arg</a> *<a href='../Y/26926.html' title='Multiple used in 66 places.'>td</a> = <a href='../S/2562.html#L29' title='Defined at 29 in elf/testobj2.c.'>p</a>;
+<a id='L32' name='L32'></a>  32 
+<a id='L33' name='L33'></a>  33   <em class='comment'>/* We know all entries are for the same module, so ti_offset is the</em>
+<a id='L34' name='L34'></a>  34 <em class='comment'>     only distinguishing entry.  */</em>
+<a id='L35' name='L35'></a>  35   <strong class='reserved'>return</strong> <a href='../Y/26926.html' title='Multiple used in 66 places.'>td</a>-&gt;<a href='../Y/27391.html' title='Multiple used in 9 places.'>tlsinfo</a>.<a href='../Y/27256.html' title='Multiple used in 48 places.'>ti_offset</a>;
+<a id='L36' name='L36'></a>  36 <em class='brace'>}</em>
+<a id='L37' name='L37'></a>  37 
+<a id='L38' name='L38'></a>  38 <strong class='reserved'>inline</strong> <strong class='reserved'>static</strong> <strong class='reserved'>int</strong>
+<a id='L39' name='L39'></a>  39 <a href='../S/3176.html#L102' title='Referred from 102 in elf/tlsdeschtab.h.'>eq_tlsdesc</a> (<strong class='reserved'>void</strong> *<a href='../S/2562.html#L29' title='Defined at 29 in elf/testobj2.c.'>p</a>, <strong class='reserved'>void</strong> *<a href='../Y/23199.html' title='Multiple used in 945 places.'>q</a>)
+<a id='L40' name='L40'></a>  40 <em class='brace'>{</em>
+<a id='L41' name='L41'></a>  41   <strong class='reserved'>struct</strong> <a href='../D/38185.html' title='Multiple defined in 4 places.'>tlsdesc_dynamic_arg</a> *<a href='../Y/26937.html' title='Multiple used in 2 places.'>tdp</a> = <a href='../S/2562.html#L29' title='Defined at 29 in elf/testobj2.c.'>p</a>, *<a href='../Y/26938.html' title='Multiple used in 2 places.'>tdq</a> = <a href='../Y/23199.html' title='Multiple used in 945 places.'>q</a>;
+<a id='L42' name='L42'></a>  42 
+<a id='L43' name='L43'></a>  43   <strong class='reserved'>return</strong> <a href='../Y/26937.html' title='Multiple used in 2 places.'>tdp</a>-&gt;<a href='../Y/27391.html' title='Multiple used in 9 places.'>tlsinfo</a>.<a href='../Y/27256.html' title='Multiple used in 48 places.'>ti_offset</a> == <a href='../Y/26938.html' title='Multiple used in 2 places.'>tdq</a>-&gt;<a href='../Y/27391.html' title='Multiple used in 9 places.'>tlsinfo</a>.<a href='../Y/27256.html' title='Multiple used in 48 places.'>ti_offset</a>;
+<a id='L44' name='L44'></a>  44 <em class='brace'>}</em>
+<a id='L45' name='L45'></a>  45 
+<a id='L46' name='L46'></a>  46 <strong class='reserved'>inline</strong> <strong class='reserved'>static</strong> <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a>
+<a id='L47' name='L47'></a>  47 <a href='../S/3176.html#L116' title='Referred from 116 in elf/tlsdeschtab.h.'>map_generation</a> (<strong class='reserved'>struct</strong> <a href='../D/32945.html' title='Multiple defined in 4 places.'>link_map</a> *<a href='../D/33311.html' title='Multiple defined in 2 places.'>map</a>)
+<a id='L48' name='L48'></a>  48 <em class='brace'>{</em>
+<a id='L49' name='L49'></a>  49   <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/16490.html' title='Multiple used in 24848 places.'>idx</a> = <a href='../D/33311.html' title='Multiple defined in 2 places.'>map</a>-&gt;<a href='../Y/17675.html' title='Multiple used in 66 places.'>l_tls_modid</a>;
+<a id='L50' name='L50'></a>  50   <strong class='reserved'>struct</strong> <a href='../D/29820.html' title='Multiple defined in 2 places.'>dtv_slotinfo_list</a> *<a href='../Y/18270.html' title='Multiple used in 98 places.'>listp</a> = <a href='../D/5057.html' title='Multiple defined in 6 places.'>GL</a>(<a href='../Y/12962.html' title='Multiple used in 25 places.'>dl_tls_dtv_slotinfo_list</a>);
+<a id='L51' name='L51'></a>  51 
+<a id='L52' name='L52'></a>  52   <em class='comment'>/* Find the place in the dtv slotinfo list.  */</em>
+<a id='L53' name='L53'></a>  53   <strong class='reserved'>do</strong>
+<a id='L54' name='L54'></a>  54     <em class='brace'>{</em>
+<a id='L55' name='L55'></a>  55       <em class='comment'>/* Does it fit in the array of this list element?  */</em>
+<a id='L56' name='L56'></a>  56       <strong class='reserved'>if</strong> (<a href='../Y/16490.html' title='Multiple used in 24848 places.'>idx</a> &lt; <a href='../Y/18270.html' title='Multiple used in 98 places.'>listp</a>-&gt;<a href='../D/32598.html' title='Multiple defined in 10 places.'>len</a>)
+<a id='L57' name='L57'></a>  57     <em class='brace'>{</em>
+<a id='L58' name='L58'></a>  58       <em class='comment'>/* We should never get here for a module in static TLS, so</em>
+<a id='L59' name='L59'></a>  59 <em class='comment'>         we can assume that, if the generation count is zero, we</em>
+<a id='L60' name='L60'></a>  60 <em class='comment'>         still haven't determined the generation count for this</em>
+<a id='L61' name='L61'></a>  61 <em class='comment'>         module.  */</em>
+<a id='L62' name='L62'></a>  62       <strong class='reserved'>if</strong> (<a href='../Y/18270.html' title='Multiple used in 98 places.'>listp</a>-&gt;<a href='../Y/25651.html' title='Multiple used in 56 places.'>slotinfo</a>[<a href='../Y/16490.html' title='Multiple used in 24848 places.'>idx</a>].<a href='../D/33311.html' title='Multiple defined in 2 places.'>map</a> == <a href='../D/33311.html' title='Multiple defined in 2 places.'>map</a> &amp;&amp; <a href='../Y/18270.html' title='Multiple used in 98 places.'>listp</a>-&gt;<a href='../Y/25651.html' title='Multiple used in 56 places.'>slotinfo</a>[<a href='../Y/16490.html' title='Multiple used in 24848 places.'>idx</a>].<a href='../Y/15411.html' title='Multiple used in 108 places.'>gen</a>)
+<a id='L63' name='L63'></a>  63         <strong class='reserved'>return</strong> <a href='../Y/18270.html' title='Multiple used in 98 places.'>listp</a>-&gt;<a href='../Y/25651.html' title='Multiple used in 56 places.'>slotinfo</a>[<a href='../Y/16490.html' title='Multiple used in 24848 places.'>idx</a>].<a href='../Y/15411.html' title='Multiple used in 108 places.'>gen</a>;
+<a id='L64' name='L64'></a>  64       <strong class='reserved'>else</strong>
+<a id='L65' name='L65'></a>  65         <strong class='reserved'>break</strong>;
+<a id='L66' name='L66'></a>  66     <em class='brace'>}</em>
+<a id='L67' name='L67'></a>  67       <a href='../Y/16490.html' title='Multiple used in 24848 places.'>idx</a> -= <a href='../Y/18270.html' title='Multiple used in 98 places.'>listp</a>-&gt;<a href='../D/32598.html' title='Multiple defined in 10 places.'>len</a>;
+<a id='L68' name='L68'></a>  68       <a href='../Y/18270.html' title='Multiple used in 98 places.'>listp</a> = <a href='../Y/18270.html' title='Multiple used in 98 places.'>listp</a>-&gt;<a href='../Y/20703.html' title='Multiple used in 1000 places.'>next</a>;
+<a id='L69' name='L69'></a>  69     <em class='brace'>}</em>
+<a id='L70' name='L70'></a>  70   <strong class='reserved'>while</strong> (<a href='../Y/18270.html' title='Multiple used in 98 places.'>listp</a> != <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>);
+<a id='L71' name='L71'></a>  71 
+<a id='L72' name='L72'></a>  72   <em class='comment'>/* If we get to this point, the module still hasn't been assigned an</em>
+<a id='L73' name='L73'></a>  73 <em class='comment'>     entry in the dtv slotinfo data structures, and it will when we're</em>
+<a id='L74' name='L74'></a>  74 <em class='comment'>     done with relocations.  At that point, the module will get a</em>
+<a id='L75' name='L75'></a>  75 <em class='comment'>     generation number that is one past the current generation, so</em>
+<a id='L76' name='L76'></a>  76 <em class='comment'>     return exactly that.  */</em>
+<a id='L77' name='L77'></a>  77   <strong class='reserved'>return</strong> <a href='../D/5057.html' title='Multiple defined in 6 places.'>GL</a>(<a href='../Y/12963.html' title='Multiple used in 13 places.'>dl_tls_generation</a>) + 1;
+<a id='L78' name='L78'></a>  78 <em class='brace'>}</em>
+<a id='L79' name='L79'></a>  79 
+<a id='L80' name='L80'></a>  80 <em class='comment'>/* Returns the data pointer for a given map and tls offset that is used</em>
+<a id='L81' name='L81'></a>  81 <em class='comment'>   to fill in one of the GOT entries referenced by a TLSDESC relocation</em>
+<a id='L82' name='L82'></a>  82 <em class='comment'>   when using dynamic TLS.  This requires allocation, returns NULL on</em>
+<a id='L83' name='L83'></a>  83 <em class='comment'>   allocation failure.  */</em>
+<a id='L84' name='L84'></a>  84 <strong class='reserved'>void</strong> *
+<a id='L85' name='L85'></a>  85 <a href='../R/16562.html' title='Multiple referred from 9 places.'>_dl_make_tlsdesc_dynamic</a> (<strong class='reserved'>struct</strong> <a href='../D/32945.html' title='Multiple defined in 4 places.'>link_map</a> *<a href='../D/33311.html' title='Multiple defined in 2 places.'>map</a>, <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/27256.html' title='Multiple used in 48 places.'>ti_offset</a>)
+<a id='L86' name='L86'></a>  86 <em class='brace'>{</em>
+<a id='L87' name='L87'></a>  87   <strong class='reserved'>struct</strong> <a href='../S/18182.html#L27' title='Defined at 27 in include/inline-hashtab.h.'>hashtab</a> *<a href='../Y/16231.html' title='Multiple used in 44 places.'>ht</a>;
+<a id='L88' name='L88'></a>  88   <strong class='reserved'>void</strong> **<a href='../D/29966.html' title='Multiple defined in 3 places.'>entry</a>;
+<a id='L89' name='L89'></a>  89   <strong class='reserved'>struct</strong> <a href='../D/38185.html' title='Multiple defined in 4 places.'>tlsdesc_dynamic_arg</a> *<a href='../Y/26926.html' title='Multiple used in 66 places.'>td</a>, <a href='../D/37584.html' title='Multiple defined in 43 places.'>test</a>;
+<a id='L90' name='L90'></a>  90 
+<a id='L91' name='L91'></a>  91   <a href='../Y/16231.html' title='Multiple used in 44 places.'>ht</a> = <a href='../D/33311.html' title='Multiple defined in 2 places.'>map</a>-&gt;<a href='../Y/17622.html' title='Multiple used in 95 places.'>l_mach</a>.<a href='../Y/27390.html' title='Multiple used in 14 places.'>tlsdesc_table</a>;
+<a id='L92' name='L92'></a>  92   <strong class='reserved'>if</strong> (! <a href='../Y/16231.html' title='Multiple used in 44 places.'>ht</a>)
+<a id='L93' name='L93'></a>  93     <em class='brace'>{</em>
+<a id='L94' name='L94'></a>  94       <a href='../Y/16231.html' title='Multiple used in 44 places.'>ht</a> = <a href='../S/18182.html#L45' title='Defined at 45 in include/inline-hashtab.h.'>htab_create</a> ();
+<a id='L95' name='L95'></a>  95       <strong class='reserved'>if</strong> (! <a href='../Y/16231.html' title='Multiple used in 44 places.'>ht</a>)
+<a id='L96' name='L96'></a>  96     <strong class='reserved'>return</strong> 0;
+<a id='L97' name='L97'></a>  97       <a href='../D/33311.html' title='Multiple defined in 2 places.'>map</a>-&gt;<a href='../Y/17622.html' title='Multiple used in 95 places.'>l_mach</a>.<a href='../Y/27390.html' title='Multiple used in 14 places.'>tlsdesc_table</a> = <a href='../Y/16231.html' title='Multiple used in 44 places.'>ht</a>;
+<a id='L98' name='L98'></a>  98     <em class='brace'>}</em>
+<a id='L99' name='L99'></a>  99 
+<a id='L100' name='L100'></a> 100   <a href='../D/37584.html' title='Multiple defined in 43 places.'>test</a>.<a href='../Y/27391.html' title='Multiple used in 9 places.'>tlsinfo</a>.<a href='../Y/27255.html' title='Multiple used in 26 places.'>ti_module</a> = <a href='../D/33311.html' title='Multiple defined in 2 places.'>map</a>-&gt;<a href='../Y/17675.html' title='Multiple used in 66 places.'>l_tls_modid</a>;
+<a id='L101' name='L101'></a> 101   <a href='../D/37584.html' title='Multiple defined in 43 places.'>test</a>.<a href='../Y/27391.html' title='Multiple used in 9 places.'>tlsinfo</a>.<a href='../Y/27256.html' title='Multiple used in 48 places.'>ti_offset</a> = <a href='../Y/27256.html' title='Multiple used in 48 places.'>ti_offset</a>;
+<a id='L102' name='L102'></a> 102   <a href='../D/29966.html' title='Multiple defined in 3 places.'>entry</a> = <a href='../S/18182.html#L183' title='Defined at 183 in include/inline-hashtab.h.'>htab_find_slot</a> (<a href='../Y/16231.html' title='Multiple used in 44 places.'>ht</a>, &amp;<a href='../D/37584.html' title='Multiple defined in 43 places.'>test</a>, 1, <a href='../S/3176.html#L29' title='Defined at 29 in elf/tlsdeschtab.h.'>hash_tlsdesc</a>, <a href='../S/3176.html#L39' title='Defined at 39 in elf/tlsdeschtab.h.'>eq_tlsdesc</a>);
+<a id='L103' name='L103'></a> 103   <strong class='reserved'>if</strong> (! <a href='../D/29966.html' title='Multiple defined in 3 places.'>entry</a>)
+<a id='L104' name='L104'></a> 104     <strong class='reserved'>return</strong> 0;
+<a id='L105' name='L105'></a> 105 
+<a id='L106' name='L106'></a> 106   <strong class='reserved'>if</strong> (*<a href='../D/29966.html' title='Multiple defined in 3 places.'>entry</a>)
+<a id='L107' name='L107'></a> 107     <em class='brace'>{</em>
+<a id='L108' name='L108'></a> 108       <a href='../Y/26926.html' title='Multiple used in 66 places.'>td</a> = *<a href='../D/29966.html' title='Multiple defined in 3 places.'>entry</a>;
+<a id='L109' name='L109'></a> 109       <strong class='reserved'>return</strong> <a href='../Y/26926.html' title='Multiple used in 66 places.'>td</a>;
+<a id='L110' name='L110'></a> 110     <em class='brace'>}</em>
+<a id='L111' name='L111'></a> 111 
+<a id='L112' name='L112'></a> 112   *<a href='../D/29966.html' title='Multiple defined in 3 places.'>entry</a> = <a href='../Y/26926.html' title='Multiple used in 66 places.'>td</a> = <a href='../D/33276.html' title='Multiple defined in 8 places.'>malloc</a> (<strong class='reserved'>sizeof</strong> (<strong class='reserved'>struct</strong> <a href='../D/38185.html' title='Multiple defined in 4 places.'>tlsdesc_dynamic_arg</a>));
+<a id='L113' name='L113'></a> 113   <em class='comment'>/* This may be higher than the map's generation, but it doesn't</em>
+<a id='L114' name='L114'></a> 114 <em class='comment'>     matter much.  Worst case, we'll have one extra DTV update per</em>
+<a id='L115' name='L115'></a> 115 <em class='comment'>     thread.  */</em>
+<a id='L116' name='L116'></a> 116   <a href='../Y/26926.html' title='Multiple used in 66 places.'>td</a>-&gt;<a href='../Y/15412.html' title='Multiple used in 5 places.'>gen_count</a> = <a href='../S/3176.html#L47' title='Defined at 47 in elf/tlsdeschtab.h.'>map_generation</a> (<a href='../D/33311.html' title='Multiple defined in 2 places.'>map</a>);
+<a id='L117' name='L117'></a> 117   <a href='../Y/26926.html' title='Multiple used in 66 places.'>td</a>-&gt;<a href='../Y/27391.html' title='Multiple used in 9 places.'>tlsinfo</a> = <a href='../D/37584.html' title='Multiple defined in 43 places.'>test</a>.<a href='../Y/27391.html' title='Multiple used in 9 places.'>tlsinfo</a>;
+<a id='L118' name='L118'></a> 118   <strong class='reserved'>return</strong> <a href='../Y/26926.html' title='Multiple used in 66 places.'>td</a>;
+<a id='L119' name='L119'></a> 119 <em class='brace'>}</em>
+<a id='L120' name='L120'></a> 120 
+<a id='L121' name='L121'></a> 121 <em class='sharp'># endif</em> <em class='comment'>/* SHARED */</em>
+<a id='L122' name='L122'></a> 122 
+<a id='L123' name='L123'></a> 123 <em class='sharp'>#endif</em>
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L29'>[^]</a><a href='#L85'>[v]</a><a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

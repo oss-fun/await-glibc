@@ -1,0 +1,351 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>sysdeps/powerpc/powerpc64/le/power10/strlen.S</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18977.html'>sysdeps</a>/<a href='../files/19149.html'>powerpc</a>/<a href='../files/19172.html'>powerpc64</a>/<a href='../files/19180.html'>le</a>/<a href='../files/19183.html'>power10</a>/strlen.S</h2>
+<em class='comment'>/* [&lt;][&gt;][^][v][top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* Optimized strlen implementation for POWER10 LE.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   Copyright (C) 2021-2022 Free Software Foundation, Inc.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'></em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'></em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'></em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   License along with the GNU C Library; if not, see</em>
+<a id='L17' name='L17'></a>  17 <em class='comment'>   &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L18' name='L18'></a>  18 
+<a id='L19' name='L19'></a>  19 <em class='sharp'>#include</em> &lt;<a href='../I/5967.html'>sysdep.h</a>&gt;
+<a id='L20' name='L20'></a>  20 
+<a id='L21' name='L21'></a>  21 <em class='comment'>/* To reuse the code for rawmemchr, we have some extra steps compared to the</em>
+<a id='L22' name='L22'></a>  22 <em class='comment'>   strlen implementation:</em>
+<a id='L23' name='L23'></a>  23 <em class='comment'>      - Sum the initial value of r3 with the position at which the char was</em>
+<a id='L24' name='L24'></a>  24 <em class='comment'>        found, to guarantee we return a pointer and not the length.</em>
+<a id='L25' name='L25'></a>  25 <em class='comment'>      - In the main loop, subtract each byte by the char we are looking for,</em>
+<a id='L26' name='L26'></a>  26 <em class='comment'>        so we can keep using vminub to quickly check 64B at once.  */</em>
+<a id='L27' name='L27'></a>  27 <em class='sharp'>#ifdef</em> <a href='../D/16771.html' title='Multiple defined in 7 places.'>USE_AS_RAWMEMCHR</a>
+<a id='L28' name='L28'></a>  28 <em class='sharp'># ifndef</em> <a href='../D/10868.html' title='Multiple defined in 9 places.'>RAWMEMCHR</a>
+<a id='L29' name='L29'></a>  29 <em class='sharp'>#  define</em> <a href='../R/2877.html' title='Multiple referred from 2 places.'>FUNCNAME</a> __rawmemchr
+<a id='L30' name='L30'></a>  30 <em class='sharp'># else</em>
+<a id='L31' name='L31'></a>  31 <em class='sharp'>#  define</em> <a href='../R/2877.html' title='Multiple referred from 2 places.'>FUNCNAME</a> RAWMEMCHR
+<a id='L32' name='L32'></a>  32 <em class='sharp'># endif</em>
+<a id='L33' name='L33'></a>  33 <em class='sharp'># define</em> MCOUNT_NARGS 2
+<a id='L34' name='L34'></a>  34 <em class='sharp'># define</em> VREG_ZERO v20
+<a id='L35' name='L35'></a>  35 <em class='sharp'># define</em> OFF_START_LOOP 256
+<a id='L36' name='L36'></a>  36 <em class='sharp'># define</em> RAWMEMCHR_SUBTRACT_VECTORS \
+<a id='L37' name='L37'></a>  37     vsububm   v4,v4,v18;        \
+<a id='L38' name='L38'></a>  38     vsububm   v5,v5,v18;        \
+<a id='L39' name='L39'></a>  39     vsububm   v6,v6,v18;        \
+<a id='L40' name='L40'></a>  40     vsububm   v7,v7,v18;
+<a id='L41' name='L41'></a>  41 <em class='sharp'># define</em> TAIL(vreg,increment)      \
+<a id='L42' name='L42'></a>  42     vctzlsbb  r4,vreg;     \
+<a id='L43' name='L43'></a>  43     addi      r4,r4,increment; \
+<a id='L44' name='L44'></a>  44     add   r3,r5,r4;    \
+<a id='L45' name='L45'></a>  45     blr
+<a id='L46' name='L46'></a>  46 
+<a id='L47' name='L47'></a>  47 <em class='sharp'>#else</em> <em class='comment'>/* strlen */</em>
+<a id='L48' name='L48'></a>  48 
+<a id='L49' name='L49'></a>  49 <em class='sharp'># ifndef</em> <a href='../D/14917.html' title='Multiple defined in 76 places.'>STRLEN</a>
+<a id='L50' name='L50'></a>  50 <em class='sharp'>#  define</em> <a href='../R/2877.html' title='Multiple referred from 2 places.'>FUNCNAME</a> __strlen
+<a id='L51' name='L51'></a>  51 <em class='sharp'>#  define</em> <a href='../R/1331.html' title='Multiple referred from 2 places.'>DEFINE_STRLEN_HIDDEN_DEF</a> 1
+<a id='L52' name='L52'></a>  52 <em class='sharp'># else</em>
+<a id='L53' name='L53'></a>  53 <em class='sharp'>#  define</em> <a href='../R/2877.html' title='Multiple referred from 2 places.'>FUNCNAME</a> STRLEN
+<a id='L54' name='L54'></a>  54 <em class='sharp'># endif</em>
+<a id='L55' name='L55'></a>  55 <em class='sharp'># define</em> MCOUNT_NARGS 1
+<a id='L56' name='L56'></a>  56 <em class='sharp'># define</em> VREG_ZERO v18
+<a id='L57' name='L57'></a>  57 <em class='sharp'># define</em> OFF_START_LOOP 192
+<a id='L58' name='L58'></a>  58 <em class='sharp'># define</em> TAIL(vreg,increment)      \
+<a id='L59' name='L59'></a>  59     vctzlsbb  r4,vreg;     \
+<a id='L60' name='L60'></a>  60     subf      r3,r3,r5;    \
+<a id='L61' name='L61'></a>  61     addi      r4,r4,increment; \
+<a id='L62' name='L62'></a>  62     add   r3,r3,r4;    \
+<a id='L63' name='L63'></a>  63     blr
+<a id='L64' name='L64'></a>  64 <em class='sharp'>#endif</em> <em class='comment'>/* USE_AS_RAWMEMCHR */</em>
+<a id='L65' name='L65'></a>  65 
+<a id='L66' name='L66'></a>  66 <em class='comment'>/* TODO: Replace macros by the actual instructions when minimum binutils becomes</em>
+<a id='L67' name='L67'></a>  67 <em class='comment'>   &gt;= 2.35.  This is used to keep compatibility with older versions.  */</em>
+<a id='L68' name='L68'></a>  68 <em class='sharp'>#define</em> VEXTRACTBM(rt,vrb)   \
+<a id='L69' name='L69'></a>  69     .long(((4)&lt;&lt;(32-6))  \
+<a id='L70' name='L70'></a>  70           | ((rt)&lt;&lt;(32-11))  \
+<a id='L71' name='L71'></a>  71           | ((8)&lt;&lt;(32-16))   \
+<a id='L72' name='L72'></a>  72           | ((vrb)&lt;&lt;(32-21)) \
+<a id='L73' name='L73'></a>  73           | 1602)
+<a id='L74' name='L74'></a>  74 
+<a id='L75' name='L75'></a>  75 <em class='sharp'>#define</em> LXVP(xtp,dq,ra)        \
+<a id='L76' name='L76'></a>  76     .long(((6)&lt;&lt;(32-6))        \
+<a id='L77' name='L77'></a>  77           | ((((xtp)-32)&gt;&gt;1)&lt;&lt;(32-10)) \
+<a id='L78' name='L78'></a>  78           | ((1)&lt;&lt;(32-11))         \
+<a id='L79' name='L79'></a>  79           | ((ra)&lt;&lt;(32-16))        \
+<a id='L80' name='L80'></a>  80           | dq)
+<a id='L81' name='L81'></a>  81 
+<a id='L82' name='L82'></a>  82 <em class='sharp'>#define</em> CHECK16(vreg,offset,addr,label) \
+<a id='L83' name='L83'></a>  83     lxv   vreg+32,offset(addr); \
+<a id='L84' name='L84'></a>  84     vcmpequb. vreg,vreg,v18;    \
+<a id='L85' name='L85'></a>  85     bne   cr6,L(label);
+<a id='L86' name='L86'></a>  86 
+<a id='L87' name='L87'></a>  87 <em class='comment'>/* Load 4 quadwords, merge into one VR for speed and check for NULLs.  r6 has #</em>
+<a id='L88' name='L88'></a>  88 <em class='comment'>   of bytes already checked.  */</em>
+<a id='L89' name='L89'></a>  89 <em class='sharp'>#define</em> CHECK64(offset,addr,label)      \
+<a id='L90' name='L90'></a>  90     li    r6,offset;            \
+<a id='L91' name='L91'></a>  91     LXVP(v4+32,offset,addr);        \
+<a id='L92' name='L92'></a>  92     LXVP(v6+32,offset+32,addr);     \
+<a id='L93' name='L93'></a>  93     RAWMEMCHR_SUBTRACT_VECTORS;     \
+<a id='L94' name='L94'></a>  94     vminub    v14,v4,v5;            \
+<a id='L95' name='L95'></a>  95     vminub    v15,v6,v7;            \
+<a id='L96' name='L96'></a>  96     vminub    v16,v14,v15;          \
+<a id='L97' name='L97'></a>  97     vcmpequb. v0,v16,VREG_ZERO;     \
+<a id='L98' name='L98'></a>  98     bne   cr6,L(label)
+<a id='L99' name='L99'></a>  99 
+<a id='L100' name='L100'></a> 100 <em class='comment'>/* Implements the function</em>
+<a id='L101' name='L101'></a> 101 <em class='comment'></em>
+<a id='L102' name='L102'></a> 102 <em class='comment'>   int [r3] strlen (const void *s [r3])</em>
+<a id='L103' name='L103'></a> 103 <em class='comment'></em>
+<a id='L104' name='L104'></a> 104 <em class='comment'>   but when USE_AS_RAWMEMCHR is set, implements the function</em>
+<a id='L105' name='L105'></a> 105 <em class='comment'></em>
+<a id='L106' name='L106'></a> 106 <em class='comment'>   void* [r3] rawmemchr (const void *s [r3], int c [r4])</em>
+<a id='L107' name='L107'></a> 107 <em class='comment'></em>
+<a id='L108' name='L108'></a> 108 <em class='comment'>   The implementation can load bytes past a matching byte, but only</em>
+<a id='L109' name='L109'></a> 109 <em class='comment'>   up to the next 64B boundary, so it never crosses a page.  */</em>
+<a id='L110' name='L110'></a> 110 
+<a id='L111' name='L111'></a> 111 .machine power9
+<a id='L112' name='L112'></a> 112 
+<a id='L113' name='L113'></a> 113 ENTRY_TOCLESS (FUNCNAME, 4)
+<a id='L114' name='L114'></a> 114     CALL_MCOUNT MCOUNT_NARGS
+<a id='L115' name='L115'></a> 115 
+<a id='L116' name='L116'></a> 116 <em class='sharp'>#ifdef</em> <a href='../D/16771.html' title='Multiple defined in 7 places.'>USE_AS_RAWMEMCHR</a>
+<a id='L117' name='L117'></a> 117     xori    r5,r4,0xff
+<a id='L118' name='L118'></a> 118 
+<a id='L119' name='L119'></a> 119     mtvsrd  v18+32,r4   <em class='comment'>/* matching char in v18  */</em>
+<a id='L120' name='L120'></a> 120     mtvsrd  v19+32,r5   <em class='comment'>/* non matching char in v19  */</em>
+<a id='L121' name='L121'></a> 121 
+<a id='L122' name='L122'></a> 122     vspltb  v18,v18,7   <em class='comment'>/* replicate  */</em>
+<a id='L123' name='L123'></a> 123     vspltb  v19,v19,7   <em class='comment'>/* replicate  */</em>
+<a id='L124' name='L124'></a> 124 <em class='sharp'>#else</em>
+<a id='L125' name='L125'></a> 125     vspltisb  v19,-1
+<a id='L126' name='L126'></a> 126 <em class='sharp'>#endif</em>
+<a id='L127' name='L127'></a> 127     vspltisb  VREG_ZERO,0
+<a id='L128' name='L128'></a> 128 
+<a id='L129' name='L129'></a> 129     <em class='comment'>/* Next 16B-aligned address. Prepare address for L(aligned).  */</em>
+<a id='L130' name='L130'></a> 130     addi      r5,r3,16
+<a id='L131' name='L131'></a> 131     clrrdi    r5,r5,4
+<a id='L132' name='L132'></a> 132 
+<a id='L133' name='L133'></a> 133     <em class='comment'>/* Align data and fill bytes not loaded with non matching char.  */</em>
+<a id='L134' name='L134'></a> 134     lvx   v0,0,r3
+<a id='L135' name='L135'></a> 135     lvsr      v1,0,r3
+<a id='L136' name='L136'></a> 136     vperm     v0,v19,v0,v1
+<a id='L137' name='L137'></a> 137 
+<a id='L138' name='L138'></a> 138     vcmpequb. v6,v0,v18
+<a id='L139' name='L139'></a> 139     beq   cr6,L(aligned)
+<a id='L140' name='L140'></a> 140 
+<a id='L141' name='L141'></a> 141 <em class='sharp'>#ifdef</em> <a href='../D/16771.html' title='Multiple defined in 7 places.'>USE_AS_RAWMEMCHR</a>
+<a id='L142' name='L142'></a> 142     vctzlsbb  r6,v6
+<a id='L143' name='L143'></a> 143     add   r3,r3,r6
+<a id='L144' name='L144'></a> 144 <em class='sharp'>#else</em>
+<a id='L145' name='L145'></a> 145     vctzlsbb  r3,v6
+<a id='L146' name='L146'></a> 146 <em class='sharp'>#endif</em>
+<a id='L147' name='L147'></a> 147     blr
+<a id='L148' name='L148'></a> 148 
+<a id='L149' name='L149'></a> 149     <em class='comment'>/* Test up to OFF_START_LOOP-16 bytes in 16B chunks.  The main loop is</em>
+<a id='L150' name='L150'></a> 150 <em class='comment'>       optimized for longer strings, so checking the first bytes in 16B</em>
+<a id='L151' name='L151'></a> 151 <em class='comment'>       chunks benefits a lot small strings.  */</em>
+<a id='L152' name='L152'></a> 152     .p2align 5
+<a id='L153' name='L153'></a> 153 L(aligned):
+<a id='L154' name='L154'></a> 154 <em class='sharp'>#ifdef</em> <a href='../D/16771.html' title='Multiple defined in 7 places.'>USE_AS_RAWMEMCHR</a>
+<a id='L155' name='L155'></a> 155     cmpdi   cr5,r4,0    <em class='comment'>/* Check if c == 0.  This will be useful to</em>
+<a id='L156' name='L156'></a> 156 <em class='comment'>                  choose how we will perform the main loop.  */</em>
+<a id='L157' name='L157'></a> 157 <em class='sharp'>#endif</em>
+<a id='L158' name='L158'></a> 158     <em class='comment'>/* Prepare address for the loop.  */</em>
+<a id='L159' name='L159'></a> 159     addi      r4,r3,OFF_START_LOOP
+<a id='L160' name='L160'></a> 160     clrrdi    r4,r4,6
+<a id='L161' name='L161'></a> 161 
+<a id='L162' name='L162'></a> 162     CHECK16(v0,0,r5,tail1)
+<a id='L163' name='L163'></a> 163     CHECK16(v1,16,r5,tail2)
+<a id='L164' name='L164'></a> 164     CHECK16(v2,32,r5,tail3)
+<a id='L165' name='L165'></a> 165     CHECK16(v3,48,r5,tail4)
+<a id='L166' name='L166'></a> 166     CHECK16(v4,64,r5,tail5)
+<a id='L167' name='L167'></a> 167     CHECK16(v5,80,r5,tail6)
+<a id='L168' name='L168'></a> 168     CHECK16(v6,96,r5,tail7)
+<a id='L169' name='L169'></a> 169     CHECK16(v7,112,r5,tail8)
+<a id='L170' name='L170'></a> 170     CHECK16(v8,128,r5,tail9)
+<a id='L171' name='L171'></a> 171     CHECK16(v9,144,r5,tail10)
+<a id='L172' name='L172'></a> 172     CHECK16(v10,160,r5,tail11)
+<a id='L173' name='L173'></a> 173 <em class='sharp'>#ifdef</em> <a href='../D/16771.html' title='Multiple defined in 7 places.'>USE_AS_RAWMEMCHR</a>
+<a id='L174' name='L174'></a> 174     CHECK16(v0,176,r5,tail12)
+<a id='L175' name='L175'></a> 175     CHECK16(v1,192,r5,tail13)
+<a id='L176' name='L176'></a> 176     CHECK16(v2,208,r5,tail14)
+<a id='L177' name='L177'></a> 177     CHECK16(v3,224,r5,tail15)
+<a id='L178' name='L178'></a> 178 <em class='sharp'>#endif</em>
+<a id='L179' name='L179'></a> 179 
+<a id='L180' name='L180'></a> 180     addi      r5,r4,128
+<a id='L181' name='L181'></a> 181 
+<a id='L182' name='L182'></a> 182 <em class='sharp'>#ifdef</em> <a href='../D/16771.html' title='Multiple defined in 7 places.'>USE_AS_RAWMEMCHR</a>
+<a id='L183' name='L183'></a> 183     <em class='comment'>/* If c == 0, use the same loop as strlen, without the vsububm.  */</em>
+<a id='L184' name='L184'></a> 184     beq cr5,L(loop)
+<a id='L185' name='L185'></a> 185 
+<a id='L186' name='L186'></a> 186     <em class='comment'>/* This is very similar to the block after L(loop), the difference is</em>
+<a id='L187' name='L187'></a> 187 <em class='comment'>       that here RAWMEMCHR_SUBTRACT_VECTORS is not empty, and we subtract</em>
+<a id='L188' name='L188'></a> 188 <em class='comment'>       each byte loaded by the char we are looking for, this way we can keep</em>
+<a id='L189' name='L189'></a> 189 <em class='comment'>       using vminub to merge the results and checking for nulls.  */</em>
+<a id='L190' name='L190'></a> 190     .p2align 5
+<a id='L191' name='L191'></a> 191 L(rawmemchr_loop):
+<a id='L192' name='L192'></a> 192     CHECK64(0,r4,pre_tail_64b)
+<a id='L193' name='L193'></a> 193     CHECK64(64,r4,pre_tail_64b)
+<a id='L194' name='L194'></a> 194     addi      r4,r4,256
+<a id='L195' name='L195'></a> 195 
+<a id='L196' name='L196'></a> 196     CHECK64(0,r5,tail_64b)
+<a id='L197' name='L197'></a> 197     CHECK64(64,r5,tail_64b)
+<a id='L198' name='L198'></a> 198     addi      r5,r5,256
+<a id='L199' name='L199'></a> 199 
+<a id='L200' name='L200'></a> 200     b     L(rawmemchr_loop)
+<a id='L201' name='L201'></a> 201 <em class='sharp'>#endif</em>
+<a id='L202' name='L202'></a> 202     <em class='comment'>/* Switch to a more aggressive approach checking 64B each time.  Use 2</em>
+<a id='L203' name='L203'></a> 203 <em class='comment'>       pointers 128B apart and unroll the loop once to make the pointer</em>
+<a id='L204' name='L204'></a> 204 <em class='comment'>       updates and usages separated enough to avoid stalls waiting for</em>
+<a id='L205' name='L205'></a> 205 <em class='comment'>       address calculation.  */</em>
+<a id='L206' name='L206'></a> 206     .p2align 5
+<a id='L207' name='L207'></a> 207 L(loop):
+<a id='L208' name='L208'></a> 208 <em class='sharp'>#undef</em> RAWMEMCHR_SUBTRACT_VECTORS
+<a id='L209' name='L209'></a> 209 <em class='sharp'>#define</em> RAWMEMCHR_SUBTRACT_VECTORS <em class='comment'>/* nothing */</em>
+<a id='L210' name='L210'></a> 210     CHECK64(0,r4,pre_tail_64b)
+<a id='L211' name='L211'></a> 211     CHECK64(64,r4,pre_tail_64b)
+<a id='L212' name='L212'></a> 212     addi      r4,r4,256
+<a id='L213' name='L213'></a> 213 
+<a id='L214' name='L214'></a> 214     CHECK64(0,r5,tail_64b)
+<a id='L215' name='L215'></a> 215     CHECK64(64,r5,tail_64b)
+<a id='L216' name='L216'></a> 216     addi      r5,r5,256
+<a id='L217' name='L217'></a> 217 
+<a id='L218' name='L218'></a> 218     b     L(loop)
+<a id='L219' name='L219'></a> 219 
+<a id='L220' name='L220'></a> 220     .p2align  5
+<a id='L221' name='L221'></a> 221 L(pre_tail_64b):
+<a id='L222' name='L222'></a> 222     mr  r5,r4
+<a id='L223' name='L223'></a> 223 L(tail_64b):
+<a id='L224' name='L224'></a> 224     <em class='comment'>/* OK, we found a null byte.  Let's look for it in the current 64-byte</em>
+<a id='L225' name='L225'></a> 225 <em class='comment'>       block and mark it in its corresponding VR.  lxvp vx,0(ry) puts the</em>
+<a id='L226' name='L226'></a> 226 <em class='comment'>       low 16B bytes into vx+1, and the high into vx, so the order here is</em>
+<a id='L227' name='L227'></a> 227 <em class='comment'>       v5, v4, v7, v6.  */</em>
+<a id='L228' name='L228'></a> 228     vcmpequb  v1,v5,VREG_ZERO
+<a id='L229' name='L229'></a> 229     vcmpequb  v2,v4,VREG_ZERO
+<a id='L230' name='L230'></a> 230     vcmpequb  v3,v7,VREG_ZERO
+<a id='L231' name='L231'></a> 231     vcmpequb  v4,v6,VREG_ZERO
+<a id='L232' name='L232'></a> 232 
+<a id='L233' name='L233'></a> 233     <em class='comment'>/* Take into account the other 64B blocks we had already checked.  */</em>
+<a id='L234' name='L234'></a> 234     add r5,r5,r6
+<a id='L235' name='L235'></a> 235 
+<a id='L236' name='L236'></a> 236     <em class='comment'>/* Extract first bit of each byte.  */</em>
+<a id='L237' name='L237'></a> 237     VEXTRACTBM(r7,v1)
+<a id='L238' name='L238'></a> 238     VEXTRACTBM(r8,v2)
+<a id='L239' name='L239'></a> 239     VEXTRACTBM(r9,v3)
+<a id='L240' name='L240'></a> 240     VEXTRACTBM(r10,v4)
+<a id='L241' name='L241'></a> 241 
+<a id='L242' name='L242'></a> 242     <em class='comment'>/* Shift each value into their corresponding position.  */</em>
+<a id='L243' name='L243'></a> 243     sldi      r8,r8,16
+<a id='L244' name='L244'></a> 244     sldi      r9,r9,32
+<a id='L245' name='L245'></a> 245     sldi      r10,r10,48
+<a id='L246' name='L246'></a> 246 
+<a id='L247' name='L247'></a> 247     <em class='comment'>/* Merge the results.  */</em>
+<a id='L248' name='L248'></a> 248     or    r7,r7,r8
+<a id='L249' name='L249'></a> 249     or    r8,r9,r10
+<a id='L250' name='L250'></a> 250     or    r10,r8,r7
+<a id='L251' name='L251'></a> 251 
+<a id='L252' name='L252'></a> 252     cnttzd    r0,r10      <em class='comment'>/* Count trailing zeros before the match.  */</em>
+<a id='L253' name='L253'></a> 253 <em class='sharp'>#ifndef</em> <a href='../D/16771.html' title='Multiple defined in 7 places.'>USE_AS_RAWMEMCHR</a>
+<a id='L254' name='L254'></a> 254     subf      r5,r3,r5
+<a id='L255' name='L255'></a> 255 <em class='sharp'>#endif</em>
+<a id='L256' name='L256'></a> 256     add   r3,r5,r0    <em class='comment'>/* Compute final length.  */</em>
+<a id='L257' name='L257'></a> 257     blr
+<a id='L258' name='L258'></a> 258 
+<a id='L259' name='L259'></a> 259     .p2align  5
+<a id='L260' name='L260'></a> 260 L(tail1):
+<a id='L261' name='L261'></a> 261     TAIL(v0,0)
+<a id='L262' name='L262'></a> 262 
+<a id='L263' name='L263'></a> 263     .p2align  5
+<a id='L264' name='L264'></a> 264 L(tail2):
+<a id='L265' name='L265'></a> 265     TAIL(v1,16)
+<a id='L266' name='L266'></a> 266 
+<a id='L267' name='L267'></a> 267     .p2align  5
+<a id='L268' name='L268'></a> 268 L(tail3):
+<a id='L269' name='L269'></a> 269     TAIL(v2,32)
+<a id='L270' name='L270'></a> 270 
+<a id='L271' name='L271'></a> 271     .p2align  5
+<a id='L272' name='L272'></a> 272 L(tail4):
+<a id='L273' name='L273'></a> 273     TAIL(v3,48)
+<a id='L274' name='L274'></a> 274 
+<a id='L275' name='L275'></a> 275     .p2align  5
+<a id='L276' name='L276'></a> 276 L(tail5):
+<a id='L277' name='L277'></a> 277     TAIL(v4,64)
+<a id='L278' name='L278'></a> 278 
+<a id='L279' name='L279'></a> 279     .p2align  5
+<a id='L280' name='L280'></a> 280 L(tail6):
+<a id='L281' name='L281'></a> 281     TAIL(v5,80)
+<a id='L282' name='L282'></a> 282 
+<a id='L283' name='L283'></a> 283     .p2align  5
+<a id='L284' name='L284'></a> 284 L(tail7):
+<a id='L285' name='L285'></a> 285     TAIL(v6,96)
+<a id='L286' name='L286'></a> 286 
+<a id='L287' name='L287'></a> 287     .p2align  5
+<a id='L288' name='L288'></a> 288 L(tail8):
+<a id='L289' name='L289'></a> 289     TAIL(v7,112)
+<a id='L290' name='L290'></a> 290 
+<a id='L291' name='L291'></a> 291     .p2align  5
+<a id='L292' name='L292'></a> 292 L(tail9):
+<a id='L293' name='L293'></a> 293     TAIL(v8,128)
+<a id='L294' name='L294'></a> 294 
+<a id='L295' name='L295'></a> 295     .p2align  5
+<a id='L296' name='L296'></a> 296 L(tail10):
+<a id='L297' name='L297'></a> 297     TAIL(v9,144)
+<a id='L298' name='L298'></a> 298 
+<a id='L299' name='L299'></a> 299     .p2align  5
+<a id='L300' name='L300'></a> 300 L(tail11):
+<a id='L301' name='L301'></a> 301     TAIL(v10,160)
+<a id='L302' name='L302'></a> 302 
+<a id='L303' name='L303'></a> 303 <em class='sharp'>#ifdef</em> <a href='../D/16771.html' title='Multiple defined in 7 places.'>USE_AS_RAWMEMCHR</a>
+<a id='L304' name='L304'></a> 304     .p2align  5
+<a id='L305' name='L305'></a> 305 L(tail12):
+<a id='L306' name='L306'></a> 306     TAIL(v0,176)
+<a id='L307' name='L307'></a> 307 
+<a id='L308' name='L308'></a> 308     .p2align  5
+<a id='L309' name='L309'></a> 309 L(tail13):
+<a id='L310' name='L310'></a> 310     TAIL(v1,192)
+<a id='L311' name='L311'></a> 311 
+<a id='L312' name='L312'></a> 312     .p2align  5
+<a id='L313' name='L313'></a> 313 L(tail14):
+<a id='L314' name='L314'></a> 314     TAIL(v2,208)
+<a id='L315' name='L315'></a> 315 
+<a id='L316' name='L316'></a> 316     .p2align  5
+<a id='L317' name='L317'></a> 317 L(tail15):
+<a id='L318' name='L318'></a> 318     TAIL(v3,224)
+<a id='L319' name='L319'></a> 319 <em class='sharp'>#endif</em>
+<a id='L320' name='L320'></a> 320 
+<a id='L321' name='L321'></a> 321 END (FUNCNAME)
+<a id='L322' name='L322'></a> 322 
+<a id='L323' name='L323'></a> 323 <em class='sharp'>#ifdef</em> <a href='../D/16771.html' title='Multiple defined in 7 places.'>USE_AS_RAWMEMCHR</a>
+<a id='L324' name='L324'></a> 324 weak_alias (__rawmemchr,rawmemchr)
+<a id='L325' name='L325'></a> 325 libc_hidden_builtin_def (__rawmemchr)
+<a id='L326' name='L326'></a> 326 <em class='sharp'>#else</em>
+<a id='L327' name='L327'></a> 327 <em class='sharp'># ifdef</em> <a href='../D/1971.html' title='Multiple defined in 2 places.'>DEFINE_STRLEN_HIDDEN_DEF</a>
+<a id='L328' name='L328'></a> 328 weak_alias (__strlen, strlen)
+<a id='L329' name='L329'></a> 329 libc_hidden_builtin_def (strlen)
+<a id='L330' name='L330'></a> 330 <em class='sharp'># endif</em>
+<a id='L331' name='L331'></a> 331 <em class='sharp'>#endif</em>
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;][^][v]<a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

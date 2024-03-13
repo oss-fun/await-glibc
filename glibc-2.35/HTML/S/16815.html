@@ -1,0 +1,1000 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>sysdeps/sparc/sparc64/multiarch/memcpy-memmove-niagara7.S</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18977.html'>sysdeps</a>/<a href='../files/19227.html'>sparc</a>/<a href='../files/19240.html'>sparc64</a>/<a href='../files/19244.html'>multiarch</a>/memcpy-memmove-niagara7.S</h2>
+<em class='comment'>/* [&lt;][&gt;][^][v][top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* Copy SIZE bytes from SRC to DEST.  For SUN4V M7.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   Copyright (C) 2017-2022 Free Software Foundation, Inc.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'></em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'></em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'></em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   License along with the GNU C Library; if not, see</em>
+<a id='L17' name='L17'></a>  17 <em class='comment'>   &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L18' name='L18'></a>  18 
+<a id='L19' name='L19'></a>  19 <em class='sharp'>#include</em> &lt;<a href='../I/5967.html'>sysdep.h</a>&gt;
+<a id='L20' name='L20'></a>  20 
+<a id='L21' name='L21'></a>  21 <em class='sharp'>#ifndef</em> <a href='../D/17486.html' title='Multiple defined in 43 places.'>XCC</a>
+<a id='L22' name='L22'></a>  22 <em class='sharp'># define</em> <a href='../R/9775.html' title='Multiple referred from 23 places.'>XCC</a>    xcc
+<a id='L23' name='L23'></a>  23 <em class='sharp'>#endif</em>
+<a id='L24' name='L24'></a>  24     .register   %g2,#scratch
+<a id='L25' name='L25'></a>  25     .register   %g3,#scratch
+<a id='L26' name='L26'></a>  26     .register   %g6,#scratch
+<a id='L27' name='L27'></a>  27 
+<a id='L28' name='L28'></a>  28 <em class='sharp'>#define</em> FPRS_FEF    0x04
+<a id='L29' name='L29'></a>  29 
+<a id='L30' name='L30'></a>  30 <em class='comment'>/*</em>
+<a id='L31' name='L31'></a>  31 <em class='comment'> * ASI_STBI_P marks the cache line as "least recently used"</em>
+<a id='L32' name='L32'></a>  32 <em class='comment'> * which means if many threads are active, it has a high chance</em>
+<a id='L33' name='L33'></a>  33 <em class='comment'> * of being pushed out of the cache between the first initializing</em>
+<a id='L34' name='L34'></a>  34 <em class='comment'> * store and the final stores.</em>
+<a id='L35' name='L35'></a>  35 <em class='comment'> * Thus, in this algorithm we use ASI_STBIMRU_P which marks the</em>
+<a id='L36' name='L36'></a>  36 <em class='comment'> * cache line as "most recently used" for all but the last cache</em>
+<a id='L37' name='L37'></a>  37 <em class='comment'> * line.</em>
+<a id='L38' name='L38'></a>  38 <em class='comment'> */</em>
+<a id='L39' name='L39'></a>  39 
+<a id='L40' name='L40'></a>  40 <em class='sharp'>#define</em> ASI_BLK_INIT_QUAD_LDD_P 0xe2
+<a id='L41' name='L41'></a>  41 <em class='sharp'>#define</em> ASI_ST_BLK_INIT_MRU_P   0xf2
+<a id='L42' name='L42'></a>  42 
+<a id='L43' name='L43'></a>  43 <em class='sharp'>#define</em> ASI_STBI_P  ASI_BLK_INIT_QUAD_LDD_P
+<a id='L44' name='L44'></a>  44 <em class='sharp'>#define</em> ASI_STBIMRU_P   ASI_ST_BLK_INIT_MRU_P
+<a id='L45' name='L45'></a>  45 
+<a id='L46' name='L46'></a>  46 <em class='sharp'>#define</em> BLOCK_SIZE  64  <em class='comment'>/* L2 data cache line size  */</em>
+<a id='L47' name='L47'></a>  47 <em class='sharp'>#define</em> SHORTCOPY   3
+<a id='L48' name='L48'></a>  48 <em class='sharp'>#define</em> SHORTCHECK  14
+<a id='L49' name='L49'></a>  49 <em class='sharp'>#define</em> SHORT_LONG  64  <em class='comment'>/* max copy for short longword-aligned case  */</em>
+<a id='L50' name='L50'></a>  50                 <em class='comment'>/* must be at least 64  */</em>
+<a id='L51' name='L51'></a>  51 <em class='sharp'>#define</em> SMALL_MAX   255 <em class='comment'>/* max small copy for word/long aligned  */</em>
+<a id='L52' name='L52'></a>  52 <em class='sharp'>#define</em> SMALL_UMAX  128 <em class='comment'>/* max small copy for unaligned case  */</em>
+<a id='L53' name='L53'></a>  53 <em class='sharp'>#define</em> MED_WMAX    1023    <em class='comment'>/* max copy for medium word-aligned case  */</em>
+<a id='L54' name='L54'></a>  54 <em class='sharp'>#define</em> MED_MAX     511 <em class='comment'>/* max copy for medium longword-aligned case  */</em>
+<a id='L55' name='L55'></a>  55 <em class='sharp'>#define</em> ST_CHUNK    20  <em class='comment'>/* ST_CHUNK - block of values for BIS Store  */</em>
+<a id='L56' name='L56'></a>  56 <em class='comment'>/* on T4, prefetch 20 is a strong read prefetch to L1 and L2 data cache</em>
+<a id='L57' name='L57'></a>  57 <em class='comment'> * prefetch 20 can cause inst pipeline to delay if data is in memory</em>
+<a id='L58' name='L58'></a>  58 <em class='comment'> * prefetch 21 is a strong read prefetch to L2 data cache, not L1 data cache  */</em>
+<a id='L59' name='L59'></a>  59 <em class='sharp'>#define</em> ALIGN_PRE   20  <em class='comment'>/* distance for aligned prefetch loop  */</em>
+<a id='L60' name='L60'></a>  60 
+<a id='L61' name='L61'></a>  61 <em class='sharp'>#define</em> EX_ST(x)    x
+<a id='L62' name='L62'></a>  62 <em class='sharp'>#define</em> EX_RETVAL(x)    x
+<a id='L63' name='L63'></a>  63 <em class='sharp'>#define</em> STORE_ASI(src,addr) stxa src, [addr] ASI_STBIMRU_P
+<a id='L64' name='L64'></a>  64 <em class='sharp'>#define</em> STORE_INIT(src,addr)    stxa src, [addr] ASI_STBI_P
+<a id='L65' name='L65'></a>  65 
+<a id='L66' name='L66'></a>  66 <em class='sharp'>#if</em> <a href='../D/6753.html' title='Multiple defined in 3 places.'>IS_IN</a> (<a href='../D/32623.html' title='Multiple defined in 2 places.'>libc</a>)
+<a id='L67' name='L67'></a>  67 
+<a id='L68' name='L68'></a>  68     .text
+<a id='L69' name='L69'></a>  69 
+<a id='L70' name='L70'></a>  70 <a href='../D/3651.html' title='Multiple defined in 54 places.'>ENTRY</a>(<a href='../S/16834.html#L84' title='Referred from 84 in sysdeps/sparc/sparc64/multiarch/ifunc-impl-list.c.'>__memmove_niagara7</a>)
+<a id='L71' name='L71'></a>  71     <em class='comment'>/* %o0=dst, %o1=src, %o2=len */</em>
+<a id='L72' name='L72'></a>  72     cmp %o1, %o0    <em class='comment'>/* if from address is &gt;= to use forward copy  */</em>
+<a id='L73' name='L73'></a>  73     bgeu,pn %XCC, .Lforcpy  <em class='comment'>/* else use backward if ...  */</em>
+<a id='L74' name='L74'></a>  74      sub    %o0, %o1, %o4   <em class='comment'>/* get difference of two addresses  */</em>
+<a id='L75' name='L75'></a>  75     cmp %o2, %o4    <em class='comment'>/* compare size and difference of addresses  */</em>
+<a id='L76' name='L76'></a>  76     bleu,pn %XCC, .Lforcpy  <em class='comment'>/* if size is bigger, do overlapped copy  */</em>
+<a id='L77' name='L77'></a>  77      add    %o1, %o2, %o5   <em class='comment'>/* get to end of source space  */</em>
+<a id='L78' name='L78'></a>  78 
+<a id='L79' name='L79'></a>  79 <em class='comment'>/* an overlapped copy that must be done "backwards"  */</em>
+<a id='L80' name='L80'></a>  80 .Lchksize:
+<a id='L81' name='L81'></a>  81     cmp %o2, 8          <em class='comment'>/* less than 8 byte do byte copy  */</em>
+<a id='L82' name='L82'></a>  82     blu,pn %XCC, 2f         <em class='comment'>/* else continue  */</em>
+<a id='L83' name='L83'></a>  83 
+<a id='L84' name='L84'></a>  84 <em class='comment'>/* Now size is bigger than 8  */</em>
+<a id='L85' name='L85'></a>  85 .Ldbalign:
+<a id='L86' name='L86'></a>  86      add    %o0, %o2, %g1       <em class='comment'>/* get to end of dest space  */</em>
+<a id='L87' name='L87'></a>  87     andcc   %g1, 7, %o3     <em class='comment'>/* %o3 has cnt til dst 8 byte align  */</em>
+<a id='L88' name='L88'></a>  88     bz,a,pn %XCC, .Ldbbck       <em class='comment'>/* skip if dst is 8 byte aligned  */</em>
+<a id='L89' name='L89'></a>  89      andn   %o2, 7, %o3     <em class='comment'>/* force %o3 cnt to multiple of 8  */</em>
+<a id='L90' name='L90'></a>  90     sub %o2, %o3, %o2       <em class='comment'>/* update o2 with new count  */</em>
+<a id='L91' name='L91'></a>  91 
+<a id='L92' name='L92'></a>  92 1:  dec %o5         <em class='comment'>/* decrement source  */</em>
+<a id='L93' name='L93'></a>  93     ldub    [%o5], %g1      <em class='comment'>/* load one byte  */</em>
+<a id='L94' name='L94'></a>  94     deccc   %o3         <em class='comment'>/* decrement count  */</em>
+<a id='L95' name='L95'></a>  95     bgu,pt  %XCC, 1b        <em class='comment'>/* if not done keep copying  */</em>
+<a id='L96' name='L96'></a>  96      stb    %g1, [%o5+%o4]      <em class='comment'>/* store one byte into dest  */</em>
+<a id='L97' name='L97'></a>  97     andncc  %o2, 7, %o3     <em class='comment'>/* force %o3 cnt to multiple of 8  */</em>
+<a id='L98' name='L98'></a>  98     bz,pn   %XCC, 2f        <em class='comment'>/* if size &lt; 8, move to byte copy  */</em>
+<a id='L99' name='L99'></a>  99 
+<a id='L100' name='L100'></a> 100 <em class='comment'>/* Now Destination is 8 byte aligned  */</em>
+<a id='L101' name='L101'></a> 101 .Ldbbck:
+<a id='L102' name='L102'></a> 102      andcc  %o5, 7, %o0     <em class='comment'>/* %o0 has src offset  */</em>
+<a id='L103' name='L103'></a> 103     bz,a,pn %XCC, .Ldbcopybc    <em class='comment'>/* if src is aligned do fast memmove  */</em>
+<a id='L104' name='L104'></a> 104      sub    %o2, %o3, %o2       <em class='comment'>/* Residue bytes in %o2  */</em>
+<a id='L105' name='L105'></a> 105 
+<a id='L106' name='L106'></a> 106 .Lcpy_dbwdbc:               <em class='comment'>/* alignment of src is needed  */</em>
+<a id='L107' name='L107'></a> 107     sub %o2, 8, %o2     <em class='comment'>/* set size one loop ahead  */</em>
+<a id='L108' name='L108'></a> 108     sll %o0, 3, %g1     <em class='comment'>/* %g1 is left shift  */</em>
+<a id='L109' name='L109'></a> 109     mov 64, %g5         <em class='comment'>/* init %g5 to be 64  */</em>
+<a id='L110' name='L110'></a> 110     sub %g5, %g1, %g5       <em class='comment'>/* %g5 rightshift = (64 - leftshift)  */</em>
+<a id='L111' name='L111'></a> 111     sub %o5, %o0, %o5       <em class='comment'>/* align the src at 8 bytes.  */</em>
+<a id='L112' name='L112'></a> 112     add %o4, %o0, %o4       <em class='comment'>/* increase diff between src &amp; dst  */</em>
+<a id='L113' name='L113'></a> 113     ldx [%o5], %o1      <em class='comment'>/* load first 8 bytes  */</em>
+<a id='L114' name='L114'></a> 114     srlx    %o1, %g5, %o1
+<a id='L115' name='L115'></a> 115 1:  sub %o5, 8, %o5     <em class='comment'>/* subtract 8 from src  */</em>
+<a id='L116' name='L116'></a> 116     ldx [%o5], %o0      <em class='comment'>/* load 8 byte  */</em>
+<a id='L117' name='L117'></a> 117     sllx    %o0, %g1, %o3       <em class='comment'>/* shift loaded val left to tmp reg  */</em>
+<a id='L118' name='L118'></a> 118     or  %o1, %o3, %o3       <em class='comment'>/* align data  */</em>
+<a id='L119' name='L119'></a> 119     stx %o3, [%o5+%o4]      <em class='comment'>/* store 8 byte  */</em>
+<a id='L120' name='L120'></a> 120     subcc   %o2, 8, %o2     <em class='comment'>/* subtract 8 byte from size  */</em>
+<a id='L121' name='L121'></a> 121     bg,pt   %XCC, 1b        <em class='comment'>/* if size &gt; 0 continue  */</em>
+<a id='L122' name='L122'></a> 122      srlx   %o0, %g5, %o1       <em class='comment'>/* move extra byte for the next use  */</em>
+<a id='L123' name='L123'></a> 123 
+<a id='L124' name='L124'></a> 124     srl %g1, 3, %o0     <em class='comment'>/* restore %o0 value for alignment  */</em>
+<a id='L125' name='L125'></a> 125     add %o5, %o0, %o5       <em class='comment'>/* restore src alignment  */</em>
+<a id='L126' name='L126'></a> 126     sub %o4, %o0, %o4       <em class='comment'>/* restore diff between src &amp; dest  */</em>
+<a id='L127' name='L127'></a> 127 
+<a id='L128' name='L128'></a> 128     ba  2f          <em class='comment'>/* branch to the trailing byte copy  */</em>
+<a id='L129' name='L129'></a> 129      add    %o2, 8, %o2     <em class='comment'>/* restore size value  */</em>
+<a id='L130' name='L130'></a> 130 
+<a id='L131' name='L131'></a> 131 .Ldbcopybc:             <em class='comment'>/* alignment of src is not needed  */</em>
+<a id='L132' name='L132'></a> 132 1:  sub %o5, 8, %o5     <em class='comment'>/* subtract from src  */</em>
+<a id='L133' name='L133'></a> 133     ldx [%o5], %g1      <em class='comment'>/* load 8 bytes  */</em>
+<a id='L134' name='L134'></a> 134     subcc   %o3, 8, %o3     <em class='comment'>/* subtract from size  */</em>
+<a id='L135' name='L135'></a> 135     bgu,pt  %XCC, 1b        <em class='comment'>/* if size is bigger 0 continue  */</em>
+<a id='L136' name='L136'></a> 136      stx    %g1, [%o5+%o4]      <em class='comment'>/* store 8 bytes to destination  */</em>
+<a id='L137' name='L137'></a> 137 
+<a id='L138' name='L138'></a> 138     ba  2f
+<a id='L139' name='L139'></a> 139      nop
+<a id='L140' name='L140'></a> 140 
+<a id='L141' name='L141'></a> 141 .Lbcbyte:
+<a id='L142' name='L142'></a> 142 1:  ldub    [%o5], %g1      <em class='comment'>/* load one byte  */</em>
+<a id='L143' name='L143'></a> 143     stb %g1, [%o5+%o4]      <em class='comment'>/* store one byte  */</em>
+<a id='L144' name='L144'></a> 144 2:  deccc   %o2         <em class='comment'>/* decrement size  */</em>
+<a id='L145' name='L145'></a> 145     bgeu,a,pt %XCC, 1b      <em class='comment'>/* if size is &gt;= 0 continue  */</em>
+<a id='L146' name='L146'></a> 146      dec    %o5         <em class='comment'>/* decrement from address  */</em>
+<a id='L147' name='L147'></a> 147 
+<a id='L148' name='L148'></a> 148 .Lexitbc:               <em class='comment'>/* exit from backward copy  */</em>
+<a id='L149' name='L149'></a> 149     retl
+<a id='L150' name='L150'></a> 150      add    %o5, %o4, %o0       <em class='comment'>/* restore dest addr  */</em>
+<a id='L151' name='L151'></a> 151 
+<a id='L152' name='L152'></a> 152 
+<a id='L153' name='L153'></a> 153 <em class='comment'>/* Check to see if memmove is large aligned copy</em>
+<a id='L154' name='L154'></a> 154 <em class='comment'> * If so, use special version of copy that avoids</em>
+<a id='L155' name='L155'></a> 155 <em class='comment'> * use of block store init.  */</em>
+<a id='L156' name='L156'></a> 156 .Lforcpy:
+<a id='L157' name='L157'></a> 157     cmp %o2, SMALL_MAX      <em class='comment'>/* check for not small case  */</em>
+<a id='L158' name='L158'></a> 158     blt,pn  %XCC, .Lmv_short    <em class='comment'>/* merge with memcpy  */</em>
+<a id='L159' name='L159'></a> 159      mov    %o0, %g1        <em class='comment'>/* save %o0  */</em>
+<a id='L160' name='L160'></a> 160     neg %o0, %o5
+<a id='L161' name='L161'></a> 161     andcc   %o5, 7, %o5     <em class='comment'>/* bytes till DST 8 byte aligned  */</em>
+<a id='L162' name='L162'></a> 162     brz,pt  %o5, .Lmv_dst_aligned_on_8
+<a id='L163' name='L163'></a> 163 
+<a id='L164' name='L164'></a> 164 <em class='comment'>/* %o5 has the bytes to be written in partial store.  */</em>
+<a id='L165' name='L165'></a> 165      sub    %o2, %o5, %o2
+<a id='L166' name='L166'></a> 166     sub %o1, %o0, %o1       <em class='comment'>/* %o1 gets the difference  */</em>
+<a id='L167' name='L167'></a> 167 7:                  <em class='comment'>/* dst aligning loop  */</em>
+<a id='L168' name='L168'></a> 168     ldub    [%o1+%o0], %o4      <em class='comment'>/* load one byte  */</em>
+<a id='L169' name='L169'></a> 169     subcc   %o5, 1, %o5
+<a id='L170' name='L170'></a> 170     stb %o4, [%o0]
+<a id='L171' name='L171'></a> 171     bgu,pt  %XCC, 7b
+<a id='L172' name='L172'></a> 172      add    %o0, 1, %o0     <em class='comment'>/* advance dst  */</em>
+<a id='L173' name='L173'></a> 173     add %o1, %o0, %o1       <em class='comment'>/* restore %o1  */</em>
+<a id='L174' name='L174'></a> 174 .Lmv_dst_aligned_on_8:
+<a id='L175' name='L175'></a> 175     andcc   %o1, 7, %o5
+<a id='L176' name='L176'></a> 176     brnz,pn %o5, .Lsrc_dst_unaligned_on_8
+<a id='L177' name='L177'></a> 177      prefetch [%o1 + (1 * BLOCK_SIZE)], 20
+<a id='L178' name='L178'></a> 178 
+<a id='L179' name='L179'></a> 179 .Lmv_src_dst_aligned_on_8:
+<a id='L180' name='L180'></a> 180 <em class='comment'>/* check if we are copying MED_MAX or more bytes  */</em>
+<a id='L181' name='L181'></a> 181     cmp %o2, MED_MAX        <em class='comment'>/* limit to store buffer size  */</em>
+<a id='L182' name='L182'></a> 182     bleu,pt %XCC, .Lmedlong
+<a id='L183' name='L183'></a> 183      prefetch [%o1 + (2 * BLOCK_SIZE)], 20
+<a id='L184' name='L184'></a> 184 
+<a id='L185' name='L185'></a> 185 <em class='comment'>/* The mv_align loop below mimics the memcpy code for large aligned copies,</em>
+<a id='L186' name='L186'></a> 186 <em class='comment'> * but does not use the ASI_STBI_P (block initializing store) performance</em>
+<a id='L187' name='L187'></a> 187 <em class='comment'> * optimization.  This is used when memcpy is incorrectly invoked with</em>
+<a id='L188' name='L188'></a> 188 <em class='comment'> * overlapping buffers.  */</em>
+<a id='L189' name='L189'></a> 189 
+<a id='L190' name='L190'></a> 190 .Lmv_large_align8_copy:         <em class='comment'>/* Src and dst share 8 byte align  */</em>
+<a id='L191' name='L191'></a> 191                     <em class='comment'>/* align dst to 64 byte boundary  */</em>
+<a id='L192' name='L192'></a> 192     andcc   %o0, 0x3f, %o3      <em class='comment'>/* check for dst 64 byte aligned  */</em>
+<a id='L193' name='L193'></a> 193     brz,pn  %o3, .Lmv_aligned_on_64
+<a id='L194' name='L194'></a> 194      sub    %o3, 64, %o3        <em class='comment'>/* %o3 has negative bytes to move  */</em>
+<a id='L195' name='L195'></a> 195     add %o2, %o3, %o2       <em class='comment'>/* adjust remaining count  */</em>
+<a id='L196' name='L196'></a> 196 .Lmv_align_to_64:
+<a id='L197' name='L197'></a> 197     ldx [%o1], %o4
+<a id='L198' name='L198'></a> 198     add %o1, 8, %o1     <em class='comment'>/* increment src ptr  */</em>
+<a id='L199' name='L199'></a> 199     addcc   %o3, 8, %o3
+<a id='L200' name='L200'></a> 200     stx %o4, [%o0]
+<a id='L201' name='L201'></a> 201     brnz,pt %o3, .Lmv_align_to_64
+<a id='L202' name='L202'></a> 202      add    %o0, 8, %o0     <em class='comment'>/* increment dst ptr  */</em>
+<a id='L203' name='L203'></a> 203 
+<a id='L204' name='L204'></a> 204 .Lmv_aligned_on_64:
+<a id='L205' name='L205'></a> 205     andn    %o2, 0x3f, %o5      <em class='comment'>/* %o5 is multiple of block size  */</em>
+<a id='L206' name='L206'></a> 206     and %o2, 0x3f, %o2      <em class='comment'>/* residue bytes in %o2  */</em>
+<a id='L207' name='L207'></a> 207 .Lmv_align_loop:
+<a id='L208' name='L208'></a> 208     ldx [%o1],%o4
+<a id='L209' name='L209'></a> 209     stx %o4,[%o0]
+<a id='L210' name='L210'></a> 210     prefetch [%o0 + (10 * BLOCK_SIZE)], 22
+<a id='L211' name='L211'></a> 211     prefetch [%o1 + (10 * BLOCK_SIZE)], 21
+<a id='L212' name='L212'></a> 212     subcc   %o5, 64, %o5
+<a id='L213' name='L213'></a> 213     ldx [%o1+8],%o4
+<a id='L214' name='L214'></a> 214     stx %o4,[%o0+8]
+<a id='L215' name='L215'></a> 215     ldx [%o1+16],%o4
+<a id='L216' name='L216'></a> 216     stx %o4,[%o0+16]
+<a id='L217' name='L217'></a> 217     ldx [%o1+24],%o4
+<a id='L218' name='L218'></a> 218     stx %o4,[%o0+24]
+<a id='L219' name='L219'></a> 219     ldx [%o1+32],%o4
+<a id='L220' name='L220'></a> 220     stx %o4,[%o0+32]
+<a id='L221' name='L221'></a> 221     ldx [%o1+40],%o4
+<a id='L222' name='L222'></a> 222     stx %o4,[%o0+40]
+<a id='L223' name='L223'></a> 223     ldx [%o1+48],%o4
+<a id='L224' name='L224'></a> 224     add %o1, 64, %o1
+<a id='L225' name='L225'></a> 225     stx %o4,[%o0+48]
+<a id='L226' name='L226'></a> 226     add %o0, 64, %o0
+<a id='L227' name='L227'></a> 227     ldx [%o1-8],%o4
+<a id='L228' name='L228'></a> 228     bgt,pt  %XCC, .Lmv_align_loop
+<a id='L229' name='L229'></a> 229      stx    %o4,[%o0-8]
+<a id='L230' name='L230'></a> 230 
+<a id='L231' name='L231'></a> 231     ba  .Lmedlong
+<a id='L232' name='L232'></a> 232      nop
+<a id='L233' name='L233'></a> 233 END(__memmove_niagara7)
+<a id='L234' name='L234'></a> 234 
+<a id='L235' name='L235'></a> 235 <a href='../D/3651.html' title='Multiple defined in 54 places.'>ENTRY</a>(<a href='../S/16834.html#L53' title='Referred from 53 in sysdeps/sparc/sparc64/multiarch/ifunc-impl-list.c.'>__mempcpy_niagara7</a>)
+<a id='L236' name='L236'></a> 236     <em class='comment'>/* %o0=dst, %o1=src, %o2=len */</em>
+<a id='L237' name='L237'></a> 237     ba,pt   %icc, 101f
+<a id='L238' name='L238'></a> 238      add    %o0, %o2, %g1       <em class='comment'>/* save dst + len  */</em>
+<a id='L239' name='L239'></a> 239 END(__mempcpy_niagara7)
+<a id='L240' name='L240'></a> 240 
+<a id='L241' name='L241'></a> 241     .align  32
+<a id='L242' name='L242'></a> 242 <a href='../D/3651.html' title='Multiple defined in 54 places.'>ENTRY</a>(<a href='../S/16834.html#L40' title='Referred from 40 in sysdeps/sparc/sparc64/multiarch/ifunc-impl-list.c.'>__memcpy_niagara7</a>)
+<a id='L243' name='L243'></a> 243 100:    <em class='comment'>/* %o0=dst, %o1=src, %o2=len */</em>
+<a id='L244' name='L244'></a> 244     mov %o0, %g1        <em class='comment'>/* save %o0  */</em>
+<a id='L245' name='L245'></a> 245 101:
+<a id='L246' name='L246'></a> 246 <em class='sharp'>#ifndef</em> <a href='../Y/3526.html' title='Multiple used in 23 places.'>__arch64__</a>
+<a id='L247' name='L247'></a> 247     srl %o2, 0, %o2
+<a id='L248' name='L248'></a> 248 <em class='sharp'>#endif</em>
+<a id='L249' name='L249'></a> 249     cmp %o2, SMALL_MAX      <em class='comment'>/* check for not small case  */</em>
+<a id='L250' name='L250'></a> 250     bgeu,pn %XCC, .Lmedium      <em class='comment'>/* go to larger cases  */</em>
+<a id='L251' name='L251'></a> 251 .Lmv_short:
+<a id='L252' name='L252'></a> 252      cmp    %o2, SHORTCOPY      <em class='comment'>/* check for really short case  */</em>
+<a id='L253' name='L253'></a> 253     ble,pn  %XCC, .Lsmallfin
+<a id='L254' name='L254'></a> 254      or %o0, %o1, %o4       <em class='comment'>/* prepare alignment check  */</em>
+<a id='L255' name='L255'></a> 255     andcc   %o4, 0x3, %o5       <em class='comment'>/* test for word alignment  */</em>
+<a id='L256' name='L256'></a> 256     bnz,pn  %XCC, .Lsmallunalign    <em class='comment'>/* branch to non-word aligned case  */</em>
+<a id='L257' name='L257'></a> 257      nop
+<a id='L258' name='L258'></a> 258     subcc   %o2, 7, %o2     <em class='comment'>/* adjust count  */</em>
+<a id='L259' name='L259'></a> 259     ble,pn  %XCC, .Lsmallwordx
+<a id='L260' name='L260'></a> 260      andcc  %o4, 0x7, %o5       <em class='comment'>/* test for long alignment  */</em>
+<a id='L261' name='L261'></a> 261 <em class='comment'>/* 8 or more bytes, src and dest start on word boundary</em>
+<a id='L262' name='L262'></a> 262 <em class='comment'> * %o4 contains or %o0, %o1  */</em>
+<a id='L263' name='L263'></a> 263 .Lsmalllong:
+<a id='L264' name='L264'></a> 264     bnz,pn  %XCC, .Lsmallwords  <em class='comment'>/* branch to word aligned case  */</em>
+<a id='L265' name='L265'></a> 265      cmp    %o2, SHORT_LONG-7
+<a id='L266' name='L266'></a> 266     bge,a   %XCC, .Lmedl64      <em class='comment'>/* if we branch  */</em>
+<a id='L267' name='L267'></a> 267      sub    %o2,56,%o2      <em class='comment'>/* adjust %o2 to -63 off count  */</em>
+<a id='L268' name='L268'></a> 268 
+<a id='L269' name='L269'></a> 269 <em class='comment'>/* slightly unroll the small_long_loop to improve very short copies  */</em>
+<a id='L270' name='L270'></a> 270     cmp %o2, 32-7
+<a id='L271' name='L271'></a> 271     blt,a,pn %XCC, .Lsmall_long_l
+<a id='L272' name='L272'></a> 272      sub    %o1, %o0, %o1       <em class='comment'>/* %o1 gets the difference  */</em>
+<a id='L273' name='L273'></a> 273 
+<a id='L274' name='L274'></a> 274     ldx [%o1], %o5
+<a id='L275' name='L275'></a> 275     ldx [%o1+8], %o4
+<a id='L276' name='L276'></a> 276     ldx [%o1+16], %o3
+<a id='L277' name='L277'></a> 277 
+<a id='L278' name='L278'></a> 278     subcc   %o2, 24, %o2
+<a id='L279' name='L279'></a> 279     sub %o1, %o0, %o1       <em class='comment'>/* %o1 gets the difference  */</em>
+<a id='L280' name='L280'></a> 280 
+<a id='L281' name='L281'></a> 281     stx %o5, [%o0]      <em class='comment'>/* write word  */</em>
+<a id='L282' name='L282'></a> 282     stx %o4, [%o0+8]        <em class='comment'>/* write word  */</em>
+<a id='L283' name='L283'></a> 283     stx %o3, [%o0+16]       <em class='comment'>/* write word  */</em>
+<a id='L284' name='L284'></a> 284 
+<a id='L285' name='L285'></a> 285     add %o0, 24, %o0
+<a id='L286' name='L286'></a> 286 
+<a id='L287' name='L287'></a> 287 <em class='comment'>/* end loop unroll  */</em>
+<a id='L288' name='L288'></a> 288 
+<a id='L289' name='L289'></a> 289 .Lsmall_long_l:
+<a id='L290' name='L290'></a> 290     ldx [%o1+%o0], %o3
+<a id='L291' name='L291'></a> 291     subcc   %o2, 8, %o2
+<a id='L292' name='L292'></a> 292     add %o0, 8, %o0
+<a id='L293' name='L293'></a> 293     bgu,pn  %XCC, .Lsmall_long_l    <em class='comment'>/* loop until done  */</em>
+<a id='L294' name='L294'></a> 294      stx    %o3, [%o0-8]        <em class='comment'>/* write word  */</em>
+<a id='L295' name='L295'></a> 295     addcc   %o2, 7, %o2     <em class='comment'>/* restore %o2 to correct count  */</em>
+<a id='L296' name='L296'></a> 296     bnz,pn  %XCC, .Lsmall_long_x    <em class='comment'>/* check for completion  */</em>
+<a id='L297' name='L297'></a> 297      add    %o1, %o0, %o1       <em class='comment'>/* restore %o1  */</em>
+<a id='L298' name='L298'></a> 298     retl
+<a id='L299' name='L299'></a> 299      mov    EX_RETVAL(%g1), %o0 <em class='comment'>/* restore %o0  */</em>
+<a id='L300' name='L300'></a> 300 .Lsmall_long_x:
+<a id='L301' name='L301'></a> 301     cmp %o2, 4          <em class='comment'>/* check for 4 or more bytes left  */</em>
+<a id='L302' name='L302'></a> 302     blt,pn  %XCC, .Lsmallleft3  <em class='comment'>/* if not, go to finish up  */</em>
+<a id='L303' name='L303'></a> 303      nop
+<a id='L304' name='L304'></a> 304     lduw    [%o1], %o3
+<a id='L305' name='L305'></a> 305     add %o1, 4, %o1
+<a id='L306' name='L306'></a> 306     subcc   %o2, 4, %o2
+<a id='L307' name='L307'></a> 307     stw %o3, [%o0]
+<a id='L308' name='L308'></a> 308     bnz,pn  %XCC, .Lsmallleft3
+<a id='L309' name='L309'></a> 309      add    %o0, 4, %o0
+<a id='L310' name='L310'></a> 310     retl
+<a id='L311' name='L311'></a> 311      mov    EX_RETVAL(%g1), %o0 <em class='comment'>/* restore %o0  */</em>
+<a id='L312' name='L312'></a> 312 
+<a id='L313' name='L313'></a> 313     .align 32
+<a id='L314' name='L314'></a> 314 <em class='comment'>/* src and dest start on word boundary; 7 or fewer bytes  */</em>
+<a id='L315' name='L315'></a> 315 .Lsmallwordx:
+<a id='L316' name='L316'></a> 316     lduw    [%o1], %o3      <em class='comment'>/* read word  */</em>
+<a id='L317' name='L317'></a> 317     addcc   %o2, 3, %o2     <em class='comment'>/* restore count  */</em>
+<a id='L318' name='L318'></a> 318     bz,pt   %XCC, .Lsmallexit
+<a id='L319' name='L319'></a> 319      stw    %o3, [%o0]      <em class='comment'>/* write word  */</em>
+<a id='L320' name='L320'></a> 320     deccc   %o2         <em class='comment'>/* reduce count for cc test  */</em>
+<a id='L321' name='L321'></a> 321     ldub    [%o1+4], %o3        <em class='comment'>/* load one byte  */</em>
+<a id='L322' name='L322'></a> 322     bz,pt   %XCC, .Lsmallexit
+<a id='L323' name='L323'></a> 323      stb    %o3, [%o0+4]        <em class='comment'>/* store one byte  */</em>
+<a id='L324' name='L324'></a> 324     ldub    [%o1+5], %o3        <em class='comment'>/* load second byte  */</em>
+<a id='L325' name='L325'></a> 325     deccc   %o2
+<a id='L326' name='L326'></a> 326     bz,pt   %XCC, .Lsmallexit
+<a id='L327' name='L327'></a> 327      stb    %o3, [%o0+5]        <em class='comment'>/* store second byte  */</em>
+<a id='L328' name='L328'></a> 328     ldub    [%o1+6], %o3        <em class='comment'>/* load third byte  */</em>
+<a id='L329' name='L329'></a> 329     stb %o3, [%o0+6]        <em class='comment'>/* store third byte  */</em>
+<a id='L330' name='L330'></a> 330 .Lsmallexit:
+<a id='L331' name='L331'></a> 331     retl
+<a id='L332' name='L332'></a> 332      mov    EX_RETVAL(%g1), %o0 <em class='comment'>/* restore %o0  */</em>
+<a id='L333' name='L333'></a> 333 
+<a id='L334' name='L334'></a> 334     .align 32
+<a id='L335' name='L335'></a> 335 .Lsmallunalign:
+<a id='L336' name='L336'></a> 336     cmp %o2, SHORTCHECK
+<a id='L337' name='L337'></a> 337     ble,pn  %XCC, .Lsmallrest
+<a id='L338' name='L338'></a> 338      cmp    %o2, SMALL_UMAX
+<a id='L339' name='L339'></a> 339     bge,pt  %XCC, .Lmedium_join
+<a id='L340' name='L340'></a> 340      andcc  %o1, 0x3, %o5       <em class='comment'>/* is src word aligned  */</em>
+<a id='L341' name='L341'></a> 341     bz,pn   %XCC, .Laldst
+<a id='L342' name='L342'></a> 342      cmp    %o5, 2          <em class='comment'>/* is src half-word aligned  */</em>
+<a id='L343' name='L343'></a> 343     be,pt   %XCC, .Ls2algn
+<a id='L344' name='L344'></a> 344      cmp    %o5, 3          <em class='comment'>/* src is byte aligned  */</em>
+<a id='L345' name='L345'></a> 345 .Ls1algn:
+<a id='L346' name='L346'></a> 346     ldub    [%o1], %o3      <em class='comment'>/* move 1 or 3 bytes to align it  */</em>
+<a id='L347' name='L347'></a> 347     inc 1, %o1
+<a id='L348' name='L348'></a> 348     stb %o3, [%o0]      <em class='comment'>/* move a byte to align src  */</em>
+<a id='L349' name='L349'></a> 349     inc 1, %o0
+<a id='L350' name='L350'></a> 350     bne,pt  %XCC, .Ls2algn
+<a id='L351' name='L351'></a> 351      dec    %o2
+<a id='L352' name='L352'></a> 352     b   .Lald           <em class='comment'>/* now go align dest  */</em>
+<a id='L353' name='L353'></a> 353      andcc  %o0, 0x3, %o5
+<a id='L354' name='L354'></a> 354 
+<a id='L355' name='L355'></a> 355 .Ls2algn:
+<a id='L356' name='L356'></a> 356     lduh    [%o1], %o3      <em class='comment'>/* know src is 2 byte aligned  */</em>
+<a id='L357' name='L357'></a> 357     inc 2, %o1
+<a id='L358' name='L358'></a> 358     srl %o3, 8, %o4
+<a id='L359' name='L359'></a> 359     stb %o4, [%o0]      <em class='comment'>/* have to do bytes,  */</em>
+<a id='L360' name='L360'></a> 360     stb %o3, [%o0 + 1]      <em class='comment'>/* do not know dst alignment  */</em>
+<a id='L361' name='L361'></a> 361     inc 2, %o0
+<a id='L362' name='L362'></a> 362     dec 2, %o2
+<a id='L363' name='L363'></a> 363 
+<a id='L364' name='L364'></a> 364 .Laldst:
+<a id='L365' name='L365'></a> 365     andcc   %o0, 0x3, %o5       <em class='comment'>/* align the destination address  */</em>
+<a id='L366' name='L366'></a> 366 .Lald:
+<a id='L367' name='L367'></a> 367     bz,pn   %XCC, .Lw4cp
+<a id='L368' name='L368'></a> 368      cmp    %o5, 2
+<a id='L369' name='L369'></a> 369     be,pn   %XCC, .Lw2cp
+<a id='L370' name='L370'></a> 370      cmp    %o5, 3
+<a id='L371' name='L371'></a> 371 .Lw3cp: lduw    [%o1], %o4
+<a id='L372' name='L372'></a> 372     inc 4, %o1
+<a id='L373' name='L373'></a> 373     srl %o4, 24, %o5
+<a id='L374' name='L374'></a> 374     stb %o5, [%o0]
+<a id='L375' name='L375'></a> 375     bne,pt  %XCC, .Lw1cp
+<a id='L376' name='L376'></a> 376      inc    %o0
+<a id='L377' name='L377'></a> 377     dec 1, %o2
+<a id='L378' name='L378'></a> 378     andn    %o2, 3, %o3     <em class='comment'>/* %o3 is aligned word count  */</em>
+<a id='L379' name='L379'></a> 379     dec 4, %o3          <em class='comment'>/* avoid reading beyond tail of src  */</em>
+<a id='L380' name='L380'></a> 380     sub %o1, %o0, %o1       <em class='comment'>/*  %o1 gets the difference  */</em>
+<a id='L381' name='L381'></a> 381 
+<a id='L382' name='L382'></a> 382 1:  sll %o4, 8, %g5     <em class='comment'>/* save residual bytes  */</em>
+<a id='L383' name='L383'></a> 383     lduw    [%o1+%o0], %o4
+<a id='L384' name='L384'></a> 384     deccc   4, %o3
+<a id='L385' name='L385'></a> 385     srl %o4, 24, %o5        <em class='comment'>/* merge with residual  */</em>
+<a id='L386' name='L386'></a> 386     or  %o5, %g5, %g5
+<a id='L387' name='L387'></a> 387     st  %g5, [%o0]
+<a id='L388' name='L388'></a> 388     bnz,pt  %XCC, 1b
+<a id='L389' name='L389'></a> 389      inc    4, %o0
+<a id='L390' name='L390'></a> 390     sub %o1, 3, %o1     <em class='comment'>/* used one byte of last word read  */</em>
+<a id='L391' name='L391'></a> 391     and %o2, 3, %o2
+<a id='L392' name='L392'></a> 392     b   7f
+<a id='L393' name='L393'></a> 393      inc    4, %o2
+<a id='L394' name='L394'></a> 394 
+<a id='L395' name='L395'></a> 395 .Lw1cp: srl %o4, 8, %o5
+<a id='L396' name='L396'></a> 396     sth %o5, [%o0]
+<a id='L397' name='L397'></a> 397     inc 2, %o0
+<a id='L398' name='L398'></a> 398     dec 3, %o2
+<a id='L399' name='L399'></a> 399     andn    %o2, 3, %o3     <em class='comment'>/* %o3 is aligned word count  */</em>
+<a id='L400' name='L400'></a> 400     dec 4, %o3          <em class='comment'>/* avoid reading beyond tail of src  */</em>
+<a id='L401' name='L401'></a> 401     sub %o1, %o0, %o1       <em class='comment'>/* %o1 gets the difference  */</em>
+<a id='L402' name='L402'></a> 402 
+<a id='L403' name='L403'></a> 403 2:  sll %o4, 24, %g5        <em class='comment'>/* save residual bytes  */</em>
+<a id='L404' name='L404'></a> 404     lduw    [%o1+%o0], %o4
+<a id='L405' name='L405'></a> 405     deccc   4, %o3
+<a id='L406' name='L406'></a> 406     srl %o4, 8, %o5     <em class='comment'>/* merge with residual  */</em>
+<a id='L407' name='L407'></a> 407     or  %o5, %g5, %g5
+<a id='L408' name='L408'></a> 408     st  %g5, [%o0]
+<a id='L409' name='L409'></a> 409     bnz,pt  %XCC, 2b
+<a id='L410' name='L410'></a> 410      inc    4, %o0
+<a id='L411' name='L411'></a> 411     sub %o1, 1, %o1     <em class='comment'>/* used 3 bytes of last word read  */</em>
+<a id='L412' name='L412'></a> 412     and %o2, 3, %o2
+<a id='L413' name='L413'></a> 413     b   7f
+<a id='L414' name='L414'></a> 414      inc    4, %o2
+<a id='L415' name='L415'></a> 415 
+<a id='L416' name='L416'></a> 416 .Lw2cp: lduw    [%o1], %o4
+<a id='L417' name='L417'></a> 417     inc 4, %o1
+<a id='L418' name='L418'></a> 418     srl %o4, 16, %o5
+<a id='L419' name='L419'></a> 419     sth %o5, [%o0]
+<a id='L420' name='L420'></a> 420     inc 2, %o0
+<a id='L421' name='L421'></a> 421     dec 2, %o2
+<a id='L422' name='L422'></a> 422     andn    %o2, 3, %o3     <em class='comment'>/* %o3 is aligned word count  */</em>
+<a id='L423' name='L423'></a> 423     dec 4, %o3          <em class='comment'>/* avoid reading beyond tail of src  */</em>
+<a id='L424' name='L424'></a> 424     sub %o1, %o0, %o1       <em class='comment'>/* %o1 gets the difference  */</em>
+<a id='L425' name='L425'></a> 425 
+<a id='L426' name='L426'></a> 426 3:  sll %o4, 16, %g5        <em class='comment'>/* save residual bytes  */</em>
+<a id='L427' name='L427'></a> 427     lduw    [%o1+%o0], %o4
+<a id='L428' name='L428'></a> 428     deccc   4, %o3
+<a id='L429' name='L429'></a> 429     srl %o4, 16, %o5        <em class='comment'>/* merge with residual  */</em>
+<a id='L430' name='L430'></a> 430     or  %o5, %g5, %g5
+<a id='L431' name='L431'></a> 431     st  %g5, [%o0]
+<a id='L432' name='L432'></a> 432     bnz,pt  %XCC, 3b
+<a id='L433' name='L433'></a> 433      inc    4, %o0
+<a id='L434' name='L434'></a> 434     sub %o1, 2, %o1     <em class='comment'>/* used two bytes of last word read  */</em>
+<a id='L435' name='L435'></a> 435     and %o2, 3, %o2
+<a id='L436' name='L436'></a> 436     b   7f
+<a id='L437' name='L437'></a> 437      inc    4, %o2
+<a id='L438' name='L438'></a> 438 
+<a id='L439' name='L439'></a> 439 .Lw4cp: andn    %o2, 3, %o3     <em class='comment'>/* %o3 is aligned word count  */</em>
+<a id='L440' name='L440'></a> 440     sub %o1, %o0, %o1       <em class='comment'>/* %o1 gets the difference  */</em>
+<a id='L441' name='L441'></a> 441 
+<a id='L442' name='L442'></a> 442 1:  lduw    [%o1+%o0], %o4      <em class='comment'>/* read from address  */</em>
+<a id='L443' name='L443'></a> 443     deccc   4, %o3          <em class='comment'>/* decrement count  */</em>
+<a id='L444' name='L444'></a> 444     st  %o4, [%o0]      <em class='comment'>/* write at destination address  */</em>
+<a id='L445' name='L445'></a> 445     bgu,pt  %XCC, 1b
+<a id='L446' name='L446'></a> 446      inc    4, %o0          <em class='comment'>/* increment to address  */</em>
+<a id='L447' name='L447'></a> 447     and %o2, 3, %o2     <em class='comment'>/* number of leftover bytes, if any  */</em>
+<a id='L448' name='L448'></a> 448 
+<a id='L449' name='L449'></a> 449     <em class='comment'>/* simple finish up byte copy, works with any alignment  */</em>
+<a id='L450' name='L450'></a> 450 7:
+<a id='L451' name='L451'></a> 451     add %o1, %o0, %o1       <em class='comment'>/* restore %o1  */</em>
+<a id='L452' name='L452'></a> 452 .Lsmallrest:
+<a id='L453' name='L453'></a> 453     tst %o2
+<a id='L454' name='L454'></a> 454     bz,pt   %XCC, .Lsmallx
+<a id='L455' name='L455'></a> 455      cmp    %o2, 4
+<a id='L456' name='L456'></a> 456     blt,pn  %XCC, .Lsmallleft3
+<a id='L457' name='L457'></a> 457      nop
+<a id='L458' name='L458'></a> 458     sub %o2, 3, %o2
+<a id='L459' name='L459'></a> 459 .Lsmallnotalign4:
+<a id='L460' name='L460'></a> 460     ldub    [%o1], %o3      <em class='comment'>/* read byte  */</em>
+<a id='L461' name='L461'></a> 461     subcc   %o2, 4, %o2     <em class='comment'>/* reduce count by 4  */</em>
+<a id='L462' name='L462'></a> 462     stb %o3, [%o0]      <em class='comment'>/* write byte  */</em>
+<a id='L463' name='L463'></a> 463     ldub    [%o1+1], %o3        <em class='comment'>/* repeat for total of 4 bytes  */</em>
+<a id='L464' name='L464'></a> 464     add %o1, 4, %o1     <em class='comment'>/* advance SRC by 4  */</em>
+<a id='L465' name='L465'></a> 465     stb %o3, [%o0+1]
+<a id='L466' name='L466'></a> 466     ldub    [%o1-2], %o3
+<a id='L467' name='L467'></a> 467     add %o0, 4, %o0     <em class='comment'>/* advance DST by 4  */</em>
+<a id='L468' name='L468'></a> 468     stb %o3, [%o0-2]
+<a id='L469' name='L469'></a> 469     ldub    [%o1-1], %o3
+<a id='L470' name='L470'></a> 470     bgu,pt  %XCC, .Lsmallnotalign4  <em class='comment'>/* loop til 3 or fewer bytes remain  */</em>
+<a id='L471' name='L471'></a> 471      stb    %o3, [%o0-1]
+<a id='L472' name='L472'></a> 472     addcc   %o2, 3, %o2     <em class='comment'>/* restore count  */</em>
+<a id='L473' name='L473'></a> 473     bz,pt   %XCC, .Lsmallx
+<a id='L474' name='L474'></a> 474 .Lsmallleft3:               <em class='comment'>/* 1, 2, or 3 bytes remain  */</em>
+<a id='L475' name='L475'></a> 475      subcc  %o2, 1, %o2
+<a id='L476' name='L476'></a> 476     ldub    [%o1], %o3      <em class='comment'>/* load one byte  */</em>
+<a id='L477' name='L477'></a> 477     bz,pt   %XCC, .Lsmallx
+<a id='L478' name='L478'></a> 478      stb    %o3, [%o0]      <em class='comment'>/* store one byte  */</em>
+<a id='L479' name='L479'></a> 479     ldub    [%o1+1], %o3        <em class='comment'>/* load second byte  */</em>
+<a id='L480' name='L480'></a> 480     subcc   %o2, 1, %o2
+<a id='L481' name='L481'></a> 481     bz,pt   %XCC, .Lsmallx
+<a id='L482' name='L482'></a> 482      stb    %o3, [%o0+1]        <em class='comment'>/* store second byte  */</em>
+<a id='L483' name='L483'></a> 483     ldub    [%o1+2], %o3        <em class='comment'>/* load third byte  */</em>
+<a id='L484' name='L484'></a> 484     stb %o3, [%o0+2]        <em class='comment'>/* store third byte  */</em>
+<a id='L485' name='L485'></a> 485 .Lsmallx:
+<a id='L486' name='L486'></a> 486     retl
+<a id='L487' name='L487'></a> 487      mov    EX_RETVAL(%g1), %o0 <em class='comment'>/* restore %o0  */</em>
+<a id='L488' name='L488'></a> 488 
+<a id='L489' name='L489'></a> 489 .Lsmallfin:
+<a id='L490' name='L490'></a> 490     tst %o2
+<a id='L491' name='L491'></a> 491     bnz,pn  %XCC, .Lsmallleft3
+<a id='L492' name='L492'></a> 492      nop
+<a id='L493' name='L493'></a> 493     retl
+<a id='L494' name='L494'></a> 494      mov    EX_RETVAL(%g1), %o0 <em class='comment'>/* restore %o0  */</em>
+<a id='L495' name='L495'></a> 495 
+<a id='L496' name='L496'></a> 496     .align 16
+<a id='L497' name='L497'></a> 497 .Lsmallwords:
+<a id='L498' name='L498'></a> 498     lduw    [%o1], %o3      <em class='comment'>/* read word  */</em>
+<a id='L499' name='L499'></a> 499     subcc   %o2, 8, %o2     <em class='comment'>/* update count  */</em>
+<a id='L500' name='L500'></a> 500     stw %o3, [%o0]      <em class='comment'>/* write word  */</em>
+<a id='L501' name='L501'></a> 501     add %o1, 8, %o1     <em class='comment'>/* update SRC  */</em>
+<a id='L502' name='L502'></a> 502     lduw    [%o1-4], %o3        <em class='comment'>/* read word  */</em>
+<a id='L503' name='L503'></a> 503     add %o0, 8, %o0     <em class='comment'>/* update DST  */</em>
+<a id='L504' name='L504'></a> 504     bgu,pt  %XCC, .Lsmallwords  <em class='comment'>/* loop until done  */</em>
+<a id='L505' name='L505'></a> 505      stw    %o3, [%o0-4]        <em class='comment'>/* write word  */</em>
+<a id='L506' name='L506'></a> 506     addcc   %o2, 7, %o2     <em class='comment'>/* restore count  */</em>
+<a id='L507' name='L507'></a> 507     bz,pt   %XCC, .Lsmallexit   <em class='comment'>/* check for completion  */</em>
+<a id='L508' name='L508'></a> 508      cmp    %o2, 4          <em class='comment'>/* check for 4 or more bytes left  */</em>
+<a id='L509' name='L509'></a> 509     blt,pt  %XCC, .Lsmallleft3  <em class='comment'>/* if not, go to finish up  */</em>
+<a id='L510' name='L510'></a> 510      nop
+<a id='L511' name='L511'></a> 511     lduw    [%o1], %o3
+<a id='L512' name='L512'></a> 512     add %o1, 4, %o1
+<a id='L513' name='L513'></a> 513     subcc   %o2, 4, %o2
+<a id='L514' name='L514'></a> 514     add %o0, 4, %o0
+<a id='L515' name='L515'></a> 515     bnz,pn  %XCC, .Lsmallleft3
+<a id='L516' name='L516'></a> 516      stw    %o3, [%o0-4]
+<a id='L517' name='L517'></a> 517     retl
+<a id='L518' name='L518'></a> 518      mov    EX_RETVAL(%g1), %o0 <em class='comment'>/* restore %o0  */</em>
+<a id='L519' name='L519'></a> 519 
+<a id='L520' name='L520'></a> 520     .align 16
+<a id='L521' name='L521'></a> 521 .Lmedium:
+<a id='L522' name='L522'></a> 522 .Lmedium_join:
+<a id='L523' name='L523'></a> 523     neg %o0, %o5
+<a id='L524' name='L524'></a> 524     andcc   %o5, 7, %o5     <em class='comment'>/* bytes till DST 8 byte aligned  */</em>
+<a id='L525' name='L525'></a> 525     brz,pt  %o5, .Ldst_aligned_on_8
+<a id='L526' name='L526'></a> 526 
+<a id='L527' name='L527'></a> 527     <em class='comment'>/* %o5 has the bytes to be written in partial store.  */</em>
+<a id='L528' name='L528'></a> 528      sub    %o2, %o5, %o2
+<a id='L529' name='L529'></a> 529     sub %o1, %o0, %o1       <em class='comment'>/* %o1 gets the difference  */</em>
+<a id='L530' name='L530'></a> 530 7:                  <em class='comment'>/* dst aligning loop  */</em>
+<a id='L531' name='L531'></a> 531     ldub    [%o1+%o0], %o4      <em class='comment'>/* load one byte  */</em>
+<a id='L532' name='L532'></a> 532     subcc   %o5, 1, %o5
+<a id='L533' name='L533'></a> 533     stb %o4, [%o0]
+<a id='L534' name='L534'></a> 534     bgu,pt  %XCC, 7b
+<a id='L535' name='L535'></a> 535      add    %o0, 1, %o0     <em class='comment'>/* advance dst  */</em>
+<a id='L536' name='L536'></a> 536     add %o1, %o0, %o1       <em class='comment'>/* restore %o1  */</em>
+<a id='L537' name='L537'></a> 537 .Ldst_aligned_on_8:
+<a id='L538' name='L538'></a> 538     andcc   %o1, 7, %o5
+<a id='L539' name='L539'></a> 539     brnz,pt %o5, .Lsrc_dst_unaligned_on_8
+<a id='L540' name='L540'></a> 540      nop
+<a id='L541' name='L541'></a> 541 
+<a id='L542' name='L542'></a> 542 .Lsrc_dst_aligned_on_8:
+<a id='L543' name='L543'></a> 543     <em class='comment'>/* check if we are copying MED_MAX or more bytes  */</em>
+<a id='L544' name='L544'></a> 544     cmp %o2, MED_MAX        <em class='comment'>/* limit to store buffer size  */</em>
+<a id='L545' name='L545'></a> 545     bgu,pn  %XCC, .Llarge_align8_copy
+<a id='L546' name='L546'></a> 546      nop
+<a id='L547' name='L547'></a> 547 <em class='comment'>/*</em>
+<a id='L548' name='L548'></a> 548 <em class='comment'> * Special case for handling when src and dest are both long word aligned</em>
+<a id='L549' name='L549'></a> 549 <em class='comment'> * and total data to move is less than MED_MAX bytes</em>
+<a id='L550' name='L550'></a> 550 <em class='comment'> */</em>
+<a id='L551' name='L551'></a> 551 .Lmedlong:
+<a id='L552' name='L552'></a> 552     subcc   %o2, 63, %o2        <em class='comment'>/* adjust length to allow cc test  */</em>
+<a id='L553' name='L553'></a> 553     ble,pn  %XCC, .Lmedl63      <em class='comment'>/* skip big loop if &lt; 64 bytes  */</em>
+<a id='L554' name='L554'></a> 554      nop
+<a id='L555' name='L555'></a> 555 .Lmedl64:
+<a id='L556' name='L556'></a> 556     ldx [%o1], %o4      <em class='comment'>/* load  */</em>
+<a id='L557' name='L557'></a> 557     subcc   %o2, 64, %o2        <em class='comment'>/* decrement length count  */</em>
+<a id='L558' name='L558'></a> 558     stx %o4, [%o0]      <em class='comment'>/* and store  */</em>
+<a id='L559' name='L559'></a> 559     ldx [%o1+8], %o3        <em class='comment'>/* a block of 64 bytes  */</em>
+<a id='L560' name='L560'></a> 560     stx %o3, [%o0+8]
+<a id='L561' name='L561'></a> 561     ldx [%o1+16], %o4
+<a id='L562' name='L562'></a> 562     stx %o4, [%o0+16]
+<a id='L563' name='L563'></a> 563     ldx [%o1+24], %o3
+<a id='L564' name='L564'></a> 564     stx %o3, [%o0+24]
+<a id='L565' name='L565'></a> 565     ldx [%o1+32], %o4       <em class='comment'>/* load  */</em>
+<a id='L566' name='L566'></a> 566     stx %o4, [%o0+32]       <em class='comment'>/* and store  */</em>
+<a id='L567' name='L567'></a> 567     ldx [%o1+40], %o3       <em class='comment'>/* a block of 64 bytes  */</em>
+<a id='L568' name='L568'></a> 568     add %o1, 64, %o1        <em class='comment'>/* increase src ptr by 64  */</em>
+<a id='L569' name='L569'></a> 569     stx %o3, [%o0+40]
+<a id='L570' name='L570'></a> 570     ldx [%o1-16], %o4
+<a id='L571' name='L571'></a> 571     add %o0, 64, %o0        <em class='comment'>/* increase dst ptr by 64  */</em>
+<a id='L572' name='L572'></a> 572     stx %o4, [%o0-16]
+<a id='L573' name='L573'></a> 573     ldx [%o1-8], %o3
+<a id='L574' name='L574'></a> 574     bgu,pt  %XCC, .Lmedl64      <em class='comment'>/* repeat if at least 64 bytes left  */</em>
+<a id='L575' name='L575'></a> 575      stx    %o3, [%o0-8]
+<a id='L576' name='L576'></a> 576 .Lmedl63:
+<a id='L577' name='L577'></a> 577     addcc   %o2, 32, %o2        <em class='comment'>/* adjust remaining count  */</em>
+<a id='L578' name='L578'></a> 578     ble,pt  %XCC, .Lmedl31      <em class='comment'>/* to skip if 31 or fewer bytes left  */</em>
+<a id='L579' name='L579'></a> 579      nop
+<a id='L580' name='L580'></a> 580     ldx [%o1], %o4      <em class='comment'>/* load  */</em>
+<a id='L581' name='L581'></a> 581     sub %o2, 32, %o2        <em class='comment'>/* decrement length count  */</em>
+<a id='L582' name='L582'></a> 582     stx %o4, [%o0]      <em class='comment'>/* and store  */</em>
+<a id='L583' name='L583'></a> 583     ldx [%o1+8], %o3        <em class='comment'>/* a block of 32 bytes  */</em>
+<a id='L584' name='L584'></a> 584     add %o1, 32, %o1        <em class='comment'>/* increase src ptr by 32  */</em>
+<a id='L585' name='L585'></a> 585     stx %o3, [%o0+8]
+<a id='L586' name='L586'></a> 586     ldx [%o1-16], %o4
+<a id='L587' name='L587'></a> 587     add %o0, 32, %o0        <em class='comment'>/* increase dst ptr by 32  */</em>
+<a id='L588' name='L588'></a> 588     stx %o4, [%o0-16]
+<a id='L589' name='L589'></a> 589     ldx [%o1-8], %o3
+<a id='L590' name='L590'></a> 590     stx %o3, [%o0-8]
+<a id='L591' name='L591'></a> 591 .Lmedl31:
+<a id='L592' name='L592'></a> 592     addcc   %o2, 16, %o2        <em class='comment'>/* adjust remaining count  */</em>
+<a id='L593' name='L593'></a> 593     ble,pt  %XCC, .Lmedl15      <em class='comment'>/* skip if 15 or fewer bytes left  */</em>
+<a id='L594' name='L594'></a> 594      nop
+<a id='L595' name='L595'></a> 595     ldx [%o1], %o4      <em class='comment'>/* load and store 16 bytes  */</em>
+<a id='L596' name='L596'></a> 596     add %o1, 16, %o1        <em class='comment'>/* increase src ptr by 16  */</em>
+<a id='L597' name='L597'></a> 597     stx %o4, [%o0]
+<a id='L598' name='L598'></a> 598     sub %o2, 16, %o2        <em class='comment'>/* decrease count by 16  */</em>
+<a id='L599' name='L599'></a> 599     ldx [%o1-8], %o3
+<a id='L600' name='L600'></a> 600     add %o0, 16, %o0        <em class='comment'>/* increase dst ptr by 16  */</em>
+<a id='L601' name='L601'></a> 601     stx %o3, [%o0-8]
+<a id='L602' name='L602'></a> 602 .Lmedl15:
+<a id='L603' name='L603'></a> 603     addcc   %o2, 15, %o2        <em class='comment'>/* restore count  */</em>
+<a id='L604' name='L604'></a> 604     bz,pt   %XCC, .Lsmallexit   <em class='comment'>/* exit if finished  */</em>
+<a id='L605' name='L605'></a> 605      cmp    %o2, 8
+<a id='L606' name='L606'></a> 606     blt,pt  %XCC, .Lmedw7       <em class='comment'>/* skip if 7 or fewer bytes left  */</em>
+<a id='L607' name='L607'></a> 607      tst    %o2
+<a id='L608' name='L608'></a> 608     ldx [%o1], %o4      <em class='comment'>/* load 8 bytes  */</em>
+<a id='L609' name='L609'></a> 609     add %o1, 8, %o1     <em class='comment'>/* increase src ptr by 8  */</em>
+<a id='L610' name='L610'></a> 610     add %o0, 8, %o0     <em class='comment'>/* increase dst ptr by 8  */</em>
+<a id='L611' name='L611'></a> 611     subcc   %o2, 8, %o2     <em class='comment'>/* decrease count by 8  */</em>
+<a id='L612' name='L612'></a> 612     bnz,pn  %XCC, .Lmedw7
+<a id='L613' name='L613'></a> 613      stx    %o4, [%o0-8]        <em class='comment'>/* and store 8 bytes  */</em>
+<a id='L614' name='L614'></a> 614     retl
+<a id='L615' name='L615'></a> 615      mov    EX_RETVAL(%g1), %o0 <em class='comment'>/* restore %o0  */</em>
+<a id='L616' name='L616'></a> 616 
+<a id='L617' name='L617'></a> 617     .align 16
+<a id='L618' name='L618'></a> 618 .Lsrc_dst_unaligned_on_8:
+<a id='L619' name='L619'></a> 619     <em class='comment'>/* DST is 8-byte aligned, src is not  */</em>
+<a id='L620' name='L620'></a> 620     andcc   %o1, 0x3, %o5       <em class='comment'>/* test word alignment  */</em>
+<a id='L621' name='L621'></a> 621     bnz,pt  %XCC, .Lunalignsetup    <em class='comment'>/* branch if not word aligned  */</em>
+<a id='L622' name='L622'></a> 622      nop
+<a id='L623' name='L623'></a> 623 
+<a id='L624' name='L624'></a> 624 <em class='comment'>/*</em>
+<a id='L625' name='L625'></a> 625 <em class='comment'> * Handle all cases where src and dest are aligned on word</em>
+<a id='L626' name='L626'></a> 626 <em class='comment'> * boundaries. Use unrolled loops for better performance.</em>
+<a id='L627' name='L627'></a> 627 <em class='comment'> * This option wins over standard large data move when</em>
+<a id='L628' name='L628'></a> 628 <em class='comment'> * source and destination is in cache for medium</em>
+<a id='L629' name='L629'></a> 629 <em class='comment'> * to short data moves.</em>
+<a id='L630' name='L630'></a> 630 <em class='comment'> */</em>
+<a id='L631' name='L631'></a> 631     cmp %o2, MED_WMAX       <em class='comment'>/* limit to store buffer size  */</em>
+<a id='L632' name='L632'></a> 632     bge,pt  %XCC, .Lunalignrejoin   <em class='comment'>/* otherwise rejoin main loop  */</em>
+<a id='L633' name='L633'></a> 633      nop
+<a id='L634' name='L634'></a> 634 
+<a id='L635' name='L635'></a> 635     subcc   %o2, 31, %o2        <em class='comment'>/* adjust length to allow cc test  */</em>
+<a id='L636' name='L636'></a> 636                     <em class='comment'>/* for end of loop  */</em>
+<a id='L637' name='L637'></a> 637     ble,pt  %XCC, .Lmedw31      <em class='comment'>/* skip big loop if less than 16  */</em>
+<a id='L638' name='L638'></a> 638 .Lmedw32:
+<a id='L639' name='L639'></a> 639      ld [%o1], %o4      <em class='comment'>/* move a block of 32 bytes  */</em>
+<a id='L640' name='L640'></a> 640     sllx    %o4, 32, %o5
+<a id='L641' name='L641'></a> 641     ld  [%o1+4], %o4
+<a id='L642' name='L642'></a> 642     or  %o4, %o5, %o5
+<a id='L643' name='L643'></a> 643     stx %o5, [%o0]
+<a id='L644' name='L644'></a> 644     subcc   %o2, 32, %o2        <em class='comment'>/* decrement length count  */</em>
+<a id='L645' name='L645'></a> 645     ld  [%o1+8], %o4
+<a id='L646' name='L646'></a> 646     sllx    %o4, 32, %o5
+<a id='L647' name='L647'></a> 647     ld  [%o1+12], %o4
+<a id='L648' name='L648'></a> 648     or  %o4, %o5, %o5
+<a id='L649' name='L649'></a> 649     stx %o5, [%o0+8]
+<a id='L650' name='L650'></a> 650     add %o1, 32, %o1        <em class='comment'>/* increase src ptr by 32  */</em>
+<a id='L651' name='L651'></a> 651     ld  [%o1-16], %o4
+<a id='L652' name='L652'></a> 652     sllx    %o4, 32, %o5
+<a id='L653' name='L653'></a> 653     ld  [%o1-12], %o4
+<a id='L654' name='L654'></a> 654     or  %o4, %o5, %o5
+<a id='L655' name='L655'></a> 655     stx %o5, [%o0+16]
+<a id='L656' name='L656'></a> 656     add %o0, 32, %o0        <em class='comment'>/* increase dst ptr by 32  */</em>
+<a id='L657' name='L657'></a> 657     ld  [%o1-8], %o4
+<a id='L658' name='L658'></a> 658     sllx    %o4, 32, %o5
+<a id='L659' name='L659'></a> 659     ld  [%o1-4], %o4
+<a id='L660' name='L660'></a> 660     or  %o4, %o5, %o5
+<a id='L661' name='L661'></a> 661     bgu,pt  %XCC, .Lmedw32      <em class='comment'>/* repeat if at least 32 bytes left  */</em>
+<a id='L662' name='L662'></a> 662      stx    %o5, [%o0-8]
+<a id='L663' name='L663'></a> 663 .Lmedw31:
+<a id='L664' name='L664'></a> 664     addcc   %o2, 31, %o2        <em class='comment'>/* restore count  */</em>
+<a id='L665' name='L665'></a> 665     bz,pt   %XCC, .Lsmallexit   <em class='comment'>/* exit if finished  */</em>
+<a id='L666' name='L666'></a> 666      cmp    %o2, 16
+<a id='L667' name='L667'></a> 667     blt,pt  %XCC, .Lmedw15
+<a id='L668' name='L668'></a> 668      nop
+<a id='L669' name='L669'></a> 669     ld  [%o1], %o4      <em class='comment'>/* move a block of 16 bytes  */</em>
+<a id='L670' name='L670'></a> 670     sllx    %o4, 32, %o5
+<a id='L671' name='L671'></a> 671     subcc   %o2, 16, %o2        <em class='comment'>/* decrement length count  */</em>
+<a id='L672' name='L672'></a> 672     ld  [%o1+4], %o4
+<a id='L673' name='L673'></a> 673     or  %o4, %o5, %o5
+<a id='L674' name='L674'></a> 674     stx %o5, [%o0]
+<a id='L675' name='L675'></a> 675     add %o1, 16, %o1        <em class='comment'>/* increase src ptr by 16  */</em>
+<a id='L676' name='L676'></a> 676     ld  [%o1-8], %o4
+<a id='L677' name='L677'></a> 677     add %o0, 16, %o0        <em class='comment'>/* increase dst ptr by 16  */</em>
+<a id='L678' name='L678'></a> 678     sllx    %o4, 32, %o5
+<a id='L679' name='L679'></a> 679     ld  [%o1-4], %o4
+<a id='L680' name='L680'></a> 680     or  %o4, %o5, %o5
+<a id='L681' name='L681'></a> 681     stx %o5, [%o0-8]
+<a id='L682' name='L682'></a> 682 .Lmedw15:
+<a id='L683' name='L683'></a> 683     bz,pt   %XCC, .Lsmallexit   <em class='comment'>/* exit if finished  */</em>
+<a id='L684' name='L684'></a> 684      cmp    %o2, 8
+<a id='L685' name='L685'></a> 685     blt,pn  %XCC, .Lmedw7       <em class='comment'>/* skip if 7 or fewer bytes left  */</em>
+<a id='L686' name='L686'></a> 686      tst    %o2
+<a id='L687' name='L687'></a> 687     ld  [%o1], %o4      <em class='comment'>/* load 4 bytes  */</em>
+<a id='L688' name='L688'></a> 688     subcc   %o2, 8, %o2     <em class='comment'>/* decrease count by 8  */</em>
+<a id='L689' name='L689'></a> 689     stw %o4, [%o0]      <em class='comment'>/* and store 4 bytes  */</em>
+<a id='L690' name='L690'></a> 690     add %o1, 8, %o1     <em class='comment'>/* increase src ptr by 8  */</em>
+<a id='L691' name='L691'></a> 691     ld  [%o1-4], %o3        <em class='comment'>/* load 4 bytes  */</em>
+<a id='L692' name='L692'></a> 692     add %o0, 8, %o0     <em class='comment'>/* increase dst ptr by 8  */</em>
+<a id='L693' name='L693'></a> 693     stw %o3, [%o0-4]        <em class='comment'>/* and store 4 bytes  */</em>
+<a id='L694' name='L694'></a> 694     bz,pt   %XCC, .Lsmallexit   <em class='comment'>/* exit if finished  */</em>
+<a id='L695' name='L695'></a> 695 .Lmedw7:                <em class='comment'>/* count is ge 1, less than 8  */</em>
+<a id='L696' name='L696'></a> 696      cmp    %o2, 4          <em class='comment'>/* check for 4 bytes left  */</em>
+<a id='L697' name='L697'></a> 697     blt,pn  %XCC, .Lsmallleft3  <em class='comment'>/* skip if 3 or fewer bytes left  */</em>
+<a id='L698' name='L698'></a> 698      nop
+<a id='L699' name='L699'></a> 699     ld  [%o1], %o4      <em class='comment'>/* load 4 bytes  */</em>
+<a id='L700' name='L700'></a> 700     add %o1, 4, %o1     <em class='comment'>/* increase src ptr by 4  */</em>
+<a id='L701' name='L701'></a> 701     add %o0, 4, %o0     <em class='comment'>/* increase dst ptr by 4  */</em>
+<a id='L702' name='L702'></a> 702     subcc   %o2, 4, %o2     <em class='comment'>/* decrease count by 4  */</em>
+<a id='L703' name='L703'></a> 703     bnz,pt  %XCC, .Lsmallleft3
+<a id='L704' name='L704'></a> 704      stw    %o4, [%o0-4]        <em class='comment'>/* and store 4 bytes  */</em>
+<a id='L705' name='L705'></a> 705     retl
+<a id='L706' name='L706'></a> 706      mov    EX_RETVAL(%g1), %o0 <em class='comment'>/* restore %o0  */</em>
+<a id='L707' name='L707'></a> 707 
+<a id='L708' name='L708'></a> 708     .align 16
+<a id='L709' name='L709'></a> 709 .Llarge_align8_copy:            <em class='comment'>/* Src and dst 8 byte aligned  */</em>
+<a id='L710' name='L710'></a> 710     <em class='comment'>/* align dst to 64 byte boundary  */</em>
+<a id='L711' name='L711'></a> 711     andcc   %o0, 0x3f, %o3      <em class='comment'>/* check for dst 64 byte aligned  */</em>
+<a id='L712' name='L712'></a> 712     brz,pn  %o3, .Laligned_to_64
+<a id='L713' name='L713'></a> 713      andcc  %o0, 8, %o3     <em class='comment'>/* odd long words to move?  */</em>
+<a id='L714' name='L714'></a> 714     brz,pt  %o3, .Laligned_to_16
+<a id='L715' name='L715'></a> 715      nop
+<a id='L716' name='L716'></a> 716     ldx [%o1], %o4
+<a id='L717' name='L717'></a> 717     sub %o2, 8, %o2
+<a id='L718' name='L718'></a> 718     add %o1, 8, %o1     <em class='comment'>/* increment src ptr  */</em>
+<a id='L719' name='L719'></a> 719     add %o0, 8, %o0     <em class='comment'>/* increment dst ptr  */</em>
+<a id='L720' name='L720'></a> 720     stx %o4, [%o0-8]
+<a id='L721' name='L721'></a> 721 .Laligned_to_16:
+<a id='L722' name='L722'></a> 722     andcc   %o0, 16, %o3        <em class='comment'>/* pair of long words to move?  */</em>
+<a id='L723' name='L723'></a> 723     brz,pt  %o3, .Laligned_to_32
+<a id='L724' name='L724'></a> 724      nop
+<a id='L725' name='L725'></a> 725     ldx [%o1], %o4
+<a id='L726' name='L726'></a> 726     sub %o2, 16, %o2
+<a id='L727' name='L727'></a> 727     stx %o4, [%o0]
+<a id='L728' name='L728'></a> 728     add %o1, 16, %o1        <em class='comment'>/* increment src ptr  */</em>
+<a id='L729' name='L729'></a> 729     ldx [%o1-8], %o4
+<a id='L730' name='L730'></a> 730     add %o0, 16, %o0        <em class='comment'>/* increment dst ptr  */</em>
+<a id='L731' name='L731'></a> 731     stx %o4, [%o0-8]
+<a id='L732' name='L732'></a> 732 .Laligned_to_32:
+<a id='L733' name='L733'></a> 733     andcc   %o0, 32, %o3        <em class='comment'>/* four long words to move?  */</em>
+<a id='L734' name='L734'></a> 734     brz,pt  %o3, .Laligned_to_64
+<a id='L735' name='L735'></a> 735      nop
+<a id='L736' name='L736'></a> 736     ldx [%o1], %o4
+<a id='L737' name='L737'></a> 737     sub %o2, 32, %o2
+<a id='L738' name='L738'></a> 738     stx %o4, [%o0]
+<a id='L739' name='L739'></a> 739     ldx [%o1+8], %o4
+<a id='L740' name='L740'></a> 740     stx %o4, [%o0+8]
+<a id='L741' name='L741'></a> 741     ldx [%o1+16], %o4
+<a id='L742' name='L742'></a> 742     stx %o4, [%o0+16]
+<a id='L743' name='L743'></a> 743     add %o1, 32, %o1        <em class='comment'>/* increment src ptr  */</em>
+<a id='L744' name='L744'></a> 744     ldx [%o1-8], %o4
+<a id='L745' name='L745'></a> 745     add %o0, 32, %o0        <em class='comment'>/* increment dst ptr  */</em>
+<a id='L746' name='L746'></a> 746     stx %o4, [%o0-8]
+<a id='L747' name='L747'></a> 747 .Laligned_to_64:
+<a id='L748' name='L748'></a> 748 <em class='comment'>/*  Following test is included to avoid issues where existing executables</em>
+<a id='L749' name='L749'></a> 749 <em class='comment'> *  incorrectly call memcpy with overlapping src and dest instead of memmove</em>
+<a id='L750' name='L750'></a> 750 <em class='comment'> *</em>
+<a id='L751' name='L751'></a> 751 <em class='comment'> *  if ( (src ge dst) and (dst+len &gt; src)) go to overlap case</em>
+<a id='L752' name='L752'></a> 752 <em class='comment'> *  if ( (src lt dst) and (src+len &gt; dst)) go to overlap case</em>
+<a id='L753' name='L753'></a> 753 <em class='comment'> */</em>
+<a id='L754' name='L754'></a> 754     cmp %o1,%o0
+<a id='L755' name='L755'></a> 755     bge,pt  %XCC, 1f
+<a id='L756' name='L756'></a> 756      nop
+<a id='L757' name='L757'></a> 757 <em class='comment'>/*              src+len &gt; dst?  */</em>
+<a id='L758' name='L758'></a> 758     add %o1, %o2, %o4
+<a id='L759' name='L759'></a> 759     cmp %o4, %o0
+<a id='L760' name='L760'></a> 760     bgt,pt  %XCC, .Lmv_aligned_on_64
+<a id='L761' name='L761'></a> 761      nop
+<a id='L762' name='L762'></a> 762     ba  2f
+<a id='L763' name='L763'></a> 763      nop
+<a id='L764' name='L764'></a> 764 1:
+<a id='L765' name='L765'></a> 765 <em class='comment'>/*              dst+len &gt; src?  */</em>
+<a id='L766' name='L766'></a> 766     add %o0, %o2, %o4
+<a id='L767' name='L767'></a> 767     cmp %o4, %o1
+<a id='L768' name='L768'></a> 768     bgt,pt  %XCC, .Lmv_aligned_on_64
+<a id='L769' name='L769'></a> 769      nop
+<a id='L770' name='L770'></a> 770 2:
+<a id='L771' name='L771'></a> 771 <em class='comment'>/*  handle non-overlapped copies</em>
+<a id='L772' name='L772'></a> 772 <em class='comment'> *</em>
+<a id='L773' name='L773'></a> 773 <em class='comment'> *  Using block init store (BIS) instructions to avoid fetching cache</em>
+<a id='L774' name='L774'></a> 774 <em class='comment'> *  lines from memory. Use ST_CHUNK stores to first element of each cache</em>
+<a id='L775' name='L775'></a> 775 <em class='comment'> *  line (similar to prefetching) to avoid overfilling STQ or miss buffers.</em>
+<a id='L776' name='L776'></a> 776 <em class='comment'> *  Gives existing cache lines time to be moved out of L1/L2/L3 cache.</em>
+<a id='L777' name='L777'></a> 777 <em class='comment'> */</em>
+<a id='L778' name='L778'></a> 778     andn    %o2, 0x3f, %o5      <em class='comment'>/* %o5 is multiple of block size  */</em>
+<a id='L779' name='L779'></a> 779     and %o2, 0x3f, %o2      <em class='comment'>/* residue bytes in %o2  */</em>
+<a id='L780' name='L780'></a> 780 
+<a id='L781' name='L781'></a> 781 <em class='comment'>/*  We use ASI_STBIMRU_P for the first store to each cache line</em>
+<a id='L782' name='L782'></a> 782 <em class='comment'> *  followed by ASI_STBI_P (mark as LRU) for the last store. That</em>
+<a id='L783' name='L783'></a> 783 <em class='comment'> *  mixed approach reduces the chances the cache line is removed</em>
+<a id='L784' name='L784'></a> 784 <em class='comment'> *  before we finish setting it, while minimizing the effects on</em>
+<a id='L785' name='L785'></a> 785 <em class='comment'> *  other cached values during a large memcpy</em>
+<a id='L786' name='L786'></a> 786 <em class='comment'> *</em>
+<a id='L787' name='L787'></a> 787 <em class='comment'> *  Intermediate stores can be normal since first BIS activates the</em>
+<a id='L788' name='L788'></a> 788 <em class='comment'> *  cache line in the L2 cache.</em>
+<a id='L789' name='L789'></a> 789 <em class='comment'> *</em>
+<a id='L790' name='L790'></a> 790 <em class='comment'> *  ST_CHUNK batches up initial BIS operations for several cache lines</em>
+<a id='L791' name='L791'></a> 791 <em class='comment'> *  to allow multiple requests to not be blocked by overflowing the</em>
+<a id='L792' name='L792'></a> 792 <em class='comment'> *  the store miss buffer. Then the matching stores for all those</em>
+<a id='L793' name='L793'></a> 793 <em class='comment'> *  BIS operations are executed.</em>
+<a id='L794' name='L794'></a> 794 <em class='comment'> */</em>
+<a id='L795' name='L795'></a> 795 
+<a id='L796' name='L796'></a> 796 .Lalign_loop:
+<a id='L797' name='L797'></a> 797     cmp %o5, ST_CHUNK*64
+<a id='L798' name='L798'></a> 798     blu,pt  %XCC, .Lalign_short
+<a id='L799' name='L799'></a> 799      mov    ST_CHUNK, %o3
+<a id='L800' name='L800'></a> 800     sllx    %o3, 6, %g5     <em class='comment'>/* ST_CHUNK*64  */</em>
+<a id='L801' name='L801'></a> 801 
+<a id='L802' name='L802'></a> 802 .Lalign_loop_start:
+<a id='L803' name='L803'></a> 803     prefetch [%o1 + (ALIGN_PRE * BLOCK_SIZE)], 21
+<a id='L804' name='L804'></a> 804     subcc   %o3, 2, %o3
+<a id='L805' name='L805'></a> 805     ldx [%o1], %o4
+<a id='L806' name='L806'></a> 806     add %o1, 128, %o1
+<a id='L807' name='L807'></a> 807     EX_ST(STORE_ASI(%o4, %o0))
+<a id='L808' name='L808'></a> 808     add %o0, 64, %o0
+<a id='L809' name='L809'></a> 809     ldx [%o1-64], %o4
+<a id='L810' name='L810'></a> 810     EX_ST(STORE_ASI(%o4, %o0))
+<a id='L811' name='L811'></a> 811     add %o0, 64, %o0
+<a id='L812' name='L812'></a> 812     bgu,pt  %XCC, .Lalign_loop_start
+<a id='L813' name='L813'></a> 813      prefetch [%o1 + ((ALIGN_PRE-1) * BLOCK_SIZE)], 21
+<a id='L814' name='L814'></a> 814 
+<a id='L815' name='L815'></a> 815     mov ST_CHUNK, %o3
+<a id='L816' name='L816'></a> 816     sub %o1, %g5, %o1       <em class='comment'>/* reset %o1  */</em>
+<a id='L817' name='L817'></a> 817     sub %o0, %g5, %o0       <em class='comment'>/* reset %o0  */</em>
+<a id='L818' name='L818'></a> 818 
+<a id='L819' name='L819'></a> 819     sub %o0, 8, %o0     <em class='comment'>/* adjust %o0 for ASI alignment  */</em>
+<a id='L820' name='L820'></a> 820 .Lalign_loop_rest:
+<a id='L821' name='L821'></a> 821     ldx [%o1+8],%o4
+<a id='L822' name='L822'></a> 822     add %o0, 64, %o0
+<a id='L823' name='L823'></a> 823     stx %o4, [%o0-48]
+<a id='L824' name='L824'></a> 824     subcc   %o3, 1, %o3
+<a id='L825' name='L825'></a> 825     ldx [%o1+16],%o4
+<a id='L826' name='L826'></a> 826     stx %o4, [%o0-40]
+<a id='L827' name='L827'></a> 827     sub %o5, 64, %o5
+<a id='L828' name='L828'></a> 828     ldx [%o1+24],%o4
+<a id='L829' name='L829'></a> 829     stx %o4, [%o0-32]
+<a id='L830' name='L830'></a> 830     ldx [%o1+32],%o4
+<a id='L831' name='L831'></a> 831     stx %o4, [%o0-24]
+<a id='L832' name='L832'></a> 832     ldx [%o1+40],%o4
+<a id='L833' name='L833'></a> 833     stx %o4, [%o0-16]
+<a id='L834' name='L834'></a> 834     ldx [%o1+48],%o4
+<a id='L835' name='L835'></a> 835     stx %o4, [%o0-8]
+<a id='L836' name='L836'></a> 836     add %o1, 64, %o1
+<a id='L837' name='L837'></a> 837     ldx [%o1-8],%o4
+<a id='L838' name='L838'></a> 838     bgu,pt  %XCC, .Lalign_loop_rest
+<a id='L839' name='L839'></a> 839      EX_ST(STORE_INIT(%o4,%o0)) <em class='comment'>/* mark cache line as LRU  */</em>
+<a id='L840' name='L840'></a> 840 
+<a id='L841' name='L841'></a> 841     mov ST_CHUNK, %o3
+<a id='L842' name='L842'></a> 842     cmp %o5, ST_CHUNK*64
+<a id='L843' name='L843'></a> 843     bgu,pt  %XCC, .Lalign_loop_start
+<a id='L844' name='L844'></a> 844      add    %o0, 8, %o0     <em class='comment'>/* restore %o0 from ASI alignment  */</em>
+<a id='L845' name='L845'></a> 845 
+<a id='L846' name='L846'></a> 846     cmp %o5, 0
+<a id='L847' name='L847'></a> 847     beq,pt  %XCC, .Lalign_done
+<a id='L848' name='L848'></a> 848 
+<a id='L849' name='L849'></a> 849 <em class='comment'>/* no prefetches needed in these loops</em>
+<a id='L850' name='L850'></a> 850 <em class='comment'> * since we are within ALIGN_PRE of the end */</em>
+<a id='L851' name='L851'></a> 851 .Lalign_short:
+<a id='L852' name='L852'></a> 852      srl    %o5, 6, %o3
+<a id='L853' name='L853'></a> 853 .Lalign_loop_short:
+<a id='L854' name='L854'></a> 854     subcc   %o3, 1, %o3
+<a id='L855' name='L855'></a> 855     ldx [%o1], %o4
+<a id='L856' name='L856'></a> 856     add %o1, 64, %o1
+<a id='L857' name='L857'></a> 857     EX_ST(STORE_ASI(%o4, %o0))
+<a id='L858' name='L858'></a> 858     bgu,pt  %XCC, .Lalign_loop_short
+<a id='L859' name='L859'></a> 859      add    %o0, 64, %o0
+<a id='L860' name='L860'></a> 860 
+<a id='L861' name='L861'></a> 861     sub %o1, %o5, %o1       <em class='comment'>/* reset %o1  */</em>
+<a id='L862' name='L862'></a> 862     sub %o0, %o5, %o0       <em class='comment'>/* reset %o0  */</em>
+<a id='L863' name='L863'></a> 863 
+<a id='L864' name='L864'></a> 864     sub %o0, 8, %o0     <em class='comment'>/* adjust %o0 for ASI alignment  */</em>
+<a id='L865' name='L865'></a> 865 .Lalign_short_rest:
+<a id='L866' name='L866'></a> 866     ldx [%o1+8],%o4
+<a id='L867' name='L867'></a> 867     add %o0, 64, %o0
+<a id='L868' name='L868'></a> 868     stx %o4, [%o0-48]
+<a id='L869' name='L869'></a> 869     ldx [%o1+16],%o4
+<a id='L870' name='L870'></a> 870     subcc   %o5, 64, %o5
+<a id='L871' name='L871'></a> 871     stx %o4, [%o0-40]
+<a id='L872' name='L872'></a> 872     ldx [%o1+24],%o4
+<a id='L873' name='L873'></a> 873     stx %o4, [%o0-32]
+<a id='L874' name='L874'></a> 874     ldx [%o1+32],%o4
+<a id='L875' name='L875'></a> 875     stx %o4, [%o0-24]
+<a id='L876' name='L876'></a> 876     ldx [%o1+40],%o4
+<a id='L877' name='L877'></a> 877     stx %o4, [%o0-16]
+<a id='L878' name='L878'></a> 878     ldx [%o1+48],%o4
+<a id='L879' name='L879'></a> 879     stx %o4, [%o0-8]
+<a id='L880' name='L880'></a> 880     add %o1, 64, %o1
+<a id='L881' name='L881'></a> 881     ldx [%o1-8],%o4
+<a id='L882' name='L882'></a> 882     bgu,pt  %XCC, .Lalign_short_rest
+<a id='L883' name='L883'></a> 883      EX_ST(STORE_INIT(%o4,%o0)) <em class='comment'>/* mark cache line as LRU  */</em>
+<a id='L884' name='L884'></a> 884 
+<a id='L885' name='L885'></a> 885     add %o0, 8, %o0     <em class='comment'>/* restore %o0 from ASI alignment  */</em>
+<a id='L886' name='L886'></a> 886 
+<a id='L887' name='L887'></a> 887 .Lalign_done:
+<a id='L888' name='L888'></a> 888     cmp %o2, 0
+<a id='L889' name='L889'></a> 889     membar  #StoreStore
+<a id='L890' name='L890'></a> 890     bne,pt  %XCC, .Lmedl63
+<a id='L891' name='L891'></a> 891      subcc  %o2, 63, %o2        <em class='comment'>/* adjust length to allow cc test  */</em>
+<a id='L892' name='L892'></a> 892     retl
+<a id='L893' name='L893'></a> 893      mov    EX_RETVAL(%g1), %o0 <em class='comment'>/* restore %o0  */</em>
+<a id='L894' name='L894'></a> 894 
+<a id='L895' name='L895'></a> 895     .align 16
+<a id='L896' name='L896'></a> 896     <em class='comment'>/* Dst is on 8 byte boundary; src is not; remaining cnt &gt; SMALL_MAX  */</em>
+<a id='L897' name='L897'></a> 897     <em class='comment'>/* Since block load/store and BIS are not in use for unaligned data,</em>
+<a id='L898' name='L898'></a> 898 <em class='comment'>     * no need to align dst on 64 byte cache line boundary  */</em>
+<a id='L899' name='L899'></a> 899 .Lunalignsetup:
+<a id='L900' name='L900'></a> 900 .Lunalignrejoin:
+<a id='L901' name='L901'></a> 901     rd  %fprs, %g5      <em class='comment'>/* check for unused fp  */</em>
+<a id='L902' name='L902'></a> 902     <em class='comment'>/* if fprs.fef == 0, set it.</em>
+<a id='L903' name='L903'></a> 903 <em class='comment'>     * Setting it when already set costs more than checking */</em>
+<a id='L904' name='L904'></a> 904     andcc   %g5, FPRS_FEF, %g5  <em class='comment'>/* test FEF, fprs.du = fprs.dl = 0  */</em>
+<a id='L905' name='L905'></a> 905     bz,a    %XCC, 1f
+<a id='L906' name='L906'></a> 906      wr %g0, FPRS_FEF, %fprs    <em class='comment'>/* fprs.fef = 1  */</em>
+<a id='L907' name='L907'></a> 907 1:
+<a id='L908' name='L908'></a> 908     andn    %o2, 0x3f, %o5      <em class='comment'>/* %o5 is multiple of block size  */</em>
+<a id='L909' name='L909'></a> 909     and %o2, 0x3f, %o2      <em class='comment'>/* residue bytes in %o2  */</em>
+<a id='L910' name='L910'></a> 910     cmp %o2, 8          <em class='comment'>/* Insure we do not load beyond  */</em>
+<a id='L911' name='L911'></a> 911     bgt,pt  %XCC, .Lunalign_adjust  <em class='comment'>/* end of source buffer  */</em>
+<a id='L912' name='L912'></a> 912      andn   %o1, 0x7, %o4       <em class='comment'>/* %o4 has 8 byte aligned src addr  */</em>
+<a id='L913' name='L913'></a> 913     add %o2, 64, %o2        <em class='comment'>/* adjust to leave loop  */</em>
+<a id='L914' name='L914'></a> 914     sub %o5, 64, %o5        <em class='comment'>/* early if necessary  */</em>
+<a id='L915' name='L915'></a> 915 .Lunalign_adjust:
+<a id='L916' name='L916'></a> 916     alignaddr %o1, %g0, %g0     <em class='comment'>/* generate %gsr  */</em>
+<a id='L917' name='L917'></a> 917     add %o1, %o5, %o1       <em class='comment'>/* advance %o1 to after blocks  */</em>
+<a id='L918' name='L918'></a> 918     ldd [%o4], %f0
+<a id='L919' name='L919'></a> 919 .Lunalign_loop:
+<a id='L920' name='L920'></a> 920     prefetch [%o0 + (9 * BLOCK_SIZE)], 20
+<a id='L921' name='L921'></a> 921     ldd [%o4+8], %f2
+<a id='L922' name='L922'></a> 922     faligndata %f0, %f2, %f16
+<a id='L923' name='L923'></a> 923     ldd [%o4+16], %f4
+<a id='L924' name='L924'></a> 924     subcc   %o5, BLOCK_SIZE, %o5
+<a id='L925' name='L925'></a> 925     std %f16, [%o0]
+<a id='L926' name='L926'></a> 926     faligndata %f2, %f4, %f18
+<a id='L927' name='L927'></a> 927     ldd [%o4+24], %f6
+<a id='L928' name='L928'></a> 928     std %f18, [%o0+8]
+<a id='L929' name='L929'></a> 929     faligndata %f4, %f6, %f20
+<a id='L930' name='L930'></a> 930     ldd [%o4+32], %f8
+<a id='L931' name='L931'></a> 931     std %f20, [%o0+16]
+<a id='L932' name='L932'></a> 932     faligndata %f6, %f8, %f22
+<a id='L933' name='L933'></a> 933     ldd [%o4+40], %f10
+<a id='L934' name='L934'></a> 934     std %f22, [%o0+24]
+<a id='L935' name='L935'></a> 935     faligndata %f8, %f10, %f24
+<a id='L936' name='L936'></a> 936     ldd [%o4+48], %f12
+<a id='L937' name='L937'></a> 937     std %f24, [%o0+32]
+<a id='L938' name='L938'></a> 938     faligndata %f10, %f12, %f26
+<a id='L939' name='L939'></a> 939     ldd [%o4+56], %f14
+<a id='L940' name='L940'></a> 940     add %o4, BLOCK_SIZE, %o4
+<a id='L941' name='L941'></a> 941     std %f26, [%o0+40]
+<a id='L942' name='L942'></a> 942     faligndata %f12, %f14, %f28
+<a id='L943' name='L943'></a> 943     ldd [%o4], %f0
+<a id='L944' name='L944'></a> 944     std %f28, [%o0+48]
+<a id='L945' name='L945'></a> 945     faligndata %f14, %f0, %f30
+<a id='L946' name='L946'></a> 946     std %f30, [%o0+56]
+<a id='L947' name='L947'></a> 947     add %o0, BLOCK_SIZE, %o0
+<a id='L948' name='L948'></a> 948     bgu,pt  %XCC, .Lunalign_loop
+<a id='L949' name='L949'></a> 949      prefetch [%o4 + (11 * BLOCK_SIZE)], 20
+<a id='L950' name='L950'></a> 950 
+<a id='L951' name='L951'></a> 951     <em class='comment'>/* Handle trailing bytes, 64 to 127</em>
+<a id='L952' name='L952'></a> 952 <em class='comment'>     * Dest long word aligned, Src not long word aligned  */</em>
+<a id='L953' name='L953'></a> 953     cmp %o2, 15
+<a id='L954' name='L954'></a> 954     bleu,pt %XCC, .Lunalign_short
+<a id='L955' name='L955'></a> 955 
+<a id='L956' name='L956'></a> 956      andn   %o2, 0x7, %o5       <em class='comment'>/* %o5 is multiple of 8  */</em>
+<a id='L957' name='L957'></a> 957     and %o2, 0x7, %o2       <em class='comment'>/* residue bytes in %o2  */</em>
+<a id='L958' name='L958'></a> 958     add %o2, 8, %o2
+<a id='L959' name='L959'></a> 959     sub %o5, 8, %o5     <em class='comment'>/* do not load past end of src  */</em>
+<a id='L960' name='L960'></a> 960     andn    %o1, 0x7, %o4       <em class='comment'>/* %o4 has 8 byte aligned src addr  */</em>
+<a id='L961' name='L961'></a> 961     add %o1, %o5, %o1       <em class='comment'>/* move %o1 to after multiple of 8  */</em>
+<a id='L962' name='L962'></a> 962     ldd [%o4], %f0      <em class='comment'>/* fetch partial word  */</em>
+<a id='L963' name='L963'></a> 963 .Lunalign_by8:
+<a id='L964' name='L964'></a> 964     ldd [%o4+8], %f2
+<a id='L965' name='L965'></a> 965     add %o4, 8, %o4
+<a id='L966' name='L966'></a> 966     faligndata %f0, %f2, %f16
+<a id='L967' name='L967'></a> 967     subcc   %o5, 8, %o5
+<a id='L968' name='L968'></a> 968     std %f16, [%o0]
+<a id='L969' name='L969'></a> 969     fsrc2   %f2, %f0
+<a id='L970' name='L970'></a> 970     bgu,pt  %XCC, .Lunalign_by8
+<a id='L971' name='L971'></a> 971      add    %o0, 8, %o0
+<a id='L972' name='L972'></a> 972 
+<a id='L973' name='L973'></a> 973 .Lunalign_short:            <em class='comment'>/* restore fprs state */</em>
+<a id='L974' name='L974'></a> 974     brnz,pt %g5, .Lsmallrest
+<a id='L975' name='L975'></a> 975      nop
+<a id='L976' name='L976'></a> 976     ba  .Lsmallrest
+<a id='L977' name='L977'></a> 977      wr %g5, %g0, %fprs
+<a id='L978' name='L978'></a> 978 END(__memcpy_niagara7)
+<a id='L979' name='L979'></a> 979 
+<a id='L980' name='L980'></a> 980 <em class='sharp'>#endif</em>
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;][^][v]<a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

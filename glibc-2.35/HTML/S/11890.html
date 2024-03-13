@@ -1,0 +1,135 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>sysdeps/unix/sysv/linux/riscv/setcontext.S</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18977.html'>sysdeps</a>/<a href='../files/19246.html'>unix</a>/<a href='../files/19257.html'>sysv</a>/<a href='../files/19258.html'>linux</a>/<a href='../files/19339.html'>riscv</a>/setcontext.S</h2>
+<em class='comment'>/* [&lt;][&gt;][^][v][top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* Set current context.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   Copyright (C) 2009-2022 Free Software Foundation, Inc.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'></em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'></em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'></em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   License along with the GNU C Library.  If not, see</em>
+<a id='L17' name='L17'></a>  17 <em class='comment'>   &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L18' name='L18'></a>  18 
+<a id='L19' name='L19'></a>  19 <em class='sharp'>#include</em> "<a href='../I/12039.html'>ucontext-macros.h</a>"
+<a id='L20' name='L20'></a>  20 
+<a id='L21' name='L21'></a>  21 <em class='comment'>/*  int __setcontext (const ucontext_t *ucp)</em>
+<a id='L22' name='L22'></a>  22 <em class='comment'></em>
+<a id='L23' name='L23'></a>  23 <em class='comment'>  Restores the machine context in UCP and thereby resumes execution</em>
+<a id='L24' name='L24'></a>  24 <em class='comment'>  in that context.</em>
+<a id='L25' name='L25'></a>  25 <em class='comment'></em>
+<a id='L26' name='L26'></a>  26 <em class='comment'>  This implementation is intended to be used for *synchronous* context</em>
+<a id='L27' name='L27'></a>  27 <em class='comment'>  switches only.  Therefore, it does not have to restore anything</em>
+<a id='L28' name='L28'></a>  28 <em class='comment'>  other than the PRESERVED state.  */</em>
+<a id='L29' name='L29'></a>  29 
+<a id='L30' name='L30'></a>  30     .text
+<a id='L31' name='L31'></a>  31 LEAF (__setcontext)
+<a id='L32' name='L32'></a>  32 
+<a id='L33' name='L33'></a>  33     mv  t0, a0  <em class='comment'>/* Save ucp into t0.  */</em>
+<a id='L34' name='L34'></a>  34 
+<a id='L35' name='L35'></a>  35 <em class='comment'>/* rt_sigprocmask (SIG_SETMASK, &amp;ucp-&gt;uc_sigmask, NULL, _NSIG8) */</em>
+<a id='L36' name='L36'></a>  36     li  a3, _NSIG8
+<a id='L37' name='L37'></a>  37     mv  a2, zero
+<a id='L38' name='L38'></a>  38     add     a1, a0, UCONTEXT_SIGMASK
+<a id='L39' name='L39'></a>  39     li  a0, SIG_SETMASK
+<a id='L40' name='L40'></a>  40 
+<a id='L41' name='L41'></a>  41     li  a7, SYS_ify (rt_sigprocmask)
+<a id='L42' name='L42'></a>  42     scall
+<a id='L43' name='L43'></a>  43 
+<a id='L44' name='L44'></a>  44     bltz    a0, 99f
+<a id='L45' name='L45'></a>  45 
+<a id='L46' name='L46'></a>  46     cfi_def_cfa (t0, 0)
+<a id='L47' name='L47'></a>  47 
+<a id='L48' name='L48'></a>  48 <em class='sharp'>#ifndef</em> <a href='../Y/7240.html' title='Multiple used in 11 places.'>__riscv_float_abi_soft</a>
+<a id='L49' name='L49'></a>  49     lw  t1, MCONTEXT_FSR(t0)
+<a id='L50' name='L50'></a>  50 
+<a id='L51' name='L51'></a>  51     RESTORE_FP_REG_CFI (fs0,   8, t0)
+<a id='L52' name='L52'></a>  52     RESTORE_FP_REG_CFI (fs1,   9, t0)
+<a id='L53' name='L53'></a>  53     RESTORE_FP_REG_CFI (fs2,  18, t0)
+<a id='L54' name='L54'></a>  54     RESTORE_FP_REG_CFI (fs3,  19, t0)
+<a id='L55' name='L55'></a>  55     RESTORE_FP_REG_CFI (fs4,  20, t0)
+<a id='L56' name='L56'></a>  56     RESTORE_FP_REG_CFI (fs5,  21, t0)
+<a id='L57' name='L57'></a>  57     RESTORE_FP_REG_CFI (fs6,  22, t0)
+<a id='L58' name='L58'></a>  58     RESTORE_FP_REG_CFI (fs7,  23, t0)
+<a id='L59' name='L59'></a>  59     RESTORE_FP_REG_CFI (fs8,  24, t0)
+<a id='L60' name='L60'></a>  60     RESTORE_FP_REG_CFI (fs9,  25, t0)
+<a id='L61' name='L61'></a>  61     RESTORE_FP_REG_CFI (fs10, 26, t0)
+<a id='L62' name='L62'></a>  62     RESTORE_FP_REG_CFI (fs11, 27, t0)
+<a id='L63' name='L63'></a>  63 
+<a id='L64' name='L64'></a>  64     fssr    t1
+<a id='L65' name='L65'></a>  65 <em class='sharp'>#endif</em> <em class='comment'>/* __riscv_float_abi_soft */</em>
+<a id='L66' name='L66'></a>  66 
+<a id='L67' name='L67'></a>  67     <em class='comment'>/* Note the contents of argument registers will be random</em>
+<a id='L68' name='L68'></a>  68 <em class='comment'>       unless makecontext() has been called.  */</em>
+<a id='L69' name='L69'></a>  69     RESTORE_INT_REG     (t1,   0, t0)
+<a id='L70' name='L70'></a>  70     RESTORE_INT_REG_CFI (ra,   1, t0)
+<a id='L71' name='L71'></a>  71     RESTORE_INT_REG     (sp,   2, t0)
+<a id='L72' name='L72'></a>  72     RESTORE_INT_REG_CFI (s0,   8, t0)
+<a id='L73' name='L73'></a>  73     RESTORE_INT_REG_CFI (s1,   9, t0)
+<a id='L74' name='L74'></a>  74     RESTORE_INT_REG     (a0,  10, t0)
+<a id='L75' name='L75'></a>  75     RESTORE_INT_REG     (a1,  11, t0)
+<a id='L76' name='L76'></a>  76     RESTORE_INT_REG     (a2,  12, t0)
+<a id='L77' name='L77'></a>  77     RESTORE_INT_REG     (a3,  13, t0)
+<a id='L78' name='L78'></a>  78     RESTORE_INT_REG     (a4,  14, t0)
+<a id='L79' name='L79'></a>  79     RESTORE_INT_REG     (a5,  15, t0)
+<a id='L80' name='L80'></a>  80     RESTORE_INT_REG     (a6,  16, t0)
+<a id='L81' name='L81'></a>  81     RESTORE_INT_REG     (a7,  17, t0)
+<a id='L82' name='L82'></a>  82     RESTORE_INT_REG_CFI (s2,  18, t0)
+<a id='L83' name='L83'></a>  83     RESTORE_INT_REG_CFI (s3,  19, t0)
+<a id='L84' name='L84'></a>  84     RESTORE_INT_REG_CFI (s4,  20, t0)
+<a id='L85' name='L85'></a>  85     RESTORE_INT_REG_CFI (s5,  21, t0)
+<a id='L86' name='L86'></a>  86     RESTORE_INT_REG_CFI (s6,  22, t0)
+<a id='L87' name='L87'></a>  87     RESTORE_INT_REG_CFI (s7,  23, t0)
+<a id='L88' name='L88'></a>  88     RESTORE_INT_REG_CFI (s8,  24, t0)
+<a id='L89' name='L89'></a>  89     RESTORE_INT_REG_CFI (s9,  25, t0)
+<a id='L90' name='L90'></a>  90     RESTORE_INT_REG_CFI (s10, 26, t0)
+<a id='L91' name='L91'></a>  91     RESTORE_INT_REG_CFI (s11, 27, t0)
+<a id='L92' name='L92'></a>  92 
+<a id='L93' name='L93'></a>  93     jr  t1
+<a id='L94' name='L94'></a>  94 
+<a id='L95' name='L95'></a>  95 99: j   __syscall_error
+<a id='L96' name='L96'></a>  96 
+<a id='L97' name='L97'></a>  97 END (__setcontext)
+<a id='L98' name='L98'></a>  98 libc_hidden_def (__setcontext)
+<a id='L99' name='L99'></a>  99 weak_alias (__setcontext, setcontext)
+<a id='L100' name='L100'></a> 100 
+<a id='L101' name='L101'></a> 101 LEAF (__start_context)
+<a id='L102' name='L102'></a> 102 
+<a id='L103' name='L103'></a> 103     <em class='comment'>/* Terminate call stack by noting ra == 0.  Happily, s0 == 0 here.  */</em>
+<a id='L104' name='L104'></a> 104     cfi_register (ra, s0)
+<a id='L105' name='L105'></a> 105 
+<a id='L106' name='L106'></a> 106     <em class='comment'>/* Call the function passed to makecontext.  */</em>
+<a id='L107' name='L107'></a> 107     jalr    s1
+<a id='L108' name='L108'></a> 108 
+<a id='L109' name='L109'></a> 109     <em class='comment'>/* Invoke subsequent context if present, else exit(0).  */</em>
+<a id='L110' name='L110'></a> 110     mv  a0, s2
+<a id='L111' name='L111'></a> 111     beqz    s2, 1f
+<a id='L112' name='L112'></a> 112     jal HIDDEN_JUMPTARGET (__setcontext)
+<a id='L113' name='L113'></a> 113 1:  j   HIDDEN_JUMPTARGET (exit)
+<a id='L114' name='L114'></a> 114 
+<a id='L115' name='L115'></a> 115 END (__start_context)
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;][^][v]<a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

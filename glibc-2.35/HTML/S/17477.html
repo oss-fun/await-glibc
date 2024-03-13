@@ -1,0 +1,283 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>sysdeps/s390/iso-8859-1_cp037_z900.c</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18977.html'>sysdeps</a>/<a href='../files/19209.html'>s390</a>/iso-8859-1_cp037_z900.c</h2>
+<em class='comment'>/* [&lt;][&gt;][^][v][top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* Conversion between ISO 8859-1 and IBM037.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'></em>
+<a id='L3' name='L3'></a>   3 <em class='comment'>   This module uses the translate instruction.</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'>   Copyright (C) 1997-2022 Free Software Foundation, Inc.</em>
+<a id='L5' name='L5'></a>   5 <em class='comment'></em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   This is free software; you can redistribute it and/or</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L10' name='L10'></a>  10 <em class='comment'></em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   This is distributed in the hope that it will be useful,</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L15' name='L15'></a>  15 <em class='comment'></em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L17' name='L17'></a>  17 <em class='comment'>   License along with the GNU C Library; if not, see</em>
+<a id='L18' name='L18'></a>  18 <em class='comment'>   &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L19' name='L19'></a>  19 
+<a id='L20' name='L20'></a>  20 <em class='sharp'>#include</em> &lt;<a href='../I/112.html'>dlfcn.h</a>&gt;
+<a id='L21' name='L21'></a>  21 <em class='sharp'>#include</em> &lt;<a href='../I/1969.html'>stdint.h</a>&gt;
+<a id='L22' name='L22'></a>  22 
+<a id='L23' name='L23'></a>  23 <em class='comment'>// conversion table from ISO-8859-1 to IBM037</em>
+<a id='L24' name='L24'></a>  24 <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <strong class='reserved'>unsigned</strong> <strong class='reserved'>char</strong> <a href='../Y/26765.html' title='Multiple used in 2 places.'>table_iso8859_1_to_cp037</a>[256]
+<a id='L25' name='L25'></a>  25 <strong class='reserved'>__attribute__</strong> ((<a href='../D/27641.html' title='Multiple defined in 2 places.'>aligned</a> (8))) =
+<a id='L26' name='L26'></a>  26 <em class='brace'>{</em>
+<a id='L27' name='L27'></a>  27   [0x00] = 0x00, [0x01] = 0x01, [0x02] = 0x02, [0x03] = 0x03,
+<a id='L28' name='L28'></a>  28   [0x04] = 0x37, [0x05] = 0x2D, [0x06] = 0x2E, [0x07] = 0x2F,
+<a id='L29' name='L29'></a>  29   [0x08] = 0x16, [0x09] = 0x05, [0x0A] = 0x25, [0x0B] = 0x0B,
+<a id='L30' name='L30'></a>  30   [0x0C] = 0x0C, [0x0D] = 0x0D, [0x0E] = 0x0E, [0x0F] = 0x0F,
+<a id='L31' name='L31'></a>  31   [0x10] = 0x10, [0x11] = 0x11, [0x12] = 0x12, [0x13] = 0x13,
+<a id='L32' name='L32'></a>  32   [0x14] = 0x3C, [0x15] = 0x3D, [0x16] = 0x32, [0x17] = 0x26,
+<a id='L33' name='L33'></a>  33   [0x18] = 0x18, [0x19] = 0x19, [0x1A] = 0x3F, [0x1B] = 0x27,
+<a id='L34' name='L34'></a>  34   [0x1C] = 0x1C, [0x1D] = 0x1D, [0x1E] = 0x1E, [0x1F] = 0x1F,
+<a id='L35' name='L35'></a>  35   [0x20] = 0x40, [0x21] = 0x5A, [0x22] = 0x7F, [0x23] = 0x7B,
+<a id='L36' name='L36'></a>  36   [0x24] = 0x5B, [0x25] = 0x6C, [0x26] = 0x50, [0x27] = 0x7D,
+<a id='L37' name='L37'></a>  37   [0x28] = 0x4D, [0x29] = 0x5D, [0x2A] = 0x5C, [0x2B] = 0x4E,
+<a id='L38' name='L38'></a>  38   [0x2C] = 0x6B, [0x2D] = 0x60, [0x2E] = 0x4B, [0x2F] = 0x61,
+<a id='L39' name='L39'></a>  39   [0x30] = 0xF0, [0x31] = 0xF1, [0x32] = 0xF2, [0x33] = 0xF3,
+<a id='L40' name='L40'></a>  40   [0x34] = 0xF4, [0x35] = 0xF5, [0x36] = 0xF6, [0x37] = 0xF7,
+<a id='L41' name='L41'></a>  41   [0x38] = 0xF8, [0x39] = 0xF9, [0x3A] = 0x7A, [0x3B] = 0x5E,
+<a id='L42' name='L42'></a>  42   [0x3C] = 0x4C, [0x3D] = 0x7E, [0x3E] = 0x6E, [0x3F] = 0x6F,
+<a id='L43' name='L43'></a>  43   [0x40] = 0x7C, [0x41] = 0xC1, [0x42] = 0xC2, [0x43] = 0xC3,
+<a id='L44' name='L44'></a>  44   [0x44] = 0xC4, [0x45] = 0xC5, [0x46] = 0xC6, [0x47] = 0xC7,
+<a id='L45' name='L45'></a>  45   [0x48] = 0xC8, [0x49] = 0xC9, [0x4A] = 0xD1, [0x4B] = 0xD2,
+<a id='L46' name='L46'></a>  46   [0x4C] = 0xD3, [0x4D] = 0xD4, [0x4E] = 0xD5, [0x4F] = 0xD6,
+<a id='L47' name='L47'></a>  47   [0x50] = 0xD7, [0x51] = 0xD8, [0x52] = 0xD9, [0x53] = 0xE2,
+<a id='L48' name='L48'></a>  48   [0x54] = 0xE3, [0x55] = 0xE4, [0x56] = 0xE5, [0x57] = 0xE6,
+<a id='L49' name='L49'></a>  49   [0x58] = 0xE7, [0x59] = 0xE8, [0x5A] = 0xE9, [0x5B] = 0xBA,
+<a id='L50' name='L50'></a>  50   [0x5C] = 0xE0, [0x5D] = 0xBB, [0x5E] = 0xB0, [0x5F] = 0x6D,
+<a id='L51' name='L51'></a>  51   [0x60] = 0x79, [0x61] = 0x81, [0x62] = 0x82, [0x63] = 0x83,
+<a id='L52' name='L52'></a>  52   [0x64] = 0x84, [0x65] = 0x85, [0x66] = 0x86, [0x67] = 0x87,
+<a id='L53' name='L53'></a>  53   [0x68] = 0x88, [0x69] = 0x89, [0x6A] = 0x91, [0x6B] = 0x92,
+<a id='L54' name='L54'></a>  54   [0x6C] = 0x93, [0x6D] = 0x94, [0x6E] = 0x95, [0x6F] = 0x96,
+<a id='L55' name='L55'></a>  55   [0x70] = 0x97, [0x71] = 0x98, [0x72] = 0x99, [0x73] = 0xA2,
+<a id='L56' name='L56'></a>  56   [0x74] = 0xA3, [0x75] = 0xA4, [0x76] = 0xA5, [0x77] = 0xA6,
+<a id='L57' name='L57'></a>  57   [0x78] = 0xA7, [0x79] = 0xA8, [0x7A] = 0xA9, [0x7B] = 0xC0,
+<a id='L58' name='L58'></a>  58   [0x7C] = 0x4F, [0x7D] = 0xD0, [0x7E] = 0xA1, [0x7F] = 0x07,
+<a id='L59' name='L59'></a>  59   [0x80] = 0x20, [0x81] = 0x21, [0x82] = 0x22, [0x83] = 0x23,
+<a id='L60' name='L60'></a>  60   [0x84] = 0x24, [0x85] = 0x15, [0x86] = 0x06, [0x87] = 0x17,
+<a id='L61' name='L61'></a>  61   [0x88] = 0x28, [0x89] = 0x29, [0x8A] = 0x2A, [0x8B] = 0x2B,
+<a id='L62' name='L62'></a>  62   [0x8C] = 0x2C, [0x8D] = 0x09, [0x8E] = 0x0A, [0x8F] = 0x1B,
+<a id='L63' name='L63'></a>  63   [0x90] = 0x30, [0x91] = 0x31, [0x92] = 0x1A, [0x93] = 0x33,
+<a id='L64' name='L64'></a>  64   [0x94] = 0x34, [0x95] = 0x35, [0x96] = 0x36, [0x97] = 0x08,
+<a id='L65' name='L65'></a>  65   [0x98] = 0x38, [0x99] = 0x39, [0x9A] = 0x3A, [0x9B] = 0x3B,
+<a id='L66' name='L66'></a>  66   [0x9C] = 0x04, [0x9D] = 0x14, [0x9E] = 0x3E, [0x9F] = 0xFF,
+<a id='L67' name='L67'></a>  67   [0xA0] = 0x41, [0xA1] = 0xAA, [0xA2] = 0x4A, [0xA3] = 0xB1,
+<a id='L68' name='L68'></a>  68   [0xA4] = 0x9F, [0xA5] = 0xB2, [0xA6] = 0x6A, [0xA7] = 0xB5,
+<a id='L69' name='L69'></a>  69   [0xA8] = 0xBD, [0xA9] = 0xB4, [0xAA] = 0x9A, [0xAB] = 0x8A,
+<a id='L70' name='L70'></a>  70   [0xAC] = 0x5F, [0xAD] = 0xCA, [0xAE] = 0xAF, [0xAF] = 0xBC,
+<a id='L71' name='L71'></a>  71   [0xB0] = 0x90, [0xB1] = 0x8F, [0xB2] = 0xEA, [0xB3] = 0xFA,
+<a id='L72' name='L72'></a>  72   [0xB4] = 0xBE, [0xB5] = 0xA0, [0xB6] = 0xB6, [0xB7] = 0xB3,
+<a id='L73' name='L73'></a>  73   [0xB8] = 0x9D, [0xB9] = 0xDA, [0xBA] = 0x9B, [0xBB] = 0x8B,
+<a id='L74' name='L74'></a>  74   [0xBC] = 0xB7, [0xBD] = 0xB8, [0xBE] = 0xB9, [0xBF] = 0xAB,
+<a id='L75' name='L75'></a>  75   [0xC0] = 0x64, [0xC1] = 0x65, [0xC2] = 0x62, [0xC3] = 0x66,
+<a id='L76' name='L76'></a>  76   [0xC4] = 0x63, [0xC5] = 0x67, [0xC6] = 0x9E, [0xC7] = 0x68,
+<a id='L77' name='L77'></a>  77   [0xC8] = 0x74, [0xC9] = 0x71, [0xCA] = 0x72, [0xCB] = 0x73,
+<a id='L78' name='L78'></a>  78   [0xCC] = 0x78, [0xCD] = 0x75, [0xCE] = 0x76, [0xCF] = 0x77,
+<a id='L79' name='L79'></a>  79   [0xD0] = 0xAC, [0xD1] = 0x69, [0xD2] = 0xED, [0xD3] = 0xEE,
+<a id='L80' name='L80'></a>  80   [0xD4] = 0xEB, [0xD5] = 0xEF, [0xD6] = 0xEC, [0xD7] = 0xBF,
+<a id='L81' name='L81'></a>  81   [0xD8] = 0x80, [0xD9] = 0xFD, [0xDA] = 0xFE, [0xDB] = 0xFB,
+<a id='L82' name='L82'></a>  82   [0xDC] = 0xFC, [0xDD] = 0xAD, [0xDE] = 0xAE, [0xDF] = 0x59,
+<a id='L83' name='L83'></a>  83   [0xE0] = 0x44, [0xE1] = 0x45, [0xE2] = 0x42, [0xE3] = 0x46,
+<a id='L84' name='L84'></a>  84   [0xE4] = 0x43, [0xE5] = 0x47, [0xE6] = 0x9C, [0xE7] = 0x48,
+<a id='L85' name='L85'></a>  85   [0xE8] = 0x54, [0xE9] = 0x51, [0xEA] = 0x52, [0xEB] = 0x53,
+<a id='L86' name='L86'></a>  86   [0xEC] = 0x58, [0xED] = 0x55, [0xEE] = 0x56, [0xEF] = 0x57,
+<a id='L87' name='L87'></a>  87   [0xF0] = 0x8C, [0xF1] = 0x49, [0xF2] = 0xCD, [0xF3] = 0xCE,
+<a id='L88' name='L88'></a>  88   [0xF4] = 0xCB, [0xF5] = 0xCF, [0xF6] = 0xCC, [0xF7] = 0xE1,
+<a id='L89' name='L89'></a>  89   [0xF8] = 0x70, [0xF9] = 0xDD, [0xFA] = 0xDE, [0xFB] = 0xDB,
+<a id='L90' name='L90'></a>  90   [0xFC] = 0xDC, [0xFD] = 0x8D, [0xFE] = 0x8E, [0xFF] = 0xDF
+<a id='L91' name='L91'></a>  91 <em class='brace'>}</em>;
+<a id='L92' name='L92'></a>  92 
+<a id='L93' name='L93'></a>  93 <em class='comment'>// conversion table from IBM037 to ISO-8859-1</em>
+<a id='L94' name='L94'></a>  94 <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <strong class='reserved'>unsigned</strong> <strong class='reserved'>char</strong> <a href='../Y/26763.html' title='Multiple used in 2 places.'>table_cp037_iso8859_1</a>[256]
+<a id='L95' name='L95'></a>  95 <strong class='reserved'>__attribute__</strong> ((<a href='../D/27641.html' title='Multiple defined in 2 places.'>aligned</a> (8))) =
+<a id='L96' name='L96'></a>  96 <em class='brace'>{</em>
+<a id='L97' name='L97'></a>  97   [0x00] = 0x00, [0x01] = 0x01, [0x02] = 0x02, [0x03] = 0x03,
+<a id='L98' name='L98'></a>  98   [0x04] = 0x9C, [0x05] = 0x09, [0x06] = 0x86, [0x07] = 0x7F,
+<a id='L99' name='L99'></a>  99   [0x08] = 0x97, [0x09] = 0x8D, [0x0A] = 0x8E, [0x0B] = 0x0B,
+<a id='L100' name='L100'></a> 100   [0x0C] = 0x0C, [0x0D] = 0x0D, [0x0E] = 0x0E, [0x0F] = 0x0F,
+<a id='L101' name='L101'></a> 101   [0x10] = 0x10, [0x11] = 0x11, [0x12] = 0x12, [0x13] = 0x13,
+<a id='L102' name='L102'></a> 102   [0x14] = 0x9D, [0x15] = 0x85, [0x16] = 0x08, [0x17] = 0x87,
+<a id='L103' name='L103'></a> 103   [0x18] = 0x18, [0x19] = 0x19, [0x1A] = 0x92, [0x1B] = 0x8F,
+<a id='L104' name='L104'></a> 104   [0x1C] = 0x1C, [0x1D] = 0x1D, [0x1E] = 0x1E, [0x1F] = 0x1F,
+<a id='L105' name='L105'></a> 105   [0x20] = 0x80, [0x21] = 0x81, [0x22] = 0x82, [0x23] = 0x83,
+<a id='L106' name='L106'></a> 106   [0x24] = 0x84, [0x25] = 0x0A, [0x26] = 0x17, [0x27] = 0x1B,
+<a id='L107' name='L107'></a> 107   [0x28] = 0x88, [0x29] = 0x89, [0x2A] = 0x8A, [0x2B] = 0x8B,
+<a id='L108' name='L108'></a> 108   [0x2C] = 0x8C, [0x2D] = 0x05, [0x2E] = 0x06, [0x2F] = 0x07,
+<a id='L109' name='L109'></a> 109   [0x30] = 0x90, [0x31] = 0x91, [0x32] = 0x16, [0x33] = 0x93,
+<a id='L110' name='L110'></a> 110   [0x34] = 0x94, [0x35] = 0x95, [0x36] = 0x96, [0x37] = 0x04,
+<a id='L111' name='L111'></a> 111   [0x38] = 0x98, [0x39] = 0x99, [0x3A] = 0x9A, [0x3B] = 0x9B,
+<a id='L112' name='L112'></a> 112   [0x3C] = 0x14, [0x3D] = 0x15, [0x3E] = 0x9E, [0x3F] = 0x1A,
+<a id='L113' name='L113'></a> 113   [0x40] = 0x20, [0x41] = 0xA0, [0x42] = 0xE2, [0x43] = 0xE4,
+<a id='L114' name='L114'></a> 114   [0x44] = 0xE0, [0x45] = 0xE1, [0x46] = 0xE3, [0x47] = 0xE5,
+<a id='L115' name='L115'></a> 115   [0x48] = 0xE7, [0x49] = 0xF1, [0x4A] = 0xA2, [0x4B] = 0x2E,
+<a id='L116' name='L116'></a> 116   [0x4C] = 0x3C, [0x4D] = 0x28, [0x4E] = 0x2B, [0x4F] = 0x7C,
+<a id='L117' name='L117'></a> 117   [0x50] = 0x26, [0x51] = 0xE9, [0x52] = 0xEA, [0x53] = 0xEB,
+<a id='L118' name='L118'></a> 118   [0x54] = 0xE8, [0x55] = 0xED, [0x56] = 0xEE, [0x57] = 0xEF,
+<a id='L119' name='L119'></a> 119   [0x58] = 0xEC, [0x59] = 0xDF, [0x5A] = 0x21, [0x5B] = 0x24,
+<a id='L120' name='L120'></a> 120   [0x5C] = 0x2A, [0x5D] = 0x29, [0x5E] = 0x3B, [0x5F] = 0xAC,
+<a id='L121' name='L121'></a> 121   [0x60] = 0x2D, [0x61] = 0x2F, [0x62] = 0xC2, [0x63] = 0xC4,
+<a id='L122' name='L122'></a> 122   [0x64] = 0xC0, [0x65] = 0xC1, [0x66] = 0xC3, [0x67] = 0xC5,
+<a id='L123' name='L123'></a> 123   [0x68] = 0xC7, [0x69] = 0xD1, [0x6A] = 0xA6, [0x6B] = 0x2C,
+<a id='L124' name='L124'></a> 124   [0x6C] = 0x25, [0x6D] = 0x5F, [0x6E] = 0x3E, [0x6F] = 0x3F,
+<a id='L125' name='L125'></a> 125   [0x70] = 0xF8, [0x71] = 0xC9, [0x72] = 0xCA, [0x73] = 0xCB,
+<a id='L126' name='L126'></a> 126   [0x74] = 0xC8, [0x75] = 0xCD, [0x76] = 0xCE, [0x77] = 0xCF,
+<a id='L127' name='L127'></a> 127   [0x78] = 0xCC, [0x79] = 0x60, [0x7A] = 0x3A, [0x7B] = 0x23,
+<a id='L128' name='L128'></a> 128   [0x7C] = 0x40, [0x7D] = 0x27, [0x7E] = 0x3D, [0x7F] = 0x22,
+<a id='L129' name='L129'></a> 129   [0x80] = 0xD8, [0x81] = 0x61, [0x82] = 0x62, [0x83] = 0x63,
+<a id='L130' name='L130'></a> 130   [0x84] = 0x64, [0x85] = 0x65, [0x86] = 0x66, [0x87] = 0x67,
+<a id='L131' name='L131'></a> 131   [0x88] = 0x68, [0x89] = 0x69, [0x8A] = 0xAB, [0x8B] = 0xBB,
+<a id='L132' name='L132'></a> 132   [0x8C] = 0xF0, [0x8D] = 0xFD, [0x8E] = 0xFE, [0x8F] = 0xB1,
+<a id='L133' name='L133'></a> 133   [0x90] = 0xB0, [0x91] = 0x6A, [0x92] = 0x6B, [0x93] = 0x6C,
+<a id='L134' name='L134'></a> 134   [0x94] = 0x6D, [0x95] = 0x6E, [0x96] = 0x6F, [0x97] = 0x70,
+<a id='L135' name='L135'></a> 135   [0x98] = 0x71, [0x99] = 0x72, [0x9A] = 0xAA, [0x9B] = 0xBA,
+<a id='L136' name='L136'></a> 136   [0x9C] = 0xE6, [0x9D] = 0xB8, [0x9E] = 0xC6, [0x9F] = 0xA4,
+<a id='L137' name='L137'></a> 137   [0xA0] = 0xB5, [0xA1] = 0x7E, [0xA2] = 0x73, [0xA3] = 0x74,
+<a id='L138' name='L138'></a> 138   [0xA4] = 0x75, [0xA5] = 0x76, [0xA6] = 0x77, [0xA7] = 0x78,
+<a id='L139' name='L139'></a> 139   [0xA8] = 0x79, [0xA9] = 0x7A, [0xAA] = 0xA1, [0xAB] = 0xBF,
+<a id='L140' name='L140'></a> 140   [0xAC] = 0xD0, [0xAD] = 0xDD, [0xAE] = 0xDE, [0xAF] = 0xAE,
+<a id='L141' name='L141'></a> 141   [0xB0] = 0x5E, [0xB1] = 0xA3, [0xB2] = 0xA5, [0xB3] = 0xB7,
+<a id='L142' name='L142'></a> 142   [0xB4] = 0xA9, [0xB5] = 0xA7, [0xB6] = 0xB6, [0xB7] = 0xBC,
+<a id='L143' name='L143'></a> 143   [0xB8] = 0xBD, [0xB9] = 0xBE, [0xBA] = 0x5B, [0xBB] = 0x5D,
+<a id='L144' name='L144'></a> 144   [0xBC] = 0xAF, [0xBD] = 0xA8, [0xBE] = 0xB4, [0xBF] = 0xD7,
+<a id='L145' name='L145'></a> 145   [0xC0] = 0x7B, [0xC1] = 0x41, [0xC2] = 0x42, [0xC3] = 0x43,
+<a id='L146' name='L146'></a> 146   [0xC4] = 0x44, [0xC5] = 0x45, [0xC6] = 0x46, [0xC7] = 0x47,
+<a id='L147' name='L147'></a> 147   [0xC8] = 0x48, [0xC9] = 0x49, [0xCA] = 0xAD, [0xCB] = 0xF4,
+<a id='L148' name='L148'></a> 148   [0xCC] = 0xF6, [0xCD] = 0xF2, [0xCE] = 0xF3, [0xCF] = 0xF5,
+<a id='L149' name='L149'></a> 149   [0xD0] = 0x7D, [0xD1] = 0x4A, [0xD2] = 0x4B, [0xD3] = 0x4C,
+<a id='L150' name='L150'></a> 150   [0xD4] = 0x4D, [0xD5] = 0x4E, [0xD6] = 0x4F, [0xD7] = 0x50,
+<a id='L151' name='L151'></a> 151   [0xD8] = 0x51, [0xD9] = 0x52, [0xDA] = 0xB9, [0xDB] = 0xFB,
+<a id='L152' name='L152'></a> 152   [0xDC] = 0xFC, [0xDD] = 0xF9, [0xDE] = 0xFA, [0xDF] = 0xFF,
+<a id='L153' name='L153'></a> 153   [0xE0] = 0x5C, [0xE1] = 0xF7, [0xE2] = 0x53, [0xE3] = 0x54,
+<a id='L154' name='L154'></a> 154   [0xE4] = 0x55, [0xE5] = 0x56, [0xE6] = 0x57, [0xE7] = 0x58,
+<a id='L155' name='L155'></a> 155   [0xE8] = 0x59, [0xE9] = 0x5A, [0xEA] = 0xB2, [0xEB] = 0xD4,
+<a id='L156' name='L156'></a> 156   [0xEC] = 0xD6, [0xED] = 0xD2, [0xEE] = 0xD3, [0xEF] = 0xD5,
+<a id='L157' name='L157'></a> 157   [0xF0] = 0x30, [0xF1] = 0x31, [0xF2] = 0x32, [0xF3] = 0x33,
+<a id='L158' name='L158'></a> 158   [0xF4] = 0x34, [0xF5] = 0x35, [0xF6] = 0x36, [0xF7] = 0x37,
+<a id='L159' name='L159'></a> 159   [0xF8] = 0x38, [0xF9] = 0x39, [0xFA] = 0xB3, [0xFB] = 0xDB,
+<a id='L160' name='L160'></a> 160   [0xFC] = 0xDC, [0xFD] = 0xD9, [0xFE] = 0xDA, [0xFF] = 0x9F
+<a id='L161' name='L161'></a> 161 <em class='brace'>}</em>;
+<a id='L162' name='L162'></a> 162 
+<a id='L163' name='L163'></a> 163 <em class='comment'>/* Definitions used in the body of the `gconv' function.  */</em>
+<a id='L164' name='L164'></a> 164 <em class='sharp'>#define</em> <a href='../R/760.html' title='Multiple referred from 4 places.'>CHARSET_NAME</a>        "ISO-8859-1//"
+<a id='L165' name='L165'></a> 165 <em class='sharp'>#define</em> <a href='../R/2814.html' title='Multiple referred from 77 places.'>FROM_LOOP</a>       iso8859_1_to_cp037_z900
+<a id='L166' name='L166'></a> 166 <em class='sharp'>#define</em> <a href='../R/8875.html' title='Multiple referred from 63 places.'>TO_LOOP</a>         cp037_to_iso8859_1_z900
+<a id='L167' name='L167'></a> 167 <em class='sharp'>#define</em> <a href='../R/1327.html' title='Multiple referred from 2 places.'>DEFINE_INIT</a>     1
+<a id='L168' name='L168'></a> 168 <em class='sharp'>#define</em> <a href='../S/7088.html#L366' title='Referred from 366 in iconv/skeleton.c.'>DEFINE_FINI</a>     1
+<a id='L169' name='L169'></a> 169 <em class='sharp'>#define</em> <a href='../R/4916.html' title='Multiple referred from 131 places.'>MIN_NEEDED_FROM</a>     1
+<a id='L170' name='L170'></a> 170 <em class='sharp'>#define</em> <a href='../R/4919.html' title='Multiple referred from 133 places.'>MIN_NEEDED_TO</a>       1
+<a id='L171' name='L171'></a> 171 
+<a id='L172' name='L172'></a> 172 <em class='sharp'># if</em> <strong class='reserved'>defined</strong> <a href='../Y/7310.html' title='Multiple used in 82 places.'>__s390x__</a>
+<a id='L173' name='L173'></a> 173 <em class='sharp'>#  define</em> <a href='../S/17477.html#L191' title='Referred from 191 in sysdeps/s390/iso-8859-1_cp037_z900.c.'>BRANCH_ON_COUNT</a>(<a href='../Y/1574.html' title='Multiple used in 11 places.'>REG</a>,<a href='../Y/1011.html' title='Multiple used in 2 places.'>LBL</a>) "brctg %" #<a href='../Y/1574.html' title='Multiple used in 11 places.'>REG</a> "," #<a href='../Y/1011.html' title='Multiple used in 2 places.'>LBL</a> "\n\t"
+<a id='L174' name='L174'></a> 174 <em class='sharp'># else</em>
+<a id='L175' name='L175'></a> 175 <em class='sharp'>#  define</em> <a href='../S/17477.html#L191' title='Referred from 191 in sysdeps/s390/iso-8859-1_cp037_z900.c.'>BRANCH_ON_COUNT</a>(<a href='../Y/1574.html' title='Multiple used in 11 places.'>REG</a>,<a href='../Y/1011.html' title='Multiple used in 2 places.'>LBL</a>) "brct %" #<a href='../Y/1574.html' title='Multiple used in 11 places.'>REG</a> "," #<a href='../Y/1011.html' title='Multiple used in 2 places.'>LBL</a> "\n\t"
+<a id='L176' name='L176'></a> 176 <em class='sharp'># endif</em>
+<a id='L177' name='L177'></a> 177 
+<a id='L178' name='L178'></a> 178 <em class='sharp'>#define</em> <a href='../R/8912.html' title='Multiple referred from 2 places.'>TR_LOOP</a>(<a href='../D/15366.html' title='Multiple defined in 8 places.'>TABLE</a>)                          \
+<a id='L179' name='L179'></a> 179   <em class='brace'>{</em>                                 \
+<a id='L180' name='L180'></a> 180     <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/18032.html' title='Multiple used in 636 places.'>length</a> = (<a href='../Y/16764.html' title='Multiple used in 218 places.'>inend</a> - <a href='../Y/16908.html' title='Multiple used in 980 places.'>inptr</a> &lt; <a href='../Y/21971.html' title='Multiple used in 282 places.'>outend</a> - <a href='../Y/21994.html' title='Multiple used in 1121 places.'>outptr</a>            \
+<a id='L181' name='L181'></a> 181              ? <a href='../Y/16764.html' title='Multiple used in 218 places.'>inend</a> - <a href='../Y/16908.html' title='Multiple used in 980 places.'>inptr</a> : <a href='../Y/21971.html' title='Multiple used in 282 places.'>outend</a> - <a href='../Y/21994.html' title='Multiple used in 1121 places.'>outptr</a>);        \
+<a id='L182' name='L182'></a> 182                                     \
+<a id='L183' name='L183'></a> 183     <em class='comment'>/* Process in 256 byte blocks.  */</em>                  \
+<a id='L184' name='L184'></a> 184     <strong class='reserved'>if</strong> (<a href='../D/23349.html' title='Multiple defined in 3 places.'>__builtin_expect</a> (<a href='../Y/18032.html' title='Multiple used in 636 places.'>length</a> &gt;= 256, 0))                \
+<a id='L185' name='L185'></a> 185       <em class='brace'>{</em>                                 \
+<a id='L186' name='L186'></a> 186     <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/10950.html' title='Multiple used in 4 places.'>blocks</a> = <a href='../Y/18032.html' title='Multiple used in 636 places.'>length</a> / 256;                   \
+<a id='L187' name='L187'></a> 187     <strong class='reserved'>__asm__</strong> <strong class='reserved'>__volatile__</strong>("0: mvc 0(256,%[R_OUT]),0(%[R_IN])\n\t"    \
+<a id='L188' name='L188'></a> 188                  "   tr 0(256,%[R_OUT]),0(%[R_TBL])\n\t"    \
+<a id='L189' name='L189'></a> 189                  "   la %[R_IN],256(%[R_IN])\n\t"       \
+<a id='L190' name='L190'></a> 190                  "   la %[R_OUT],256(%[R_OUT])\n\t"     \
+<a id='L191' name='L191'></a> 191                  <a href='../D/904.html' title='Multiple defined in 2 places.'>BRANCH_ON_COUNT</a> ([<a href='../Y/1710.html' title='Multiple used in 14 places.'>R_LI</a>], 0b)       \
+<a id='L192' name='L192'></a> 192                  : <em class='comment'>/* outputs */</em> [<a href='../Y/1707.html' title='Multiple used in 22 places.'>R_IN</a>] "+a" (<a href='../Y/16908.html' title='Multiple used in 980 places.'>inptr</a>)    \
+<a id='L193' name='L193'></a> 193                    , [<a href='../Y/1713.html' title='Multiple used in 22 places.'>R_OUT</a>] "+a" (<a href='../Y/21994.html' title='Multiple used in 1121 places.'>outptr</a>), [<a href='../Y/1710.html' title='Multiple used in 14 places.'>R_LI</a>] "+d" (<a href='../Y/10950.html' title='Multiple used in 4 places.'>blocks</a>) \
+<a id='L194' name='L194'></a> 194                  : <em class='comment'>/* inputs */</em> [<a href='../Y/1721.html' title='Multiple used in 3 places.'>R_TBL</a>] "a" (<a href='../D/15366.html' title='Multiple defined in 8 places.'>TABLE</a>)     \
+<a id='L195' name='L195'></a> 195                  : <em class='comment'>/* clobber list */</em> "memory"      \
+<a id='L196' name='L196'></a> 196                  );                     \
+<a id='L197' name='L197'></a> 197     <a href='../Y/18032.html' title='Multiple used in 636 places.'>length</a> = <a href='../Y/18032.html' title='Multiple used in 636 places.'>length</a> % 256;                      \
+<a id='L198' name='L198'></a> 198       <em class='brace'>}</em>                                 \
+<a id='L199' name='L199'></a> 199                                     \
+<a id='L200' name='L200'></a> 200     <em class='comment'>/* Process remaining 0...248 bytes in 8byte blocks.  */</em>     \
+<a id='L201' name='L201'></a> 201     <strong class='reserved'>if</strong> (<a href='../Y/18032.html' title='Multiple used in 636 places.'>length</a> &gt;= 8)                            \
+<a id='L202' name='L202'></a> 202       <em class='brace'>{</em>                                 \
+<a id='L203' name='L203'></a> 203     <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/10950.html' title='Multiple used in 4 places.'>blocks</a> = <a href='../Y/18032.html' title='Multiple used in 636 places.'>length</a> / 8;                 \
+<a id='L204' name='L204'></a> 204     <strong class='reserved'>for</strong> (<strong class='reserved'>int</strong> <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> = 0; <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> &lt; <a href='../Y/10950.html' title='Multiple used in 4 places.'>blocks</a>; <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>++)                \
+<a id='L205' name='L205'></a> 205       <em class='brace'>{</em>                             \
+<a id='L206' name='L206'></a> 206         <a href='../Y/21994.html' title='Multiple used in 1121 places.'>outptr</a>[0] = <a href='../D/15366.html' title='Multiple defined in 8 places.'>TABLE</a>[<a href='../Y/16908.html' title='Multiple used in 980 places.'>inptr</a>[0]];                \
+<a id='L207' name='L207'></a> 207         <a href='../Y/21994.html' title='Multiple used in 1121 places.'>outptr</a>[1] = <a href='../D/15366.html' title='Multiple defined in 8 places.'>TABLE</a>[<a href='../Y/16908.html' title='Multiple used in 980 places.'>inptr</a>[1]];                \
+<a id='L208' name='L208'></a> 208         <a href='../Y/21994.html' title='Multiple used in 1121 places.'>outptr</a>[2] = <a href='../D/15366.html' title='Multiple defined in 8 places.'>TABLE</a>[<a href='../Y/16908.html' title='Multiple used in 980 places.'>inptr</a>[2]];                \
+<a id='L209' name='L209'></a> 209         <a href='../Y/21994.html' title='Multiple used in 1121 places.'>outptr</a>[3] = <a href='../D/15366.html' title='Multiple defined in 8 places.'>TABLE</a>[<a href='../Y/16908.html' title='Multiple used in 980 places.'>inptr</a>[3]];                \
+<a id='L210' name='L210'></a> 210         <a href='../Y/21994.html' title='Multiple used in 1121 places.'>outptr</a>[4] = <a href='../D/15366.html' title='Multiple defined in 8 places.'>TABLE</a>[<a href='../Y/16908.html' title='Multiple used in 980 places.'>inptr</a>[4]];                \
+<a id='L211' name='L211'></a> 211         <a href='../Y/21994.html' title='Multiple used in 1121 places.'>outptr</a>[5] = <a href='../D/15366.html' title='Multiple defined in 8 places.'>TABLE</a>[<a href='../Y/16908.html' title='Multiple used in 980 places.'>inptr</a>[5]];                \
+<a id='L212' name='L212'></a> 212         <a href='../Y/21994.html' title='Multiple used in 1121 places.'>outptr</a>[6] = <a href='../D/15366.html' title='Multiple defined in 8 places.'>TABLE</a>[<a href='../Y/16908.html' title='Multiple used in 980 places.'>inptr</a>[6]];                \
+<a id='L213' name='L213'></a> 213         <a href='../Y/21994.html' title='Multiple used in 1121 places.'>outptr</a>[7] = <a href='../D/15366.html' title='Multiple defined in 8 places.'>TABLE</a>[<a href='../Y/16908.html' title='Multiple used in 980 places.'>inptr</a>[7]];                \
+<a id='L214' name='L214'></a> 214         <a href='../Y/16908.html' title='Multiple used in 980 places.'>inptr</a> += 8;                         \
+<a id='L215' name='L215'></a> 215         <a href='../Y/21994.html' title='Multiple used in 1121 places.'>outptr</a> += 8;                        \
+<a id='L216' name='L216'></a> 216       <em class='brace'>}</em>                             \
+<a id='L217' name='L217'></a> 217     <a href='../Y/18032.html' title='Multiple used in 636 places.'>length</a> = <a href='../Y/18032.html' title='Multiple used in 636 places.'>length</a> % 8;                        \
+<a id='L218' name='L218'></a> 218       <em class='brace'>}</em>                                 \
+<a id='L219' name='L219'></a> 219                                     \
+<a id='L220' name='L220'></a> 220     <em class='comment'>/* Process remaining 0...7 bytes.  */</em>               \
+<a id='L221' name='L221'></a> 221     <strong class='reserved'>switch</strong> (<a href='../Y/18032.html' title='Multiple used in 636 places.'>length</a>)                         \
+<a id='L222' name='L222'></a> 222       <em class='brace'>{</em>                                 \
+<a id='L223' name='L223'></a> 223       <strong class='reserved'>case</strong> 7: <a href='../Y/21994.html' title='Multiple used in 1121 places.'>outptr</a>[6] = <a href='../D/15366.html' title='Multiple defined in 8 places.'>TABLE</a>[<a href='../Y/16908.html' title='Multiple used in 980 places.'>inptr</a>[6]];              \
+<a id='L224' name='L224'></a> 224     <em class='comment'>/* Fall through.  */</em>                        \
+<a id='L225' name='L225'></a> 225       <strong class='reserved'>case</strong> 6: <a href='../Y/21994.html' title='Multiple used in 1121 places.'>outptr</a>[5] = <a href='../D/15366.html' title='Multiple defined in 8 places.'>TABLE</a>[<a href='../Y/16908.html' title='Multiple used in 980 places.'>inptr</a>[5]];              \
+<a id='L226' name='L226'></a> 226     <em class='comment'>/* Fall through.  */</em>                        \
+<a id='L227' name='L227'></a> 227       <strong class='reserved'>case</strong> 5: <a href='../Y/21994.html' title='Multiple used in 1121 places.'>outptr</a>[4] = <a href='../D/15366.html' title='Multiple defined in 8 places.'>TABLE</a>[<a href='../Y/16908.html' title='Multiple used in 980 places.'>inptr</a>[4]];              \
+<a id='L228' name='L228'></a> 228     <em class='comment'>/* Fall through.  */</em>                        \
+<a id='L229' name='L229'></a> 229       <strong class='reserved'>case</strong> 4: <a href='../Y/21994.html' title='Multiple used in 1121 places.'>outptr</a>[3] = <a href='../D/15366.html' title='Multiple defined in 8 places.'>TABLE</a>[<a href='../Y/16908.html' title='Multiple used in 980 places.'>inptr</a>[3]];              \
+<a id='L230' name='L230'></a> 230     <em class='comment'>/* Fall through.  */</em>                        \
+<a id='L231' name='L231'></a> 231       <strong class='reserved'>case</strong> 3: <a href='../Y/21994.html' title='Multiple used in 1121 places.'>outptr</a>[2] = <a href='../D/15366.html' title='Multiple defined in 8 places.'>TABLE</a>[<a href='../Y/16908.html' title='Multiple used in 980 places.'>inptr</a>[2]];              \
+<a id='L232' name='L232'></a> 232     <em class='comment'>/* Fall through.  */</em>                        \
+<a id='L233' name='L233'></a> 233       <strong class='reserved'>case</strong> 2: <a href='../Y/21994.html' title='Multiple used in 1121 places.'>outptr</a>[1] = <a href='../D/15366.html' title='Multiple defined in 8 places.'>TABLE</a>[<a href='../Y/16908.html' title='Multiple used in 980 places.'>inptr</a>[1]];              \
+<a id='L234' name='L234'></a> 234     <em class='comment'>/* Fall through.  */</em>                        \
+<a id='L235' name='L235'></a> 235       <strong class='reserved'>case</strong> 1: <a href='../Y/21994.html' title='Multiple used in 1121 places.'>outptr</a>[0] = <a href='../D/15366.html' title='Multiple defined in 8 places.'>TABLE</a>[<a href='../Y/16908.html' title='Multiple used in 980 places.'>inptr</a>[0]];              \
+<a id='L236' name='L236'></a> 236     <em class='comment'>/* Fall through.  */</em>                        \
+<a id='L237' name='L237'></a> 237       <strong class='reserved'>case</strong> 0: <strong class='reserved'>break</strong>;                            \
+<a id='L238' name='L238'></a> 238       <em class='brace'>}</em>                                 \
+<a id='L239' name='L239'></a> 239     <a href='../Y/16908.html' title='Multiple used in 980 places.'>inptr</a> += <a href='../Y/18032.html' title='Multiple used in 636 places.'>length</a>;                            \
+<a id='L240' name='L240'></a> 240     <a href='../Y/21994.html' title='Multiple used in 1121 places.'>outptr</a> += <a href='../Y/18032.html' title='Multiple used in 636 places.'>length</a>;                           \
+<a id='L241' name='L241'></a> 241   <em class='brace'>}</em>
+<a id='L242' name='L242'></a> 242 
+<a id='L243' name='L243'></a> 243 
+<a id='L244' name='L244'></a> 244 <em class='comment'>/* First define the conversion function from ISO 8859-1 to CP037.  */</em>
+<a id='L245' name='L245'></a> 245 <em class='sharp'>#define</em> <a href='../R/4917.html' title='Multiple referred from 8 places.'>MIN_NEEDED_INPUT</a>    <a href='../D/7994.html' title='Multiple defined in 60 places.'>MIN_NEEDED_FROM</a>
+<a id='L246' name='L246'></a> 246 <em class='sharp'>#define</em> <a href='../R/4918.html' title='Multiple referred from 9 places.'>MIN_NEEDED_OUTPUT</a>   <a href='../D/7997.html' title='Multiple defined in 60 places.'>MIN_NEEDED_TO</a>
+<a id='L247' name='L247'></a> 247 <em class='sharp'>#define</em> <a href='../R/4491.html' title='Multiple referred from 3 places.'>LOOPFCT</a>         <a href='../D/4718.html' title='Multiple defined in 88 places.'>FROM_LOOP</a>
+<a id='L248' name='L248'></a> 248 <em class='sharp'>#define</em> <a href='../R/549.html' title='Multiple referred from 6 places.'>BODY</a>            <a href='../S/17477.html#L178' title='Defined at 178 in sysdeps/s390/iso-8859-1_cp037_z900.c.'>TR_LOOP</a> (<a href='../Y/26765.html' title='Multiple used in 2 places.'>table_iso8859_1_to_cp037</a>)
+<a id='L249' name='L249'></a> 249 
+<a id='L250' name='L250'></a> 250 <em class='sharp'>#include</em> &lt;iconv/loop.c&gt;
+<a id='L251' name='L251'></a> 251 
+<a id='L252' name='L252'></a> 252 
+<a id='L253' name='L253'></a> 253 <em class='comment'>/* Next, define the conversion function from CP037 to ISO 8859-1.  */</em>
+<a id='L254' name='L254'></a> 254 <em class='sharp'>#define</em> <a href='../R/4917.html' title='Multiple referred from 8 places.'>MIN_NEEDED_INPUT</a>    <a href='../D/7997.html' title='Multiple defined in 60 places.'>MIN_NEEDED_TO</a>
+<a id='L255' name='L255'></a> 255 <em class='sharp'>#define</em> <a href='../R/4918.html' title='Multiple referred from 9 places.'>MIN_NEEDED_OUTPUT</a>   <a href='../D/7994.html' title='Multiple defined in 60 places.'>MIN_NEEDED_FROM</a>
+<a id='L256' name='L256'></a> 256 <em class='sharp'>#define</em> <a href='../R/4491.html' title='Multiple referred from 3 places.'>LOOPFCT</a>         <a href='../D/16170.html' title='Multiple defined in 88 places.'>TO_LOOP</a>
+<a id='L257' name='L257'></a> 257 <em class='sharp'>#define</em> <a href='../R/549.html' title='Multiple referred from 6 places.'>BODY</a>            <a href='../S/17477.html#L178' title='Defined at 178 in sysdeps/s390/iso-8859-1_cp037_z900.c.'>TR_LOOP</a> (<a href='../Y/26763.html' title='Multiple used in 2 places.'>table_cp037_iso8859_1</a>);
+<a id='L258' name='L258'></a> 258 
+<a id='L259' name='L259'></a> 259 <em class='sharp'>#include</em> &lt;iconv/loop.c&gt;
+<a id='L260' name='L260'></a> 260 
+<a id='L261' name='L261'></a> 261 
+<a id='L262' name='L262'></a> 262 <em class='comment'>/* Now define the toplevel functions.  */</em>
+<a id='L263' name='L263'></a> 263 <em class='sharp'>#include</em> &lt;iconv/skeleton.c&gt;
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;][^][v]<a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

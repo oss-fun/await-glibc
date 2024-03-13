@@ -1,0 +1,155 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>nptl/pthread_mutex_setprioceiling.c</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18931.html'>nptl</a>/pthread_mutex_setprioceiling.c</h2>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L27'>[^]</a>[v][top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<h2 class='header'>DEFINITIONS</h2>
+This source file includes following definitions.
+<ol>
+<li><a href='#L27' title='Defined at 27.'>__pthread_mutex_setprioceiling</a></li>
+</ol>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* Set current priority ceiling of pthread_mutex_t.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   Copyright (C) 2006-2022 Free Software Foundation, Inc.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'></em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'></em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'></em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   License along with the GNU C Library; if not, see</em>
+<a id='L17' name='L17'></a>  17 <em class='comment'>   &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L18' name='L18'></a>  18 
+<a id='L19' name='L19'></a>  19 <em class='sharp'>#include</em> &lt;stdbool.h&gt;
+<a id='L20' name='L20'></a>  20 <em class='sharp'>#include</em> &lt;<a href='../I/116.html'>errno.h</a>&gt;
+<a id='L21' name='L21'></a>  21 <em class='sharp'>#include</em> &lt;<a href='../I/6831.html'>pthreadP.h</a>&gt;
+<a id='L22' name='L22'></a>  22 <em class='sharp'>#include</em> &lt;<a href='17870.html'>atomic.h</a>&gt;
+<a id='L23' name='L23'></a>  23 <em class='sharp'>#include</em> &lt;<a href='../I/6752.html'>futex-internal.h</a>&gt;
+<a id='L24' name='L24'></a>  24 <em class='sharp'>#include</em> &lt;<a href='17977.html'>shlib-compat.h</a>&gt;
+<a id='L25' name='L25'></a>  25 
+<a id='L26' name='L26'></a>  26 <strong class='reserved'>int</strong>
+<a id='L27' name='L27'></a>  27 <a href='../R/15598.html' title='Multiple referred from 2 places.'>__pthread_mutex_setprioceiling</a> (<a href='../D/35134.html' title='Multiple defined in 2 places.'>pthread_mutex_t</a> *<a href='../S/5207.html#L98' title='Defined at 98 in mach/lock-intern.h.'>mutex</a>, <strong class='reserved'>int</strong> <a href='../Y/22783.html' title='Multiple used in 41 places.'>prioceiling</a>,
+<a id='L28' name='L28'></a>  28                 <strong class='reserved'>int</strong> *<a href='../Y/21547.html' title='Multiple used in 5 places.'>old_ceiling</a>)
+<a id='L29' name='L29'></a>  29 <em class='brace'>{</em>
+<a id='L30' name='L30'></a>  30   <em class='comment'>/* See concurrency notes regarding __kind in struct __pthread_mutex_s</em>
+<a id='L31' name='L31'></a>  31 <em class='comment'>     in sysdeps/nptl/bits/thread-shared-types.h.  */</em>
+<a id='L32' name='L32'></a>  32   <strong class='reserved'>if</strong> ((<a href='../D/27931.html' title='Multiple defined in 3 places.'>atomic_load_relaxed</a> (&amp;(<a href='../S/5207.html#L98' title='Defined at 98 in mach/lock-intern.h.'>mutex</a>-&gt;<a href='../Y/4155.html' title='Multiple used in 633 places.'>__data</a>.<a href='../Y/5305.html' title='Multiple used in 60 places.'>__kind</a>))
+<a id='L33' name='L33'></a>  33        &amp; <a href='../S/17823.html#L99' title='Defined at 99 in sysdeps/nptl/pthreadP.h.'>PTHREAD_MUTEX_PRIO_PROTECT_NP</a>) == 0)
+<a id='L34' name='L34'></a>  34     <strong class='reserved'>return</strong> <a href='../D/3156.html' title='Multiple defined in 3 places.'>EINVAL</a>;
+<a id='L35' name='L35'></a>  35 
+<a id='L36' name='L36'></a>  36   <em class='comment'>/* See __init_sched_fifo_prio.  */</em>
+<a id='L37' name='L37'></a>  37   <strong class='reserved'>if</strong> (<a href='../D/27931.html' title='Multiple defined in 3 places.'>atomic_load_relaxed</a> (&amp;<a href='../Y/7340.html' title='Multiple used in 17 places.'>__sched_fifo_min_prio</a>) == -1
+<a id='L38' name='L38'></a>  38       || <a href='../D/27931.html' title='Multiple defined in 3 places.'>atomic_load_relaxed</a> (&amp;<a href='../Y/7339.html' title='Multiple used in 11 places.'>__sched_fifo_max_prio</a>) == -1)
+<a id='L39' name='L39'></a>  39     <a href='../Y/5151.html' title='Multiple used in 9 places.'>__init_sched_fifo_prio</a> ();
+<a id='L40' name='L40'></a>  40 
+<a id='L41' name='L41'></a>  41   <strong class='reserved'>if</strong> (<a href='../D/24205.html' title='Multiple defined in 2 places.'>__glibc_unlikely</a> (<a href='../Y/22783.html' title='Multiple used in 41 places.'>prioceiling</a>
+<a id='L42' name='L42'></a>  42             &lt; <a href='../D/27931.html' title='Multiple defined in 3 places.'>atomic_load_relaxed</a> (&amp;<a href='../Y/7340.html' title='Multiple used in 17 places.'>__sched_fifo_min_prio</a>))
+<a id='L43' name='L43'></a>  43       || <a href='../D/24205.html' title='Multiple defined in 2 places.'>__glibc_unlikely</a> (<a href='../Y/22783.html' title='Multiple used in 41 places.'>prioceiling</a>
+<a id='L44' name='L44'></a>  44                &gt; <a href='../D/27931.html' title='Multiple defined in 3 places.'>atomic_load_relaxed</a> (&amp;<a href='../Y/7339.html' title='Multiple used in 11 places.'>__sched_fifo_max_prio</a>))
+<a id='L45' name='L45'></a>  45       || <a href='../D/24205.html' title='Multiple defined in 2 places.'>__glibc_unlikely</a> ((<a href='../Y/22783.html' title='Multiple used in 41 places.'>prioceiling</a>
+<a id='L46' name='L46'></a>  46                 &amp; (<a href='../S/17823.html#L154' title='Defined at 154 in sysdeps/nptl/pthreadP.h.'>PTHREAD_MUTEXATTR_PRIO_CEILING_MASK</a>
+<a id='L47' name='L47'></a>  47                    &gt;&gt; <a href='../S/17823.html#L153' title='Defined at 153 in sysdeps/nptl/pthreadP.h.'>PTHREAD_MUTEXATTR_PRIO_CEILING_SHIFT</a>))
+<a id='L48' name='L48'></a>  48                != <a href='../Y/22783.html' title='Multiple used in 41 places.'>prioceiling</a>))
+<a id='L49' name='L49'></a>  49     <strong class='reserved'>return</strong> <a href='../D/3156.html' title='Multiple defined in 3 places.'>EINVAL</a>;
+<a id='L50' name='L50'></a>  50 
+<a id='L51' name='L51'></a>  51   <em class='comment'>/* Check whether we already hold the mutex.  */</em>
+<a id='L52' name='L52'></a>  52   <a href='../S/3749.html#L624' title='Defined at 624 in timezone/private.h.'>bool</a> <a href='../Y/18397.html' title='Multiple used in 5 places.'>locked</a> = <a href='../D/30360.html' title='Multiple defined in 5 places.'>false</a>;
+<a id='L53' name='L53'></a>  53   <strong class='reserved'>int</strong> <a href='../Y/17530.html' title='Multiple used in 86 places.'>kind</a> = <a href='../S/17823.html#L120' title='Defined at 120 in sysdeps/nptl/pthreadP.h.'>PTHREAD_MUTEX_TYPE</a> (<a href='../S/5207.html#L98' title='Defined at 98 in mach/lock-intern.h.'>mutex</a>);
+<a id='L54' name='L54'></a>  54   <strong class='reserved'>if</strong> (<a href='../S/5207.html#L98' title='Defined at 98 in mach/lock-intern.h.'>mutex</a>-&gt;<a href='../Y/4155.html' title='Multiple used in 633 places.'>__data</a>.<a href='../Y/6443.html' title='Multiple used in 67 places.'>__owner</a> == <a href='../D/15900.html' title='Multiple defined in 5 places.'>THREAD_GETMEM</a> (<a href='../D/15913.html' title='Multiple defined in 23 places.'>THREAD_SELF</a>, <a href='../Y/27281.html' title='Multiple used in 178 places.'>tid</a>))
+<a id='L55' name='L55'></a>  55     <em class='brace'>{</em>
+<a id='L56' name='L56'></a>  56       <strong class='reserved'>if</strong> (<a href='../Y/17530.html' title='Multiple used in 86 places.'>kind</a> == <a href='../S/17823.html#L104' title='Defined at 104 in sysdeps/nptl/pthreadP.h.'>PTHREAD_MUTEX_PP_ERRORCHECK_NP</a>)
+<a id='L57' name='L57'></a>  57     <strong class='reserved'>return</strong> <a href='../D/2965.html' title='Multiple defined in 2 places.'>EDEADLK</a>;
+<a id='L58' name='L58'></a>  58 
+<a id='L59' name='L59'></a>  59       <strong class='reserved'>if</strong> (<a href='../Y/17530.html' title='Multiple used in 86 places.'>kind</a> == <a href='../S/17823.html#L102' title='Defined at 102 in sysdeps/nptl/pthreadP.h.'>PTHREAD_MUTEX_PP_RECURSIVE_NP</a>)
+<a id='L60' name='L60'></a>  60     <a href='../Y/18397.html' title='Multiple used in 5 places.'>locked</a> = <a href='../D/38483.html' title='Multiple defined in 5 places.'>true</a>;
+<a id='L61' name='L61'></a>  61     <em class='brace'>}</em>
+<a id='L62' name='L62'></a>  62 
+<a id='L63' name='L63'></a>  63   <strong class='reserved'>int</strong> <a href='../Y/21686.html' title='Multiple used in 364 places.'>oldval</a> = <a href='../S/5207.html#L98' title='Defined at 98 in mach/lock-intern.h.'>mutex</a>-&gt;<a href='../Y/4155.html' title='Multiple used in 633 places.'>__data</a>.<a href='../Y/5502.html' title='Multiple used in 298 places.'>__lock</a>;
+<a id='L64' name='L64'></a>  64   <strong class='reserved'>if</strong> (! <a href='../Y/18397.html' title='Multiple used in 5 places.'>locked</a>)
+<a id='L65' name='L65'></a>  65     <strong class='reserved'>do</strong>
+<a id='L66' name='L66'></a>  66       <em class='brace'>{</em>
+<a id='L67' name='L67'></a>  67     <em class='comment'>/* Need to lock the mutex, but without obeying the priority</em>
+<a id='L68' name='L68'></a>  68 <em class='comment'>       protect protocol.  */</em>
+<a id='L69' name='L69'></a>  69     <strong class='reserved'>int</strong> <a href='../Y/11414.html' title='Multiple used in 43 places.'>ceilval</a> = (<a href='../Y/21686.html' title='Multiple used in 364 places.'>oldval</a> &amp; <a href='../S/17823.html#L147' title='Defined at 147 in sysdeps/nptl/pthreadP.h.'>PTHREAD_MUTEX_PRIO_CEILING_MASK</a>);
+<a id='L70' name='L70'></a>  70 
+<a id='L71' name='L71'></a>  71     <a href='../Y/21686.html' title='Multiple used in 364 places.'>oldval</a> = <a href='../D/27897.html' title='Multiple defined in 18 places.'>atomic_compare_and_exchange_val_acq</a> (&amp;<a href='../S/5207.html#L98' title='Defined at 98 in mach/lock-intern.h.'>mutex</a>-&gt;<a href='../Y/4155.html' title='Multiple used in 633 places.'>__data</a>.<a href='../Y/5502.html' title='Multiple used in 298 places.'>__lock</a>,
+<a id='L72' name='L72'></a>  72                               <a href='../Y/11414.html' title='Multiple used in 43 places.'>ceilval</a> | 1, <a href='../Y/11414.html' title='Multiple used in 43 places.'>ceilval</a>);
+<a id='L73' name='L73'></a>  73     <strong class='reserved'>if</strong> (<a href='../Y/21686.html' title='Multiple used in 364 places.'>oldval</a> == <a href='../Y/11414.html' title='Multiple used in 43 places.'>ceilval</a>)
+<a id='L74' name='L74'></a>  74       <strong class='reserved'>break</strong>;
+<a id='L75' name='L75'></a>  75 
+<a id='L76' name='L76'></a>  76     <strong class='reserved'>do</strong>
+<a id='L77' name='L77'></a>  77       <em class='brace'>{</em>
+<a id='L78' name='L78'></a>  78         <a href='../Y/21686.html' title='Multiple used in 364 places.'>oldval</a>
+<a id='L79' name='L79'></a>  79           = <a href='../D/27897.html' title='Multiple defined in 18 places.'>atomic_compare_and_exchange_val_acq</a> (&amp;<a href='../S/5207.html#L98' title='Defined at 98 in mach/lock-intern.h.'>mutex</a>-&gt;<a href='../Y/4155.html' title='Multiple used in 633 places.'>__data</a>.<a href='../Y/5502.html' title='Multiple used in 298 places.'>__lock</a>,
+<a id='L80' name='L80'></a>  80                              <a href='../Y/11414.html' title='Multiple used in 43 places.'>ceilval</a> | 2,
+<a id='L81' name='L81'></a>  81                              <a href='../Y/11414.html' title='Multiple used in 43 places.'>ceilval</a> | 1);
+<a id='L82' name='L82'></a>  82 
+<a id='L83' name='L83'></a>  83         <strong class='reserved'>if</strong> ((<a href='../Y/21686.html' title='Multiple used in 364 places.'>oldval</a> &amp; <a href='../S/17823.html#L147' title='Defined at 147 in sysdeps/nptl/pthreadP.h.'>PTHREAD_MUTEX_PRIO_CEILING_MASK</a>) != <a href='../Y/11414.html' title='Multiple used in 43 places.'>ceilval</a>)
+<a id='L84' name='L84'></a>  84           <strong class='reserved'>break</strong>;
+<a id='L85' name='L85'></a>  85 
+<a id='L86' name='L86'></a>  86         <strong class='reserved'>if</strong> (<a href='../Y/21686.html' title='Multiple used in 364 places.'>oldval</a> != <a href='../Y/11414.html' title='Multiple used in 43 places.'>ceilval</a>)
+<a id='L87' name='L87'></a>  87           <a href='../D/30971.html' title='Multiple defined in 3 places.'>futex_wait</a> ((<strong class='reserved'>unsigned</strong> <strong class='reserved'>int</strong> *) &amp;<a href='../S/5207.html#L98' title='Defined at 98 in mach/lock-intern.h.'>mutex</a>-&gt;<a href='../Y/4155.html' title='Multiple used in 633 places.'>__data</a>.<a href='../Y/5502.html' title='Multiple used in 298 places.'>__lock</a>, <a href='../Y/11414.html' title='Multiple used in 43 places.'>ceilval</a> | 2,
+<a id='L88' name='L88'></a>  88               <a href='../D/10387.html' title='Multiple defined in 2 places.'>PTHREAD_MUTEX_PSHARED</a> (<a href='../S/5207.html#L98' title='Defined at 98 in mach/lock-intern.h.'>mutex</a>));
+<a id='L89' name='L89'></a>  89       <em class='brace'>}</em>
+<a id='L90' name='L90'></a>  90     <strong class='reserved'>while</strong> (<a href='../D/27897.html' title='Multiple defined in 18 places.'>atomic_compare_and_exchange_val_acq</a> (&amp;<a href='../S/5207.html#L98' title='Defined at 98 in mach/lock-intern.h.'>mutex</a>-&gt;<a href='../Y/4155.html' title='Multiple used in 633 places.'>__data</a>.<a href='../Y/5502.html' title='Multiple used in 298 places.'>__lock</a>,
+<a id='L91' name='L91'></a>  91                             <a href='../Y/11414.html' title='Multiple used in 43 places.'>ceilval</a> | 2, <a href='../Y/11414.html' title='Multiple used in 43 places.'>ceilval</a>)
+<a id='L92' name='L92'></a>  92            != <a href='../Y/11414.html' title='Multiple used in 43 places.'>ceilval</a>);
+<a id='L93' name='L93'></a>  93 
+<a id='L94' name='L94'></a>  94     <strong class='reserved'>if</strong> ((<a href='../Y/21686.html' title='Multiple used in 364 places.'>oldval</a> &amp; <a href='../S/17823.html#L147' title='Defined at 147 in sysdeps/nptl/pthreadP.h.'>PTHREAD_MUTEX_PRIO_CEILING_MASK</a>) != <a href='../Y/11414.html' title='Multiple used in 43 places.'>ceilval</a>)
+<a id='L95' name='L95'></a>  95       <strong class='reserved'>continue</strong>;
+<a id='L96' name='L96'></a>  96       <em class='brace'>}</em>
+<a id='L97' name='L97'></a>  97     <strong class='reserved'>while</strong> (0);
+<a id='L98' name='L98'></a>  98 
+<a id='L99' name='L99'></a>  99   <strong class='reserved'>int</strong> <a href='../Y/21673.html' title='Multiple used in 21 places.'>oldprio</a> = (<a href='../Y/21686.html' title='Multiple used in 364 places.'>oldval</a> &amp; <a href='../S/17823.html#L147' title='Defined at 147 in sysdeps/nptl/pthreadP.h.'>PTHREAD_MUTEX_PRIO_CEILING_MASK</a>)
+<a id='L100' name='L100'></a> 100         &gt;&gt; <a href='../S/17823.html#L146' title='Defined at 146 in sysdeps/nptl/pthreadP.h.'>PTHREAD_MUTEX_PRIO_CEILING_SHIFT</a>;
+<a id='L101' name='L101'></a> 101   <strong class='reserved'>if</strong> (<a href='../Y/18397.html' title='Multiple used in 5 places.'>locked</a>)
+<a id='L102' name='L102'></a> 102     <em class='brace'>{</em>
+<a id='L103' name='L103'></a> 103       <strong class='reserved'>int</strong> <a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a> = <a href='../Y/6680.html' title='Multiple used in 13 places.'>__pthread_tpp_change_priority</a> (<a href='../Y/21673.html' title='Multiple used in 21 places.'>oldprio</a>, <a href='../Y/22783.html' title='Multiple used in 41 places.'>prioceiling</a>);
+<a id='L104' name='L104'></a> 104       <strong class='reserved'>if</strong> (<a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a>)
+<a id='L105' name='L105'></a> 105     <strong class='reserved'>return</strong> <a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a>;
+<a id='L106' name='L106'></a> 106     <em class='brace'>}</em>
+<a id='L107' name='L107'></a> 107 
+<a id='L108' name='L108'></a> 108   <strong class='reserved'>if</strong> (<a href='../Y/21547.html' title='Multiple used in 5 places.'>old_ceiling</a> != <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>)
+<a id='L109' name='L109'></a> 109     *<a href='../Y/21547.html' title='Multiple used in 5 places.'>old_ceiling</a> = <a href='../Y/21673.html' title='Multiple used in 21 places.'>oldprio</a>;
+<a id='L110' name='L110'></a> 110 
+<a id='L111' name='L111'></a> 111   <strong class='reserved'>int</strong> <a href='../Y/20662.html' title='Multiple used in 3 places.'>newlock</a> = 0;
+<a id='L112' name='L112'></a> 112   <strong class='reserved'>if</strong> (<a href='../Y/18397.html' title='Multiple used in 5 places.'>locked</a>)
+<a id='L113' name='L113'></a> 113     <a href='../Y/20662.html' title='Multiple used in 3 places.'>newlock</a> = (<a href='../S/5207.html#L98' title='Defined at 98 in mach/lock-intern.h.'>mutex</a>-&gt;<a href='../Y/4155.html' title='Multiple used in 633 places.'>__data</a>.<a href='../Y/5502.html' title='Multiple used in 298 places.'>__lock</a> &amp; ~<a href='../S/17823.html#L147' title='Defined at 147 in sysdeps/nptl/pthreadP.h.'>PTHREAD_MUTEX_PRIO_CEILING_MASK</a>);
+<a id='L114' name='L114'></a> 114   <a href='../S/5207.html#L98' title='Defined at 98 in mach/lock-intern.h.'>mutex</a>-&gt;<a href='../Y/4155.html' title='Multiple used in 633 places.'>__data</a>.<a href='../Y/5502.html' title='Multiple used in 298 places.'>__lock</a> = <a href='../Y/20662.html' title='Multiple used in 3 places.'>newlock</a>
+<a id='L115' name='L115'></a> 115              | (<a href='../Y/22783.html' title='Multiple used in 41 places.'>prioceiling</a> &lt;&lt; <a href='../S/17823.html#L146' title='Defined at 146 in sysdeps/nptl/pthreadP.h.'>PTHREAD_MUTEX_PRIO_CEILING_SHIFT</a>);
+<a id='L116' name='L116'></a> 116   <a href='../D/27926.html' title='Multiple defined in 18 places.'>atomic_full_barrier</a> ();
+<a id='L117' name='L117'></a> 117 
+<a id='L118' name='L118'></a> 118   <a href='../S/17835.html#L207' title='Defined at 207 in sysdeps/nptl/futex-internal.h.'>futex_wake</a> ((<strong class='reserved'>unsigned</strong> <strong class='reserved'>int</strong> *)&amp;<a href='../S/5207.html#L98' title='Defined at 98 in mach/lock-intern.h.'>mutex</a>-&gt;<a href='../Y/4155.html' title='Multiple used in 633 places.'>__data</a>.<a href='../Y/5502.html' title='Multiple used in 298 places.'>__lock</a>, <a href='../S/18175.html#L81' title='Defined at 81 in include/limits.h.'>INT_MAX</a>,
+<a id='L119' name='L119'></a> 119           <a href='../D/10387.html' title='Multiple defined in 2 places.'>PTHREAD_MUTEX_PSHARED</a> (<a href='../S/5207.html#L98' title='Defined at 98 in mach/lock-intern.h.'>mutex</a>));
+<a id='L120' name='L120'></a> 120 
+<a id='L121' name='L121'></a> 121   <strong class='reserved'>return</strong> 0;
+<a id='L122' name='L122'></a> 122 <em class='brace'>}</em>
+<a id='L123' name='L123'></a> 123 <a href='../D/38964.html' title='Multiple defined in 2 places.'>versioned_symbol</a> (<a href='../D/32623.html' title='Multiple defined in 2 places.'>libc</a>, <a href='../S/18430.html#L27' title='Defined at 27 in nptl/pthread_mutex_setprioceiling.c.'>__pthread_mutex_setprioceiling</a>,
+<a id='L124' name='L124'></a> 124           <a href='../S/14195.html#L27' title='Defined at 27 in sysdeps/mach/hurd/htl/pt-mutex-setprioceiling.c.'>pthread_mutex_setprioceiling</a>, <a href='../Y/703.html' title='Multiple used in 509 places.'>GLIBC_2_34</a>);
+<a id='L125' name='L125'></a> 125 
+<a id='L126' name='L126'></a> 126 <em class='sharp'>#if</em> <a href='../D/9586.html' title='Multiple defined in 2 places.'>OTHER_SHLIB_COMPAT</a> (<a href='../Y/18189.html' title='Multiple used in 441 places.'>libpthread</a>, <a href='../Y/708.html' title='Multiple used in 63 places.'>GLIBC_2_4</a>, <a href='../Y/703.html' title='Multiple used in 509 places.'>GLIBC_2_34</a>)
+<a id='L127' name='L127'></a> 127 <a href='../D/29028.html' title='Multiple defined in 14 places.'>compat_symbol</a> (<a href='../Y/18189.html' title='Multiple used in 441 places.'>libpthread</a>, <a href='../S/18430.html#L27' title='Defined at 27 in nptl/pthread_mutex_setprioceiling.c.'>__pthread_mutex_setprioceiling</a>,
+<a id='L128' name='L128'></a> 128                <a href='../S/14195.html#L27' title='Defined at 27 in sysdeps/mach/hurd/htl/pt-mutex-setprioceiling.c.'>pthread_mutex_setprioceiling</a>, <a href='../Y/708.html' title='Multiple used in 63 places.'>GLIBC_2_4</a>);
+<a id='L129' name='L129'></a> 129 <em class='sharp'>#endif</em>
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;][^]<a href='#L27'>[v]</a><a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

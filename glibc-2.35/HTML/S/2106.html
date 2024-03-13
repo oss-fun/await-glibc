@@ -1,0 +1,127 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>hurd/thread-cancel.c</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18878.html'>hurd</a>/thread-cancel.c</h2>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L35'>[^]</a><a href='#L88'>[v]</a>[top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<h2 class='header'>DEFINITIONS</h2>
+This source file includes following definitions.
+<ol>
+<li><a href='#L35' title='Defined at 35.'>hurd_thread_cancel</a></li>
+<li><a href='#L88' title='Defined at 88.'>hurd_check_cancel</a></li>
+</ol>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* Thread cancellation support.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   Copyright (C) 1995-2022 Free Software Foundation, Inc.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'></em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'></em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'></em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   License along with the GNU C Library; if not, see</em>
+<a id='L17' name='L17'></a>  17 <em class='comment'>   &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L18' name='L18'></a>  18 
+<a id='L19' name='L19'></a>  19 <em class='sharp'>#include</em> &lt;<a href='../I/1264.html'>hurd/signal.h</a>&gt;
+<a id='L20' name='L20'></a>  20 <em class='sharp'>#include</em> &lt;hurd/interrupt.h&gt;
+<a id='L21' name='L21'></a>  21 <em class='sharp'>#include</em> &lt;<a href='../I/23.html'>assert.h</a>&gt;
+<a id='L22' name='L22'></a>  22 <em class='sharp'>#include</em> &lt;<a href='../I/6602.html'>thread_state.h</a>&gt;
+<a id='L23' name='L23'></a>  23 
+<a id='L24' name='L24'></a>  24 
+<a id='L25' name='L25'></a>  25 <em class='comment'>/* See hurdsig.c.  */</em>
+<a id='L26' name='L26'></a>  26 <strong class='reserved'>extern</strong> <a href='../Y/18811.html' title='Multiple used in 330 places.'>mach_port_t</a> <a href='../S/2170.html#L413' title='Defined at 413 in hurd/hurdsig.c.'>_hurdsig_abort_rpcs</a> (<strong class='reserved'>struct</strong> <a href='../S/2121.html#L64' title='Defined at 64 in hurd/hurd/signal.h.'>hurd_sigstate</a> *<a href='../Y/25903.html' title='Multiple used in 849 places.'>ss</a>,
+<a id='L27' name='L27'></a>  27                     <strong class='reserved'>int</strong> <a href='../Y/25430.html' title='Multiple used in 204 places.'>signo</a>, <strong class='reserved'>int</strong> <a href='../Y/25452.html' title='Multiple used in 15 places.'>sigthread</a>,
+<a id='L28' name='L28'></a>  28                     <strong class='reserved'>struct</strong> <a href='../D/33246.html' title='Multiple defined in 2 places.'>machine_thread_all_state</a> *,
+<a id='L29' name='L29'></a>  29                     <strong class='reserved'>int</strong> *<a href='../Y/26124.html' title='Multiple used in 8 places.'>state_change</a>,
+<a id='L30' name='L30'></a>  30                     <a href='../Y/18811.html' title='Multiple used in 330 places.'>mach_port_t</a> *<a href='../Y/23803.html' title='Multiple used in 43 places.'>reply_port</a>,
+<a id='L31' name='L31'></a>  31                     <a href='../Y/18804.html' title='Multiple used in 17 places.'>mach_msg_type_name_t</a> <a href='../Y/23804.html' title='Multiple used in 8 places.'>reply_port_type</a>,
+<a id='L32' name='L32'></a>  32                     <strong class='reserved'>int</strong> <a href='../Y/28346.html' title='Multiple used in 9 places.'>untraced</a>);
+<a id='L33' name='L33'></a>  33 
+<a id='L34' name='L34'></a>  34 <a href='../D/30030.html' title='Multiple defined in 4 places.'>error_t</a>
+<a id='L35' name='L35'></a>  35 <a href='../S/2110.html#L341' title='Referred from 341 in hurd/hurd.h.'>hurd_thread_cancel</a> (<a href='../S/17829.html#L242' title='Defined at 242 in sysdeps/nptl/thread_db.h.'>thread_t</a> <a href='../D/38045.html' title='Multiple defined in 2 places.'>thread</a>)
+<a id='L36' name='L36'></a>  36 <em class='brace'>{</em>
+<a id='L37' name='L37'></a>  37   <strong class='reserved'>struct</strong> <a href='../S/2121.html#L64' title='Defined at 64 in hurd/hurd/signal.h.'>hurd_sigstate</a> *<a href='../Y/25903.html' title='Multiple used in 849 places.'>ss</a> = <a href='../S/2170.html#L77' title='Defined at 77 in hurd/hurdsig.c.'>_hurd_thread_sigstate</a> (<a href='../D/38045.html' title='Multiple defined in 2 places.'>thread</a>);
+<a id='L38' name='L38'></a>  38   <strong class='reserved'>struct</strong> <a href='../D/33246.html' title='Multiple defined in 2 places.'>machine_thread_all_state</a> <a href='../S/735.html#L29' title='Defined at 29 in iconvdata/tst-loading.c.'>state</a>;
+<a id='L39' name='L39'></a>  39   <strong class='reserved'>int</strong> <a href='../Y/26124.html' title='Multiple used in 8 places.'>state_change</a>;
+<a id='L40' name='L40'></a>  40   <a href='../D/30030.html' title='Multiple defined in 4 places.'>error_t</a> <a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a>;
+<a id='L41' name='L41'></a>  41 
+<a id='L42' name='L42'></a>  42   <strong class='reserved'>if</strong> (! <a href='../Y/25903.html' title='Multiple used in 849 places.'>ss</a>)
+<a id='L43' name='L43'></a>  43     <strong class='reserved'>return</strong> <a href='../D/3156.html' title='Multiple defined in 3 places.'>EINVAL</a>;
+<a id='L44' name='L44'></a>  44   <strong class='reserved'>if</strong> (<a href='../Y/25903.html' title='Multiple used in 849 places.'>ss</a> == <a href='../S/2121.html#L166' title='Defined at 166 in hurd/hurd/signal.h.'>_hurd_self_sigstate</a> ())
+<a id='L45' name='L45'></a>  45     <em class='brace'>{</em>
+<a id='L46' name='L46'></a>  46       <em class='comment'>/* We are cancelling ourselves, so it is easy to succeed</em>
+<a id='L47' name='L47'></a>  47 <em class='comment'>     quickly.  Since this function is not a cancellation point, we</em>
+<a id='L48' name='L48'></a>  48 <em class='comment'>     just leave the flag set pending the next cancellation point</em>
+<a id='L49' name='L49'></a>  49 <em class='comment'>     (hurd_check_cancel or RPC) and return success.  */</em>
+<a id='L50' name='L50'></a>  50       <a href='../Y/25903.html' title='Multiple used in 849 places.'>ss</a>-&gt;<a href='../Y/11268.html' title='Multiple used in 32 places.'>cancel</a> = 1;
+<a id='L51' name='L51'></a>  51       <strong class='reserved'>return</strong> 0;
+<a id='L52' name='L52'></a>  52     <em class='brace'>}</em>
+<a id='L53' name='L53'></a>  53 
+<a id='L54' name='L54'></a>  54   <a href='../D/27838.html' title='Multiple defined in 9 places.'>assert</a> (! <a href='../D/26101.html' title='Multiple defined in 3 places.'>__spin_lock_locked</a> (&amp;<a href='../Y/25903.html' title='Multiple used in 849 places.'>ss</a>-&gt;<a href='../Y/12175.html' title='Multiple used in 23 places.'>critical_section_lock</a>));
+<a id='L55' name='L55'></a>  55   <a href='../S/5207.html#L58' title='Defined at 58 in mach/lock-intern.h.'>__spin_lock</a> (&amp;<a href='../Y/25903.html' title='Multiple used in 849 places.'>ss</a>-&gt;<a href='../Y/12175.html' title='Multiple used in 23 places.'>critical_section_lock</a>);
+<a id='L56' name='L56'></a>  56   <a href='../S/5207.html#L58' title='Defined at 58 in mach/lock-intern.h.'>__spin_lock</a> (&amp;<a href='../Y/25903.html' title='Multiple used in 849 places.'>ss</a>-&gt;<a href='../S/1874.html#L71' title='Defined at 71 in malloc/tst-interpose-aux.c.'>lock</a>);
+<a id='L57' name='L57'></a>  57   <a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a> = <a href='../Y/8112.html' title='Multiple used in 5 places.'>__thread_suspend</a> (<a href='../D/38045.html' title='Multiple defined in 2 places.'>thread</a>);
+<a id='L58' name='L58'></a>  58   <a href='../D/26105.html' title='Multiple defined in 3 places.'>__spin_unlock</a> (&amp;<a href='../Y/25903.html' title='Multiple used in 849 places.'>ss</a>-&gt;<a href='../S/1874.html#L71' title='Defined at 71 in malloc/tst-interpose-aux.c.'>lock</a>);
+<a id='L59' name='L59'></a>  59 
+<a id='L60' name='L60'></a>  60   <strong class='reserved'>if</strong> (! <a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a>)
+<a id='L61' name='L61'></a>  61     <em class='brace'>{</em>
+<a id='L62' name='L62'></a>  62       <em class='comment'>/* Set the flag telling the thread its operation is being cancelled.  */</em>
+<a id='L63' name='L63'></a>  63       <a href='../Y/25903.html' title='Multiple used in 849 places.'>ss</a>-&gt;<a href='../Y/11268.html' title='Multiple used in 32 places.'>cancel</a> = 1;
+<a id='L64' name='L64'></a>  64 
+<a id='L65' name='L65'></a>  65       <em class='comment'>/* Interrupt any interruptible RPC now in progress.  */</em>
+<a id='L66' name='L66'></a>  66       <a href='../S/735.html#L29' title='Defined at 29 in iconvdata/tst-loading.c.'>state</a>.<a href='../S/2161.html#L36' title='Defined at 36 in hurd/hurdports.c.'>set</a> = 0;
+<a id='L67' name='L67'></a>  67       <a href='../S/2170.html#L413' title='Defined at 413 in hurd/hurdsig.c.'>_hurdsig_abort_rpcs</a> (<a href='../Y/25903.html' title='Multiple used in 849 places.'>ss</a>, 0, 0, &amp;<a href='../S/735.html#L29' title='Defined at 29 in iconvdata/tst-loading.c.'>state</a>, &amp;<a href='../Y/26124.html' title='Multiple used in 8 places.'>state_change</a>, <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>, 0, 0);
+<a id='L68' name='L68'></a>  68       <strong class='reserved'>if</strong> (<a href='../Y/26124.html' title='Multiple used in 8 places.'>state_change</a>)
+<a id='L69' name='L69'></a>  69     <a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a> = <a href='../Y/8111.html' title='Multiple used in 10 places.'>__thread_set_state</a> (<a href='../D/38045.html' title='Multiple defined in 2 places.'>thread</a>, <a href='../D/7546.html' title='Multiple defined in 2 places.'>MACHINE_THREAD_STATE_FLAVOR</a>,
+<a id='L70' name='L70'></a>  70                   (<a href='../Y/20243.html' title='Multiple used in 28 places.'>natural_t</a> *) &amp;<a href='../S/735.html#L29' title='Defined at 29 in iconvdata/tst-loading.c.'>state</a>.<a href='../Y/10780.html' title='Multiple used in 73 places.'>basic</a>,
+<a id='L71' name='L71'></a>  71                   <a href='../D/7544.html' title='Multiple defined in 2 places.'>MACHINE_THREAD_STATE_COUNT</a>);
+<a id='L72' name='L72'></a>  72 
+<a id='L73' name='L73'></a>  73       <strong class='reserved'>if</strong> (<a href='../Y/25903.html' title='Multiple used in 849 places.'>ss</a>-&gt;<a href='../S/17107.html#L58' title='Defined at 58 in sysdeps/htl/pt-cond-timedwait.c.'>cancel_hook</a>)
+<a id='L74' name='L74'></a>  74     <em class='comment'>/* The code being cancelled has a special wakeup function.</em>
+<a id='L75' name='L75'></a>  75 <em class='comment'>       Calling this should make the thread wake up and check the</em>
+<a id='L76' name='L76'></a>  76 <em class='comment'>       cancellation flag.  */</em>
+<a id='L77' name='L77'></a>  77     (*<a href='../Y/25903.html' title='Multiple used in 849 places.'>ss</a>-&gt;<a href='../S/17107.html#L58' title='Defined at 58 in sysdeps/htl/pt-cond-timedwait.c.'>cancel_hook</a>) ();
+<a id='L78' name='L78'></a>  78 
+<a id='L79' name='L79'></a>  79       <a href='../Y/8106.html' title='Multiple used in 13 places.'>__thread_resume</a> (<a href='../D/38045.html' title='Multiple defined in 2 places.'>thread</a>);
+<a id='L80' name='L80'></a>  80     <em class='brace'>}</em>
+<a id='L81' name='L81'></a>  81 
+<a id='L82' name='L82'></a>  82   <a href='../S/2121.html#L249' title='Defined at 249 in hurd/hurd/signal.h.'>_hurd_critical_section_unlock</a> (<a href='../Y/25903.html' title='Multiple used in 849 places.'>ss</a>);
+<a id='L83' name='L83'></a>  83   <strong class='reserved'>return</strong> <a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a>;
+<a id='L84' name='L84'></a>  84 <em class='brace'>}</em>
+<a id='L85' name='L85'></a>  85 
+<a id='L86' name='L86'></a>  86 
+<a id='L87' name='L87'></a>  87 <strong class='reserved'>int</strong>
+<a id='L88' name='L88'></a>  88 <a href='../S/2110.html#L344' title='Referred from 344 in hurd/hurd.h.'>hurd_check_cancel</a> (<strong class='reserved'>void</strong>)
+<a id='L89' name='L89'></a>  89 <em class='brace'>{</em>
+<a id='L90' name='L90'></a>  90   <strong class='reserved'>struct</strong> <a href='../S/2121.html#L64' title='Defined at 64 in hurd/hurd/signal.h.'>hurd_sigstate</a> *<a href='../Y/25903.html' title='Multiple used in 849 places.'>ss</a> = <a href='../S/2121.html#L166' title='Defined at 166 in hurd/hurd/signal.h.'>_hurd_self_sigstate</a> ();
+<a id='L91' name='L91'></a>  91   <strong class='reserved'>int</strong> <a href='../Y/11268.html' title='Multiple used in 32 places.'>cancel</a>;
+<a id='L92' name='L92'></a>  92 
+<a id='L93' name='L93'></a>  93   <a href='../S/5207.html#L58' title='Defined at 58 in mach/lock-intern.h.'>__spin_lock</a> (&amp;<a href='../Y/25903.html' title='Multiple used in 849 places.'>ss</a>-&gt;<a href='../S/1874.html#L71' title='Defined at 71 in malloc/tst-interpose-aux.c.'>lock</a>);
+<a id='L94' name='L94'></a>  94   <a href='../D/27838.html' title='Multiple defined in 9 places.'>assert</a> (! <a href='../D/26101.html' title='Multiple defined in 3 places.'>__spin_lock_locked</a> (&amp;<a href='../Y/25903.html' title='Multiple used in 849 places.'>ss</a>-&gt;<a href='../Y/12175.html' title='Multiple used in 23 places.'>critical_section_lock</a>));
+<a id='L95' name='L95'></a>  95   <a href='../Y/11268.html' title='Multiple used in 32 places.'>cancel</a> = <a href='../Y/25903.html' title='Multiple used in 849 places.'>ss</a>-&gt;<a href='../Y/11268.html' title='Multiple used in 32 places.'>cancel</a>;
+<a id='L96' name='L96'></a>  96   <a href='../Y/25903.html' title='Multiple used in 849 places.'>ss</a>-&gt;<a href='../Y/11268.html' title='Multiple used in 32 places.'>cancel</a> = 0;
+<a id='L97' name='L97'></a>  97   <a href='../D/26105.html' title='Multiple defined in 3 places.'>__spin_unlock</a> (&amp;<a href='../Y/25903.html' title='Multiple used in 849 places.'>ss</a>-&gt;<a href='../S/1874.html#L71' title='Defined at 71 in malloc/tst-interpose-aux.c.'>lock</a>);
+<a id='L98' name='L98'></a>  98 
+<a id='L99' name='L99'></a>  99   <strong class='reserved'>return</strong> <a href='../Y/11268.html' title='Multiple used in 32 places.'>cancel</a>;
+<a id='L100' name='L100'></a> 100 <em class='brace'>}</em>
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L35'>[^]</a><a href='#L88'>[v]</a><a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

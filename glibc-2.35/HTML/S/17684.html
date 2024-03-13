@@ -1,0 +1,123 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>sysdeps/s390/wcschrnul-vx.S</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18977.html'>sysdeps</a>/<a href='../files/19209.html'>s390</a>/wcschrnul-vx.S</h2>
+<em class='comment'>/* [&lt;][&gt;][^][v][top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* Vector optimized 32/64 bit S/390 version of wcschrnul.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   Copyright (C) 2015-2022 Free Software Foundation, Inc.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'></em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'></em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'></em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   License along with the GNU C Library; if not, see</em>
+<a id='L17' name='L17'></a>  17 <em class='comment'>   &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L18' name='L18'></a>  18 
+<a id='L19' name='L19'></a>  19 <em class='sharp'>#include</em> &lt;<a href='17654.html'>ifunc-wcschrnul.h</a>&gt;
+<a id='L20' name='L20'></a>  20 <em class='sharp'>#if</em> <a href='../D/5442.html' title='Multiple defined in 2 places.'>HAVE_WCSCHRNUL_Z13</a>
+<a id='L21' name='L21'></a>  21 
+<a id='L22' name='L22'></a>  22 <em class='sharp'># include</em> "<a href='../I/5967.html'>sysdep.h</a>"
+<a id='L23' name='L23'></a>  23 <em class='sharp'># include</em> "<a href='../I/6421.html'>asm-syntax.h</a>"
+<a id='L24' name='L24'></a>  24 
+<a id='L25' name='L25'></a>  25     .text
+<a id='L26' name='L26'></a>  26 
+<a id='L27' name='L27'></a>  27 <em class='comment'>/* wchar_t* wcschrnul (const wchar_t *s, wchar_t c)</em>
+<a id='L28' name='L28'></a>  28 <em class='comment'>   Returns pointer to first c or to \0 if c not found.</em>
+<a id='L29' name='L29'></a>  29 <em class='comment'></em>
+<a id='L30' name='L30'></a>  30 <em class='comment'>   Register usage:</em>
+<a id='L31' name='L31'></a>  31 <em class='comment'>   -r1=tmp</em>
+<a id='L32' name='L32'></a>  32 <em class='comment'>   -r2=s and return pointer</em>
+<a id='L33' name='L33'></a>  33 <em class='comment'>   -r3=c</em>
+<a id='L34' name='L34'></a>  34 <em class='comment'>   -r4=tmp</em>
+<a id='L35' name='L35'></a>  35 <em class='comment'>   -r5=current_len</em>
+<a id='L36' name='L36'></a>  36 <em class='comment'>   -v16=part of s</em>
+<a id='L37' name='L37'></a>  37 <em class='comment'>   -v18=vector with c replicated in every byte</em>
+<a id='L38' name='L38'></a>  38 <em class='comment'>*/</em>
+<a id='L39' name='L39'></a>  39 <a href='../D/3651.html' title='Multiple defined in 54 places.'>ENTRY</a>(<a href='../R/9473.html' title='Multiple referred from 4 places.'>WCSCHRNUL_Z13</a>)
+<a id='L40' name='L40'></a>  40     .machine "z13"
+<a id='L41' name='L41'></a>  41     .machinemode "zarch_nohighgprs"
+<a id='L42' name='L42'></a>  42 
+<a id='L43' name='L43'></a>  43     vlbb    %v16,0(%r2),6   <em class='comment'>/* Load s until next 4k-byte boundary.  */</em>
+<a id='L44' name='L44'></a>  44     lcbb    %r1,0(%r2),6    <em class='comment'>/* Get bytes to 4k-byte boundary or 16.  */</em>
+<a id='L45' name='L45'></a>  45 
+<a id='L46' name='L46'></a>  46     tmll    %r2,3       <em class='comment'>/* Test if s is 4-byte aligned?   */</em>
+<a id='L47' name='L47'></a>  47     jne .Lfallback  <em class='comment'>/* And use common-code variant if not.  */</em>
+<a id='L48' name='L48'></a>  48 
+<a id='L49' name='L49'></a>  49     lghi    %r5,0       <em class='comment'>/* current_len = 0.  */</em>
+<a id='L50' name='L50'></a>  50 
+<a id='L51' name='L51'></a>  51     vlvgf   %v18,%r3,0  <em class='comment'>/* Generate vector which elements are all c.  */</em>
+<a id='L52' name='L52'></a>  52     vrepf   %v18,%v18,0
+<a id='L53' name='L53'></a>  53 
+<a id='L54' name='L54'></a>  54     vfeezfs %v16,%v16,%v18  <em class='comment'>/* Find element equal with zero search.  */</em>
+<a id='L55' name='L55'></a>  55     vlgvb   %r4,%v16,7  <em class='comment'>/* Load byte index of character or zero.  */</em>
+<a id='L56' name='L56'></a>  56     clrjl   %r4,%r1,.Lfound <em class='comment'>/* Return if c/zero is in loaded bytes.  */</em>
+<a id='L57' name='L57'></a>  57 
+<a id='L58' name='L58'></a>  58     <em class='comment'>/* Align s to 16 byte.  */</em>
+<a id='L59' name='L59'></a>  59     risbgn  %r4,%r2,60,128+63,0 <em class='comment'>/* %r3 = bits 60-63 of %r2 'and' 15.  */</em>
+<a id='L60' name='L60'></a>  60     lghi    %r5,16      <em class='comment'>/* current_len = 16.  */</em>
+<a id='L61' name='L61'></a>  61     slr %r5,%r4     <em class='comment'>/* Compute bytes to 16bytes boundary.  */</em>
+<a id='L62' name='L62'></a>  62 
+<a id='L63' name='L63'></a>  63     <em class='comment'>/* Find c/zero in 16byte aligned loop */</em>
+<a id='L64' name='L64'></a>  64 .Lloop:
+<a id='L65' name='L65'></a>  65     vl  %v16,0(%r5,%r2) <em class='comment'>/* Load s.  */</em>
+<a id='L66' name='L66'></a>  66     vfeezfs %v16,%v16,%v18  <em class='comment'>/* Find element equal with zero search.  */</em>
+<a id='L67' name='L67'></a>  67     jno .Lfound     <em class='comment'>/* Found c/zero (cc=0|1|2).  */</em>
+<a id='L68' name='L68'></a>  68     vl  %v16,16(%r5,%r2)
+<a id='L69' name='L69'></a>  69     vfeezfs %v16,%v16,%v18
+<a id='L70' name='L70'></a>  70     jno .Lfound16
+<a id='L71' name='L71'></a>  71     vl  %v16,32(%r5,%r2)
+<a id='L72' name='L72'></a>  72     vfeezfs %v16,%v16,%v18
+<a id='L73' name='L73'></a>  73     jno .Lfound32
+<a id='L74' name='L74'></a>  74     vl  %v16,48(%r5,%r2)
+<a id='L75' name='L75'></a>  75     vfeezfs %v16,%v16,%v18
+<a id='L76' name='L76'></a>  76     jno .Lfound48
+<a id='L77' name='L77'></a>  77 
+<a id='L78' name='L78'></a>  78     aghi    %r5,64
+<a id='L79' name='L79'></a>  79     j   .Lloop      <em class='comment'>/* No character and no zero -&gt; loop.  */</em>
+<a id='L80' name='L80'></a>  80 
+<a id='L81' name='L81'></a>  81     <em class='comment'>/* Found character or zero */</em>
+<a id='L82' name='L82'></a>  82 .Lfound48:
+<a id='L83' name='L83'></a>  83     aghi    %r5,16
+<a id='L84' name='L84'></a>  84 .Lfound32:
+<a id='L85' name='L85'></a>  85     aghi    %r5,16
+<a id='L86' name='L86'></a>  86 .Lfound16:
+<a id='L87' name='L87'></a>  87     aghi    %r5,16
+<a id='L88' name='L88'></a>  88 .Lfound:
+<a id='L89' name='L89'></a>  89     vlgvb   %r1,%v16,7  <em class='comment'>/* Load byte index of character.  */</em>
+<a id='L90' name='L90'></a>  90     algr    %r5,%r1
+<a id='L91' name='L91'></a>  91     la  %r2,0(%r5,%r2)  <em class='comment'>/* Return pointer to character.  */</em>
+<a id='L92' name='L92'></a>  92 
+<a id='L93' name='L93'></a>  93 .Lend:
+<a id='L94' name='L94'></a>  94     br  %r14
+<a id='L95' name='L95'></a>  95 .Lfallback:
+<a id='L96' name='L96'></a>  96     jg  WCSCHRNUL_C
+<a id='L97' name='L97'></a>  97 END(WCSCHRNUL_Z13)
+<a id='L98' name='L98'></a>  98 
+<a id='L99' name='L99'></a>  99 <em class='sharp'># if</em> ! <a href='../D/5440.html' title='Multiple defined in 2 places.'>HAVE_WCSCHRNUL_IFUNC</a>
+<a id='L100' name='L100'></a> 100 strong_alias (WCSCHRNUL_Z13, __wcschrnul)
+<a id='L101' name='L101'></a> 101 weak_alias (__wcschrnul, wcschrnul)
+<a id='L102' name='L102'></a> 102 <em class='sharp'># endif</em>
+<a id='L103' name='L103'></a> 103 <em class='sharp'>#endif</em>
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;][^][v]<a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

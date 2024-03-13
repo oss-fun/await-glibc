@@ -1,0 +1,194 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>sysdeps/x86_64/fpu/multiarch/svml_s_atanf16_core_avx512.S</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18977.html'>sysdeps</a>/<a href='../files/19391.html'>x86_64</a>/<a href='../files/19392.html'>fpu</a>/<a href='../files/19393.html'>multiarch</a>/svml_s_atanf16_core_avx512.S</h2>
+<em class='comment'>/* [&lt;][&gt;][^][v][top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* Function atanf vectorized with AVX-512.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   Copyright (C) 2021-2022 Free Software Foundation, Inc.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'></em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'></em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'></em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   License along with the GNU C Library; if not, see</em>
+<a id='L17' name='L17'></a>  17 <em class='comment'>   https://www.gnu.org/licenses/.  */</em>
+<a id='L18' name='L18'></a>  18 
+<a id='L19' name='L19'></a>  19 <em class='comment'>/*</em>
+<a id='L20' name='L20'></a>  20 <em class='comment'> * ALGORITHM DESCRIPTION:</em>
+<a id='L21' name='L21'></a>  21 <em class='comment'> *</em>
+<a id='L22' name='L22'></a>  22 <em class='comment'> *      For    0.0    &lt;= x &lt;=  7.0/16.0: atan(x) = atan(0.0) + atan(s), where s=(x-0.0)/(1.0+0.0*x)</em>
+<a id='L23' name='L23'></a>  23 <em class='comment'> *      For  7.0/16.0 &lt;= x &lt;= 11.0/16.0: atan(x) = atan(0.5) + atan(s), where s=(x-0.5)/(1.0+0.5*x)</em>
+<a id='L24' name='L24'></a>  24 <em class='comment'> *      For 11.0/16.0 &lt;= x &lt;= 19.0/16.0: atan(x) = atan(1.0) + atan(s), where s=(x-1.0)/(1.0+1.0*x)</em>
+<a id='L25' name='L25'></a>  25 <em class='comment'> *      For 19.0/16.0 &lt;= x &lt;= 39.0/16.0: atan(x) = atan(1.5) + atan(s), where s=(x-1.5)/(1.0+1.5*x)</em>
+<a id='L26' name='L26'></a>  26 <em class='comment'> *      For 39.0/16.0 &lt;= x &lt;=    inf   : atan(x) = atan(inf) + atan(s), where s=-1.0/x</em>
+<a id='L27' name='L27'></a>  27 <em class='comment'> *      Where atan(s) ~= s+s^3*Poly11(s^2) on interval |s|&lt;7.0/0.16.</em>
+<a id='L28' name='L28'></a>  28 <em class='comment'> *</em>
+<a id='L29' name='L29'></a>  29 <em class='comment'> */</em>
+<a id='L30' name='L30'></a>  30 
+<a id='L31' name='L31'></a>  31 <em class='comment'>/* Offsets for data table __svml_satan_data_internal_avx512</em>
+<a id='L32' name='L32'></a>  32 <em class='comment'> */</em>
+<a id='L33' name='L33'></a>  33 <em class='sharp'>#define</em> AbsMask                         0
+<a id='L34' name='L34'></a>  34 <em class='sharp'>#define</em> Shifter                         64
+<a id='L35' name='L35'></a>  35 <em class='sharp'>#define</em> MaxThreshold                    128
+<a id='L36' name='L36'></a>  36 <em class='sharp'>#define</em> MOne                            192
+<a id='L37' name='L37'></a>  37 <em class='sharp'>#define</em> One                             256
+<a id='L38' name='L38'></a>  38 <em class='sharp'>#define</em> LargeX                          320
+<a id='L39' name='L39'></a>  39 <em class='sharp'>#define</em> <a href='../R/9915.html' title='Multiple referred from 17 places.'>Zero</a>                            384
+<a id='L40' name='L40'></a>  40 <em class='sharp'>#define</em> Tbl_H                           448
+<a id='L41' name='L41'></a>  41 <em class='sharp'>#define</em> Pi2                             576
+<a id='L42' name='L42'></a>  42 <em class='sharp'>#define</em> coeff_1                         640
+<a id='L43' name='L43'></a>  43 <em class='sharp'>#define</em> coeff_2                         704
+<a id='L44' name='L44'></a>  44 <em class='sharp'>#define</em> coeff_3                         768
+<a id='L45' name='L45'></a>  45 
+<a id='L46' name='L46'></a>  46 <em class='sharp'>#include</em> &lt;<a href='../I/5967.html'>sysdep.h</a>&gt;
+<a id='L47' name='L47'></a>  47 
+<a id='L48' name='L48'></a>  48         .text
+<a id='L49' name='L49'></a>  49     .section .text.exex512,"ax",@progbits
+<a id='L50' name='L50'></a>  50 <a href='../D/3651.html' title='Multiple defined in 54 places.'>ENTRY</a>(_ZGVeN16v_atanf_skx)
+<a id='L51' name='L51'></a>  51         vandps    __svml_satan_data_internal_avx512(%rip), %zmm0, %zmm7
+<a id='L52' name='L52'></a>  52         vmovups   MaxThreshold+__svml_satan_data_internal_avx512(%rip), %zmm3
+<a id='L53' name='L53'></a>  53         vmovups   One+__svml_satan_data_internal_avx512(%rip), %zmm8
+<a id='L54' name='L54'></a>  54 
+<a id='L55' name='L55'></a>  55 <em class='comment'>/* round to 2 bits after binary point */</em>
+<a id='L56' name='L56'></a>  56         vreduceps $40, <em class='brace'>{</em>sae<em class='brace'>}</em>, %zmm7, %zmm5
+<a id='L57' name='L57'></a>  57 
+<a id='L58' name='L58'></a>  58 <em class='comment'>/* saturate X range */</em>
+<a id='L59' name='L59'></a>  59         vmovups   LargeX+__svml_satan_data_internal_avx512(%rip), %zmm6
+<a id='L60' name='L60'></a>  60         vmovups   Shifter+__svml_satan_data_internal_avx512(%rip), %zmm2
+<a id='L61' name='L61'></a>  61         vcmpps    $29, <em class='brace'>{</em>sae<em class='brace'>}</em>, %zmm3, %zmm7, %k1
+<a id='L62' name='L62'></a>  62 
+<a id='L63' name='L63'></a>  63 <em class='comment'>/* table lookup sequence */</em>
+<a id='L64' name='L64'></a>  64         vmovups   Tbl_H+__svml_satan_data_internal_avx512(%rip), %zmm3
+<a id='L65' name='L65'></a>  65         vsubps    <em class='brace'>{</em>rn-sae<em class='brace'>}</em>, %zmm5, %zmm7, %zmm4
+<a id='L66' name='L66'></a>  66         vaddps    <em class='brace'>{</em>rn-sae<em class='brace'>}</em>, %zmm2, %zmm7, %zmm1
+<a id='L67' name='L67'></a>  67         vxorps    %zmm0, %zmm7, %zmm0
+<a id='L68' name='L68'></a>  68         vfmadd231ps <em class='brace'>{</em>rn-sae<em class='brace'>}</em>, %zmm7, %zmm4, %zmm8
+<a id='L69' name='L69'></a>  69         vmovups   coeff_2+__svml_satan_data_internal_avx512(%rip), %zmm4
+<a id='L70' name='L70'></a>  70 
+<a id='L71' name='L71'></a>  71 <em class='comment'>/* if|X|&gt;=MaxThreshold, set DiffX=-1 */</em>
+<a id='L72' name='L72'></a>  72         vblendmps MOne+__svml_satan_data_internal_avx512(%rip), %zmm5, %zmm9<em class='brace'>{</em>%k1<em class='brace'>}</em>
+<a id='L73' name='L73'></a>  73         vmovups   coeff_3+__svml_satan_data_internal_avx512(%rip), %zmm5
+<a id='L74' name='L74'></a>  74 
+<a id='L75' name='L75'></a>  75 <em class='comment'>/* if|X|&gt;=MaxThreshold, set Y=X */</em>
+<a id='L76' name='L76'></a>  76         vminps    <em class='brace'>{</em>sae<em class='brace'>}</em>, %zmm7, %zmm6, %zmm8<em class='brace'>{</em>%k1<em class='brace'>}</em>
+<a id='L77' name='L77'></a>  77 
+<a id='L78' name='L78'></a>  78 <em class='comment'>/* R+Rl = DiffX/Y */</em>
+<a id='L79' name='L79'></a>  79         vgetmantps $0, <em class='brace'>{</em>sae<em class='brace'>}</em>, %zmm9, %zmm12
+<a id='L80' name='L80'></a>  80         vgetexpps <em class='brace'>{</em>sae<em class='brace'>}</em>, %zmm9, %zmm10
+<a id='L81' name='L81'></a>  81         vpermt2ps Tbl_H+64+__svml_satan_data_internal_avx512(%rip), %zmm1, %zmm3
+<a id='L82' name='L82'></a>  82         vgetmantps $0, <em class='brace'>{</em>sae<em class='brace'>}</em>, %zmm8, %zmm15
+<a id='L83' name='L83'></a>  83         vgetexpps <em class='brace'>{</em>sae<em class='brace'>}</em>, %zmm8, %zmm11
+<a id='L84' name='L84'></a>  84         vmovups   coeff_1+__svml_satan_data_internal_avx512(%rip), %zmm1
+<a id='L85' name='L85'></a>  85 
+<a id='L86' name='L86'></a>  86 <em class='comment'>/* set table value to Pi/2 for large X */</em>
+<a id='L87' name='L87'></a>  87         vblendmps Pi2+__svml_satan_data_internal_avx512(%rip), %zmm3, %zmm9<em class='brace'>{</em>%k1<em class='brace'>}</em>
+<a id='L88' name='L88'></a>  88         vrcp14ps  %zmm15, %zmm13
+<a id='L89' name='L89'></a>  89         vsubps    <em class='brace'>{</em>rn-sae<em class='brace'>}</em>, %zmm11, %zmm10, %zmm2
+<a id='L90' name='L90'></a>  90         vmulps    <em class='brace'>{</em>rn-sae<em class='brace'>}</em>, %zmm13, %zmm12, %zmm14
+<a id='L91' name='L91'></a>  91         vfnmadd213ps <em class='brace'>{</em>rn-sae<em class='brace'>}</em>, %zmm12, %zmm14, %zmm15
+<a id='L92' name='L92'></a>  92         vfmadd213ps <em class='brace'>{</em>rn-sae<em class='brace'>}</em>, %zmm14, %zmm13, %zmm15
+<a id='L93' name='L93'></a>  93         vscalefps <em class='brace'>{</em>rn-sae<em class='brace'>}</em>, %zmm2, %zmm15, %zmm7
+<a id='L94' name='L94'></a>  94 
+<a id='L95' name='L95'></a>  95 <em class='comment'>/* polynomial evaluation */</em>
+<a id='L96' name='L96'></a>  96         vmulps    <em class='brace'>{</em>rn-sae<em class='brace'>}</em>, %zmm7, %zmm7, %zmm8
+<a id='L97' name='L97'></a>  97         vmulps    <em class='brace'>{</em>rn-sae<em class='brace'>}</em>, %zmm7, %zmm8, %zmm6
+<a id='L98' name='L98'></a>  98         vfmadd231ps <em class='brace'>{</em>rn-sae<em class='brace'>}</em>, %zmm8, %zmm1, %zmm4
+<a id='L99' name='L99'></a>  99         vfmadd213ps <em class='brace'>{</em>rn-sae<em class='brace'>}</em>, %zmm5, %zmm4, %zmm8
+<a id='L100' name='L100'></a> 100         vfmadd213ps <em class='brace'>{</em>rn-sae<em class='brace'>}</em>, %zmm7, %zmm6, %zmm8
+<a id='L101' name='L101'></a> 101         vaddps    <em class='brace'>{</em>rn-sae<em class='brace'>}</em>, %zmm9, %zmm8, %zmm10
+<a id='L102' name='L102'></a> 102         vxorps    %zmm0, %zmm10, %zmm0
+<a id='L103' name='L103'></a> 103         ret
+<a id='L104' name='L104'></a> 104 
+<a id='L105' name='L105'></a> 105 END(_ZGVeN16v_atanf_skx)
+<a id='L106' name='L106'></a> 106 
+<a id='L107' name='L107'></a> 107         .section .rodata, "a"
+<a id='L108' name='L108'></a> 108         .align 64
+<a id='L109' name='L109'></a> 109 
+<a id='L110' name='L110'></a> 110 <em class='sharp'>#ifdef</em> __svml_satan_data_internal_avx512_typedef
+<a id='L111' name='L111'></a> 111 typedef unsigned int VUINT32;
+<a id='L112' name='L112'></a> 112 typedef struct <em class='brace'>{</em>
+<a id='L113' name='L113'></a> 113         __declspec(align(64)) VUINT32 AbsMask[16][1];
+<a id='L114' name='L114'></a> 114         __declspec(align(64)) VUINT32 Shifter[16][1];
+<a id='L115' name='L115'></a> 115         __declspec(align(64)) VUINT32 MaxThreshold[16][1];
+<a id='L116' name='L116'></a> 116         __declspec(align(64)) VUINT32 MOne[16][1];
+<a id='L117' name='L117'></a> 117         __declspec(align(64)) VUINT32 One[16][1];
+<a id='L118' name='L118'></a> 118         __declspec(align(64)) VUINT32 LargeX[16][1];
+<a id='L119' name='L119'></a> 119         __declspec(align(64)) VUINT32 Zero[16][1];
+<a id='L120' name='L120'></a> 120         __declspec(align(64)) VUINT32 Tbl_H[32][1];
+<a id='L121' name='L121'></a> 121         __declspec(align(64)) VUINT32 Pi2[16][1];
+<a id='L122' name='L122'></a> 122         __declspec(align(64)) VUINT32 coeff[3][16][1];
+<a id='L123' name='L123'></a> 123     <em class='brace'>}</em> __svml_satan_data_internal_avx512;
+<a id='L124' name='L124'></a> 124 <em class='sharp'>#endif</em>
+<a id='L125' name='L125'></a> 125 __svml_satan_data_internal_avx512:
+<a id='L126' name='L126'></a> 126         <em class='comment'>/*== AbsMask ==*/</em>
+<a id='L127' name='L127'></a> 127         .long 0x7fffffff, 0x7fffffff, 0x7fffffff, 0x7fffffff, 0x7fffffff, 0x7fffffff, 0x7fffffff, 0x7fffffff, 0x7fffffff, 0x7fffffff, 0x7fffffff, 0x7fffffff, 0x7fffffff, 0x7fffffff, 0x7fffffff, 0x7fffffff
+<a id='L128' name='L128'></a> 128         <em class='comment'>/*== Shifter ==*/</em>
+<a id='L129' name='L129'></a> 129         .align 64
+<a id='L130' name='L130'></a> 130         .long 0x4a000000, 0x4a000000, 0x4a000000, 0x4a000000, 0x4a000000, 0x4a000000, 0x4a000000, 0x4a000000, 0x4a000000, 0x4a000000, 0x4a000000, 0x4a000000, 0x4a000000, 0x4a000000, 0x4a000000, 0x4a000000
+<a id='L131' name='L131'></a> 131         <em class='comment'>/*== MaxThreshold ==*/</em>
+<a id='L132' name='L132'></a> 132         .align 64
+<a id='L133' name='L133'></a> 133         .long 0x40F80000, 0x40F80000, 0x40F80000, 0x40F80000, 0x40F80000, 0x40F80000, 0x40F80000, 0x40F80000, 0x40F80000, 0x40F80000, 0x40F80000, 0x40F80000, 0x40F80000, 0x40F80000, 0x40F80000, 0x40F80000
+<a id='L134' name='L134'></a> 134         <em class='comment'>/*== MOne ==*/</em>
+<a id='L135' name='L135'></a> 135         .align 64
+<a id='L136' name='L136'></a> 136         .long 0xbf800000, 0xbf800000, 0xbf800000, 0xbf800000, 0xbf800000, 0xbf800000, 0xbf800000, 0xbf800000, 0xbf800000, 0xbf800000, 0xbf800000, 0xbf800000, 0xbf800000, 0xbf800000, 0xbf800000, 0xbf800000
+<a id='L137' name='L137'></a> 137         <em class='comment'>/*== One ==*/</em>
+<a id='L138' name='L138'></a> 138         .align 64
+<a id='L139' name='L139'></a> 139         .long 0x3f800000, 0x3f800000, 0x3f800000, 0x3f800000, 0x3f800000, 0x3f800000, 0x3f800000, 0x3f800000, 0x3f800000, 0x3f800000, 0x3f800000, 0x3f800000, 0x3f800000, 0x3f800000, 0x3f800000, 0x3f800000
+<a id='L140' name='L140'></a> 140         <em class='comment'>/*== LargeX ==*/</em>
+<a id='L141' name='L141'></a> 141         .align 64
+<a id='L142' name='L142'></a> 142         .long 0x4f800000, 0x4f800000, 0x4f800000, 0x4f800000, 0x4f800000, 0x4f800000, 0x4f800000, 0x4f800000, 0x4f800000, 0x4f800000, 0x4f800000, 0x4f800000, 0x4f800000, 0x4f800000, 0x4f800000, 0x4f800000
+<a id='L143' name='L143'></a> 143         <em class='comment'>/*== Zero ==*/</em>
+<a id='L144' name='L144'></a> 144         .align 64
+<a id='L145' name='L145'></a> 145         .long 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000
+<a id='L146' name='L146'></a> 146         <em class='comment'>/*== Tbl_H ==*/</em>
+<a id='L147' name='L147'></a> 147         .align 64
+<a id='L148' name='L148'></a> 148         .long 0x00000000, 0x3e7adbb0
+<a id='L149' name='L149'></a> 149         .long 0x3eed6338, 0x3f24bc7d
+<a id='L150' name='L150'></a> 150         .long 0x3f490fdb, 0x3f6563e3
+<a id='L151' name='L151'></a> 151         .long 0x3f7b985f, 0x3f869c79
+<a id='L152' name='L152'></a> 152         .long 0x3f8db70d, 0x3f93877b
+<a id='L153' name='L153'></a> 153         .long 0x3f985b6c, 0x3f9c6b53
+<a id='L154' name='L154'></a> 154         .long 0x3f9fe0bb, 0x3fa2daa4
+<a id='L155' name='L155'></a> 155         .long 0x3fa57088, 0x3fa7b46f
+<a id='L156' name='L156'></a> 156         .long 0x3fa9b465, 0x3fab7b7a
+<a id='L157' name='L157'></a> 157         .long 0x3fad1283, 0x3fae809e
+<a id='L158' name='L158'></a> 158         .long 0x3fafcb99, 0x3fb0f836
+<a id='L159' name='L159'></a> 159         .long 0x3fb20a6a, 0x3fb30581
+<a id='L160' name='L160'></a> 160         .long 0x3fb3ec43, 0x3fb4c10a
+<a id='L161' name='L161'></a> 161         .long 0x3fb585d7, 0x3fb63c64
+<a id='L162' name='L162'></a> 162         .long 0x3fb6e62c, 0x3fb78478
+<a id='L163' name='L163'></a> 163         .long 0x3fb81868, 0x3fb8a2f5
+<a id='L164' name='L164'></a> 164         <em class='comment'>/*== Pi2 ==*/</em>
+<a id='L165' name='L165'></a> 165         .align 64
+<a id='L166' name='L166'></a> 166         .long 0x3fc90FDB, 0x3fc90FDB, 0x3fc90FDB, 0x3fc90FDB, 0x3fc90FDB, 0x3fc90FDB, 0x3fc90FDB, 0x3fc90FDB, 0x3fc90FDB, 0x3fc90FDB, 0x3fc90FDB, 0x3fc90FDB, 0x3fc90FDB, 0x3fc90FDB, 0x3fc90FDB, 0x3fc90FDB
+<a id='L167' name='L167'></a> 167         <em class='comment'>/*== coeff3 ==*/</em>
+<a id='L168' name='L168'></a> 168         .align 64
+<a id='L169' name='L169'></a> 169         .long 0xbe0fa8de, 0xbe0fa8de, 0xbe0fa8de, 0xbe0fa8de, 0xbe0fa8de, 0xbe0fa8de, 0xbe0fa8de, 0xbe0fa8de, 0xbe0fa8de, 0xbe0fa8de, 0xbe0fa8de, 0xbe0fa8de, 0xbe0fa8de, 0xbe0fa8de, 0xbe0fa8de, 0xbe0fa8de
+<a id='L170' name='L170'></a> 170         .long 0x3e4cc8e2, 0x3e4cc8e2, 0x3e4cc8e2, 0x3e4cc8e2, 0x3e4cc8e2, 0x3e4cc8e2, 0x3e4cc8e2, 0x3e4cc8e2, 0x3e4cc8e2, 0x3e4cc8e2, 0x3e4cc8e2, 0x3e4cc8e2, 0x3e4cc8e2, 0x3e4cc8e2, 0x3e4cc8e2, 0x3e4cc8e2
+<a id='L171' name='L171'></a> 171         .long 0xbeaaaaaa, 0xbeaaaaaa, 0xbeaaaaaa, 0xbeaaaaaa, 0xbeaaaaaa, 0xbeaaaaaa, 0xbeaaaaaa, 0xbeaaaaaa, 0xbeaaaaaa, 0xbeaaaaaa, 0xbeaaaaaa, 0xbeaaaaaa, 0xbeaaaaaa, 0xbeaaaaaa, 0xbeaaaaaa, 0xbeaaaaaa
+<a id='L172' name='L172'></a> 172         .align 64
+<a id='L173' name='L173'></a> 173         .type   __svml_satan_data_internal_avx512,@object
+<a id='L174' name='L174'></a> 174         .size   __svml_satan_data_internal_avx512,.-__svml_satan_data_internal_avx512
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;][^][v]<a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

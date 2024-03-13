@@ -1,0 +1,2091 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>sysdeps/ia64/fpu/e_powf.S</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18977.html'>sysdeps</a>/<a href='../files/19053.html'>ia64</a>/<a href='../files/19055.html'>fpu</a>/e_powf.S</h2>
+<em class='comment'>/* [&lt;][&gt;][^][v][top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 .file "powf.s"
+<a id='L2' name='L2'></a>   2 
+<a id='L3' name='L3'></a>   3 
+<a id='L4' name='L4'></a>   4 <em class='comment'>// Copyright (c) 2000 - 2005, Intel Corporation</em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>// All rights reserved.</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>//</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>//</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'>// Redistribution and use in source and binary forms, with or without</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'>// modification, are permitted provided that the following conditions are</em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>// met:</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>//</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>// * Redistributions of source code must retain the above copyright</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'>// notice, this list of conditions and the following disclaimer.</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'>//</em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>// * Redistributions in binary form must reproduce the above copyright</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>// notice, this list of conditions and the following disclaimer in the</em>
+<a id='L17' name='L17'></a>  17 <em class='comment'>// documentation and/or other materials provided with the distribution.</em>
+<a id='L18' name='L18'></a>  18 <em class='comment'>//</em>
+<a id='L19' name='L19'></a>  19 <em class='comment'>// * The name of Intel Corporation may not be used to endorse or promote</em>
+<a id='L20' name='L20'></a>  20 <em class='comment'>// products derived from this software without specific prior written</em>
+<a id='L21' name='L21'></a>  21 <em class='comment'>// permission.</em>
+<a id='L22' name='L22'></a>  22 
+<a id='L23' name='L23'></a>  23 <em class='comment'>// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS</em>
+<a id='L24' name='L24'></a>  24 <em class='comment'>// "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT</em>
+<a id='L25' name='L25'></a>  25 <em class='comment'>// LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR</em>
+<a id='L26' name='L26'></a>  26 <em class='comment'>// A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL INTEL OR ITS</em>
+<a id='L27' name='L27'></a>  27 <em class='comment'>// CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,</em>
+<a id='L28' name='L28'></a>  28 <em class='comment'>// EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,</em>
+<a id='L29' name='L29'></a>  29 <em class='comment'>// PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR</em>
+<a id='L30' name='L30'></a>  30 <em class='comment'>// PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY</em>
+<a id='L31' name='L31'></a>  31 <em class='comment'>// OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY OR TORT (INCLUDING</em>
+<a id='L32' name='L32'></a>  32 <em class='comment'>// NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS</em>
+<a id='L33' name='L33'></a>  33 <em class='comment'>// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.</em>
+<a id='L34' name='L34'></a>  34 <em class='comment'>//</em>
+<a id='L35' name='L35'></a>  35 <em class='comment'>// Intel Corporation is the author of this code, and requests that all</em>
+<a id='L36' name='L36'></a>  36 <em class='comment'>// problem reports or change requests be submitted to it directly at</em>
+<a id='L37' name='L37'></a>  37 <em class='comment'>// http://www.intel.com/software/products/opensource/libraries/num.htm.</em>
+<a id='L38' name='L38'></a>  38 <em class='comment'>//</em>
+<a id='L39' name='L39'></a>  39 <em class='comment'>// History</em>
+<a id='L40' name='L40'></a>  40 <em class='comment'>//==============================================================</em>
+<a id='L41' name='L41'></a>  41 <em class='comment'>// 02/02/00 Initial version</em>
+<a id='L42' name='L42'></a>  42 <em class='comment'>// 02/03/00 Added p12 to definite over/under path. With odd power we did not</em>
+<a id='L43' name='L43'></a>  43 <em class='comment'>//          maintain the sign of x in this path.</em>
+<a id='L44' name='L44'></a>  44 <em class='comment'>// 04/04/00 Unwind support added</em>
+<a id='L45' name='L45'></a>  45 <em class='comment'>// 04/19/00 pow(+-1,inf) now returns NaN</em>
+<a id='L46' name='L46'></a>  46 <em class='comment'>//          pow(+-val, +-inf) returns 0 or inf, but now does not call error</em>
+<a id='L47' name='L47'></a>  47 <em class='comment'>//          support</em>
+<a id='L48' name='L48'></a>  48 <em class='comment'>//          Added s1 to fcvt.fx because invalid flag was incorrectly set.</em>
+<a id='L49' name='L49'></a>  49 <em class='comment'>// 08/15/00 Bundle added after call to __libm_error_support to properly</em>
+<a id='L50' name='L50'></a>  50 <em class='comment'>//          set [the previously overwritten] GR_Parameter_RESULT.</em>
+<a id='L51' name='L51'></a>  51 <em class='comment'>// 09/07/00 Improved performance by eliminating bank conflicts and other stalls,</em>
+<a id='L52' name='L52'></a>  52 <em class='comment'>//          and tweaking the critical path</em>
+<a id='L53' name='L53'></a>  53 <em class='comment'>// 09/08/00 Per c99, pow(+-1,inf) now returns 1, and pow(+1,nan) returns 1</em>
+<a id='L54' name='L54'></a>  54 <em class='comment'>// 09/28/00 Updated NaN**0 path</em>
+<a id='L55' name='L55'></a>  55 <em class='comment'>// 01/20/01 Fixed denormal flag settings.</em>
+<a id='L56' name='L56'></a>  56 <em class='comment'>// 02/13/01 Improved speed.</em>
+<a id='L57' name='L57'></a>  57 <em class='comment'>// 03/19/01 Reordered exp polynomial to improve speed and eliminate monotonicity</em>
+<a id='L58' name='L58'></a>  58 <em class='comment'>//          problem in round up, down, and to zero modes.  Also corrected</em>
+<a id='L59' name='L59'></a>  59 <em class='comment'>//          overflow result when x negative, y odd in round up, down, zero.</em>
+<a id='L60' name='L60'></a>  60 <em class='comment'>// 06/14/01 Added brace missing from bundle</em>
+<a id='L61' name='L61'></a>  61 <em class='comment'>// 12/10/01 Corrected case where x negative, 2^23 &lt;= |y| &lt; 2^24, y odd integer.</em>
+<a id='L62' name='L62'></a>  62 <em class='comment'>// 02/08/02 Fixed overflow/underflow cases that were not calling error support.</em>
+<a id='L63' name='L63'></a>  63 <em class='comment'>// 05/20/02 Cleaned up namespace and sf0 syntax</em>
+<a id='L64' name='L64'></a>  64 <em class='comment'>// 08/29/02 Improved Itanium 2 performance</em>
+<a id='L65' name='L65'></a>  65 <em class='comment'>// 02/10/03 Reordered header: .section, .global, .proc, .align</em>
+<a id='L66' name='L66'></a>  66 <em class='comment'>// 10/09/03 Modified algorithm to improve performance, reduce table size, and</em>
+<a id='L67' name='L67'></a>  67 <em class='comment'>//          fix boundary case powf(2.0,-150.0)</em>
+<a id='L68' name='L68'></a>  68 <em class='comment'>// 03/31/05 Reformatted delimiters between data tables</em>
+<a id='L69' name='L69'></a>  69 <em class='comment'>//</em>
+<a id='L70' name='L70'></a>  70 <em class='comment'>// API</em>
+<a id='L71' name='L71'></a>  71 <em class='comment'>//==============================================================</em>
+<a id='L72' name='L72'></a>  72 <em class='comment'>// float powf(float x, float y)</em>
+<a id='L73' name='L73'></a>  73 <em class='comment'>//</em>
+<a id='L74' name='L74'></a>  74 <em class='comment'>// Overview of operation</em>
+<a id='L75' name='L75'></a>  75 <em class='comment'>//==============================================================</em>
+<a id='L76' name='L76'></a>  76 <em class='comment'>//</em>
+<a id='L77' name='L77'></a>  77 <em class='comment'>// Three steps...</em>
+<a id='L78' name='L78'></a>  78 <em class='comment'>// 1. Log(x)</em>
+<a id='L79' name='L79'></a>  79 <em class='comment'>// 2. y Log(x)</em>
+<a id='L80' name='L80'></a>  80 <em class='comment'>// 3. exp(y log(x))</em>
+<a id='L81' name='L81'></a>  81 <em class='comment'>//</em>
+<a id='L82' name='L82'></a>  82 <em class='comment'>// This means we work with the absolute value of x and merge in the sign later.</em>
+<a id='L83' name='L83'></a>  83 <em class='comment'>//      Log(x) = G + delta + r -rsq/2 + p</em>
+<a id='L84' name='L84'></a>  84 <em class='comment'>// G,delta depend on the exponent of x and table entries. The table entries are</em>
+<a id='L85' name='L85'></a>  85 <em class='comment'>// indexed by the exponent of x, called K.</em>
+<a id='L86' name='L86'></a>  86 <em class='comment'>//</em>
+<a id='L87' name='L87'></a>  87 <em class='comment'>// The G and delta come out of the reduction; r is the reduced x.</em>
+<a id='L88' name='L88'></a>  88 <em class='comment'>//</em>
+<a id='L89' name='L89'></a>  89 <em class='comment'>// B = frcpa(x)</em>
+<a id='L90' name='L90'></a>  90 <em class='comment'>// xB-1 is small means that B is the approximate inverse of x.</em>
+<a id='L91' name='L91'></a>  91 <em class='comment'>//</em>
+<a id='L92' name='L92'></a>  92 <em class='comment'>//      Log(x) = Log( (1/B)(Bx) )</em>
+<a id='L93' name='L93'></a>  93 <em class='comment'>//             = Log(1/B) + Log(Bx)</em>
+<a id='L94' name='L94'></a>  94 <em class='comment'>//             = Log(1/B) + Log( 1 + (Bx-1))</em>
+<a id='L95' name='L95'></a>  95 <em class='comment'>//</em>
+<a id='L96' name='L96'></a>  96 <em class='comment'>//      x  = 2^K 1.x_1x_2.....x_52</em>
+<a id='L97' name='L97'></a>  97 <em class='comment'>//      B= frcpa(x) = 2^-k Cm</em>
+<a id='L98' name='L98'></a>  98 <em class='comment'>//      Log(1/B) = Log(1/(2^-K Cm))</em>
+<a id='L99' name='L99'></a>  99 <em class='comment'>//      Log(1/B) = Log((2^K/ Cm))</em>
+<a id='L100' name='L100'></a> 100 <em class='comment'>//      Log(1/B) = K Log(2) + Log(1/Cm)</em>
+<a id='L101' name='L101'></a> 101 <em class='comment'>//</em>
+<a id='L102' name='L102'></a> 102 <em class='comment'>//      Log(x)   = K Log(2) + Log(1/Cm) + Log( 1 + (Bx-1))</em>
+<a id='L103' name='L103'></a> 103 <em class='comment'>//</em>
+<a id='L104' name='L104'></a> 104 <em class='comment'>// If you take the significand of x, set the exponent to true 0, then Cm is</em>
+<a id='L105' name='L105'></a> 105 <em class='comment'>// the frcpa. We tabulate the Log(1/Cm) values. There are 256 of them.</em>
+<a id='L106' name='L106'></a> 106 <em class='comment'>// The frcpa table is indexed by 8 bits, the x_1 thru x_8.</em>
+<a id='L107' name='L107'></a> 107 <em class='comment'>// m = x_1x_2...x_8 is an 8-bit index.</em>
+<a id='L108' name='L108'></a> 108 <em class='comment'>//</em>
+<a id='L109' name='L109'></a> 109 <em class='comment'>//      Log(1/Cm) = log(1/frcpa(1+m/256)) where m goes from 0 to 255.</em>
+<a id='L110' name='L110'></a> 110 <em class='comment'>//</em>
+<a id='L111' name='L111'></a> 111 <em class='comment'>// We tabluate as one double, T for single precision power</em>
+<a id='L112' name='L112'></a> 112 <em class='comment'>//</em>
+<a id='L113' name='L113'></a> 113 <em class='comment'>//      Log(x)   = (K Log(2)_hi + T) + (K Log(2)_lo) + Log( 1 + (Bx-1))</em>
+<a id='L114' name='L114'></a> 114 <em class='comment'>//      Log(x)   =  G                +     delta     + Log( 1 + (Bx-1))</em>
+<a id='L115' name='L115'></a> 115 <em class='comment'>//</em>
+<a id='L116' name='L116'></a> 116 <em class='comment'>// The Log( 1 + (Bx-1)) can be calculated as a series in r = Bx-1.</em>
+<a id='L117' name='L117'></a> 117 <em class='comment'>//</em>
+<a id='L118' name='L118'></a> 118 <em class='comment'>//      Log( 1 + (Bx-1)) = r - rsq/2 + p</em>
+<a id='L119' name='L119'></a> 119 <em class='comment'>//        where p = r^3(P0 + P1*r + P2*r^2)</em>
+<a id='L120' name='L120'></a> 120 <em class='comment'>//</em>
+<a id='L121' name='L121'></a> 121 <em class='comment'>// Then,</em>
+<a id='L122' name='L122'></a> 122 <em class='comment'>//</em>
+<a id='L123' name='L123'></a> 123 <em class='comment'>//      yLog(x) = yG + y delta + y(r-rsq/2) + yp</em>
+<a id='L124' name='L124'></a> 124 <em class='comment'>//      yLog(x) = Z1 + e3      + Z2         + Z3</em>
+<a id='L125' name='L125'></a> 125 <em class='comment'>//</em>
+<a id='L126' name='L126'></a> 126 <em class='comment'>//</em>
+<a id='L127' name='L127'></a> 127 <em class='comment'>//     exp(yLog(x)) = exp(Z1 + Z2) exp(Z3) exp(e3)</em>
+<a id='L128' name='L128'></a> 128 <em class='comment'>//</em>
+<a id='L129' name='L129'></a> 129 <em class='comment'>//</em>
+<a id='L130' name='L130'></a> 130 <em class='comment'>//       exp(Z3) is another series.</em>
+<a id='L131' name='L131'></a> 131 <em class='comment'>//       exp(e3) is approximated as f3 = 1 +  e3</em>
+<a id='L132' name='L132'></a> 132 <em class='comment'>//</em>
+<a id='L133' name='L133'></a> 133 <em class='comment'>//       exp(Z1 + Z2) = exp(Z)</em>
+<a id='L134' name='L134'></a> 134 <em class='comment'>//       Z (128/log2) = number of log2/128 in Z is N</em>
+<a id='L135' name='L135'></a> 135 <em class='comment'>//</em>
+<a id='L136' name='L136'></a> 136 <em class='comment'>//       s = Z - N log2/128</em>
+<a id='L137' name='L137'></a> 137 <em class='comment'>//</em>
+<a id='L138' name='L138'></a> 138 <em class='comment'>//       exp(Z)       = exp(s) exp(N log2/128)</em>
+<a id='L139' name='L139'></a> 139 <em class='comment'>//</em>
+<a id='L140' name='L140'></a> 140 <em class='comment'>//       exp(r)       = exp(Z - N log2/128)</em>
+<a id='L141' name='L141'></a> 141 <em class='comment'>//</em>
+<a id='L142' name='L142'></a> 142 <em class='comment'>//      r = s + d = (Z - N (log2/128)_hi) -N (log2/128)_lo</em>
+<a id='L143' name='L143'></a> 143 <em class='comment'>//                =  Z - N (log2/128)</em>
+<a id='L144' name='L144'></a> 144 <em class='comment'>//</em>
+<a id='L145' name='L145'></a> 145 <em class='comment'>//      Z         = s+d +N (log2/128)</em>
+<a id='L146' name='L146'></a> 146 <em class='comment'>//</em>
+<a id='L147' name='L147'></a> 147 <em class='comment'>//      exp(Z)    = exp(s) (1+d) exp(N log2/128)</em>
+<a id='L148' name='L148'></a> 148 <em class='comment'>//</em>
+<a id='L149' name='L149'></a> 149 <em class='comment'>//      N = M 128 + n</em>
+<a id='L150' name='L150'></a> 150 <em class='comment'>//</em>
+<a id='L151' name='L151'></a> 151 <em class='comment'>//      N log2/128 = M log2 + n log2/128</em>
+<a id='L152' name='L152'></a> 152 <em class='comment'>//</em>
+<a id='L153' name='L153'></a> 153 <em class='comment'>//      n is 8 binary digits = n_7n_6...n_1</em>
+<a id='L154' name='L154'></a> 154 <em class='comment'>//</em>
+<a id='L155' name='L155'></a> 155 <em class='comment'>//      n log2/128 = n_7n_6n_5 16 log2/128 + n_4n_3n_2n_1 log2/128</em>
+<a id='L156' name='L156'></a> 156 <em class='comment'>//      n log2/128 = n_7n_6n_5 log2/8 + n_4n_3n_2n_1 log2/128</em>
+<a id='L157' name='L157'></a> 157 <em class='comment'>//      n log2/128 = I2 log2/8 + I1 log2/128</em>
+<a id='L158' name='L158'></a> 158 <em class='comment'>//</em>
+<a id='L159' name='L159'></a> 159 <em class='comment'>//      N log2/128 = M log2 + I2 log2/8 + I1 log2/128</em>
+<a id='L160' name='L160'></a> 160 <em class='comment'>//</em>
+<a id='L161' name='L161'></a> 161 <em class='comment'>//      exp(Z)    = exp(s) (1+d) exp(log(2^M) + log(2^I2/8) + log(2^I1/128))</em>
+<a id='L162' name='L162'></a> 162 <em class='comment'>//      exp(Z)    = exp(s) f12 (2^M) 2^I2/8 2^I1/128</em>
+<a id='L163' name='L163'></a> 163 <em class='comment'>//</em>
+<a id='L164' name='L164'></a> 164 <em class='comment'>// I1, I2 are table indices. Use a series for exp(s).</em>
+<a id='L165' name='L165'></a> 165 <em class='comment'>// Then get exp(Z)</em>
+<a id='L166' name='L166'></a> 166 <em class='comment'>//</em>
+<a id='L167' name='L167'></a> 167 <em class='comment'>//     exp(yLog(x)) = exp(Z) exp(Z3) f3</em>
+<a id='L168' name='L168'></a> 168 <em class='comment'>//     exp(yLog(x)) = exp(Z)f3 exp(Z3)</em>
+<a id='L169' name='L169'></a> 169 <em class='comment'>//     exp(yLog(x)) = A exp(Z3)</em>
+<a id='L170' name='L170'></a> 170 <em class='comment'>//</em>
+<a id='L171' name='L171'></a> 171 <em class='comment'>// We actually calculate exp(Z3) -1.</em>
+<a id='L172' name='L172'></a> 172 <em class='comment'>// Then,</em>
+<a id='L173' name='L173'></a> 173 <em class='comment'>//     exp(yLog(x)) = A + A( exp(Z3)   -1)</em>
+<a id='L174' name='L174'></a> 174 <em class='comment'>//</em>
+<a id='L175' name='L175'></a> 175 
+<a id='L176' name='L176'></a> 176 <em class='comment'>// Table Generation</em>
+<a id='L177' name='L177'></a> 177 <em class='comment'>//==============================================================</em>
+<a id='L178' name='L178'></a> 178 
+<a id='L179' name='L179'></a> 179 <em class='comment'>// The log values</em>
+<a id='L180' name='L180'></a> 180 <em class='comment'>// ==============</em>
+<a id='L181' name='L181'></a> 181 <em class='comment'>// The operation (K*log2_hi) must be exact. K is the true exponent of x.</em>
+<a id='L182' name='L182'></a> 182 <em class='comment'>// If we allow gradual underflow (denormals), K can be represented in 12 bits</em>
+<a id='L183' name='L183'></a> 183 <em class='comment'>// (as a two's complement number). We assume 13 bits as an engineering</em>
+<a id='L184' name='L184'></a> 184 <em class='comment'>// precaution.</em>
+<a id='L185' name='L185'></a> 185 <em class='comment'>//</em>
+<a id='L186' name='L186'></a> 186 <em class='comment'>//           +------------+----------------+-+</em>
+<a id='L187' name='L187'></a> 187 <em class='comment'>//           |  13 bits   | 50 bits        | |</em>
+<a id='L188' name='L188'></a> 188 <em class='comment'>//           +------------+----------------+-+</em>
+<a id='L189' name='L189'></a> 189 <em class='comment'>//           0            1                66</em>
+<a id='L190' name='L190'></a> 190 <em class='comment'>//                        2                34</em>
+<a id='L191' name='L191'></a> 191 <em class='comment'>//</em>
+<a id='L192' name='L192'></a> 192 <em class='comment'>// So we want the lsb(log2_hi) to be 2^-50</em>
+<a id='L193' name='L193'></a> 193 <em class='comment'>// We get log2 as a quad-extended (15-bit exponent, 128-bit significand)</em>
+<a id='L194' name='L194'></a> 194 <em class='comment'>//</em>
+<a id='L195' name='L195'></a> 195 <em class='comment'>//      0 fffe b17217f7d1cf79ab c9e3b39803f2f6af (4...)</em>
+<a id='L196' name='L196'></a> 196 <em class='comment'>//</em>
+<a id='L197' name='L197'></a> 197 <em class='comment'>// Consider numbering the bits left to right, starting at 0 thru 127.</em>
+<a id='L198' name='L198'></a> 198 <em class='comment'>// Bit 0 is the 2^-1 bit; bit 49 is the 2^-50 bit.</em>
+<a id='L199' name='L199'></a> 199 <em class='comment'>//</em>
+<a id='L200' name='L200'></a> 200 <em class='comment'>//  ...79ab</em>
+<a id='L201' name='L201'></a> 201 <em class='comment'>//     0111 1001 1010 1011</em>
+<a id='L202' name='L202'></a> 202 <em class='comment'>//     44</em>
+<a id='L203' name='L203'></a> 203 <em class='comment'>//     89</em>
+<a id='L204' name='L204'></a> 204 <em class='comment'>//</em>
+<a id='L205' name='L205'></a> 205 <em class='comment'>// So if we shift off the rightmost 14 bits, then (shift back only</em>
+<a id='L206' name='L206'></a> 206 <em class='comment'>// the top half) we get</em>
+<a id='L207' name='L207'></a> 207 <em class='comment'>//</em>
+<a id='L208' name='L208'></a> 208 <em class='comment'>//      0 fffe b17217f7d1cf4000 e6af278ece600fcb dabc000000000000</em>
+<a id='L209' name='L209'></a> 209 <em class='comment'>//</em>
+<a id='L210' name='L210'></a> 210 <em class='comment'>// Put the right 64-bit signficand in an FR register, convert to double;</em>
+<a id='L211' name='L211'></a> 211 <em class='comment'>// it is exact. Put the next 128 bits into a quad register and round to double.</em>
+<a id='L212' name='L212'></a> 212 <em class='comment'>// The true exponent of the low part is -51.</em>
+<a id='L213' name='L213'></a> 213 <em class='comment'>//</em>
+<a id='L214' name='L214'></a> 214 <em class='comment'>// hi is 0 fffe b17217f7d1cf4000</em>
+<a id='L215' name='L215'></a> 215 <em class='comment'>// lo is 0 ffcc e6af278ece601000</em>
+<a id='L216' name='L216'></a> 216 <em class='comment'>//</em>
+<a id='L217' name='L217'></a> 217 <em class='comment'>// Convert to double memory format and get</em>
+<a id='L218' name='L218'></a> 218 <em class='comment'>//</em>
+<a id='L219' name='L219'></a> 219 <em class='comment'>// hi is 0x3fe62e42fefa39e8</em>
+<a id='L220' name='L220'></a> 220 <em class='comment'>// lo is 0x3cccd5e4f1d9cc02</em>
+<a id='L221' name='L221'></a> 221 <em class='comment'>//</em>
+<a id='L222' name='L222'></a> 222 <em class='comment'>// log2_hi + log2_lo is an accurate value for log2.</em>
+<a id='L223' name='L223'></a> 223 <em class='comment'>//</em>
+<a id='L224' name='L224'></a> 224 <em class='comment'>//</em>
+<a id='L225' name='L225'></a> 225 <em class='comment'>// The T and t values</em>
+<a id='L226' name='L226'></a> 226 <em class='comment'>// ==================</em>
+<a id='L227' name='L227'></a> 227 <em class='comment'>// A similar method is used to generate the T and t values.</em>
+<a id='L228' name='L228'></a> 228 <em class='comment'>//</em>
+<a id='L229' name='L229'></a> 229 <em class='comment'>// K * log2_hi + T  must be exact.</em>
+<a id='L230' name='L230'></a> 230 <em class='comment'>//</em>
+<a id='L231' name='L231'></a> 231 <em class='comment'>// Smallest T,t</em>
+<a id='L232' name='L232'></a> 232 <em class='comment'>// ----------</em>
+<a id='L233' name='L233'></a> 233 <em class='comment'>// The smallest T,t is</em>
+<a id='L234' name='L234'></a> 234 <em class='comment'>//       T                   t</em>
+<a id='L235' name='L235'></a> 235 <em class='comment'>// 0x3f60040155d58800, 0x3c93bce0ce3ddd81  log(1/frcpa(1+0/256))=  +1.95503e-003</em>
+<a id='L236' name='L236'></a> 236 <em class='comment'>//</em>
+<a id='L237' name='L237'></a> 237 <em class='comment'>// The exponent is 0x3f6 (biased)  or -9 (true).</em>
+<a id='L238' name='L238'></a> 238 <em class='comment'>// For the smallest T value, what we want is to clip the significand such that</em>
+<a id='L239' name='L239'></a> 239 <em class='comment'>// when it is shifted right by 9, its lsb is in the bit for 2^-51. The 9 is the</em>
+<a id='L240' name='L240'></a> 240 <em class='comment'>// specific for the first entry. In general, it is 0xffff - (biased 15-bit</em>
+<a id='L241' name='L241'></a> 241 <em class='comment'>// exponent).</em>
+<a id='L242' name='L242'></a> 242 
+<a id='L243' name='L243'></a> 243 <em class='comment'>// Independently, what we have calculated is the table value as a quad</em>
+<a id='L244' name='L244'></a> 244 <em class='comment'>// precision number.</em>
+<a id='L245' name='L245'></a> 245 <em class='comment'>// Table entry 1 is</em>
+<a id='L246' name='L246'></a> 246 <em class='comment'>// 0 fff6 80200aaeac44ef38 338f77605fdf8000</em>
+<a id='L247' name='L247'></a> 247 <em class='comment'>//</em>
+<a id='L248' name='L248'></a> 248 <em class='comment'>// We store this quad precision number in a data structure that is</em>
+<a id='L249' name='L249'></a> 249 <em class='comment'>//    sign:           1</em>
+<a id='L250' name='L250'></a> 250 <em class='comment'>//    exponent:      15</em>
+<a id='L251' name='L251'></a> 251 <em class='comment'>//    signficand_hi: 64 (includes explicit bit)</em>
+<a id='L252' name='L252'></a> 252 <em class='comment'>//    signficand_lo: 49</em>
+<a id='L253' name='L253'></a> 253 <em class='comment'>// Because the explicit bit is included, the significand is 113 bits.</em>
+<a id='L254' name='L254'></a> 254 <em class='comment'>//</em>
+<a id='L255' name='L255'></a> 255 <em class='comment'>// Consider significand_hi for table entry 1.</em>
+<a id='L256' name='L256'></a> 256 <em class='comment'>//</em>
+<a id='L257' name='L257'></a> 257 <em class='comment'>//</em>
+<a id='L258' name='L258'></a> 258 <em class='comment'>// +-+--- ... -------+--------------------+</em>
+<a id='L259' name='L259'></a> 259 <em class='comment'>// | |</em>
+<a id='L260' name='L260'></a> 260 <em class='comment'>// +-+--- ... -------+--------------------+</em>
+<a id='L261' name='L261'></a> 261 <em class='comment'>// 0 1               4444444455555555556666</em>
+<a id='L262' name='L262'></a> 262 <em class='comment'>//                   2345678901234567890123</em>
+<a id='L263' name='L263'></a> 263 <em class='comment'>//</em>
+<a id='L264' name='L264'></a> 264 <em class='comment'>// Labeled as above, bit 0 is 2^0, bit 1 is 2^-1, etc.</em>
+<a id='L265' name='L265'></a> 265 <em class='comment'>// Bit 42 is 2^-42. If we shift to the right by 9, the bit in</em>
+<a id='L266' name='L266'></a> 266 <em class='comment'>// bit 42 goes in 51.</em>
+<a id='L267' name='L267'></a> 267 <em class='comment'>//</em>
+<a id='L268' name='L268'></a> 268 <em class='comment'>// So what we want to do is shift bits 43 thru 63 into significand_lo.</em>
+<a id='L269' name='L269'></a> 269 <em class='comment'>// This is shifting bit 42 into bit 63, taking care to retain shifted-off bits.</em>
+<a id='L270' name='L270'></a> 270 <em class='comment'>// Then shifting (just with signficaand_hi) back into bit 42.</em>
+<a id='L271' name='L271'></a> 271 <em class='comment'>//</em>
+<a id='L272' name='L272'></a> 272 <em class='comment'>// The shift_value is 63-42 = 21. In general, this is</em>
+<a id='L273' name='L273'></a> 273 <em class='comment'>//      63 - (51 -(0xffff - 0xfff6))</em>
+<a id='L274' name='L274'></a> 274 <em class='comment'>// For this example, it is</em>
+<a id='L275' name='L275'></a> 275 <em class='comment'>//      63 - (51 - 9) = 63 - 42  = 21</em>
+<a id='L276' name='L276'></a> 276 <em class='comment'>//</em>
+<a id='L277' name='L277'></a> 277 <em class='comment'>// This means we are shifting 21 bits into significand_lo. We must maintain more</em>
+<a id='L278' name='L278'></a> 278 <em class='comment'>// that a 128-bit signficand not to lose bits. So before the shift we put the</em>
+<a id='L279' name='L279'></a> 279 <em class='comment'>// 128-bit significand into a 256-bit signficand and then shift.</em>
+<a id='L280' name='L280'></a> 280 <em class='comment'>// The 256-bit significand has four parts: hh, hl, lh, and ll.</em>
+<a id='L281' name='L281'></a> 281 <em class='comment'>//</em>
+<a id='L282' name='L282'></a> 282 <em class='comment'>// Start off with</em>
+<a id='L283' name='L283'></a> 283 <em class='comment'>//      hh         hl         lh         ll</em>
+<a id='L284' name='L284'></a> 284 <em class='comment'>//      &lt;64&gt;       &lt;49&gt;&lt;15_0&gt; &lt;64_0&gt;     &lt;64_0&gt;</em>
+<a id='L285' name='L285'></a> 285 <em class='comment'>//</em>
+<a id='L286' name='L286'></a> 286 <em class='comment'>// After shift by 21 (then return for significand_hi),</em>
+<a id='L287' name='L287'></a> 287 <em class='comment'>//      &lt;43&gt;&lt;21_0&gt; &lt;21&gt;&lt;43&gt;   &lt;6&gt;&lt;58_0&gt;  &lt;64_0&gt;</em>
+<a id='L288' name='L288'></a> 288 <em class='comment'>//</em>
+<a id='L289' name='L289'></a> 289 <em class='comment'>// Take the hh part and convert to a double. There is no rounding here.</em>
+<a id='L290' name='L290'></a> 290 <em class='comment'>// The conversion is exact. The true exponent of the high part is the same as</em>
+<a id='L291' name='L291'></a> 291 <em class='comment'>// the true exponent of the input quad.</em>
+<a id='L292' name='L292'></a> 292 <em class='comment'>//</em>
+<a id='L293' name='L293'></a> 293 <em class='comment'>// We have some 64 plus significand bits for the low part. In this example, we</em>
+<a id='L294' name='L294'></a> 294 <em class='comment'>// have 70 bits. We want to round this to a double. Put them in a quad and then</em>
+<a id='L295' name='L295'></a> 295 <em class='comment'>// do a quad fnorm.</em>
+<a id='L296' name='L296'></a> 296 <em class='comment'>// For this example the true exponent of the low part is</em>
+<a id='L297' name='L297'></a> 297 <em class='comment'>//      true_exponent_of_high - 43 = true_exponent_of_high - (64-21)</em>
+<a id='L298' name='L298'></a> 298 <em class='comment'>// In general, this is</em>
+<a id='L299' name='L299'></a> 299 <em class='comment'>//      true_exponent_of_high - (64 - shift_value)</em>
+<a id='L300' name='L300'></a> 300 <em class='comment'>//</em>
+<a id='L301' name='L301'></a> 301 <em class='comment'>//</em>
+<a id='L302' name='L302'></a> 302 <em class='comment'>// Largest T,t</em>
+<a id='L303' name='L303'></a> 303 <em class='comment'>// ----------</em>
+<a id='L304' name='L304'></a> 304 <em class='comment'>// The largest T,t is</em>
+<a id='L305' name='L305'></a> 305 <em class='comment'>// 0x3fe62643fecf9742, 0x3c9e3147684bd37d  log(1/frcpa(1+255/256))=+6.92171e-001</em>
+<a id='L306' name='L306'></a> 306 <em class='comment'>//</em>
+<a id='L307' name='L307'></a> 307 <em class='comment'>// Table entry 256 is</em>
+<a id='L308' name='L308'></a> 308 <em class='comment'>// 0 fffe b1321ff67cba178c 51da12f4df5a0000</em>
+<a id='L309' name='L309'></a> 309 <em class='comment'>//</em>
+<a id='L310' name='L310'></a> 310 <em class='comment'>// The shift value is</em>
+<a id='L311' name='L311'></a> 311 <em class='comment'>//      63 - (51 -(0xffff - 0xfffe)) = 13</em>
+<a id='L312' name='L312'></a> 312 <em class='comment'>//</em>
+<a id='L313' name='L313'></a> 313 <em class='comment'>// The true exponent of the low part is</em>
+<a id='L314' name='L314'></a> 314 <em class='comment'>//      true_exponent_of_high - (64 - shift_value)</em>
+<a id='L315' name='L315'></a> 315 <em class='comment'>//      -1 - (64-13) = -52</em>
+<a id='L316' name='L316'></a> 316 <em class='comment'>// Biased as a double, this is 0x3cb</em>
+<a id='L317' name='L317'></a> 317 <em class='comment'>//</em>
+<a id='L318' name='L318'></a> 318 <em class='comment'>//</em>
+<a id='L319' name='L319'></a> 319 <em class='comment'>//</em>
+<a id='L320' name='L320'></a> 320 <em class='comment'>// So then lsb(T) must be &gt;= 2^-51</em>
+<a id='L321' name='L321'></a> 321 <em class='comment'>// msb(Klog2_hi) &lt;= 2^12</em>
+<a id='L322' name='L322'></a> 322 <em class='comment'>//</em>
+<a id='L323' name='L323'></a> 323 <em class='comment'>//              +--------+---------+</em>
+<a id='L324' name='L324'></a> 324 <em class='comment'>//              |       51 bits    | &lt;== largest T</em>
+<a id='L325' name='L325'></a> 325 <em class='comment'>//              +--------+---------+</em>
+<a id='L326' name='L326'></a> 326 <em class='comment'>//              | 9 bits | 42 bits | &lt;== smallest T</em>
+<a id='L327' name='L327'></a> 327 <em class='comment'>// +------------+----------------+-+</em>
+<a id='L328' name='L328'></a> 328 <em class='comment'>// |  13 bits   | 50 bits        | |</em>
+<a id='L329' name='L329'></a> 329 <em class='comment'>// +------------+----------------+-+</em>
+<a id='L330' name='L330'></a> 330 <em class='comment'>//</em>
+<a id='L331' name='L331'></a> 331 <em class='comment'>// Note: For powf only the table of T is needed</em>
+<a id='L332' name='L332'></a> 332 
+<a id='L333' name='L333'></a> 333 
+<a id='L334' name='L334'></a> 334 <em class='comment'>// Special Cases</em>
+<a id='L335' name='L335'></a> 335 <em class='comment'>//==============================================================</em>
+<a id='L336' name='L336'></a> 336 
+<a id='L337' name='L337'></a> 337 <em class='comment'>//                                   double     float</em>
+<a id='L338' name='L338'></a> 338 <em class='comment'>// overflow                          error 24   30</em>
+<a id='L339' name='L339'></a> 339 
+<a id='L340' name='L340'></a> 340 <em class='comment'>// underflow                         error 25   31</em>
+<a id='L341' name='L341'></a> 341 
+<a id='L342' name='L342'></a> 342 <em class='comment'>// X zero  Y zero</em>
+<a id='L343' name='L343'></a> 343 <em class='comment'>//  +0     +0                 +1     error 26   32</em>
+<a id='L344' name='L344'></a> 344 <em class='comment'>//  -0     +0                 +1     error 26   32</em>
+<a id='L345' name='L345'></a> 345 <em class='comment'>//  +0     -0                 +1     error 26   32</em>
+<a id='L346' name='L346'></a> 346 <em class='comment'>//  -0     -0                 +1     error 26   32</em>
+<a id='L347' name='L347'></a> 347 
+<a id='L348' name='L348'></a> 348 <em class='comment'>// X zero  Y negative</em>
+<a id='L349' name='L349'></a> 349 <em class='comment'>//  +0     -odd integer       +inf   error 27   33  divide-by-zero</em>
+<a id='L350' name='L350'></a> 350 <em class='comment'>//  -0     -odd integer       -inf   error 27   33  divide-by-zero</em>
+<a id='L351' name='L351'></a> 351 <em class='comment'>//  +0     !-odd integer      +inf   error 27   33  divide-by-zero</em>
+<a id='L352' name='L352'></a> 352 <em class='comment'>//  -0     !-odd integer      +inf   error 27   33  divide-by-zero</em>
+<a id='L353' name='L353'></a> 353 <em class='comment'>//  +0     -inf               +inf   error 27   33  divide-by-zero</em>
+<a id='L354' name='L354'></a> 354 <em class='comment'>//  -0     -inf               +inf   error 27   33  divide-by-zero</em>
+<a id='L355' name='L355'></a> 355 
+<a id='L356' name='L356'></a> 356 <em class='comment'>// X zero  Y positve</em>
+<a id='L357' name='L357'></a> 357 <em class='comment'>//  +0     +odd integer       +0</em>
+<a id='L358' name='L358'></a> 358 <em class='comment'>//  -0     +odd integer       -0</em>
+<a id='L359' name='L359'></a> 359 <em class='comment'>//  +0     !+odd integer      +0</em>
+<a id='L360' name='L360'></a> 360 <em class='comment'>//  -0     !+odd integer      +0</em>
+<a id='L361' name='L361'></a> 361 <em class='comment'>//  +0     +inf               +0</em>
+<a id='L362' name='L362'></a> 362 <em class='comment'>//  -0     +inf               +0</em>
+<a id='L363' name='L363'></a> 363 <em class='comment'>//  +0     Y NaN              quiet Y               invalid if Y SNaN</em>
+<a id='L364' name='L364'></a> 364 <em class='comment'>//  -0     Y NaN              quiet Y               invalid if Y SNaN</em>
+<a id='L365' name='L365'></a> 365 
+<a id='L366' name='L366'></a> 366 <em class='comment'>// X one</em>
+<a id='L367' name='L367'></a> 367 <em class='comment'>//  -1     Y inf              +1</em>
+<a id='L368' name='L368'></a> 368 <em class='comment'>//  -1     Y NaN              quiet Y               invalid if Y SNaN</em>
+<a id='L369' name='L369'></a> 369 <em class='comment'>//  +1     Y NaN              +1                    invalid if Y SNaN</em>
+<a id='L370' name='L370'></a> 370 <em class='comment'>//  +1     Y any else         +1</em>
+<a id='L371' name='L371'></a> 371 
+<a id='L372' name='L372'></a> 372 <em class='comment'>// X -     Y not integer      QNAN   error 28   34  invalid</em>
+<a id='L373' name='L373'></a> 373 
+<a id='L374' name='L374'></a> 374 <em class='comment'>// X NaN   Y 0                +1     error 29   35</em>
+<a id='L375' name='L375'></a> 375 <em class='comment'>// X NaN   Y NaN              quiet X               invalid if X or Y SNaN</em>
+<a id='L376' name='L376'></a> 376 <em class='comment'>// X NaN   Y any else         quiet X               invalid if X SNaN</em>
+<a id='L377' name='L377'></a> 377 <em class='comment'>// X !+1   Y NaN              quiet Y               invalid if Y SNaN</em>
+<a id='L378' name='L378'></a> 378 
+<a id='L379' name='L379'></a> 379 
+<a id='L380' name='L380'></a> 380 <em class='comment'>// X +inf  Y &gt;0               +inf</em>
+<a id='L381' name='L381'></a> 381 <em class='comment'>// X -inf  Y &gt;0, !odd integer +inf</em>
+<a id='L382' name='L382'></a> 382 <em class='comment'>// X -inf  Y &gt;0, odd integer  -inf</em>
+<a id='L383' name='L383'></a> 383 
+<a id='L384' name='L384'></a> 384 <em class='comment'>// X +inf  Y &lt;0               +0</em>
+<a id='L385' name='L385'></a> 385 <em class='comment'>// X -inf  Y &lt;0, !odd integer +0</em>
+<a id='L386' name='L386'></a> 386 <em class='comment'>// X -inf  Y &lt;0, odd integer  -0</em>
+<a id='L387' name='L387'></a> 387 
+<a id='L388' name='L388'></a> 388 <em class='comment'>// X +inf  Y =0               +1</em>
+<a id='L389' name='L389'></a> 389 <em class='comment'>// X -inf  Y =0               +1</em>
+<a id='L390' name='L390'></a> 390 
+<a id='L391' name='L391'></a> 391 <em class='comment'>// |X|&lt;1   Y +inf             +0</em>
+<a id='L392' name='L392'></a> 392 <em class='comment'>// |X|&lt;1   Y -inf             +inf</em>
+<a id='L393' name='L393'></a> 393 <em class='comment'>// |X|&gt;1   Y +inf             +inf</em>
+<a id='L394' name='L394'></a> 394 <em class='comment'>// |X|&gt;1   Y -inf             +0</em>
+<a id='L395' name='L395'></a> 395 
+<a id='L396' name='L396'></a> 396 <em class='comment'>// X any   Y =0               +1</em>
+<a id='L397' name='L397'></a> 397 
+<a id='L398' name='L398'></a> 398 <em class='comment'>// Assembly macros</em>
+<a id='L399' name='L399'></a> 399 <em class='comment'>//==============================================================</em>
+<a id='L400' name='L400'></a> 400 
+<a id='L401' name='L401'></a> 401 <em class='comment'>// integer registers used</em>
+<a id='L402' name='L402'></a> 402 
+<a id='L403' name='L403'></a> 403 pow_GR_exp_half           = r10
+<a id='L404' name='L404'></a> 404 pow_GR_signexp_Xm1        = r11
+<a id='L405' name='L405'></a> 405 pow_GR_tmp                = r11
+<a id='L406' name='L406'></a> 406 
+<a id='L407' name='L407'></a> 407 pow_GR_signexp_X          = r14
+<a id='L408' name='L408'></a> 408 pow_GR_17ones             = r15
+<a id='L409' name='L409'></a> 409 pow_GR_Fpsr               = r15
+<a id='L410' name='L410'></a> 410 pow_AD_P                  = r16
+<a id='L411' name='L411'></a> 411 pow_GR_rcs0_mask          = r16
+<a id='L412' name='L412'></a> 412 pow_GR_exp_2tom8          = r17
+<a id='L413' name='L413'></a> 413 pow_GR_rcs0               = r17
+<a id='L414' name='L414'></a> 414 pow_GR_sig_X              = r18
+<a id='L415' name='L415'></a> 415 pow_GR_10033              = r19
+<a id='L416' name='L416'></a> 416 pow_GR_16ones             = r20
+<a id='L417' name='L417'></a> 417 
+<a id='L418' name='L418'></a> 418 pow_AD_Tt                 = r21
+<a id='L419' name='L419'></a> 419 pow_GR_exp_X              = r22
+<a id='L420' name='L420'></a> 420 pow_AD_Q                  = r23
+<a id='L421' name='L421'></a> 421 pow_GR_true_exp_X         = r24
+<a id='L422' name='L422'></a> 422 pow_GR_y_zero             = r25
+<a id='L423' name='L423'></a> 423 
+<a id='L424' name='L424'></a> 424 pow_GR_exp_Y              = r26
+<a id='L425' name='L425'></a> 425 pow_AD_tbl1               = r27
+<a id='L426' name='L426'></a> 426 pow_AD_tbl2               = r28
+<a id='L427' name='L427'></a> 427 pow_GR_offset             = r29
+<a id='L428' name='L428'></a> 428 pow_GR_exp_Xm1            = r30
+<a id='L429' name='L429'></a> 429 pow_GR_xneg_yodd          = r31
+<a id='L430' name='L430'></a> 430 
+<a id='L431' name='L431'></a> 431 pow_GR_int_N              = r38
+<a id='L432' name='L432'></a> 432 pow_GR_index1             = r39
+<a id='L433' name='L433'></a> 433 pow_GR_index2             = r40
+<a id='L434' name='L434'></a> 434 
+<a id='L435' name='L435'></a> 435 pow_AD_T1                 = r41
+<a id='L436' name='L436'></a> 436 pow_AD_T2                 = r42
+<a id='L437' name='L437'></a> 437 pow_int_GR_M              = r43
+<a id='L438' name='L438'></a> 438 pow_GR_sig_int_Y          = r44
+<a id='L439' name='L439'></a> 439 pow_GR_sign_Y_Gpr         = r45
+<a id='L440' name='L440'></a> 440 
+<a id='L441' name='L441'></a> 441 pow_GR_17ones_m1          = r46
+<a id='L442' name='L442'></a> 442 pow_GR_one                = r47
+<a id='L443' name='L443'></a> 443 pow_GR_sign_Y             = r48
+<a id='L444' name='L444'></a> 444 pow_GR_signexp_Y_Gpr      = r49
+<a id='L445' name='L445'></a> 445 pow_GR_exp_Y_Gpr          = r50
+<a id='L446' name='L446'></a> 446 
+<a id='L447' name='L447'></a> 447 pow_GR_true_exp_Y_Gpr     = r51
+<a id='L448' name='L448'></a> 448 pow_GR_signexp_Y          = r52
+<a id='L449' name='L449'></a> 449 pow_GR_x_one              = r53
+<a id='L450' name='L450'></a> 450 pow_GR_big_pos            = r55
+<a id='L451' name='L451'></a> 451 
+<a id='L452' name='L452'></a> 452 pow_GR_big_neg            = r56
+<a id='L453' name='L453'></a> 453 
+<a id='L454' name='L454'></a> 454 GR_SAVE_B0                = r50
+<a id='L455' name='L455'></a> 455 GR_SAVE_GP                = r51
+<a id='L456' name='L456'></a> 456 GR_SAVE_PFS               = r52
+<a id='L457' name='L457'></a> 457 
+<a id='L458' name='L458'></a> 458 GR_Parameter_X            = r53
+<a id='L459' name='L459'></a> 459 GR_Parameter_Y            = r54
+<a id='L460' name='L460'></a> 460 GR_Parameter_RESULT       = r55
+<a id='L461' name='L461'></a> 461 pow_GR_tag                = r56
+<a id='L462' name='L462'></a> 462 
+<a id='L463' name='L463'></a> 463 
+<a id='L464' name='L464'></a> 464 <em class='comment'>// floating point registers used</em>
+<a id='L465' name='L465'></a> 465 
+<a id='L466' name='L466'></a> 466 POW_B                     = f32
+<a id='L467' name='L467'></a> 467 POW_NORM_X                = f33
+<a id='L468' name='L468'></a> 468 POW_Xm1                   = f34
+<a id='L469' name='L469'></a> 469 POW_r1                    = f34
+<a id='L470' name='L470'></a> 470 
+<a id='L471' name='L471'></a> 471 POW_NORM_Y                = f37
+<a id='L472' name='L472'></a> 472 POW_Q2                    = f38
+<a id='L473' name='L473'></a> 473 POW_eps                   = f39
+<a id='L474' name='L474'></a> 474 POW_P2                    = f40
+<a id='L475' name='L475'></a> 475 
+<a id='L476' name='L476'></a> 476 POW_P0                    = f42
+<a id='L477' name='L477'></a> 477 POW_log2_lo               = f43
+<a id='L478' name='L478'></a> 478 POW_r                     = f44
+<a id='L479' name='L479'></a> 479 POW_Q0_half               = f45
+<a id='L480' name='L480'></a> 480 
+<a id='L481' name='L481'></a> 481 POW_tmp                   = f47
+<a id='L482' name='L482'></a> 482 POW_log2_hi               = f48
+<a id='L483' name='L483'></a> 483 POW_Q1                    = f49
+<a id='L484' name='L484'></a> 484 POW_P1                    = f50
+<a id='L485' name='L485'></a> 485 
+<a id='L486' name='L486'></a> 486 POW_log2_by_128_hi        = f51
+<a id='L487' name='L487'></a> 487 POW_inv_log2_by_128       = f52
+<a id='L488' name='L488'></a> 488 POW_rsq                   = f53
+<a id='L489' name='L489'></a> 489 POW_Yrcub                 = f54
+<a id='L490' name='L490'></a> 490 POW_log2_by_128_lo        = f55
+<a id='L491' name='L491'></a> 491 
+<a id='L492' name='L492'></a> 492 POW_xsq                   = f57
+<a id='L493' name='L493'></a> 493 POW_v2                    = f59
+<a id='L494' name='L494'></a> 494 POW_T                     = f60
+<a id='L495' name='L495'></a> 495 
+<a id='L496' name='L496'></a> 496 POW_RSHF                  = f62
+<a id='L497' name='L497'></a> 497 POW_v210                  = f63
+<a id='L498' name='L498'></a> 498 POW_twoV                  = f65
+<a id='L499' name='L499'></a> 499 
+<a id='L500' name='L500'></a> 500 POW_U                     = f66
+<a id='L501' name='L501'></a> 501 POW_G                     = f67
+<a id='L502' name='L502'></a> 502 POW_delta                 = f68
+<a id='L503' name='L503'></a> 503 POW_V                     = f70
+<a id='L504' name='L504'></a> 504 
+<a id='L505' name='L505'></a> 505 POW_p                     = f71
+<a id='L506' name='L506'></a> 506 POW_Z                     = f72
+<a id='L507' name='L507'></a> 507 POW_e3                    = f73
+<a id='L508' name='L508'></a> 508 POW_Z2                    = f75
+<a id='L509' name='L509'></a> 509 
+<a id='L510' name='L510'></a> 510 POW_W1                    = f77
+<a id='L511' name='L511'></a> 511 POW_Z3                    = f80
+<a id='L512' name='L512'></a> 512 
+<a id='L513' name='L513'></a> 513 POW_Z3sq                  = f85
+<a id='L514' name='L514'></a> 514 
+<a id='L515' name='L515'></a> 515 POW_Nfloat                = f87
+<a id='L516' name='L516'></a> 516 POW_f3                    = f89
+<a id='L517' name='L517'></a> 517 POW_q                     = f90
+<a id='L518' name='L518'></a> 518 
+<a id='L519' name='L519'></a> 519 POW_T1                    = f96
+<a id='L520' name='L520'></a> 520 POW_T2                    = f97
+<a id='L521' name='L521'></a> 521 POW_2M                    = f98
+<a id='L522' name='L522'></a> 522 POW_s                     = f99
+<a id='L523' name='L523'></a> 523 POW_f12                   = f100
+<a id='L524' name='L524'></a> 524 
+<a id='L525' name='L525'></a> 525 POW_ssq                   = f101
+<a id='L526' name='L526'></a> 526 POW_T1T2                  = f102
+<a id='L527' name='L527'></a> 527 POW_1ps                   = f103
+<a id='L528' name='L528'></a> 528 POW_A                     = f104
+<a id='L529' name='L529'></a> 529 POW_es                    = f105
+<a id='L530' name='L530'></a> 530 
+<a id='L531' name='L531'></a> 531 POW_Xp1                   = f106
+<a id='L532' name='L532'></a> 532 POW_int_K                 = f107
+<a id='L533' name='L533'></a> 533 POW_K                     = f108
+<a id='L534' name='L534'></a> 534 POW_f123                  = f109
+<a id='L535' name='L535'></a> 535 POW_Gpr                   = f110
+<a id='L536' name='L536'></a> 536 
+<a id='L537' name='L537'></a> 537 POW_Y_Gpr                 = f111
+<a id='L538' name='L538'></a> 538 POW_int_Y                 = f112
+<a id='L539' name='L539'></a> 539 POW_2Mqp1                 = f113
+<a id='L540' name='L540'></a> 540 
+<a id='L541' name='L541'></a> 541 POW_float_int_Y           = f116
+<a id='L542' name='L542'></a> 542 POW_ftz_urm_f8            = f117
+<a id='L543' name='L543'></a> 543 POW_wre_urm_f8            = f118
+<a id='L544' name='L544'></a> 544 POW_big_neg               = f119
+<a id='L545' name='L545'></a> 545 POW_big_pos               = f120
+<a id='L546' name='L546'></a> 546 
+<a id='L547' name='L547'></a> 547 <em class='comment'>// Data tables</em>
+<a id='L548' name='L548'></a> 548 <em class='comment'>//==============================================================</em>
+<a id='L549' name='L549'></a> 549 
+<a id='L550' name='L550'></a> 550 RODATA
+<a id='L551' name='L551'></a> 551 
+<a id='L552' name='L552'></a> 552 .align 16
+<a id='L553' name='L553'></a> 553 
+<a id='L554' name='L554'></a> 554 LOCAL_OBJECT_START(pow_table_P)
+<a id='L555' name='L555'></a> 555 data8 0x80000000000018E5, 0x0000BFFD  <em class='comment'>// P_1</em>
+<a id='L556' name='L556'></a> 556 data8 0xb8aa3b295c17f0bc, 0x00004006  <em class='comment'>// inv_ln2_by_128</em>
+<a id='L557' name='L557'></a> 557 <em class='comment'>//</em>
+<a id='L558' name='L558'></a> 558 <em class='comment'>//</em>
+<a id='L559' name='L559'></a> 559 data8 0x3FA5555555554A9E <em class='comment'>// Q_2</em>
+<a id='L560' name='L560'></a> 560 data8 0x0000000000000000 <em class='comment'>// Pad</em>
+<a id='L561' name='L561'></a> 561 data8 0x3FC5555555554733 <em class='comment'>// Q_1</em>
+<a id='L562' name='L562'></a> 562 data8 0x43e8000000000000 <em class='comment'>// Right shift constant for exp</em>
+<a id='L563' name='L563'></a> 563 data8 0xc9e3b39803f2f6af, 0x00003fb7  <em class='comment'>// ln2_by_128_lo</em>
+<a id='L564' name='L564'></a> 564 LOCAL_OBJECT_END(pow_table_P)
+<a id='L565' name='L565'></a> 565 
+<a id='L566' name='L566'></a> 566 LOCAL_OBJECT_START(pow_table_Q)
+<a id='L567' name='L567'></a> 567 data8 0xCCCCCCCC4ED2BA7F, 0x00003FFC  <em class='comment'>// P_2</em>
+<a id='L568' name='L568'></a> 568 data8 0xAAAAAAAAAAAAB505, 0x00003FFD  <em class='comment'>// P_0</em>
+<a id='L569' name='L569'></a> 569 data8 0x3fe62e42fefa39e8, 0x3cccd5e4f1d9cc02 <em class='comment'>// log2 hi lo =  +6.93147e-001</em>
+<a id='L570' name='L570'></a> 570 data8 0xb17217f7d1cf79ab, 0x00003ff7  <em class='comment'>// ln2_by_128_hi</em>
+<a id='L571' name='L571'></a> 571 LOCAL_OBJECT_END(pow_table_Q)
+<a id='L572' name='L572'></a> 572 
+<a id='L573' name='L573'></a> 573 
+<a id='L574' name='L574'></a> 574 LOCAL_OBJECT_START(pow_Tt)
+<a id='L575' name='L575'></a> 575 data8 0x3f60040155d58800 <em class='comment'>// log(1/frcpa(1+0/256))=  +1.95503e-003</em>
+<a id='L576' name='L576'></a> 576 data8 0x3f78121214586a00 <em class='comment'>// log(1/frcpa(1+1/256))=  +5.87661e-003</em>
+<a id='L577' name='L577'></a> 577 data8 0x3f841929f9683200 <em class='comment'>// log(1/frcpa(1+2/256))=  +9.81362e-003</em>
+<a id='L578' name='L578'></a> 578 data8 0x3f8c317384c75f00 <em class='comment'>// log(1/frcpa(1+3/256))=  +1.37662e-002</em>
+<a id='L579' name='L579'></a> 579 data8 0x3f91a6b91ac73380 <em class='comment'>// log(1/frcpa(1+4/256))=  +1.72376e-002</em>
+<a id='L580' name='L580'></a> 580 data8 0x3f95ba9a5d9ac000 <em class='comment'>// log(1/frcpa(1+5/256))=  +2.12196e-002</em>
+<a id='L581' name='L581'></a> 581 data8 0x3f99d2a807432580 <em class='comment'>// log(1/frcpa(1+6/256))=  +2.52177e-002</em>
+<a id='L582' name='L582'></a> 582 data8 0x3f9d6b2725979800 <em class='comment'>// log(1/frcpa(1+7/256))=  +2.87291e-002</em>
+<a id='L583' name='L583'></a> 583 data8 0x3fa0c58fa19dfa80 <em class='comment'>// log(1/frcpa(1+8/256))=  +3.27573e-002</em>
+<a id='L584' name='L584'></a> 584 data8 0x3fa2954c78cbce00 <em class='comment'>// log(1/frcpa(1+9/256))=  +3.62953e-002</em>
+<a id='L585' name='L585'></a> 585 data8 0x3fa4a94d2da96c40 <em class='comment'>// log(1/frcpa(1+10/256))=  +4.03542e-002</em>
+<a id='L586' name='L586'></a> 586 data8 0x3fa67c94f2d4bb40 <em class='comment'>// log(1/frcpa(1+11/256))=  +4.39192e-002</em>
+<a id='L587' name='L587'></a> 587 data8 0x3fa85188b630f040 <em class='comment'>// log(1/frcpa(1+12/256))=  +4.74971e-002</em>
+<a id='L588' name='L588'></a> 588 data8 0x3faa6b8abe73af40 <em class='comment'>// log(1/frcpa(1+13/256))=  +5.16017e-002</em>
+<a id='L589' name='L589'></a> 589 data8 0x3fac441e06f72a80 <em class='comment'>// log(1/frcpa(1+14/256))=  +5.52072e-002</em>
+<a id='L590' name='L590'></a> 590 data8 0x3fae1e6713606d00 <em class='comment'>// log(1/frcpa(1+15/256))=  +5.88257e-002</em>
+<a id='L591' name='L591'></a> 591 data8 0x3faffa6911ab9300 <em class='comment'>// log(1/frcpa(1+16/256))=  +6.24574e-002</em>
+<a id='L592' name='L592'></a> 592 data8 0x3fb0ec139c5da600 <em class='comment'>// log(1/frcpa(1+17/256))=  +6.61022e-002</em>
+<a id='L593' name='L593'></a> 593 data8 0x3fb1dbd2643d1900 <em class='comment'>// log(1/frcpa(1+18/256))=  +6.97605e-002</em>
+<a id='L594' name='L594'></a> 594 data8 0x3fb2cc7284fe5f00 <em class='comment'>// log(1/frcpa(1+19/256))=  +7.34321e-002</em>
+<a id='L595' name='L595'></a> 595 data8 0x3fb3bdf5a7d1ee60 <em class='comment'>// log(1/frcpa(1+20/256))=  +7.71173e-002</em>
+<a id='L596' name='L596'></a> 596 data8 0x3fb4b05d7aa012e0 <em class='comment'>// log(1/frcpa(1+21/256))=  +8.08161e-002</em>
+<a id='L597' name='L597'></a> 597 data8 0x3fb580db7ceb5700 <em class='comment'>// log(1/frcpa(1+22/256))=  +8.39975e-002</em>
+<a id='L598' name='L598'></a> 598 data8 0x3fb674f089365a60 <em class='comment'>// log(1/frcpa(1+23/256))=  +8.77219e-002</em>
+<a id='L599' name='L599'></a> 599 data8 0x3fb769ef2c6b5680 <em class='comment'>// log(1/frcpa(1+24/256))=  +9.14602e-002</em>
+<a id='L600' name='L600'></a> 600 data8 0x3fb85fd927506a40 <em class='comment'>// log(1/frcpa(1+25/256))=  +9.52125e-002</em>
+<a id='L601' name='L601'></a> 601 data8 0x3fb9335e5d594980 <em class='comment'>// log(1/frcpa(1+26/256))=  +9.84401e-002</em>
+<a id='L602' name='L602'></a> 602 data8 0x3fba2b0220c8e5e0 <em class='comment'>// log(1/frcpa(1+27/256))=  +1.02219e-001</em>
+<a id='L603' name='L603'></a> 603 data8 0x3fbb0004ac1a86a0 <em class='comment'>// log(1/frcpa(1+28/256))=  +1.05469e-001</em>
+<a id='L604' name='L604'></a> 604 data8 0x3fbbf968769fca00 <em class='comment'>// log(1/frcpa(1+29/256))=  +1.09274e-001</em>
+<a id='L605' name='L605'></a> 605 data8 0x3fbccfedbfee13a0 <em class='comment'>// log(1/frcpa(1+30/256))=  +1.12548e-001</em>
+<a id='L606' name='L606'></a> 606 data8 0x3fbda727638446a0 <em class='comment'>// log(1/frcpa(1+31/256))=  +1.15832e-001</em>
+<a id='L607' name='L607'></a> 607 data8 0x3fbea3257fe10f60 <em class='comment'>// log(1/frcpa(1+32/256))=  +1.19677e-001</em>
+<a id='L608' name='L608'></a> 608 data8 0x3fbf7be9fedbfde0 <em class='comment'>// log(1/frcpa(1+33/256))=  +1.22985e-001</em>
+<a id='L609' name='L609'></a> 609 data8 0x3fc02ab352ff25f0 <em class='comment'>// log(1/frcpa(1+34/256))=  +1.26303e-001</em>
+<a id='L610' name='L610'></a> 610 data8 0x3fc097ce579d2040 <em class='comment'>// log(1/frcpa(1+35/256))=  +1.29633e-001</em>
+<a id='L611' name='L611'></a> 611 data8 0x3fc1178e8227e470 <em class='comment'>// log(1/frcpa(1+36/256))=  +1.33531e-001</em>
+<a id='L612' name='L612'></a> 612 data8 0x3fc185747dbecf30 <em class='comment'>// log(1/frcpa(1+37/256))=  +1.36885e-001</em>
+<a id='L613' name='L613'></a> 613 data8 0x3fc1f3b925f25d40 <em class='comment'>// log(1/frcpa(1+38/256))=  +1.40250e-001</em>
+<a id='L614' name='L614'></a> 614 data8 0x3fc2625d1e6ddf50 <em class='comment'>// log(1/frcpa(1+39/256))=  +1.43627e-001</em>
+<a id='L615' name='L615'></a> 615 data8 0x3fc2d1610c868130 <em class='comment'>// log(1/frcpa(1+40/256))=  +1.47015e-001</em>
+<a id='L616' name='L616'></a> 616 data8 0x3fc340c597411420 <em class='comment'>// log(1/frcpa(1+41/256))=  +1.50414e-001</em>
+<a id='L617' name='L617'></a> 617 data8 0x3fc3b08b6757f2a0 <em class='comment'>// log(1/frcpa(1+42/256))=  +1.53825e-001</em>
+<a id='L618' name='L618'></a> 618 data8 0x3fc40dfb08378000 <em class='comment'>// log(1/frcpa(1+43/256))=  +1.56677e-001</em>
+<a id='L619' name='L619'></a> 619 data8 0x3fc47e74e8ca5f70 <em class='comment'>// log(1/frcpa(1+44/256))=  +1.60109e-001</em>
+<a id='L620' name='L620'></a> 620 data8 0x3fc4ef51f6466de0 <em class='comment'>// log(1/frcpa(1+45/256))=  +1.63553e-001</em>
+<a id='L621' name='L621'></a> 621 data8 0x3fc56092e02ba510 <em class='comment'>// log(1/frcpa(1+46/256))=  +1.67010e-001</em>
+<a id='L622' name='L622'></a> 622 data8 0x3fc5d23857cd74d0 <em class='comment'>// log(1/frcpa(1+47/256))=  +1.70478e-001</em>
+<a id='L623' name='L623'></a> 623 data8 0x3fc6313a37335d70 <em class='comment'>// log(1/frcpa(1+48/256))=  +1.73377e-001</em>
+<a id='L624' name='L624'></a> 624 data8 0x3fc6a399dabbd380 <em class='comment'>// log(1/frcpa(1+49/256))=  +1.76868e-001</em>
+<a id='L625' name='L625'></a> 625 data8 0x3fc70337dd3ce410 <em class='comment'>// log(1/frcpa(1+50/256))=  +1.79786e-001</em>
+<a id='L626' name='L626'></a> 626 data8 0x3fc77654128f6120 <em class='comment'>// log(1/frcpa(1+51/256))=  +1.83299e-001</em>
+<a id='L627' name='L627'></a> 627 data8 0x3fc7e9d82a0b0220 <em class='comment'>// log(1/frcpa(1+52/256))=  +1.86824e-001</em>
+<a id='L628' name='L628'></a> 628 data8 0x3fc84a6b759f5120 <em class='comment'>// log(1/frcpa(1+53/256))=  +1.89771e-001</em>
+<a id='L629' name='L629'></a> 629 data8 0x3fc8ab47d5f5a300 <em class='comment'>// log(1/frcpa(1+54/256))=  +1.92727e-001</em>
+<a id='L630' name='L630'></a> 630 data8 0x3fc91fe490965810 <em class='comment'>// log(1/frcpa(1+55/256))=  +1.96286e-001</em>
+<a id='L631' name='L631'></a> 631 data8 0x3fc981634011aa70 <em class='comment'>// log(1/frcpa(1+56/256))=  +1.99261e-001</em>
+<a id='L632' name='L632'></a> 632 data8 0x3fc9f6c407089660 <em class='comment'>// log(1/frcpa(1+57/256))=  +2.02843e-001</em>
+<a id='L633' name='L633'></a> 633 data8 0x3fca58e729348f40 <em class='comment'>// log(1/frcpa(1+58/256))=  +2.05838e-001</em>
+<a id='L634' name='L634'></a> 634 data8 0x3fcabb55c31693a0 <em class='comment'>// log(1/frcpa(1+59/256))=  +2.08842e-001</em>
+<a id='L635' name='L635'></a> 635 data8 0x3fcb1e104919efd0 <em class='comment'>// log(1/frcpa(1+60/256))=  +2.11855e-001</em>
+<a id='L636' name='L636'></a> 636 data8 0x3fcb94ee93e367c0 <em class='comment'>// log(1/frcpa(1+61/256))=  +2.15483e-001</em>
+<a id='L637' name='L637'></a> 637 data8 0x3fcbf851c0675550 <em class='comment'>// log(1/frcpa(1+62/256))=  +2.18516e-001</em>
+<a id='L638' name='L638'></a> 638 data8 0x3fcc5c0254bf23a0 <em class='comment'>// log(1/frcpa(1+63/256))=  +2.21558e-001</em>
+<a id='L639' name='L639'></a> 639 data8 0x3fccc000c9db3c50 <em class='comment'>// log(1/frcpa(1+64/256))=  +2.24609e-001</em>
+<a id='L640' name='L640'></a> 640 data8 0x3fcd244d99c85670 <em class='comment'>// log(1/frcpa(1+65/256))=  +2.27670e-001</em>
+<a id='L641' name='L641'></a> 641 data8 0x3fcd88e93fb2f450 <em class='comment'>// log(1/frcpa(1+66/256))=  +2.30741e-001</em>
+<a id='L642' name='L642'></a> 642 data8 0x3fcdedd437eaef00 <em class='comment'>// log(1/frcpa(1+67/256))=  +2.33820e-001</em>
+<a id='L643' name='L643'></a> 643 data8 0x3fce530effe71010 <em class='comment'>// log(1/frcpa(1+68/256))=  +2.36910e-001</em>
+<a id='L644' name='L644'></a> 644 data8 0x3fceb89a1648b970 <em class='comment'>// log(1/frcpa(1+69/256))=  +2.40009e-001</em>
+<a id='L645' name='L645'></a> 645 data8 0x3fcf1e75fadf9bd0 <em class='comment'>// log(1/frcpa(1+70/256))=  +2.43117e-001</em>
+<a id='L646' name='L646'></a> 646 data8 0x3fcf84a32ead7c30 <em class='comment'>// log(1/frcpa(1+71/256))=  +2.46235e-001</em>
+<a id='L647' name='L647'></a> 647 data8 0x3fcfeb2233ea07c0 <em class='comment'>// log(1/frcpa(1+72/256))=  +2.49363e-001</em>
+<a id='L648' name='L648'></a> 648 data8 0x3fd028f9c7035c18 <em class='comment'>// log(1/frcpa(1+73/256))=  +2.52501e-001</em>
+<a id='L649' name='L649'></a> 649 data8 0x3fd05c8be0d96358 <em class='comment'>// log(1/frcpa(1+74/256))=  +2.55649e-001</em>
+<a id='L650' name='L650'></a> 650 data8 0x3fd085eb8f8ae790 <em class='comment'>// log(1/frcpa(1+75/256))=  +2.58174e-001</em>
+<a id='L651' name='L651'></a> 651 data8 0x3fd0b9c8e32d1910 <em class='comment'>// log(1/frcpa(1+76/256))=  +2.61339e-001</em>
+<a id='L652' name='L652'></a> 652 data8 0x3fd0edd060b78080 <em class='comment'>// log(1/frcpa(1+77/256))=  +2.64515e-001</em>
+<a id='L653' name='L653'></a> 653 data8 0x3fd122024cf00638 <em class='comment'>// log(1/frcpa(1+78/256))=  +2.67701e-001</em>
+<a id='L654' name='L654'></a> 654 data8 0x3fd14be2927aecd0 <em class='comment'>// log(1/frcpa(1+79/256))=  +2.70257e-001</em>
+<a id='L655' name='L655'></a> 655 data8 0x3fd180618ef18ad8 <em class='comment'>// log(1/frcpa(1+80/256))=  +2.73461e-001</em>
+<a id='L656' name='L656'></a> 656 data8 0x3fd1b50bbe2fc638 <em class='comment'>// log(1/frcpa(1+81/256))=  +2.76675e-001</em>
+<a id='L657' name='L657'></a> 657 data8 0x3fd1df4cc7cf2428 <em class='comment'>// log(1/frcpa(1+82/256))=  +2.79254e-001</em>
+<a id='L658' name='L658'></a> 658 data8 0x3fd214456d0eb8d0 <em class='comment'>// log(1/frcpa(1+83/256))=  +2.82487e-001</em>
+<a id='L659' name='L659'></a> 659 data8 0x3fd23ec5991eba48 <em class='comment'>// log(1/frcpa(1+84/256))=  +2.85081e-001</em>
+<a id='L660' name='L660'></a> 660 data8 0x3fd2740d9f870af8 <em class='comment'>// log(1/frcpa(1+85/256))=  +2.88333e-001</em>
+<a id='L661' name='L661'></a> 661 data8 0x3fd29ecdabcdfa00 <em class='comment'>// log(1/frcpa(1+86/256))=  +2.90943e-001</em>
+<a id='L662' name='L662'></a> 662 data8 0x3fd2d46602adcce8 <em class='comment'>// log(1/frcpa(1+87/256))=  +2.94214e-001</em>
+<a id='L663' name='L663'></a> 663 data8 0x3fd2ff66b04ea9d0 <em class='comment'>// log(1/frcpa(1+88/256))=  +2.96838e-001</em>
+<a id='L664' name='L664'></a> 664 data8 0x3fd335504b355a30 <em class='comment'>// log(1/frcpa(1+89/256))=  +3.00129e-001</em>
+<a id='L665' name='L665'></a> 665 data8 0x3fd360925ec44f58 <em class='comment'>// log(1/frcpa(1+90/256))=  +3.02769e-001</em>
+<a id='L666' name='L666'></a> 666 data8 0x3fd38bf1c3337e70 <em class='comment'>// log(1/frcpa(1+91/256))=  +3.05417e-001</em>
+<a id='L667' name='L667'></a> 667 data8 0x3fd3c25277333180 <em class='comment'>// log(1/frcpa(1+92/256))=  +3.08735e-001</em>
+<a id='L668' name='L668'></a> 668 data8 0x3fd3edf463c16838 <em class='comment'>// log(1/frcpa(1+93/256))=  +3.11399e-001</em>
+<a id='L669' name='L669'></a> 669 data8 0x3fd419b423d5e8c0 <em class='comment'>// log(1/frcpa(1+94/256))=  +3.14069e-001</em>
+<a id='L670' name='L670'></a> 670 data8 0x3fd44591e0539f48 <em class='comment'>// log(1/frcpa(1+95/256))=  +3.16746e-001</em>
+<a id='L671' name='L671'></a> 671 data8 0x3fd47c9175b6f0a8 <em class='comment'>// log(1/frcpa(1+96/256))=  +3.20103e-001</em>
+<a id='L672' name='L672'></a> 672 data8 0x3fd4a8b341552b08 <em class='comment'>// log(1/frcpa(1+97/256))=  +3.22797e-001</em>
+<a id='L673' name='L673'></a> 673 data8 0x3fd4d4f390890198 <em class='comment'>// log(1/frcpa(1+98/256))=  +3.25498e-001</em>
+<a id='L674' name='L674'></a> 674 data8 0x3fd501528da1f960 <em class='comment'>// log(1/frcpa(1+99/256))=  +3.28206e-001</em>
+<a id='L675' name='L675'></a> 675 data8 0x3fd52dd06347d4f0 <em class='comment'>// log(1/frcpa(1+100/256))=  +3.30921e-001</em>
+<a id='L676' name='L676'></a> 676 data8 0x3fd55a6d3c7b8a88 <em class='comment'>// log(1/frcpa(1+101/256))=  +3.33644e-001</em>
+<a id='L677' name='L677'></a> 677 data8 0x3fd5925d2b112a58 <em class='comment'>// log(1/frcpa(1+102/256))=  +3.37058e-001</em>
+<a id='L678' name='L678'></a> 678 data8 0x3fd5bf406b543db0 <em class='comment'>// log(1/frcpa(1+103/256))=  +3.39798e-001</em>
+<a id='L679' name='L679'></a> 679 data8 0x3fd5ec433d5c35a8 <em class='comment'>// log(1/frcpa(1+104/256))=  +3.42545e-001</em>
+<a id='L680' name='L680'></a> 680 data8 0x3fd61965cdb02c18 <em class='comment'>// log(1/frcpa(1+105/256))=  +3.45300e-001</em>
+<a id='L681' name='L681'></a> 681 data8 0x3fd646a84935b2a0 <em class='comment'>// log(1/frcpa(1+106/256))=  +3.48063e-001</em>
+<a id='L682' name='L682'></a> 682 data8 0x3fd6740add31de90 <em class='comment'>// log(1/frcpa(1+107/256))=  +3.50833e-001</em>
+<a id='L683' name='L683'></a> 683 data8 0x3fd6a18db74a58c0 <em class='comment'>// log(1/frcpa(1+108/256))=  +3.53610e-001</em>
+<a id='L684' name='L684'></a> 684 data8 0x3fd6cf31058670e8 <em class='comment'>// log(1/frcpa(1+109/256))=  +3.56396e-001</em>
+<a id='L685' name='L685'></a> 685 data8 0x3fd6f180e852f0b8 <em class='comment'>// log(1/frcpa(1+110/256))=  +3.58490e-001</em>
+<a id='L686' name='L686'></a> 686 data8 0x3fd71f5d71b894e8 <em class='comment'>// log(1/frcpa(1+111/256))=  +3.61289e-001</em>
+<a id='L687' name='L687'></a> 687 data8 0x3fd74d5aefd66d58 <em class='comment'>// log(1/frcpa(1+112/256))=  +3.64096e-001</em>
+<a id='L688' name='L688'></a> 688 data8 0x3fd77b79922bd378 <em class='comment'>// log(1/frcpa(1+113/256))=  +3.66911e-001</em>
+<a id='L689' name='L689'></a> 689 data8 0x3fd7a9b9889f19e0 <em class='comment'>// log(1/frcpa(1+114/256))=  +3.69734e-001</em>
+<a id='L690' name='L690'></a> 690 data8 0x3fd7d81b037eb6a0 <em class='comment'>// log(1/frcpa(1+115/256))=  +3.72565e-001</em>
+<a id='L691' name='L691'></a> 691 data8 0x3fd8069e33827230 <em class='comment'>// log(1/frcpa(1+116/256))=  +3.75404e-001</em>
+<a id='L692' name='L692'></a> 692 data8 0x3fd82996d3ef8bc8 <em class='comment'>// log(1/frcpa(1+117/256))=  +3.77538e-001</em>
+<a id='L693' name='L693'></a> 693 data8 0x3fd85855776dcbf8 <em class='comment'>// log(1/frcpa(1+118/256))=  +3.80391e-001</em>
+<a id='L694' name='L694'></a> 694 data8 0x3fd8873658327cc8 <em class='comment'>// log(1/frcpa(1+119/256))=  +3.83253e-001</em>
+<a id='L695' name='L695'></a> 695 data8 0x3fd8aa75973ab8c8 <em class='comment'>// log(1/frcpa(1+120/256))=  +3.85404e-001</em>
+<a id='L696' name='L696'></a> 696 data8 0x3fd8d992dc8824e0 <em class='comment'>// log(1/frcpa(1+121/256))=  +3.88280e-001</em>
+<a id='L697' name='L697'></a> 697 data8 0x3fd908d2ea7d9510 <em class='comment'>// log(1/frcpa(1+122/256))=  +3.91164e-001</em>
+<a id='L698' name='L698'></a> 698 data8 0x3fd92c59e79c0e50 <em class='comment'>// log(1/frcpa(1+123/256))=  +3.93332e-001</em>
+<a id='L699' name='L699'></a> 699 data8 0x3fd95bd750ee3ed0 <em class='comment'>// log(1/frcpa(1+124/256))=  +3.96231e-001</em>
+<a id='L700' name='L700'></a> 700 data8 0x3fd98b7811a3ee58 <em class='comment'>// log(1/frcpa(1+125/256))=  +3.99138e-001</em>
+<a id='L701' name='L701'></a> 701 data8 0x3fd9af47f33d4068 <em class='comment'>// log(1/frcpa(1+126/256))=  +4.01323e-001</em>
+<a id='L702' name='L702'></a> 702 data8 0x3fd9df270c1914a0 <em class='comment'>// log(1/frcpa(1+127/256))=  +4.04245e-001</em>
+<a id='L703' name='L703'></a> 703 data8 0x3fda0325ed14fda0 <em class='comment'>// log(1/frcpa(1+128/256))=  +4.06442e-001</em>
+<a id='L704' name='L704'></a> 704 data8 0x3fda33440224fa78 <em class='comment'>// log(1/frcpa(1+129/256))=  +4.09379e-001</em>
+<a id='L705' name='L705'></a> 705 data8 0x3fda57725e80c380 <em class='comment'>// log(1/frcpa(1+130/256))=  +4.11587e-001</em>
+<a id='L706' name='L706'></a> 706 data8 0x3fda87d0165dd198 <em class='comment'>// log(1/frcpa(1+131/256))=  +4.14539e-001</em>
+<a id='L707' name='L707'></a> 707 data8 0x3fdaac2e6c03f890 <em class='comment'>// log(1/frcpa(1+132/256))=  +4.16759e-001</em>
+<a id='L708' name='L708'></a> 708 data8 0x3fdadccc6fdf6a80 <em class='comment'>// log(1/frcpa(1+133/256))=  +4.19726e-001</em>
+<a id='L709' name='L709'></a> 709 data8 0x3fdb015b3eb1e790 <em class='comment'>// log(1/frcpa(1+134/256))=  +4.21958e-001</em>
+<a id='L710' name='L710'></a> 710 data8 0x3fdb323a3a635948 <em class='comment'>// log(1/frcpa(1+135/256))=  +4.24941e-001</em>
+<a id='L711' name='L711'></a> 711 data8 0x3fdb56fa04462908 <em class='comment'>// log(1/frcpa(1+136/256))=  +4.27184e-001</em>
+<a id='L712' name='L712'></a> 712 data8 0x3fdb881aa659bc90 <em class='comment'>// log(1/frcpa(1+137/256))=  +4.30182e-001</em>
+<a id='L713' name='L713'></a> 713 data8 0x3fdbad0bef3db160 <em class='comment'>// log(1/frcpa(1+138/256))=  +4.32437e-001</em>
+<a id='L714' name='L714'></a> 714 data8 0x3fdbd21297781c28 <em class='comment'>// log(1/frcpa(1+139/256))=  +4.34697e-001</em>
+<a id='L715' name='L715'></a> 715 data8 0x3fdc039236f08818 <em class='comment'>// log(1/frcpa(1+140/256))=  +4.37718e-001</em>
+<a id='L716' name='L716'></a> 716 data8 0x3fdc28cb1e4d32f8 <em class='comment'>// log(1/frcpa(1+141/256))=  +4.39990e-001</em>
+<a id='L717' name='L717'></a> 717 data8 0x3fdc4e19b84723c0 <em class='comment'>// log(1/frcpa(1+142/256))=  +4.42267e-001</em>
+<a id='L718' name='L718'></a> 718 data8 0x3fdc7ff9c74554c8 <em class='comment'>// log(1/frcpa(1+143/256))=  +4.45311e-001</em>
+<a id='L719' name='L719'></a> 719 data8 0x3fdca57b64e9db00 <em class='comment'>// log(1/frcpa(1+144/256))=  +4.47600e-001</em>
+<a id='L720' name='L720'></a> 720 data8 0x3fdccb130a5ceba8 <em class='comment'>// log(1/frcpa(1+145/256))=  +4.49895e-001</em>
+<a id='L721' name='L721'></a> 721 data8 0x3fdcf0c0d18f3268 <em class='comment'>// log(1/frcpa(1+146/256))=  +4.52194e-001</em>
+<a id='L722' name='L722'></a> 722 data8 0x3fdd232075b5a200 <em class='comment'>// log(1/frcpa(1+147/256))=  +4.55269e-001</em>
+<a id='L723' name='L723'></a> 723 data8 0x3fdd490246defa68 <em class='comment'>// log(1/frcpa(1+148/256))=  +4.57581e-001</em>
+<a id='L724' name='L724'></a> 724 data8 0x3fdd6efa918d25c8 <em class='comment'>// log(1/frcpa(1+149/256))=  +4.59899e-001</em>
+<a id='L725' name='L725'></a> 725 data8 0x3fdd9509707ae528 <em class='comment'>// log(1/frcpa(1+150/256))=  +4.62221e-001</em>
+<a id='L726' name='L726'></a> 726 data8 0x3fddbb2efe92c550 <em class='comment'>// log(1/frcpa(1+151/256))=  +4.64550e-001</em>
+<a id='L727' name='L727'></a> 727 data8 0x3fddee2f3445e4a8 <em class='comment'>// log(1/frcpa(1+152/256))=  +4.67663e-001</em>
+<a id='L728' name='L728'></a> 728 data8 0x3fde148a1a2726c8 <em class='comment'>// log(1/frcpa(1+153/256))=  +4.70004e-001</em>
+<a id='L729' name='L729'></a> 729 data8 0x3fde3afc0a49ff38 <em class='comment'>// log(1/frcpa(1+154/256))=  +4.72350e-001</em>
+<a id='L730' name='L730'></a> 730 data8 0x3fde6185206d5168 <em class='comment'>// log(1/frcpa(1+155/256))=  +4.74702e-001</em>
+<a id='L731' name='L731'></a> 731 data8 0x3fde882578823d50 <em class='comment'>// log(1/frcpa(1+156/256))=  +4.77060e-001</em>
+<a id='L732' name='L732'></a> 732 data8 0x3fdeaedd2eac9908 <em class='comment'>// log(1/frcpa(1+157/256))=  +4.79423e-001</em>
+<a id='L733' name='L733'></a> 733 data8 0x3fded5ac5f436be0 <em class='comment'>// log(1/frcpa(1+158/256))=  +4.81792e-001</em>
+<a id='L734' name='L734'></a> 734 data8 0x3fdefc9326d16ab8 <em class='comment'>// log(1/frcpa(1+159/256))=  +4.84166e-001</em>
+<a id='L735' name='L735'></a> 735 data8 0x3fdf2391a21575f8 <em class='comment'>// log(1/frcpa(1+160/256))=  +4.86546e-001</em>
+<a id='L736' name='L736'></a> 736 data8 0x3fdf4aa7ee031928 <em class='comment'>// log(1/frcpa(1+161/256))=  +4.88932e-001</em>
+<a id='L737' name='L737'></a> 737 data8 0x3fdf71d627c30bb0 <em class='comment'>// log(1/frcpa(1+162/256))=  +4.91323e-001</em>
+<a id='L738' name='L738'></a> 738 data8 0x3fdf991c6cb3b378 <em class='comment'>// log(1/frcpa(1+163/256))=  +4.93720e-001</em>
+<a id='L739' name='L739'></a> 739 data8 0x3fdfc07ada69a908 <em class='comment'>// log(1/frcpa(1+164/256))=  +4.96123e-001</em>
+<a id='L740' name='L740'></a> 740 data8 0x3fdfe7f18eb03d38 <em class='comment'>// log(1/frcpa(1+165/256))=  +4.98532e-001</em>
+<a id='L741' name='L741'></a> 741 data8 0x3fe007c053c5002c <em class='comment'>// log(1/frcpa(1+166/256))=  +5.00946e-001</em>
+<a id='L742' name='L742'></a> 742 data8 0x3fe01b942198a5a0 <em class='comment'>// log(1/frcpa(1+167/256))=  +5.03367e-001</em>
+<a id='L743' name='L743'></a> 743 data8 0x3fe02f74400c64e8 <em class='comment'>// log(1/frcpa(1+168/256))=  +5.05793e-001</em>
+<a id='L744' name='L744'></a> 744 data8 0x3fe04360be7603ac <em class='comment'>// log(1/frcpa(1+169/256))=  +5.08225e-001</em>
+<a id='L745' name='L745'></a> 745 data8 0x3fe05759ac47fe30 <em class='comment'>// log(1/frcpa(1+170/256))=  +5.10663e-001</em>
+<a id='L746' name='L746'></a> 746 data8 0x3fe06b5f1911cf50 <em class='comment'>// log(1/frcpa(1+171/256))=  +5.13107e-001</em>
+<a id='L747' name='L747'></a> 747 data8 0x3fe078bf0533c568 <em class='comment'>// log(1/frcpa(1+172/256))=  +5.14740e-001</em>
+<a id='L748' name='L748'></a> 748 data8 0x3fe08cd9687e7b0c <em class='comment'>// log(1/frcpa(1+173/256))=  +5.17194e-001</em>
+<a id='L749' name='L749'></a> 749 data8 0x3fe0a10074cf9018 <em class='comment'>// log(1/frcpa(1+174/256))=  +5.19654e-001</em>
+<a id='L750' name='L750'></a> 750 data8 0x3fe0b5343a234474 <em class='comment'>// log(1/frcpa(1+175/256))=  +5.22120e-001</em>
+<a id='L751' name='L751'></a> 751 data8 0x3fe0c974c89431cc <em class='comment'>// log(1/frcpa(1+176/256))=  +5.24592e-001</em>
+<a id='L752' name='L752'></a> 752 data8 0x3fe0ddc2305b9884 <em class='comment'>// log(1/frcpa(1+177/256))=  +5.27070e-001</em>
+<a id='L753' name='L753'></a> 753 data8 0x3fe0eb524bafc918 <em class='comment'>// log(1/frcpa(1+178/256))=  +5.28726e-001</em>
+<a id='L754' name='L754'></a> 754 data8 0x3fe0ffb54213a474 <em class='comment'>// log(1/frcpa(1+179/256))=  +5.31214e-001</em>
+<a id='L755' name='L755'></a> 755 data8 0x3fe114253da97d9c <em class='comment'>// log(1/frcpa(1+180/256))=  +5.33709e-001</em>
+<a id='L756' name='L756'></a> 756 data8 0x3fe128a24f1d9afc <em class='comment'>// log(1/frcpa(1+181/256))=  +5.36210e-001</em>
+<a id='L757' name='L757'></a> 757 data8 0x3fe1365252bf0864 <em class='comment'>// log(1/frcpa(1+182/256))=  +5.37881e-001</em>
+<a id='L758' name='L758'></a> 758 data8 0x3fe14ae558b4a92c <em class='comment'>// log(1/frcpa(1+183/256))=  +5.40393e-001</em>
+<a id='L759' name='L759'></a> 759 data8 0x3fe15f85a19c7658 <em class='comment'>// log(1/frcpa(1+184/256))=  +5.42910e-001</em>
+<a id='L760' name='L760'></a> 760 data8 0x3fe16d4d38c119f8 <em class='comment'>// log(1/frcpa(1+185/256))=  +5.44592e-001</em>
+<a id='L761' name='L761'></a> 761 data8 0x3fe18203c20dd130 <em class='comment'>// log(1/frcpa(1+186/256))=  +5.47121e-001</em>
+<a id='L762' name='L762'></a> 762 data8 0x3fe196c7bc4b1f38 <em class='comment'>// log(1/frcpa(1+187/256))=  +5.49656e-001</em>
+<a id='L763' name='L763'></a> 763 data8 0x3fe1a4a738b7a33c <em class='comment'>// log(1/frcpa(1+188/256))=  +5.51349e-001</em>
+<a id='L764' name='L764'></a> 764 data8 0x3fe1b981c0c9653c <em class='comment'>// log(1/frcpa(1+189/256))=  +5.53895e-001</em>
+<a id='L765' name='L765'></a> 765 data8 0x3fe1ce69e8bb1068 <em class='comment'>// log(1/frcpa(1+190/256))=  +5.56447e-001</em>
+<a id='L766' name='L766'></a> 766 data8 0x3fe1dc619de06944 <em class='comment'>// log(1/frcpa(1+191/256))=  +5.58152e-001</em>
+<a id='L767' name='L767'></a> 767 data8 0x3fe1f160a2ad0da0 <em class='comment'>// log(1/frcpa(1+192/256))=  +5.60715e-001</em>
+<a id='L768' name='L768'></a> 768 data8 0x3fe2066d7740737c <em class='comment'>// log(1/frcpa(1+193/256))=  +5.63285e-001</em>
+<a id='L769' name='L769'></a> 769 data8 0x3fe2147dba47a390 <em class='comment'>// log(1/frcpa(1+194/256))=  +5.65001e-001</em>
+<a id='L770' name='L770'></a> 770 data8 0x3fe229a1bc5ebac0 <em class='comment'>// log(1/frcpa(1+195/256))=  +5.67582e-001</em>
+<a id='L771' name='L771'></a> 771 data8 0x3fe237c1841a502c <em class='comment'>// log(1/frcpa(1+196/256))=  +5.69306e-001</em>
+<a id='L772' name='L772'></a> 772 data8 0x3fe24cfce6f80d98 <em class='comment'>// log(1/frcpa(1+197/256))=  +5.71898e-001</em>
+<a id='L773' name='L773'></a> 773 data8 0x3fe25b2c55cd5760 <em class='comment'>// log(1/frcpa(1+198/256))=  +5.73630e-001</em>
+<a id='L774' name='L774'></a> 774 data8 0x3fe2707f4d5f7c40 <em class='comment'>// log(1/frcpa(1+199/256))=  +5.76233e-001</em>
+<a id='L775' name='L775'></a> 775 data8 0x3fe285e0842ca380 <em class='comment'>// log(1/frcpa(1+200/256))=  +5.78842e-001</em>
+<a id='L776' name='L776'></a> 776 data8 0x3fe294294708b770 <em class='comment'>// log(1/frcpa(1+201/256))=  +5.80586e-001</em>
+<a id='L777' name='L777'></a> 777 data8 0x3fe2a9a2670aff0c <em class='comment'>// log(1/frcpa(1+202/256))=  +5.83207e-001</em>
+<a id='L778' name='L778'></a> 778 data8 0x3fe2b7fb2c8d1cc0 <em class='comment'>// log(1/frcpa(1+203/256))=  +5.84959e-001</em>
+<a id='L779' name='L779'></a> 779 data8 0x3fe2c65a6395f5f4 <em class='comment'>// log(1/frcpa(1+204/256))=  +5.86713e-001</em>
+<a id='L780' name='L780'></a> 780 data8 0x3fe2dbf557b0df40 <em class='comment'>// log(1/frcpa(1+205/256))=  +5.89350e-001</em>
+<a id='L781' name='L781'></a> 781 data8 0x3fe2ea64c3f97654 <em class='comment'>// log(1/frcpa(1+206/256))=  +5.91113e-001</em>
+<a id='L782' name='L782'></a> 782 data8 0x3fe3001823684d70 <em class='comment'>// log(1/frcpa(1+207/256))=  +5.93762e-001</em>
+<a id='L783' name='L783'></a> 783 data8 0x3fe30e97e9a8b5cc <em class='comment'>// log(1/frcpa(1+208/256))=  +5.95531e-001</em>
+<a id='L784' name='L784'></a> 784 data8 0x3fe32463ebdd34e8 <em class='comment'>// log(1/frcpa(1+209/256))=  +5.98192e-001</em>
+<a id='L785' name='L785'></a> 785 data8 0x3fe332f4314ad794 <em class='comment'>// log(1/frcpa(1+210/256))=  +5.99970e-001</em>
+<a id='L786' name='L786'></a> 786 data8 0x3fe348d90e7464cc <em class='comment'>// log(1/frcpa(1+211/256))=  +6.02643e-001</em>
+<a id='L787' name='L787'></a> 787 data8 0x3fe35779f8c43d6c <em class='comment'>// log(1/frcpa(1+212/256))=  +6.04428e-001</em>
+<a id='L788' name='L788'></a> 788 data8 0x3fe36621961a6a98 <em class='comment'>// log(1/frcpa(1+213/256))=  +6.06217e-001</em>
+<a id='L789' name='L789'></a> 789 data8 0x3fe37c299f3c3668 <em class='comment'>// log(1/frcpa(1+214/256))=  +6.08907e-001</em>
+<a id='L790' name='L790'></a> 790 data8 0x3fe38ae2171976e4 <em class='comment'>// log(1/frcpa(1+215/256))=  +6.10704e-001</em>
+<a id='L791' name='L791'></a> 791 data8 0x3fe399a157a603e4 <em class='comment'>// log(1/frcpa(1+216/256))=  +6.12504e-001</em>
+<a id='L792' name='L792'></a> 792 data8 0x3fe3afccfe77b9d0 <em class='comment'>// log(1/frcpa(1+217/256))=  +6.15210e-001</em>
+<a id='L793' name='L793'></a> 793 data8 0x3fe3be9d503533b4 <em class='comment'>// log(1/frcpa(1+218/256))=  +6.17018e-001</em>
+<a id='L794' name='L794'></a> 794 data8 0x3fe3cd7480b4a8a0 <em class='comment'>// log(1/frcpa(1+219/256))=  +6.18830e-001</em>
+<a id='L795' name='L795'></a> 795 data8 0x3fe3e3c43918f76c <em class='comment'>// log(1/frcpa(1+220/256))=  +6.21554e-001</em>
+<a id='L796' name='L796'></a> 796 data8 0x3fe3f2acb27ed6c4 <em class='comment'>// log(1/frcpa(1+221/256))=  +6.23373e-001</em>
+<a id='L797' name='L797'></a> 797 data8 0x3fe4019c2125ca90 <em class='comment'>// log(1/frcpa(1+222/256))=  +6.25197e-001</em>
+<a id='L798' name='L798'></a> 798 data8 0x3fe4181061389720 <em class='comment'>// log(1/frcpa(1+223/256))=  +6.27937e-001</em>
+<a id='L799' name='L799'></a> 799 data8 0x3fe42711518df544 <em class='comment'>// log(1/frcpa(1+224/256))=  +6.29769e-001</em>
+<a id='L800' name='L800'></a> 800 data8 0x3fe436194e12b6bc <em class='comment'>// log(1/frcpa(1+225/256))=  +6.31604e-001</em>
+<a id='L801' name='L801'></a> 801 data8 0x3fe445285d68ea68 <em class='comment'>// log(1/frcpa(1+226/256))=  +6.33442e-001</em>
+<a id='L802' name='L802'></a> 802 data8 0x3fe45bcc464c8938 <em class='comment'>// log(1/frcpa(1+227/256))=  +6.36206e-001</em>
+<a id='L803' name='L803'></a> 803 data8 0x3fe46aed21f117fc <em class='comment'>// log(1/frcpa(1+228/256))=  +6.38053e-001</em>
+<a id='L804' name='L804'></a> 804 data8 0x3fe47a1527e8a2d0 <em class='comment'>// log(1/frcpa(1+229/256))=  +6.39903e-001</em>
+<a id='L805' name='L805'></a> 805 data8 0x3fe489445efffcc8 <em class='comment'>// log(1/frcpa(1+230/256))=  +6.41756e-001</em>
+<a id='L806' name='L806'></a> 806 data8 0x3fe4a018bcb69834 <em class='comment'>// log(1/frcpa(1+231/256))=  +6.44543e-001</em>
+<a id='L807' name='L807'></a> 807 data8 0x3fe4af5a0c9d65d4 <em class='comment'>// log(1/frcpa(1+232/256))=  +6.46405e-001</em>
+<a id='L808' name='L808'></a> 808 data8 0x3fe4bea2a5bdbe84 <em class='comment'>// log(1/frcpa(1+233/256))=  +6.48271e-001</em>
+<a id='L809' name='L809'></a> 809 data8 0x3fe4cdf28f10ac44 <em class='comment'>// log(1/frcpa(1+234/256))=  +6.50140e-001</em>
+<a id='L810' name='L810'></a> 810 data8 0x3fe4dd49cf994058 <em class='comment'>// log(1/frcpa(1+235/256))=  +6.52013e-001</em>
+<a id='L811' name='L811'></a> 811 data8 0x3fe4eca86e64a680 <em class='comment'>// log(1/frcpa(1+236/256))=  +6.53889e-001</em>
+<a id='L812' name='L812'></a> 812 data8 0x3fe503c43cd8eb68 <em class='comment'>// log(1/frcpa(1+237/256))=  +6.56710e-001</em>
+<a id='L813' name='L813'></a> 813 data8 0x3fe513356667fc54 <em class='comment'>// log(1/frcpa(1+238/256))=  +6.58595e-001</em>
+<a id='L814' name='L814'></a> 814 data8 0x3fe522ae0738a3d4 <em class='comment'>// log(1/frcpa(1+239/256))=  +6.60483e-001</em>
+<a id='L815' name='L815'></a> 815 data8 0x3fe5322e26867854 <em class='comment'>// log(1/frcpa(1+240/256))=  +6.62376e-001</em>
+<a id='L816' name='L816'></a> 816 data8 0x3fe541b5cb979808 <em class='comment'>// log(1/frcpa(1+241/256))=  +6.64271e-001</em>
+<a id='L817' name='L817'></a> 817 data8 0x3fe55144fdbcbd60 <em class='comment'>// log(1/frcpa(1+242/256))=  +6.66171e-001</em>
+<a id='L818' name='L818'></a> 818 data8 0x3fe560dbc45153c4 <em class='comment'>// log(1/frcpa(1+243/256))=  +6.68074e-001</em>
+<a id='L819' name='L819'></a> 819 data8 0x3fe5707a26bb8c64 <em class='comment'>// log(1/frcpa(1+244/256))=  +6.69980e-001</em>
+<a id='L820' name='L820'></a> 820 data8 0x3fe587f60ed5b8fc <em class='comment'>// log(1/frcpa(1+245/256))=  +6.72847e-001</em>
+<a id='L821' name='L821'></a> 821 data8 0x3fe597a7977c8f30 <em class='comment'>// log(1/frcpa(1+246/256))=  +6.74763e-001</em>
+<a id='L822' name='L822'></a> 822 data8 0x3fe5a760d634bb88 <em class='comment'>// log(1/frcpa(1+247/256))=  +6.76682e-001</em>
+<a id='L823' name='L823'></a> 823 data8 0x3fe5b721d295f10c <em class='comment'>// log(1/frcpa(1+248/256))=  +6.78605e-001</em>
+<a id='L824' name='L824'></a> 824 data8 0x3fe5c6ea94431ef8 <em class='comment'>// log(1/frcpa(1+249/256))=  +6.80532e-001</em>
+<a id='L825' name='L825'></a> 825 data8 0x3fe5d6bb22ea86f4 <em class='comment'>// log(1/frcpa(1+250/256))=  +6.82462e-001</em>
+<a id='L826' name='L826'></a> 826 data8 0x3fe5e6938645d38c <em class='comment'>// log(1/frcpa(1+251/256))=  +6.84397e-001</em>
+<a id='L827' name='L827'></a> 827 data8 0x3fe5f673c61a2ed0 <em class='comment'>// log(1/frcpa(1+252/256))=  +6.86335e-001</em>
+<a id='L828' name='L828'></a> 828 data8 0x3fe6065bea385924 <em class='comment'>// log(1/frcpa(1+253/256))=  +6.88276e-001</em>
+<a id='L829' name='L829'></a> 829 data8 0x3fe6164bfa7cc068 <em class='comment'>// log(1/frcpa(1+254/256))=  +6.90222e-001</em>
+<a id='L830' name='L830'></a> 830 data8 0x3fe62643fecf9740 <em class='comment'>// log(1/frcpa(1+255/256))=  +6.92171e-001</em>
+<a id='L831' name='L831'></a> 831 LOCAL_OBJECT_END(pow_Tt)
+<a id='L832' name='L832'></a> 832 
+<a id='L833' name='L833'></a> 833 
+<a id='L834' name='L834'></a> 834 <em class='comment'>// Table 1 is 2^(index_1/128) where</em>
+<a id='L835' name='L835'></a> 835 <em class='comment'>// index_1 goes from 0 to 15</em>
+<a id='L836' name='L836'></a> 836 LOCAL_OBJECT_START(pow_tbl1)
+<a id='L837' name='L837'></a> 837 data8 0x8000000000000000 , 0x00003FFF
+<a id='L838' name='L838'></a> 838 data8 0x80B1ED4FD999AB6C , 0x00003FFF
+<a id='L839' name='L839'></a> 839 data8 0x8164D1F3BC030773 , 0x00003FFF
+<a id='L840' name='L840'></a> 840 data8 0x8218AF4373FC25EC , 0x00003FFF
+<a id='L841' name='L841'></a> 841 data8 0x82CD8698AC2BA1D7 , 0x00003FFF
+<a id='L842' name='L842'></a> 842 data8 0x8383594EEFB6EE37 , 0x00003FFF
+<a id='L843' name='L843'></a> 843 data8 0x843A28C3ACDE4046 , 0x00003FFF
+<a id='L844' name='L844'></a> 844 data8 0x84F1F656379C1A29 , 0x00003FFF
+<a id='L845' name='L845'></a> 845 data8 0x85AAC367CC487B15 , 0x00003FFF
+<a id='L846' name='L846'></a> 846 data8 0x8664915B923FBA04 , 0x00003FFF
+<a id='L847' name='L847'></a> 847 data8 0x871F61969E8D1010 , 0x00003FFF
+<a id='L848' name='L848'></a> 848 data8 0x87DB357FF698D792 , 0x00003FFF
+<a id='L849' name='L849'></a> 849 data8 0x88980E8092DA8527 , 0x00003FFF
+<a id='L850' name='L850'></a> 850 data8 0x8955EE03618E5FDD , 0x00003FFF
+<a id='L851' name='L851'></a> 851 data8 0x8A14D575496EFD9A , 0x00003FFF
+<a id='L852' name='L852'></a> 852 data8 0x8AD4C6452C728924 , 0x00003FFF
+<a id='L853' name='L853'></a> 853 LOCAL_OBJECT_END(pow_tbl1)
+<a id='L854' name='L854'></a> 854 
+<a id='L855' name='L855'></a> 855 
+<a id='L856' name='L856'></a> 856 <em class='comment'>// Table 2 is 2^(index_1/8) where</em>
+<a id='L857' name='L857'></a> 857 <em class='comment'>// index_2 goes from 0 to 7</em>
+<a id='L858' name='L858'></a> 858 LOCAL_OBJECT_START(pow_tbl2)
+<a id='L859' name='L859'></a> 859 data8 0x8000000000000000 , 0x00003FFF
+<a id='L860' name='L860'></a> 860 data8 0x8B95C1E3EA8BD6E7 , 0x00003FFF
+<a id='L861' name='L861'></a> 861 data8 0x9837F0518DB8A96F , 0x00003FFF
+<a id='L862' name='L862'></a> 862 data8 0xA5FED6A9B15138EA , 0x00003FFF
+<a id='L863' name='L863'></a> 863 data8 0xB504F333F9DE6484 , 0x00003FFF
+<a id='L864' name='L864'></a> 864 data8 0xC5672A115506DADD , 0x00003FFF
+<a id='L865' name='L865'></a> 865 data8 0xD744FCCAD69D6AF4 , 0x00003FFF
+<a id='L866' name='L866'></a> 866 data8 0xEAC0C6E7DD24392F , 0x00003FFF
+<a id='L867' name='L867'></a> 867 LOCAL_OBJECT_END(pow_tbl2)
+<a id='L868' name='L868'></a> 868 
+<a id='L869' name='L869'></a> 869 .section .text
+<a id='L870' name='L870'></a> 870 WEAK_LIBM_ENTRY(powf)
+<a id='L871' name='L871'></a> 871 
+<a id='L872' name='L872'></a> 872 <em class='comment'>// Get exponent of x.  Will be used to calculate K.</em>
+<a id='L873' name='L873'></a> 873 <em class='brace'>{</em> .mfi
+<a id='L874' name='L874'></a> 874           getf.exp     pow_GR_signexp_X = f8
+<a id='L875' name='L875'></a> 875           fms.s1 POW_Xm1 = f8,f1,f1     <em class='comment'>// Will be used for r1 if x&gt;0</em>
+<a id='L876' name='L876'></a> 876           mov           pow_GR_17ones   = 0x1FFFF
+<a id='L877' name='L877'></a> 877 <em class='brace'>}</em>
+<a id='L878' name='L878'></a> 878 <em class='brace'>{</em> .mfi
+<a id='L879' name='L879'></a> 879           addl          pow_AD_P        = @ltoff(pow_table_P), gp
+<a id='L880' name='L880'></a> 880           fma.s1 POW_Xp1 = f8,f1,f1     <em class='comment'>// Will be used for r1 if x&lt;0</em>
+<a id='L881' name='L881'></a> 881           nop.i 999
+<a id='L882' name='L882'></a> 882 <em class='brace'>}</em>
+<a id='L883' name='L883'></a> 883 ;;
+<a id='L884' name='L884'></a> 884 
+<a id='L885' name='L885'></a> 885 <em class='comment'>// Get significand of x.  Will be used to get index to fetch T, Tt.</em>
+<a id='L886' name='L886'></a> 886 <em class='brace'>{</em> .mfi
+<a id='L887' name='L887'></a> 887           getf.sig      pow_GR_sig_X    = f8
+<a id='L888' name='L888'></a> 888           frcpa.s1      POW_B, p6       = f1,f8
+<a id='L889' name='L889'></a> 889           mov           pow_GR_exp_half = 0xFFFE   <em class='comment'>// Exponent for 0.5</em>
+<a id='L890' name='L890'></a> 890 <em class='brace'>}</em>
+<a id='L891' name='L891'></a> 891 <em class='brace'>{</em> .mfi
+<a id='L892' name='L892'></a> 892           ld8 pow_AD_P = [pow_AD_P]
+<a id='L893' name='L893'></a> 893           fma.s1        POW_NORM_X      = f8,f1,f0
+<a id='L894' name='L894'></a> 894           mov          pow_GR_exp_2tom8 = 0xFFF7
+<a id='L895' name='L895'></a> 895 <em class='brace'>}</em>
+<a id='L896' name='L896'></a> 896 ;;
+<a id='L897' name='L897'></a> 897 
+<a id='L898' name='L898'></a> 898 <em class='comment'>// DOUBLE 0x10033  exponent limit at which y is an integer</em>
+<a id='L899' name='L899'></a> 899 <em class='brace'>{</em> .mfi
+<a id='L900' name='L900'></a> 900           nop.m 999
+<a id='L901' name='L901'></a> 901           fcmp.lt.s1 p8,p9 = f8, f0     <em class='comment'>// Test for x&lt;0</em>
+<a id='L902' name='L902'></a> 902           addl pow_GR_10033             = 0x10033, r0
+<a id='L903' name='L903'></a> 903 <em class='brace'>}</em>
+<a id='L904' name='L904'></a> 904 <em class='brace'>{</em> .mfi
+<a id='L905' name='L905'></a> 905           mov           pow_GR_16ones   = 0xFFFF
+<a id='L906' name='L906'></a> 906           fma.s1        POW_NORM_Y      = f9,f1,f0
+<a id='L907' name='L907'></a> 907           nop.i 999
+<a id='L908' name='L908'></a> 908 <em class='brace'>}</em>
+<a id='L909' name='L909'></a> 909 ;;
+<a id='L910' name='L910'></a> 910 
+<a id='L911' name='L911'></a> 911 <em class='comment'>// p13 = TRUE ==&gt; X is unorm</em>
+<a id='L912' name='L912'></a> 912 <em class='brace'>{</em> .mfi
+<a id='L913' name='L913'></a> 913           setf.exp      POW_Q0_half     = pow_GR_exp_half  <em class='comment'>// Form 0.5</em>
+<a id='L914' name='L914'></a> 914           fclass.m  p13,p0              = f8, 0x0b  <em class='comment'>// Test for x unorm</em>
+<a id='L915' name='L915'></a> 915           adds          pow_AD_Tt       = pow_Tt - pow_table_P,  pow_AD_P
+<a id='L916' name='L916'></a> 916 <em class='brace'>}</em>
+<a id='L917' name='L917'></a> 917 <em class='brace'>{</em> .mfi
+<a id='L918' name='L918'></a> 918           adds          pow_AD_Q        = pow_table_Q - pow_table_P,  pow_AD_P
+<a id='L919' name='L919'></a> 919           nop.f 999
+<a id='L920' name='L920'></a> 920           nop.i 999
+<a id='L921' name='L921'></a> 921 <em class='brace'>}</em>
+<a id='L922' name='L922'></a> 922 ;;
+<a id='L923' name='L923'></a> 923 
+<a id='L924' name='L924'></a> 924 <em class='comment'>// p14 = TRUE ==&gt; X is ZERO</em>
+<a id='L925' name='L925'></a> 925 <em class='brace'>{</em> .mfi
+<a id='L926' name='L926'></a> 926           ldfe          POW_P2          = [pow_AD_Q], 16
+<a id='L927' name='L927'></a> 927           fclass.m  p14,p0              = f8, 0x07
+<a id='L928' name='L928'></a> 928           nop.i 999
+<a id='L929' name='L929'></a> 929 <em class='brace'>}</em>
+<a id='L930' name='L930'></a> 930 <em class='comment'>// Note POW_Xm1 and POW_r1 are used interchangably</em>
+<a id='L931' name='L931'></a> 931 <em class='brace'>{</em> .mfb
+<a id='L932' name='L932'></a> 932           nop.m 999
+<a id='L933' name='L933'></a> 933 (p8)      fnma.s1        POW_Xm1        = POW_Xp1,f1,f0
+<a id='L934' name='L934'></a> 934 (p13)     br.cond.spnt POW_X_DENORM
+<a id='L935' name='L935'></a> 935 <em class='brace'>}</em>
+<a id='L936' name='L936'></a> 936 ;;
+<a id='L937' name='L937'></a> 937 
+<a id='L938' name='L938'></a> 938 <em class='comment'>// Continue normal and denormal paths here</em>
+<a id='L939' name='L939'></a> 939 POW_COMMON:
+<a id='L940' name='L940'></a> 940 <em class='comment'>// p11 = TRUE ==&gt; Y is a NAN</em>
+<a id='L941' name='L941'></a> 941 <em class='brace'>{</em> .mfi
+<a id='L942' name='L942'></a> 942           and           pow_GR_exp_X    = pow_GR_signexp_X, pow_GR_17ones
+<a id='L943' name='L943'></a> 943           fclass.m  p11,p0              = f9, 0xc3
+<a id='L944' name='L944'></a> 944           nop.i 999
+<a id='L945' name='L945'></a> 945 <em class='brace'>}</em>
+<a id='L946' name='L946'></a> 946 <em class='brace'>{</em> .mfi
+<a id='L947' name='L947'></a> 947           nop.m 999
+<a id='L948' name='L948'></a> 948           fms.s1        POW_r           = POW_B, POW_NORM_X,f1
+<a id='L949' name='L949'></a> 949           mov pow_GR_y_zero = 0
+<a id='L950' name='L950'></a> 950 <em class='brace'>}</em>
+<a id='L951' name='L951'></a> 951 ;;
+<a id='L952' name='L952'></a> 952 
+<a id='L953' name='L953'></a> 953 <em class='comment'>// Get exponent of |x|-1 to use in comparison to 2^-8</em>
+<a id='L954' name='L954'></a> 954 <em class='brace'>{</em> .mmi
+<a id='L955' name='L955'></a> 955           getf.exp  pow_GR_signexp_Xm1  = POW_Xm1
+<a id='L956' name='L956'></a> 956           sub       pow_GR_true_exp_X   = pow_GR_exp_X, pow_GR_16ones
+<a id='L957' name='L957'></a> 957           extr.u        pow_GR_offset   = pow_GR_sig_X, 55, 8
+<a id='L958' name='L958'></a> 958 <em class='brace'>}</em>
+<a id='L959' name='L959'></a> 959 ;;
+<a id='L960' name='L960'></a> 960 
+<a id='L961' name='L961'></a> 961 <em class='brace'>{</em> .mfi
+<a id='L962' name='L962'></a> 962           alloc         r32=ar.pfs,2,19,4,0
+<a id='L963' name='L963'></a> 963           fcvt.fx.s1   POW_int_Y        = POW_NORM_Y
+<a id='L964' name='L964'></a> 964           shladd pow_AD_Tt = pow_GR_offset, 3, pow_AD_Tt
+<a id='L965' name='L965'></a> 965 <em class='brace'>}</em>
+<a id='L966' name='L966'></a> 966 <em class='brace'>{</em> .mfi
+<a id='L967' name='L967'></a> 967           setf.sig POW_int_K            = pow_GR_true_exp_X
+<a id='L968' name='L968'></a> 968           nop.f 999
+<a id='L969' name='L969'></a> 969           nop.i 999
+<a id='L970' name='L970'></a> 970 <em class='brace'>}</em>
+<a id='L971' name='L971'></a> 971 ;;
+<a id='L972' name='L972'></a> 972 
+<a id='L973' name='L973'></a> 973 <em class='comment'>// p12 = TRUE if Y is ZERO</em>
+<a id='L974' name='L974'></a> 974 <em class='comment'>// Compute xsq to decide later if |x|=1</em>
+<a id='L975' name='L975'></a> 975 <em class='brace'>{</em> .mfi
+<a id='L976' name='L976'></a> 976           ldfe          POW_P1          = [pow_AD_P], 16
+<a id='L977' name='L977'></a> 977           fclass.m      p12,p0          = f9, 0x07
+<a id='L978' name='L978'></a> 978           nop.i 999
+<a id='L979' name='L979'></a> 979 <em class='brace'>}</em>
+<a id='L980' name='L980'></a> 980 <em class='brace'>{</em> .mfb
+<a id='L981' name='L981'></a> 981           ldfe          POW_P0          = [pow_AD_Q], 16
+<a id='L982' name='L982'></a> 982           fma.s1        POW_xsq = POW_NORM_X, POW_NORM_X, f0
+<a id='L983' name='L983'></a> 983 (p11)     br.cond.spnt  POW_Y_NAN       <em class='comment'>// Branch if y=nan</em>
+<a id='L984' name='L984'></a> 984 <em class='brace'>}</em>
+<a id='L985' name='L985'></a> 985 ;;
+<a id='L986' name='L986'></a> 986 
+<a id='L987' name='L987'></a> 987 <em class='brace'>{</em> .mmf
+<a id='L988' name='L988'></a> 988           getf.exp  pow_GR_signexp_Y    = POW_NORM_Y
+<a id='L989' name='L989'></a> 989           ldfd  POW_T                   = [pow_AD_Tt]
+<a id='L990' name='L990'></a> 990           fma.s1        POW_rsq         = POW_r, POW_r,f0
+<a id='L991' name='L991'></a> 991 <em class='brace'>}</em>
+<a id='L992' name='L992'></a> 992 ;;
+<a id='L993' name='L993'></a> 993 
+<a id='L994' name='L994'></a> 994 <em class='comment'>// p11 = TRUE ==&gt; X is a NAN</em>
+<a id='L995' name='L995'></a> 995 <em class='brace'>{</em> .mfi
+<a id='L996' name='L996'></a> 996           ldfpd         POW_log2_hi, POW_log2_lo  = [pow_AD_Q], 16
+<a id='L997' name='L997'></a> 997           fclass.m      p11,p0          = POW_NORM_X, 0xc3
+<a id='L998' name='L998'></a> 998           nop.i 999
+<a id='L999' name='L999'></a> 999 <em class='brace'>}</em>
+<a id='L1000' name='L1000'></a>1000 <em class='brace'>{</em> .mfi
+<a id='L1001' name='L1001'></a>1001           ldfe          POW_inv_log2_by_128 = [pow_AD_P], 16
+<a id='L1002' name='L1002'></a>1002           fma.s1 POW_delta              = f0,f0,f0 <em class='comment'>// delta=0 in case |x| near 1</em>
+<a id='L1003' name='L1003'></a>1003 (p12)     mov pow_GR_y_zero = 1
+<a id='L1004' name='L1004'></a>1004 <em class='brace'>}</em>
+<a id='L1005' name='L1005'></a>1005 ;;
+<a id='L1006' name='L1006'></a>1006 
+<a id='L1007' name='L1007'></a>1007 <em class='brace'>{</em> .mfi
+<a id='L1008' name='L1008'></a>1008           ldfd   POW_Q2                 = [pow_AD_P], 16
+<a id='L1009' name='L1009'></a>1009           fnma.s1 POW_twoV              = POW_r, POW_Q0_half,f1
+<a id='L1010' name='L1010'></a>1010           and       pow_GR_exp_Xm1      = pow_GR_signexp_Xm1, pow_GR_17ones
+<a id='L1011' name='L1011'></a>1011 <em class='brace'>}</em>
+<a id='L1012' name='L1012'></a>1012 <em class='brace'>{</em> .mfi
+<a id='L1013' name='L1013'></a>1013           nop.m 999
+<a id='L1014' name='L1014'></a>1014           fma.s1 POW_U                  = POW_NORM_Y,POW_r,f0
+<a id='L1015' name='L1015'></a>1015           nop.i 999
+<a id='L1016' name='L1016'></a>1016 <em class='brace'>}</em>
+<a id='L1017' name='L1017'></a>1017 ;;
+<a id='L1018' name='L1018'></a>1018 
+<a id='L1019' name='L1019'></a>1019 <em class='comment'>// Determine if we will use the |x| near 1 path (p6) or normal path (p7)</em>
+<a id='L1020' name='L1020'></a>1020 <em class='brace'>{</em> .mfi
+<a id='L1021' name='L1021'></a>1021           nop.m 999
+<a id='L1022' name='L1022'></a>1022           fcvt.xf POW_K                 = POW_int_K
+<a id='L1023' name='L1023'></a>1023           cmp.lt p6,p7                  = pow_GR_exp_Xm1, pow_GR_exp_2tom8
+<a id='L1024' name='L1024'></a>1024 <em class='brace'>}</em>
+<a id='L1025' name='L1025'></a>1025 <em class='brace'>{</em> .mfb
+<a id='L1026' name='L1026'></a>1026           nop.m 999
+<a id='L1027' name='L1027'></a>1027           fma.s1 POW_G                  = f0,f0,f0  <em class='comment'>// G=0 in case |x| near 1</em>
+<a id='L1028' name='L1028'></a>1028 (p11)     br.cond.spnt  POW_X_NAN       <em class='comment'>// Branch if x=nan and y not nan</em>
+<a id='L1029' name='L1029'></a>1029 <em class='brace'>}</em>
+<a id='L1030' name='L1030'></a>1030 ;;
+<a id='L1031' name='L1031'></a>1031 
+<a id='L1032' name='L1032'></a>1032 <em class='comment'>// If on the x near 1 path, assign r1 to r</em>
+<a id='L1033' name='L1033'></a>1033 <em class='brace'>{</em> .mfi
+<a id='L1034' name='L1034'></a>1034           ldfpd  POW_Q1, POW_RSHF       = [pow_AD_P], 16
+<a id='L1035' name='L1035'></a>1035 (p6)      fma.s1    POW_r               = POW_r1, f1, f0
+<a id='L1036' name='L1036'></a>1036           nop.i 999
+<a id='L1037' name='L1037'></a>1037 <em class='brace'>}</em>
+<a id='L1038' name='L1038'></a>1038 <em class='brace'>{</em> .mfb
+<a id='L1039' name='L1039'></a>1039           nop.m 999
+<a id='L1040' name='L1040'></a>1040 (p6)      fma.s1    POW_rsq             = POW_r1, POW_r1, f0
+<a id='L1041' name='L1041'></a>1041 (p14)     br.cond.spnt POW_X_0          <em class='comment'>// Branch if x zero and y not nan</em>
+<a id='L1042' name='L1042'></a>1042 <em class='brace'>}</em>
+<a id='L1043' name='L1043'></a>1043 ;;
+<a id='L1044' name='L1044'></a>1044 
+<a id='L1045' name='L1045'></a>1045 <em class='brace'>{</em> .mfi
+<a id='L1046' name='L1046'></a>1046           getf.sig pow_GR_sig_int_Y     = POW_int_Y
+<a id='L1047' name='L1047'></a>1047 (p6)      fnma.s1 POW_twoV              = POW_r1, POW_Q0_half,f1
+<a id='L1048' name='L1048'></a>1048           and pow_GR_exp_Y              = pow_GR_signexp_Y, pow_GR_17ones
+<a id='L1049' name='L1049'></a>1049 <em class='brace'>}</em>
+<a id='L1050' name='L1050'></a>1050 <em class='brace'>{</em> .mfb
+<a id='L1051' name='L1051'></a>1051           andcm pow_GR_sign_Y           = pow_GR_signexp_Y, pow_GR_17ones
+<a id='L1052' name='L1052'></a>1052 (p6)      fma.s1 POW_U                  = POW_NORM_Y,POW_r1,f0
+<a id='L1053' name='L1053'></a>1053 (p12)     br.cond.spnt POW_Y_0   <em class='comment'>// Branch if y=zero, x not zero or nan</em>
+<a id='L1054' name='L1054'></a>1054 <em class='brace'>}</em>
+<a id='L1055' name='L1055'></a>1055 ;;
+<a id='L1056' name='L1056'></a>1056 
+<a id='L1057' name='L1057'></a>1057 <em class='brace'>{</em> .mfi
+<a id='L1058' name='L1058'></a>1058           ldfe      POW_log2_by_128_lo  = [pow_AD_P], 16
+<a id='L1059' name='L1059'></a>1059 (p7)      fma.s1 POW_Z2                 = POW_twoV, POW_U, f0
+<a id='L1060' name='L1060'></a>1060           nop.i 999
+<a id='L1061' name='L1061'></a>1061 <em class='brace'>}</em>
+<a id='L1062' name='L1062'></a>1062 <em class='brace'>{</em> .mfi
+<a id='L1063' name='L1063'></a>1063           ldfe      POW_log2_by_128_hi  = [pow_AD_Q], 16
+<a id='L1064' name='L1064'></a>1064           nop.f 999
+<a id='L1065' name='L1065'></a>1065           nop.i 999
+<a id='L1066' name='L1066'></a>1066 <em class='brace'>}</em>
+<a id='L1067' name='L1067'></a>1067 ;;
+<a id='L1068' name='L1068'></a>1068 
+<a id='L1069' name='L1069'></a>1069 <em class='brace'>{</em> .mfi
+<a id='L1070' name='L1070'></a>1070           nop.m 999
+<a id='L1071' name='L1071'></a>1071           fcvt.xf   POW_float_int_Y     = POW_int_Y
+<a id='L1072' name='L1072'></a>1072           nop.i 999
+<a id='L1073' name='L1073'></a>1073 <em class='brace'>}</em>
+<a id='L1074' name='L1074'></a>1074 <em class='brace'>{</em> .mfi
+<a id='L1075' name='L1075'></a>1075           nop.m 999
+<a id='L1076' name='L1076'></a>1076 (p7)      fma.s1 POW_G                  = POW_K, POW_log2_hi, POW_T
+<a id='L1077' name='L1077'></a>1077           adds          pow_AD_tbl1     = pow_tbl1 - pow_Tt,  pow_AD_Q
+<a id='L1078' name='L1078'></a>1078 <em class='brace'>}</em>
+<a id='L1079' name='L1079'></a>1079 ;;
+<a id='L1080' name='L1080'></a>1080 
+<a id='L1081' name='L1081'></a>1081 <em class='comment'>// p11 = TRUE ==&gt; X is NEGATIVE but not inf</em>
+<a id='L1082' name='L1082'></a>1082 <em class='brace'>{</em> .mfi
+<a id='L1083' name='L1083'></a>1083           nop.m 999
+<a id='L1084' name='L1084'></a>1084           fclass.m  p11,p0              = POW_NORM_X, 0x1a
+<a id='L1085' name='L1085'></a>1085           nop.i 999
+<a id='L1086' name='L1086'></a>1086 <em class='brace'>}</em>
+<a id='L1087' name='L1087'></a>1087 <em class='brace'>{</em> .mfi
+<a id='L1088' name='L1088'></a>1088           nop.m 999
+<a id='L1089' name='L1089'></a>1089 (p7)      fma.s1 POW_delta              = POW_K, POW_log2_lo, f0
+<a id='L1090' name='L1090'></a>1090           adds pow_AD_tbl2              = pow_tbl2 - pow_tbl1,  pow_AD_tbl1
+<a id='L1091' name='L1091'></a>1091 <em class='brace'>}</em>
+<a id='L1092' name='L1092'></a>1092 ;;
+<a id='L1093' name='L1093'></a>1093 
+<a id='L1094' name='L1094'></a>1094 <em class='brace'>{</em> .mfi
+<a id='L1095' name='L1095'></a>1095           nop.m 999
+<a id='L1096' name='L1096'></a>1096 (p6)      fma.s1 POW_Z                  = POW_twoV, POW_U, f0
+<a id='L1097' name='L1097'></a>1097           nop.i 999
+<a id='L1098' name='L1098'></a>1098 <em class='brace'>}</em>
+<a id='L1099' name='L1099'></a>1099 <em class='brace'>{</em> .mfi
+<a id='L1100' name='L1100'></a>1100           nop.m 999
+<a id='L1101' name='L1101'></a>1101           fma.s1 POW_v2                 = POW_P1, POW_r,  POW_P0
+<a id='L1102' name='L1102'></a>1102           nop.i 999
+<a id='L1103' name='L1103'></a>1103 <em class='brace'>}</em>
+<a id='L1104' name='L1104'></a>1104 ;;
+<a id='L1105' name='L1105'></a>1105 
+<a id='L1106' name='L1106'></a>1106 <em class='comment'>// p11 = TRUE ==&gt; X is NEGATIVE but not inf</em>
+<a id='L1107' name='L1107'></a>1107 <em class='comment'>//    p12 = TRUE ==&gt; X is NEGATIVE  AND  Y  already even int</em>
+<a id='L1108' name='L1108'></a>1108 <em class='comment'>//    p13 = TRUE ==&gt; X is NEGATIVE  AND  Y possible int</em>
+<a id='L1109' name='L1109'></a>1109 <em class='brace'>{</em> .mfi
+<a id='L1110' name='L1110'></a>1110           nop.m 999
+<a id='L1111' name='L1111'></a>1111 (p7)      fma.s1 POW_Z                  = POW_NORM_Y, POW_G, POW_Z2
+<a id='L1112' name='L1112'></a>1112 (p11)     cmp.gt.unc  p12,p13           = pow_GR_exp_Y, pow_GR_10033
+<a id='L1113' name='L1113'></a>1113 <em class='brace'>}</em>
+<a id='L1114' name='L1114'></a>1114 <em class='brace'>{</em> .mfi
+<a id='L1115' name='L1115'></a>1115           nop.m 999
+<a id='L1116' name='L1116'></a>1116           fma.s1 POW_Gpr                = POW_G, f1, POW_r
+<a id='L1117' name='L1117'></a>1117           nop.i 999
+<a id='L1118' name='L1118'></a>1118 <em class='brace'>}</em>
+<a id='L1119' name='L1119'></a>1119 ;;
+<a id='L1120' name='L1120'></a>1120 
+<a id='L1121' name='L1121'></a>1121 <em class='brace'>{</em> .mfi
+<a id='L1122' name='L1122'></a>1122           nop.m 999
+<a id='L1123' name='L1123'></a>1123           fma.s1 POW_Yrcub              = POW_rsq, POW_U, f0
+<a id='L1124' name='L1124'></a>1124           nop.i 999
+<a id='L1125' name='L1125'></a>1125 <em class='brace'>}</em>
+<a id='L1126' name='L1126'></a>1126 <em class='brace'>{</em> .mfi
+<a id='L1127' name='L1127'></a>1127           nop.m 999
+<a id='L1128' name='L1128'></a>1128           fma.s1 POW_p                  = POW_rsq, POW_P2, POW_v2
+<a id='L1129' name='L1129'></a>1129           nop.i 999
+<a id='L1130' name='L1130'></a>1130 <em class='brace'>}</em>
+<a id='L1131' name='L1131'></a>1131 ;;
+<a id='L1132' name='L1132'></a>1132 
+<a id='L1133' name='L1133'></a>1133 <em class='comment'>// Test if x inf</em>
+<a id='L1134' name='L1134'></a>1134 <em class='brace'>{</em> .mfi
+<a id='L1135' name='L1135'></a>1135           nop.m 999
+<a id='L1136' name='L1136'></a>1136           fclass.m p15,p0 = POW_NORM_X,  0x23
+<a id='L1137' name='L1137'></a>1137           nop.i 999
+<a id='L1138' name='L1138'></a>1138 <em class='brace'>}</em>
+<a id='L1139' name='L1139'></a>1139 <em class='comment'>// By adding RSHF (1.1000...*2^63) we put integer part in rightmost significand</em>
+<a id='L1140' name='L1140'></a>1140 <em class='brace'>{</em> .mfi
+<a id='L1141' name='L1141'></a>1141           nop.m 999
+<a id='L1142' name='L1142'></a>1142           fma.s1 POW_W1  = POW_Z, POW_inv_log2_by_128, POW_RSHF
+<a id='L1143' name='L1143'></a>1143           nop.i 999
+<a id='L1144' name='L1144'></a>1144 <em class='brace'>}</em>
+<a id='L1145' name='L1145'></a>1145 ;;
+<a id='L1146' name='L1146'></a>1146 
+<a id='L1147' name='L1147'></a>1147 <em class='comment'>// p13 = TRUE ==&gt; X is NEGATIVE  AND  Y possible int</em>
+<a id='L1148' name='L1148'></a>1148 <em class='comment'>//     p10 = TRUE ==&gt; X is NEG and Y is an int</em>
+<a id='L1149' name='L1149'></a>1149 <em class='comment'>//     p12 = TRUE ==&gt; X is NEG and Y is not an int</em>
+<a id='L1150' name='L1150'></a>1150 <em class='brace'>{</em> .mfi
+<a id='L1151' name='L1151'></a>1151           nop.m 999
+<a id='L1152' name='L1152'></a>1152 (p13)     fcmp.eq.unc.s1 p10,p12        = POW_float_int_Y,  POW_NORM_Y
+<a id='L1153' name='L1153'></a>1153           mov pow_GR_xneg_yodd = 0
+<a id='L1154' name='L1154'></a>1154 <em class='brace'>}</em>
+<a id='L1155' name='L1155'></a>1155 <em class='brace'>{</em> .mfi
+<a id='L1156' name='L1156'></a>1156           nop.m 999
+<a id='L1157' name='L1157'></a>1157           fma.s1 POW_Y_Gpr              = POW_NORM_Y, POW_Gpr, f0
+<a id='L1158' name='L1158'></a>1158           nop.i 999
+<a id='L1159' name='L1159'></a>1159 <em class='brace'>}</em>
+<a id='L1160' name='L1160'></a>1160 ;;
+<a id='L1161' name='L1161'></a>1161 
+<a id='L1162' name='L1162'></a>1162 <em class='comment'>// p11 = TRUE ==&gt; X is +1.0</em>
+<a id='L1163' name='L1163'></a>1163 <em class='brace'>{</em> .mfi
+<a id='L1164' name='L1164'></a>1164           nop.m 999
+<a id='L1165' name='L1165'></a>1165           fcmp.eq.s1 p11,p0 = POW_NORM_X, f1
+<a id='L1166' name='L1166'></a>1166           nop.i 999
+<a id='L1167' name='L1167'></a>1167 <em class='brace'>}</em>
+<a id='L1168' name='L1168'></a>1168 ;;
+<a id='L1169' name='L1169'></a>1169 
+<a id='L1170' name='L1170'></a>1170 <em class='comment'>// Extract rounded integer from rightmost significand of POW_W1</em>
+<a id='L1171' name='L1171'></a>1171 <em class='comment'>// By subtracting RSHF we get rounded integer POW_Nfloat</em>
+<a id='L1172' name='L1172'></a>1172 <em class='brace'>{</em> .mfi
+<a id='L1173' name='L1173'></a>1173           getf.sig pow_GR_int_N        = POW_W1
+<a id='L1174' name='L1174'></a>1174           fms.s1 POW_Nfloat  = POW_W1, f1, POW_RSHF
+<a id='L1175' name='L1175'></a>1175           nop.i 999
+<a id='L1176' name='L1176'></a>1176 <em class='brace'>}</em>
+<a id='L1177' name='L1177'></a>1177 <em class='brace'>{</em> .mfb
+<a id='L1178' name='L1178'></a>1178           nop.m 999
+<a id='L1179' name='L1179'></a>1179           fma.s1 POW_Z3                 = POW_p, POW_Yrcub, f0
+<a id='L1180' name='L1180'></a>1180 (p12)     br.cond.spnt POW_X_NEG_Y_NONINT  <em class='comment'>// Branch if x neg, y not integer</em>
+<a id='L1181' name='L1181'></a>1181 <em class='brace'>}</em>
+<a id='L1182' name='L1182'></a>1182 ;;
+<a id='L1183' name='L1183'></a>1183 
+<a id='L1184' name='L1184'></a>1184 <em class='comment'>// p7  = TRUE ==&gt; Y is +1.0</em>
+<a id='L1185' name='L1185'></a>1185 <em class='comment'>// p12 = TRUE ==&gt; X is NEGATIVE  AND Y is an odd integer</em>
+<a id='L1186' name='L1186'></a>1186 <em class='brace'>{</em> .mfi
+<a id='L1187' name='L1187'></a>1187           getf.exp pow_GR_signexp_Y_Gpr = POW_Y_Gpr
+<a id='L1188' name='L1188'></a>1188           fcmp.eq.s1 p7,p0 = POW_NORM_Y, f1  <em class='comment'>// Test for y=1.0</em>
+<a id='L1189' name='L1189'></a>1189 (p10)     tbit.nz.unc  p12,p0           = pow_GR_sig_int_Y,0
+<a id='L1190' name='L1190'></a>1190 <em class='brace'>}</em>
+<a id='L1191' name='L1191'></a>1191 <em class='brace'>{</em> .mfb
+<a id='L1192' name='L1192'></a>1192           nop.m 999
+<a id='L1193' name='L1193'></a>1193 (p11)     fma.s.s0 f8 = f1,f1,f0    <em class='comment'>// If x=1, result is +1</em>
+<a id='L1194' name='L1194'></a>1194 (p15)     br.cond.spnt POW_X_INF
+<a id='L1195' name='L1195'></a>1195 <em class='brace'>}</em>
+<a id='L1196' name='L1196'></a>1196 ;;
+<a id='L1197' name='L1197'></a>1197 
+<a id='L1198' name='L1198'></a>1198 <em class='comment'>// Test x and y and flag denormal</em>
+<a id='L1199' name='L1199'></a>1199 <em class='brace'>{</em> .mfi
+<a id='L1200' name='L1200'></a>1200           nop.m 999
+<a id='L1201' name='L1201'></a>1201           fcmp.eq.s0 p15,p0 = f8,f9
+<a id='L1202' name='L1202'></a>1202           nop.i 999
+<a id='L1203' name='L1203'></a>1203 <em class='brace'>}</em>
+<a id='L1204' name='L1204'></a>1204 <em class='brace'>{</em> .mfb
+<a id='L1205' name='L1205'></a>1205           nop.m 999
+<a id='L1206' name='L1206'></a>1206           fma.s1 POW_e3                 = POW_NORM_Y, POW_delta, f0
+<a id='L1207' name='L1207'></a>1207 (p11)     br.ret.spnt b0            <em class='comment'>// Early exit if x=1.0, result is +1</em>
+<a id='L1208' name='L1208'></a>1208 <em class='brace'>}</em>
+<a id='L1209' name='L1209'></a>1209 ;;
+<a id='L1210' name='L1210'></a>1210 
+<a id='L1211' name='L1211'></a>1211 <em class='brace'>{</em> .mfi
+<a id='L1212' name='L1212'></a>1212 (p12)     mov pow_GR_xneg_yodd = 1
+<a id='L1213' name='L1213'></a>1213           fnma.s1 POW_f12  = POW_Nfloat, POW_log2_by_128_lo, f1
+<a id='L1214' name='L1214'></a>1214           nop.i 999
+<a id='L1215' name='L1215'></a>1215 <em class='brace'>}</em>
+<a id='L1216' name='L1216'></a>1216 <em class='brace'>{</em> .mfb
+<a id='L1217' name='L1217'></a>1217           nop.m 999
+<a id='L1218' name='L1218'></a>1218           fnma.s1 POW_s  = POW_Nfloat, POW_log2_by_128_hi, POW_Z
+<a id='L1219' name='L1219'></a>1219 (p7)      br.ret.spnt b0        <em class='comment'>// Early exit if y=1.0, result is x</em>
+<a id='L1220' name='L1220'></a>1220 <em class='brace'>}</em>
+<a id='L1221' name='L1221'></a>1221 ;;
+<a id='L1222' name='L1222'></a>1222 
+<a id='L1223' name='L1223'></a>1223 <em class='brace'>{</em> .mmi
+<a id='L1224' name='L1224'></a>1224           and pow_GR_index1             = 0x0f, pow_GR_int_N
+<a id='L1225' name='L1225'></a>1225           and pow_GR_index2             = 0x70, pow_GR_int_N
+<a id='L1226' name='L1226'></a>1226           shr pow_int_GR_M              = pow_GR_int_N, 7    <em class='comment'>// M = N/128</em>
+<a id='L1227' name='L1227'></a>1227 <em class='brace'>}</em>
+<a id='L1228' name='L1228'></a>1228 ;;
+<a id='L1229' name='L1229'></a>1229 
+<a id='L1230' name='L1230'></a>1230 <em class='brace'>{</em> .mfi
+<a id='L1231' name='L1231'></a>1231           shladd pow_AD_T1              = pow_GR_index1, 4, pow_AD_tbl1
+<a id='L1232' name='L1232'></a>1232           fma.s1 POW_q                  = POW_Z3, POW_Q1, POW_Q0_half
+<a id='L1233' name='L1233'></a>1233           add pow_int_GR_M              = pow_GR_16ones, pow_int_GR_M
+<a id='L1234' name='L1234'></a>1234 <em class='brace'>}</em>
+<a id='L1235' name='L1235'></a>1235 <em class='brace'>{</em> .mfi
+<a id='L1236' name='L1236'></a>1236           add pow_AD_T2                 = pow_AD_tbl2, pow_GR_index2
+<a id='L1237' name='L1237'></a>1237           fma.s1 POW_Z3sq               = POW_Z3, POW_Z3, f0
+<a id='L1238' name='L1238'></a>1238           nop.i 999
+<a id='L1239' name='L1239'></a>1239 <em class='brace'>}</em>
+<a id='L1240' name='L1240'></a>1240 ;;
+<a id='L1241' name='L1241'></a>1241 
+<a id='L1242' name='L1242'></a>1242 <em class='brace'>{</em> .mmi
+<a id='L1243' name='L1243'></a>1243           ldfe POW_T1                   = [pow_AD_T1]
+<a id='L1244' name='L1244'></a>1244           ldfe POW_T2                   = [pow_AD_T2]
+<a id='L1245' name='L1245'></a>1245           nop.i 999
+<a id='L1246' name='L1246'></a>1246 <em class='brace'>}</em>
+<a id='L1247' name='L1247'></a>1247 ;;
+<a id='L1248' name='L1248'></a>1248 
+<a id='L1249' name='L1249'></a>1249 <em class='comment'>// f123 = f12*(e3+1) = f12*e3+f12</em>
+<a id='L1250' name='L1250'></a>1250 <em class='brace'>{</em> .mfi
+<a id='L1251' name='L1251'></a>1251           setf.exp POW_2M               = pow_int_GR_M
+<a id='L1252' name='L1252'></a>1252           fma.s1 POW_f123               = POW_e3,POW_f12,POW_f12
+<a id='L1253' name='L1253'></a>1253           nop.i 999
+<a id='L1254' name='L1254'></a>1254 <em class='brace'>}</em>
+<a id='L1255' name='L1255'></a>1255 <em class='brace'>{</em> .mfi
+<a id='L1256' name='L1256'></a>1256           nop.m 999
+<a id='L1257' name='L1257'></a>1257           fma.s1 POW_ssq                = POW_s, POW_s, f0
+<a id='L1258' name='L1258'></a>1258           nop.i 999
+<a id='L1259' name='L1259'></a>1259 <em class='brace'>}</em>
+<a id='L1260' name='L1260'></a>1260 ;;
+<a id='L1261' name='L1261'></a>1261 
+<a id='L1262' name='L1262'></a>1262 <em class='brace'>{</em> .mfi
+<a id='L1263' name='L1263'></a>1263           nop.m 999
+<a id='L1264' name='L1264'></a>1264           fma.s1 POW_v2                 = POW_s, POW_Q2, POW_Q1
+<a id='L1265' name='L1265'></a>1265           and pow_GR_exp_Y_Gpr          = pow_GR_signexp_Y_Gpr, pow_GR_17ones
+<a id='L1266' name='L1266'></a>1266 <em class='brace'>}</em>
+<a id='L1267' name='L1267'></a>1267 ;;
+<a id='L1268' name='L1268'></a>1268 
+<a id='L1269' name='L1269'></a>1269 <em class='brace'>{</em> .mfi
+<a id='L1270' name='L1270'></a>1270           cmp.ne p12,p13 = pow_GR_xneg_yodd, r0
+<a id='L1271' name='L1271'></a>1271           fma.s1 POW_q                  = POW_Z3sq, POW_q, POW_Z3
+<a id='L1272' name='L1272'></a>1272           sub pow_GR_true_exp_Y_Gpr     = pow_GR_exp_Y_Gpr, pow_GR_16ones
+<a id='L1273' name='L1273'></a>1273 <em class='brace'>}</em>
+<a id='L1274' name='L1274'></a>1274 ;;
+<a id='L1275' name='L1275'></a>1275 
+<a id='L1276' name='L1276'></a>1276 <em class='comment'>// p8 TRUE ==&gt; |Y(G + r)| &gt;= 7</em>
+<a id='L1277' name='L1277'></a>1277 
+<a id='L1278' name='L1278'></a>1278 <em class='comment'>// single</em>
+<a id='L1279' name='L1279'></a>1279 <em class='comment'>//     -2^7   -2^6             2^6   2^7</em>
+<a id='L1280' name='L1280'></a>1280 <em class='comment'>// -----+-----+----+ ... +-----+-----+-----</em>
+<a id='L1281' name='L1281'></a>1281 <em class='comment'>//  p8  |             p9             |  p8</em>
+<a id='L1282' name='L1282'></a>1282 <em class='comment'>//      |     |       p10      |     |</em>
+<a id='L1283' name='L1283'></a>1283 
+<a id='L1284' name='L1284'></a>1284 <em class='comment'>// Form signexp of constants to indicate overflow</em>
+<a id='L1285' name='L1285'></a>1285 <em class='brace'>{</em> .mfi
+<a id='L1286' name='L1286'></a>1286           mov         pow_GR_big_pos    = 0x1007f
+<a id='L1287' name='L1287'></a>1287           nop.f 999
+<a id='L1288' name='L1288'></a>1288           cmp.le p8,p9                  = 7, pow_GR_true_exp_Y_Gpr
+<a id='L1289' name='L1289'></a>1289 <em class='brace'>}</em>
+<a id='L1290' name='L1290'></a>1290 <em class='brace'>{</em> .mfi
+<a id='L1291' name='L1291'></a>1291           mov         pow_GR_big_neg    = 0x3007f
+<a id='L1292' name='L1292'></a>1292           nop.f 999
+<a id='L1293' name='L1293'></a>1293           andcm pow_GR_sign_Y_Gpr       = pow_GR_signexp_Y_Gpr, pow_GR_17ones
+<a id='L1294' name='L1294'></a>1294 <em class='brace'>}</em>
+<a id='L1295' name='L1295'></a>1295 ;;
+<a id='L1296' name='L1296'></a>1296 
+<a id='L1297' name='L1297'></a>1297 <em class='comment'>// Form big positive and negative constants to test for possible overflow</em>
+<a id='L1298' name='L1298'></a>1298 <em class='comment'>// Scale both terms of the polynomial by POW_f123</em>
+<a id='L1299' name='L1299'></a>1299 <em class='brace'>{</em> .mfi
+<a id='L1300' name='L1300'></a>1300           setf.exp POW_big_pos          = pow_GR_big_pos
+<a id='L1301' name='L1301'></a>1301           fma.s1 POW_ssq                = POW_ssq, POW_f123, f0
+<a id='L1302' name='L1302'></a>1302 (p9)      cmp.le.unc p0,p10             = 6, pow_GR_true_exp_Y_Gpr
+<a id='L1303' name='L1303'></a>1303 <em class='brace'>}</em>
+<a id='L1304' name='L1304'></a>1304 <em class='brace'>{</em> .mfb
+<a id='L1305' name='L1305'></a>1305           setf.exp POW_big_neg          = pow_GR_big_neg
+<a id='L1306' name='L1306'></a>1306           fma.s1 POW_1ps                = POW_s, POW_f123, POW_f123
+<a id='L1307' name='L1307'></a>1307 (p8)      br.cond.spnt POW_OVER_UNDER_X_NOT_INF
+<a id='L1308' name='L1308'></a>1308 <em class='brace'>}</em>
+<a id='L1309' name='L1309'></a>1309 ;;
+<a id='L1310' name='L1310'></a>1310 
+<a id='L1311' name='L1311'></a>1311 <em class='brace'>{</em> .mfi
+<a id='L1312' name='L1312'></a>1312           nop.m 999
+<a id='L1313' name='L1313'></a>1313 (p12)     fnma.s1 POW_T1T2              = POW_T1, POW_T2, f0
+<a id='L1314' name='L1314'></a>1314           nop.i 999
+<a id='L1315' name='L1315'></a>1315 <em class='brace'>}</em>
+<a id='L1316' name='L1316'></a>1316 <em class='brace'>{</em> .mfi
+<a id='L1317' name='L1317'></a>1317           nop.m 999
+<a id='L1318' name='L1318'></a>1318 (p13)     fma.s1 POW_T1T2               = POW_T1, POW_T2, f0
+<a id='L1319' name='L1319'></a>1319           nop.i 999
+<a id='L1320' name='L1320'></a>1320 <em class='brace'>}</em>
+<a id='L1321' name='L1321'></a>1321 ;;
+<a id='L1322' name='L1322'></a>1322 
+<a id='L1323' name='L1323'></a>1323 <em class='brace'>{</em> .mfi
+<a id='L1324' name='L1324'></a>1324           nop.m 999
+<a id='L1325' name='L1325'></a>1325           fma.s1 POW_v210               = POW_s, POW_v2, POW_Q0_half
+<a id='L1326' name='L1326'></a>1326           nop.i 999
+<a id='L1327' name='L1327'></a>1327 <em class='brace'>}</em>
+<a id='L1328' name='L1328'></a>1328 <em class='brace'>{</em> .mfi
+<a id='L1329' name='L1329'></a>1329           nop.m 999
+<a id='L1330' name='L1330'></a>1330           fma.s1 POW_2Mqp1              = POW_2M, POW_q, POW_2M
+<a id='L1331' name='L1331'></a>1331           nop.i 999
+<a id='L1332' name='L1332'></a>1332 <em class='brace'>}</em>
+<a id='L1333' name='L1333'></a>1333 ;;
+<a id='L1334' name='L1334'></a>1334 
+<a id='L1335' name='L1335'></a>1335 <em class='brace'>{</em> .mfi
+<a id='L1336' name='L1336'></a>1336           nop.m 999
+<a id='L1337' name='L1337'></a>1337           fma.s1 POW_es                 = POW_ssq, POW_v210, POW_1ps
+<a id='L1338' name='L1338'></a>1338           nop.i 999
+<a id='L1339' name='L1339'></a>1339 <em class='brace'>}</em>
+<a id='L1340' name='L1340'></a>1340 <em class='brace'>{</em> .mfi
+<a id='L1341' name='L1341'></a>1341           nop.m 999
+<a id='L1342' name='L1342'></a>1342           fma.s1 POW_A                  = POW_T1T2, POW_2Mqp1, f0
+<a id='L1343' name='L1343'></a>1343           nop.i 999
+<a id='L1344' name='L1344'></a>1344 <em class='brace'>}</em>
+<a id='L1345' name='L1345'></a>1345 ;;
+<a id='L1346' name='L1346'></a>1346 
+<a id='L1347' name='L1347'></a>1347 <em class='comment'>// Dummy op to set inexact</em>
+<a id='L1348' name='L1348'></a>1348 <em class='brace'>{</em> .mfi
+<a id='L1349' name='L1349'></a>1349           nop.m 999
+<a id='L1350' name='L1350'></a>1350           fma.s0 POW_tmp                = POW_2M, POW_q, POW_2M
+<a id='L1351' name='L1351'></a>1351           nop.i 999
+<a id='L1352' name='L1352'></a>1352 <em class='brace'>}</em>
+<a id='L1353' name='L1353'></a>1353 ;;
+<a id='L1354' name='L1354'></a>1354 
+<a id='L1355' name='L1355'></a>1355 <em class='brace'>{</em> .mfb
+<a id='L1356' name='L1356'></a>1356           nop.m 999
+<a id='L1357' name='L1357'></a>1357           fma.s.s0 f8                   = POW_A, POW_es, f0
+<a id='L1358' name='L1358'></a>1358 (p10)     br.ret.sptk     b0            <em class='comment'>// Exit main branch if no over/underflow</em>
+<a id='L1359' name='L1359'></a>1359 <em class='brace'>}</em>
+<a id='L1360' name='L1360'></a>1360 ;;
+<a id='L1361' name='L1361'></a>1361 
+<a id='L1362' name='L1362'></a>1362 <em class='comment'>// POSSIBLE_OVER_UNDER</em>
+<a id='L1363' name='L1363'></a>1363 <em class='comment'>// p6 = TRUE ==&gt; Y_Gpr negative</em>
+<a id='L1364' name='L1364'></a>1364 <em class='comment'>// Result is already computed.  We just need to know if over/underflow occurred.</em>
+<a id='L1365' name='L1365'></a>1365 
+<a id='L1366' name='L1366'></a>1366 <em class='brace'>{</em> .mfb
+<a id='L1367' name='L1367'></a>1367         cmp.eq p0,p6                    = pow_GR_sign_Y_Gpr, r0
+<a id='L1368' name='L1368'></a>1368         nop.f 999
+<a id='L1369' name='L1369'></a>1369 (p6)    br.cond.spnt POW_POSSIBLE_UNDER
+<a id='L1370' name='L1370'></a>1370 <em class='brace'>}</em>
+<a id='L1371' name='L1371'></a>1371 ;;
+<a id='L1372' name='L1372'></a>1372 
+<a id='L1373' name='L1373'></a>1373 <em class='comment'>// POSSIBLE_OVER</em>
+<a id='L1374' name='L1374'></a>1374 <em class='comment'>// We got an answer.</em>
+<a id='L1375' name='L1375'></a>1375 <em class='comment'>// overflow is a possibility, not a certainty</em>
+<a id='L1376' name='L1376'></a>1376 
+<a id='L1377' name='L1377'></a>1377 
+<a id='L1378' name='L1378'></a>1378 <em class='comment'>// We define an overflow when the answer with</em>
+<a id='L1379' name='L1379'></a>1379 <em class='comment'>//    WRE set</em>
+<a id='L1380' name='L1380'></a>1380 <em class='comment'>//    user-defined rounding mode</em>
+<a id='L1381' name='L1381'></a>1381 
+<a id='L1382' name='L1382'></a>1382 <em class='comment'>// double</em>
+<a id='L1383' name='L1383'></a>1383 <em class='comment'>// Largest double is 7FE (biased double)</em>
+<a id='L1384' name='L1384'></a>1384 <em class='comment'>//                   7FE - 3FF + FFFF = 103FE</em>
+<a id='L1385' name='L1385'></a>1385 <em class='comment'>// Create + largest_double_plus_ulp</em>
+<a id='L1386' name='L1386'></a>1386 <em class='comment'>// Create - largest_double_plus_ulp</em>
+<a id='L1387' name='L1387'></a>1387 <em class='comment'>// Calculate answer with WRE set.</em>
+<a id='L1388' name='L1388'></a>1388 
+<a id='L1389' name='L1389'></a>1389 <em class='comment'>// single</em>
+<a id='L1390' name='L1390'></a>1390 <em class='comment'>// Largest single is FE (biased double)</em>
+<a id='L1391' name='L1391'></a>1391 <em class='comment'>//                   FE - 7F + FFFF = 1007E</em>
+<a id='L1392' name='L1392'></a>1392 <em class='comment'>// Create + largest_single_plus_ulp</em>
+<a id='L1393' name='L1393'></a>1393 <em class='comment'>// Create - largest_single_plus_ulp</em>
+<a id='L1394' name='L1394'></a>1394 <em class='comment'>// Calculate answer with WRE set.</em>
+<a id='L1395' name='L1395'></a>1395 
+<a id='L1396' name='L1396'></a>1396 <em class='comment'>// Cases when answer is ldn+1  are as follows:</em>
+<a id='L1397' name='L1397'></a>1397 <em class='comment'>//  ldn                   ldn+1</em>
+<a id='L1398' name='L1398'></a>1398 <em class='comment'>// --+----------|----------+------------</em>
+<a id='L1399' name='L1399'></a>1399 <em class='comment'>//              |</em>
+<a id='L1400' name='L1400'></a>1400 <em class='comment'>//    +inf          +inf      -inf</em>
+<a id='L1401' name='L1401'></a>1401 <em class='comment'>//                  RN         RN</em>
+<a id='L1402' name='L1402'></a>1402 <em class='comment'>//                             RZ</em>
+<a id='L1403' name='L1403'></a>1403 
+<a id='L1404' name='L1404'></a>1404 <em class='comment'>// Put in s2 (td set, wre set)</em>
+<a id='L1405' name='L1405'></a>1405 <em class='brace'>{</em> .mfi
+<a id='L1406' name='L1406'></a>1406         nop.m 999
+<a id='L1407' name='L1407'></a>1407         fsetc.s2 0x7F,0x42
+<a id='L1408' name='L1408'></a>1408         nop.i 999
+<a id='L1409' name='L1409'></a>1409 <em class='brace'>}</em>
+<a id='L1410' name='L1410'></a>1410 ;;
+<a id='L1411' name='L1411'></a>1411 
+<a id='L1412' name='L1412'></a>1412 <em class='brace'>{</em> .mfi
+<a id='L1413' name='L1413'></a>1413         nop.m 999
+<a id='L1414' name='L1414'></a>1414         fma.s.s2 POW_wre_urm_f8         = POW_A, POW_es, f0
+<a id='L1415' name='L1415'></a>1415         nop.i 999
+<a id='L1416' name='L1416'></a>1416 <em class='brace'>}</em>
+<a id='L1417' name='L1417'></a>1417 ;;
+<a id='L1418' name='L1418'></a>1418 
+<a id='L1419' name='L1419'></a>1419 <em class='comment'>// Return s2 to default</em>
+<a id='L1420' name='L1420'></a>1420 <em class='brace'>{</em> .mfi
+<a id='L1421' name='L1421'></a>1421         nop.m 999
+<a id='L1422' name='L1422'></a>1422         fsetc.s2 0x7F,0x40
+<a id='L1423' name='L1423'></a>1423         nop.i 999
+<a id='L1424' name='L1424'></a>1424 <em class='brace'>}</em>
+<a id='L1425' name='L1425'></a>1425 ;;
+<a id='L1426' name='L1426'></a>1426 
+<a id='L1427' name='L1427'></a>1427 <em class='comment'>// p7 = TRUE ==&gt; yes, we have an overflow</em>
+<a id='L1428' name='L1428'></a>1428 <em class='brace'>{</em> .mfi
+<a id='L1429' name='L1429'></a>1429         nop.m 999
+<a id='L1430' name='L1430'></a>1430         fcmp.ge.s1 p7, p8               =  POW_wre_urm_f8, POW_big_pos
+<a id='L1431' name='L1431'></a>1431         nop.i 999
+<a id='L1432' name='L1432'></a>1432 <em class='brace'>}</em>
+<a id='L1433' name='L1433'></a>1433 ;;
+<a id='L1434' name='L1434'></a>1434 
+<a id='L1435' name='L1435'></a>1435 <em class='brace'>{</em> .mfi
+<a id='L1436' name='L1436'></a>1436         nop.m 999
+<a id='L1437' name='L1437'></a>1437 (p8)    fcmp.le.s1 p7, p0               =  POW_wre_urm_f8, POW_big_neg
+<a id='L1438' name='L1438'></a>1438         nop.i 999
+<a id='L1439' name='L1439'></a>1439 <em class='brace'>}</em>
+<a id='L1440' name='L1440'></a>1440 ;;
+<a id='L1441' name='L1441'></a>1441 
+<a id='L1442' name='L1442'></a>1442 <em class='brace'>{</em> .mbb
+<a id='L1443' name='L1443'></a>1443 (p7)   mov pow_GR_tag                   = 30
+<a id='L1444' name='L1444'></a>1444 (p7)   br.cond.spnt __libm_error_region <em class='comment'>// Branch if overflow</em>
+<a id='L1445' name='L1445'></a>1445        br.ret.sptk     b0               <em class='comment'>// Exit if did not overflow</em>
+<a id='L1446' name='L1446'></a>1446 <em class='brace'>}</em>
+<a id='L1447' name='L1447'></a>1447 ;;
+<a id='L1448' name='L1448'></a>1448 
+<a id='L1449' name='L1449'></a>1449 
+<a id='L1450' name='L1450'></a>1450 POW_POSSIBLE_UNDER:
+<a id='L1451' name='L1451'></a>1451 <em class='comment'>// We got an answer. input was &lt; -2^9 but &gt; -2^10 (double)</em>
+<a id='L1452' name='L1452'></a>1452 <em class='comment'>// We got an answer. input was &lt; -2^6 but &gt; -2^7  (float)</em>
+<a id='L1453' name='L1453'></a>1453 <em class='comment'>// underflow is a possibility, not a certainty</em>
+<a id='L1454' name='L1454'></a>1454 
+<a id='L1455' name='L1455'></a>1455 <em class='comment'>// We define an underflow when the answer with</em>
+<a id='L1456' name='L1456'></a>1456 <em class='comment'>//    ftz set</em>
+<a id='L1457' name='L1457'></a>1457 <em class='comment'>// is zero (tiny numbers become zero)</em>
+<a id='L1458' name='L1458'></a>1458 <em class='comment'>// Notice (from below) that if we have an unlimited exponent range,</em>
+<a id='L1459' name='L1459'></a>1459 <em class='comment'>// then there is an extra machine number E between the largest denormal and</em>
+<a id='L1460' name='L1460'></a>1460 <em class='comment'>// the smallest normal.</em>
+<a id='L1461' name='L1461'></a>1461 <em class='comment'>// So if with unbounded exponent we round to E or below, then we are</em>
+<a id='L1462' name='L1462'></a>1462 <em class='comment'>// tiny and underflow has occurred.</em>
+<a id='L1463' name='L1463'></a>1463 <em class='comment'>// But notice that you can be in a situation where we are tiny, namely</em>
+<a id='L1464' name='L1464'></a>1464 <em class='comment'>// rounded to E, but when the exponent is bounded we round to smallest</em>
+<a id='L1465' name='L1465'></a>1465 <em class='comment'>// normal. So the answer can be the smallest normal with underflow.</em>
+<a id='L1466' name='L1466'></a>1466 <em class='comment'>//                           E</em>
+<a id='L1467' name='L1467'></a>1467 <em class='comment'>// -----+--------------------+--------------------+-----</em>
+<a id='L1468' name='L1468'></a>1468 <em class='comment'>//      |                    |                    |</em>
+<a id='L1469' name='L1469'></a>1469 <em class='comment'>//   1.1...10 2^-3fff    1.1...11 2^-3fff    1.0...00 2^-3ffe</em>
+<a id='L1470' name='L1470'></a>1470 <em class='comment'>//   0.1...11 2^-3ffe                                   (biased, 1)</em>
+<a id='L1471' name='L1471'></a>1471 <em class='comment'>//    largest dn                               smallest normal</em>
+<a id='L1472' name='L1472'></a>1472 
+<a id='L1473' name='L1473'></a>1473 <em class='comment'>// Form small constant (2^-170) to correct underflow result near region of</em>
+<a id='L1474' name='L1474'></a>1474 <em class='comment'>// smallest denormal in round-nearest.</em>
+<a id='L1475' name='L1475'></a>1475 
+<a id='L1476' name='L1476'></a>1476 <em class='comment'>// Put in s2 (td set, ftz set)</em>
+<a id='L1477' name='L1477'></a>1477 .pred.rel "mutex",p12,p13
+<a id='L1478' name='L1478'></a>1478 <em class='brace'>{</em> .mfi
+<a id='L1479' name='L1479'></a>1479         mov pow_GR_Fpsr = ar40          <em class='comment'>// Read the fpsr--need to check rc.s0</em>
+<a id='L1480' name='L1480'></a>1480         fsetc.s2 0x7F,0x41
+<a id='L1481' name='L1481'></a>1481         mov pow_GR_rcs0_mask            = 0x0c00 <em class='comment'>// Set mask for rc.s0</em>
+<a id='L1482' name='L1482'></a>1482 <em class='brace'>}</em>
+<a id='L1483' name='L1483'></a>1483 <em class='brace'>{</em> .mfi
+<a id='L1484' name='L1484'></a>1484 (p12)   mov pow_GR_tmp                  = 0x2ffff - 170
+<a id='L1485' name='L1485'></a>1485         nop.f 999
+<a id='L1486' name='L1486'></a>1486 (p13)   mov pow_GR_tmp                  = 0x0ffff - 170
+<a id='L1487' name='L1487'></a>1487 <em class='brace'>}</em>
+<a id='L1488' name='L1488'></a>1488 ;;
+<a id='L1489' name='L1489'></a>1489 
+<a id='L1490' name='L1490'></a>1490 <em class='brace'>{</em> .mfi
+<a id='L1491' name='L1491'></a>1491         setf.exp POW_eps                = pow_GR_tmp        <em class='comment'>// Form 2^-170</em>
+<a id='L1492' name='L1492'></a>1492         fma.s.s2 POW_ftz_urm_f8         = POW_A, POW_es, f0
+<a id='L1493' name='L1493'></a>1493         nop.i 999
+<a id='L1494' name='L1494'></a>1494 <em class='brace'>}</em>
+<a id='L1495' name='L1495'></a>1495 ;;
+<a id='L1496' name='L1496'></a>1496 
+<a id='L1497' name='L1497'></a>1497 <em class='comment'>// Return s2 to default</em>
+<a id='L1498' name='L1498'></a>1498 <em class='brace'>{</em> .mfi
+<a id='L1499' name='L1499'></a>1499         nop.m 999
+<a id='L1500' name='L1500'></a>1500         fsetc.s2 0x7F,0x40
+<a id='L1501' name='L1501'></a>1501         nop.i 999
+<a id='L1502' name='L1502'></a>1502 <em class='brace'>}</em>
+<a id='L1503' name='L1503'></a>1503 ;;
+<a id='L1504' name='L1504'></a>1504 
+<a id='L1505' name='L1505'></a>1505 <em class='comment'>// p7 = TRUE ==&gt; yes, we have an underflow</em>
+<a id='L1506' name='L1506'></a>1506 <em class='brace'>{</em> .mfi
+<a id='L1507' name='L1507'></a>1507         nop.m 999
+<a id='L1508' name='L1508'></a>1508         fcmp.eq.s1 p7, p0               =  POW_ftz_urm_f8, f0
+<a id='L1509' name='L1509'></a>1509         nop.i 999
+<a id='L1510' name='L1510'></a>1510 <em class='brace'>}</em>
+<a id='L1511' name='L1511'></a>1511 ;;
+<a id='L1512' name='L1512'></a>1512 
+<a id='L1513' name='L1513'></a>1513 <em class='brace'>{</em> .mmi
+<a id='L1514' name='L1514'></a>1514 (p7)    and pow_GR_rcs0  = pow_GR_rcs0_mask, pow_GR_Fpsr  <em class='comment'>// Isolate rc.s0</em>
+<a id='L1515' name='L1515'></a>1515 ;;
+<a id='L1516' name='L1516'></a>1516 (p7)    cmp.eq.unc p6,p0 = pow_GR_rcs0, r0    <em class='comment'>// Test for round to nearest</em>
+<a id='L1517' name='L1517'></a>1517         nop.i 999
+<a id='L1518' name='L1518'></a>1518 <em class='brace'>}</em>
+<a id='L1519' name='L1519'></a>1519 ;;
+<a id='L1520' name='L1520'></a>1520 
+<a id='L1521' name='L1521'></a>1521 <em class='comment'>// Tweak result slightly if underflow to get correct rounding near smallest</em>
+<a id='L1522' name='L1522'></a>1522 <em class='comment'>// denormal if round-nearest</em>
+<a id='L1523' name='L1523'></a>1523 <em class='brace'>{</em> .mfi
+<a id='L1524' name='L1524'></a>1524         nop.m 999
+<a id='L1525' name='L1525'></a>1525 (p6)    fms.s.s0 f8                     = POW_A, POW_es, POW_eps
+<a id='L1526' name='L1526'></a>1526         nop.i 999
+<a id='L1527' name='L1527'></a>1527 <em class='brace'>}</em>
+<a id='L1528' name='L1528'></a>1528 <em class='brace'>{</em> .mbb
+<a id='L1529' name='L1529'></a>1529 (p7)    mov pow_GR_tag                  = 31
+<a id='L1530' name='L1530'></a>1530 (p7)    br.cond.spnt __libm_error_region <em class='comment'>// Branch if underflow</em>
+<a id='L1531' name='L1531'></a>1531         br.ret.sptk     b0               <em class='comment'>// Exit if did not underflow</em>
+<a id='L1532' name='L1532'></a>1532 <em class='brace'>}</em>
+<a id='L1533' name='L1533'></a>1533 ;;
+<a id='L1534' name='L1534'></a>1534 
+<a id='L1535' name='L1535'></a>1535 POW_X_DENORM:
+<a id='L1536' name='L1536'></a>1536 <em class='comment'>// Here if x unorm. Use the NORM_X for getf instructions, and then back</em>
+<a id='L1537' name='L1537'></a>1537 <em class='comment'>// to normal path</em>
+<a id='L1538' name='L1538'></a>1538 <em class='brace'>{</em> .mfi
+<a id='L1539' name='L1539'></a>1539         getf.exp      pow_GR_signexp_X  = POW_NORM_X
+<a id='L1540' name='L1540'></a>1540         nop.f 999
+<a id='L1541' name='L1541'></a>1541         nop.i 999
+<a id='L1542' name='L1542'></a>1542 <em class='brace'>}</em>
+<a id='L1543' name='L1543'></a>1543 ;;
+<a id='L1544' name='L1544'></a>1544 
+<a id='L1545' name='L1545'></a>1545 <em class='brace'>{</em> .mib
+<a id='L1546' name='L1546'></a>1546         getf.sig      pow_GR_sig_X      = POW_NORM_X
+<a id='L1547' name='L1547'></a>1547         nop.i 999
+<a id='L1548' name='L1548'></a>1548         br.cond.sptk    POW_COMMON
+<a id='L1549' name='L1549'></a>1549 <em class='brace'>}</em>
+<a id='L1550' name='L1550'></a>1550 ;;
+<a id='L1551' name='L1551'></a>1551 
+<a id='L1552' name='L1552'></a>1552 POW_X_0:
+<a id='L1553' name='L1553'></a>1553 <em class='comment'>// Here if x=0 and y not nan</em>
+<a id='L1554' name='L1554'></a>1554 <em class='comment'>//</em>
+<a id='L1555' name='L1555'></a>1555 <em class='comment'>// We have the following cases:</em>
+<a id='L1556' name='L1556'></a>1556 <em class='comment'>//  p6  x=0  and  y&gt;0 and is an integer (may be even or odd)</em>
+<a id='L1557' name='L1557'></a>1557 <em class='comment'>//  p7  x=0  and  y&gt;0 and is NOT an integer, return +0</em>
+<a id='L1558' name='L1558'></a>1558 <em class='comment'>//  p8  x=0  and  y&gt;0 and so big as to always be an even integer, return +0</em>
+<a id='L1559' name='L1559'></a>1559 <em class='comment'>//  p9  x=0  and  y&gt;0 and may not be integer</em>
+<a id='L1560' name='L1560'></a>1560 <em class='comment'>//  p10 x=0  and  y&gt;0 and is an odd  integer, return x</em>
+<a id='L1561' name='L1561'></a>1561 <em class='comment'>//  p11 x=0  and  y&gt;0 and is an even integer, return +0</em>
+<a id='L1562' name='L1562'></a>1562 <em class='comment'>//  p12 used in dummy fcmp to set denormal flag if y=unorm</em>
+<a id='L1563' name='L1563'></a>1563 <em class='comment'>//  p13 x=0  and  y&gt;0</em>
+<a id='L1564' name='L1564'></a>1564 <em class='comment'>//  p14 x=0  and  y=0, branch to code for calling error handling</em>
+<a id='L1565' name='L1565'></a>1565 <em class='comment'>//  p15 x=0  and  y&lt;0, branch to code for calling error handling</em>
+<a id='L1566' name='L1566'></a>1566 <em class='comment'>//</em>
+<a id='L1567' name='L1567'></a>1567 <em class='brace'>{</em> .mfi
+<a id='L1568' name='L1568'></a>1568         getf.sig pow_GR_sig_int_Y = POW_int_Y <em class='comment'>// Get signif of int_Y</em>
+<a id='L1569' name='L1569'></a>1569         fcmp.lt.s1 p15,p13 = f9, f0           <em class='comment'>// Test for y&lt;0</em>
+<a id='L1570' name='L1570'></a>1570         and pow_GR_exp_Y = pow_GR_signexp_Y, pow_GR_17ones
+<a id='L1571' name='L1571'></a>1571 <em class='brace'>}</em>
+<a id='L1572' name='L1572'></a>1572 <em class='brace'>{</em> .mfb
+<a id='L1573' name='L1573'></a>1573         cmp.ne p14,p0 = pow_GR_y_zero,r0      <em class='comment'>// Test for y=0</em>
+<a id='L1574' name='L1574'></a>1574         fcvt.xf   POW_float_int_Y = POW_int_Y
+<a id='L1575' name='L1575'></a>1575 (p14)   br.cond.spnt POW_X_0_Y_0              <em class='comment'>// Branch if x=0 and y=0</em>
+<a id='L1576' name='L1576'></a>1576 <em class='brace'>}</em>
+<a id='L1577' name='L1577'></a>1577 ;;
+<a id='L1578' name='L1578'></a>1578 
+<a id='L1579' name='L1579'></a>1579 <em class='comment'>// If x=0 and y&gt;0, test y and flag denormal</em>
+<a id='L1580' name='L1580'></a>1580 <em class='brace'>{</em> .mfb
+<a id='L1581' name='L1581'></a>1581 (p13)   cmp.gt.unc p8,p9 = pow_GR_exp_Y, pow_GR_10033 <em class='comment'>// Test y +big = even int</em>
+<a id='L1582' name='L1582'></a>1582 (p13)   fcmp.eq.s0 p12,p0 = f9,f0    <em class='comment'>// If x=0, y&gt;0 dummy op to flag denormal</em>
+<a id='L1583' name='L1583'></a>1583 (p15)   br.cond.spnt POW_X_0_Y_NEG <em class='comment'>// Branch if x=0 and y&lt;0</em>
+<a id='L1584' name='L1584'></a>1584 <em class='brace'>}</em>
+<a id='L1585' name='L1585'></a>1585 ;;
+<a id='L1586' name='L1586'></a>1586 
+<a id='L1587' name='L1587'></a>1587 <em class='comment'>// Here if x=0 and y&gt;0</em>
+<a id='L1588' name='L1588'></a>1588 <em class='brace'>{</em> .mfi
+<a id='L1589' name='L1589'></a>1589         nop.m 999
+<a id='L1590' name='L1590'></a>1590 (p9)    fcmp.eq.unc.s1 p6,p7 = POW_float_int_Y,  POW_NORM_Y <em class='comment'>// Test y=int</em>
+<a id='L1591' name='L1591'></a>1591         nop.i 999
+<a id='L1592' name='L1592'></a>1592 <em class='brace'>}</em>
+<a id='L1593' name='L1593'></a>1593 <em class='brace'>{</em> .mfi
+<a id='L1594' name='L1594'></a>1594         nop.m 999
+<a id='L1595' name='L1595'></a>1595 (p8)    fma.s.s0 f8 = f0,f0,f0 <em class='comment'>// If x=0, y&gt;0 and large even int, return +0</em>
+<a id='L1596' name='L1596'></a>1596         nop.i 999
+<a id='L1597' name='L1597'></a>1597 <em class='brace'>}</em>
+<a id='L1598' name='L1598'></a>1598 ;;
+<a id='L1599' name='L1599'></a>1599 
+<a id='L1600' name='L1600'></a>1600 <em class='brace'>{</em> .mfi
+<a id='L1601' name='L1601'></a>1601         nop.m 999
+<a id='L1602' name='L1602'></a>1602 (p7)    fma.s.s0 f8  = f0,f0,f0   <em class='comment'>// Result +0 if x=0 and y&gt;0 and not integer</em>
+<a id='L1603' name='L1603'></a>1603 (p6)    tbit.nz.unc p10,p11 = pow_GR_sig_int_Y,0 <em class='comment'>// If y&gt;0 int, test y even/odd</em>
+<a id='L1604' name='L1604'></a>1604 <em class='brace'>}</em>
+<a id='L1605' name='L1605'></a>1605 ;;
+<a id='L1606' name='L1606'></a>1606 
+<a id='L1607' name='L1607'></a>1607 <em class='comment'>// Note if x=0, y&gt;0 and odd integer, just return x</em>
+<a id='L1608' name='L1608'></a>1608 <em class='brace'>{</em> .mfb
+<a id='L1609' name='L1609'></a>1609         nop.m 999
+<a id='L1610' name='L1610'></a>1610 (p11)   fma.s.s0 f8  = f0,f0,f0   <em class='comment'>// Result +0 if x=0 and y even integer</em>
+<a id='L1611' name='L1611'></a>1611         br.ret.sptk b0            <em class='comment'>// Exit if x=0 and y&gt;0</em>
+<a id='L1612' name='L1612'></a>1612 <em class='brace'>}</em>
+<a id='L1613' name='L1613'></a>1613 ;;
+<a id='L1614' name='L1614'></a>1614 
+<a id='L1615' name='L1615'></a>1615 POW_X_0_Y_0:
+<a id='L1616' name='L1616'></a>1616 <em class='comment'>// When X is +-0 and Y is +-0, IEEE returns 1.0</em>
+<a id='L1617' name='L1617'></a>1617 <em class='comment'>// We call error support with this value</em>
+<a id='L1618' name='L1618'></a>1618 
+<a id='L1619' name='L1619'></a>1619 <em class='brace'>{</em> .mfb
+<a id='L1620' name='L1620'></a>1620         mov pow_GR_tag                  = 32
+<a id='L1621' name='L1621'></a>1621         fma.s.s0 f8                     = f1,f1,f0
+<a id='L1622' name='L1622'></a>1622         br.cond.sptk __libm_error_region
+<a id='L1623' name='L1623'></a>1623 <em class='brace'>}</em>
+<a id='L1624' name='L1624'></a>1624 ;;
+<a id='L1625' name='L1625'></a>1625 
+<a id='L1626' name='L1626'></a>1626 POW_X_0_Y_NEG:
+<a id='L1627' name='L1627'></a>1627 <em class='comment'>// When X is +-0 and Y is negative, IEEE returns</em>
+<a id='L1628' name='L1628'></a>1628 <em class='comment'>// X     Y           answer</em>
+<a id='L1629' name='L1629'></a>1629 <em class='comment'>// +0    -odd int    +inf</em>
+<a id='L1630' name='L1630'></a>1630 <em class='comment'>// -0    -odd int    -inf</em>
+<a id='L1631' name='L1631'></a>1631 
+<a id='L1632' name='L1632'></a>1632 <em class='comment'>// +0    !-odd int   +inf</em>
+<a id='L1633' name='L1633'></a>1633 <em class='comment'>// -0    !-odd int   +inf</em>
+<a id='L1634' name='L1634'></a>1634 
+<a id='L1635' name='L1635'></a>1635 <em class='comment'>// p6 == Y is a floating point number outside the integer.</em>
+<a id='L1636' name='L1636'></a>1636 <em class='comment'>//       Hence it is an integer and is even.</em>
+<a id='L1637' name='L1637'></a>1637 <em class='comment'>//       return +inf</em>
+<a id='L1638' name='L1638'></a>1638 
+<a id='L1639' name='L1639'></a>1639 <em class='comment'>// p7 == Y is a floating point number within the integer range.</em>
+<a id='L1640' name='L1640'></a>1640 <em class='comment'>//      p9  == (int_Y = NORM_Y), Y is an integer, which may be odd or even.</em>
+<a id='L1641' name='L1641'></a>1641 <em class='comment'>//           p11 odd</em>
+<a id='L1642' name='L1642'></a>1642 <em class='comment'>//              return (sign_of_x)inf</em>
+<a id='L1643' name='L1643'></a>1643 <em class='comment'>//           p12 even</em>
+<a id='L1644' name='L1644'></a>1644 <em class='comment'>//              return +inf</em>
+<a id='L1645' name='L1645'></a>1645 <em class='comment'>//      p10 == Y is not an integer</em>
+<a id='L1646' name='L1646'></a>1646 <em class='comment'>//         return +inf</em>
+<a id='L1647' name='L1647'></a>1647 <em class='comment'>//</em>
+<a id='L1648' name='L1648'></a>1648 
+<a id='L1649' name='L1649'></a>1649 <em class='brace'>{</em> .mfi
+<a id='L1650' name='L1650'></a>1650           nop.m 999
+<a id='L1651' name='L1651'></a>1651           nop.f 999
+<a id='L1652' name='L1652'></a>1652           cmp.gt  p6,p7                 = pow_GR_exp_Y, pow_GR_10033
+<a id='L1653' name='L1653'></a>1653 <em class='brace'>}</em>
+<a id='L1654' name='L1654'></a>1654 ;;
+<a id='L1655' name='L1655'></a>1655 
+<a id='L1656' name='L1656'></a>1656 <em class='brace'>{</em> .mfi
+<a id='L1657' name='L1657'></a>1657           mov pow_GR_tag                = 33
+<a id='L1658' name='L1658'></a>1658 (p7)      fcmp.eq.unc.s1 p9,p10         = POW_float_int_Y,  POW_NORM_Y
+<a id='L1659' name='L1659'></a>1659           nop.i 999
+<a id='L1660' name='L1660'></a>1660 <em class='brace'>}</em>
+<a id='L1661' name='L1661'></a>1661 ;;
+<a id='L1662' name='L1662'></a>1662 
+<a id='L1663' name='L1663'></a>1663 <em class='brace'>{</em> .mfb
+<a id='L1664' name='L1664'></a>1664           nop.m 999
+<a id='L1665' name='L1665'></a>1665 (p6)      frcpa.s0 f8,p13               = f1, f0
+<a id='L1666' name='L1666'></a>1666 (p6)      br.cond.sptk __libm_error_region   <em class='comment'>// x=0, y&lt;0, y large neg int</em>
+<a id='L1667' name='L1667'></a>1667 <em class='brace'>}</em>
+<a id='L1668' name='L1668'></a>1668 ;;
+<a id='L1669' name='L1669'></a>1669 
+<a id='L1670' name='L1670'></a>1670 <em class='brace'>{</em> .mfb
+<a id='L1671' name='L1671'></a>1671           nop.m 999
+<a id='L1672' name='L1672'></a>1672 (p10)     frcpa.s0 f8,p13               = f1, f0
+<a id='L1673' name='L1673'></a>1673 (p10)     br.cond.sptk __libm_error_region   <em class='comment'>// x=0, y&lt;0, y not int</em>
+<a id='L1674' name='L1674'></a>1674 <em class='brace'>}</em>
+<a id='L1675' name='L1675'></a>1675 ;;
+<a id='L1676' name='L1676'></a>1676 
+<a id='L1677' name='L1677'></a>1677 <em class='comment'>// x=0, y&lt;0, y an int</em>
+<a id='L1678' name='L1678'></a>1678 <em class='brace'>{</em> .mib
+<a id='L1679' name='L1679'></a>1679           nop.m 999
+<a id='L1680' name='L1680'></a>1680 (p9)      tbit.nz.unc p11,p12           = pow_GR_sig_int_Y,0
+<a id='L1681' name='L1681'></a>1681           nop.b 999
+<a id='L1682' name='L1682'></a>1682 <em class='brace'>}</em>
+<a id='L1683' name='L1683'></a>1683 ;;
+<a id='L1684' name='L1684'></a>1684 
+<a id='L1685' name='L1685'></a>1685 <em class='brace'>{</em> .mfi
+<a id='L1686' name='L1686'></a>1686           nop.m 999
+<a id='L1687' name='L1687'></a>1687 (p12)     frcpa.s0 f8,p13               = f1,f0
+<a id='L1688' name='L1688'></a>1688           nop.i 999
+<a id='L1689' name='L1689'></a>1689 <em class='brace'>}</em>
+<a id='L1690' name='L1690'></a>1690 ;;
+<a id='L1691' name='L1691'></a>1691 
+<a id='L1692' name='L1692'></a>1692 <em class='brace'>{</em> .mfb
+<a id='L1693' name='L1693'></a>1693           nop.m 999
+<a id='L1694' name='L1694'></a>1694 (p11)     frcpa.s0 f8,p13               = f1,f8
+<a id='L1695' name='L1695'></a>1695           br.cond.sptk __libm_error_region
+<a id='L1696' name='L1696'></a>1696 <em class='brace'>}</em>
+<a id='L1697' name='L1697'></a>1697 ;;
+<a id='L1698' name='L1698'></a>1698 
+<a id='L1699' name='L1699'></a>1699 
+<a id='L1700' name='L1700'></a>1700 POW_Y_0:
+<a id='L1701' name='L1701'></a>1701 <em class='comment'>// Here for y zero, x anything but zero and nan</em>
+<a id='L1702' name='L1702'></a>1702 <em class='comment'>// Set flag if x denormal</em>
+<a id='L1703' name='L1703'></a>1703 <em class='comment'>// Result is +1.0</em>
+<a id='L1704' name='L1704'></a>1704 <em class='brace'>{</em> .mfi
+<a id='L1705' name='L1705'></a>1705         nop.m 999
+<a id='L1706' name='L1706'></a>1706         fcmp.eq.s0 p6,p0 = f8,f0    <em class='comment'>// Sets flag if x denormal</em>
+<a id='L1707' name='L1707'></a>1707         nop.i 999
+<a id='L1708' name='L1708'></a>1708 <em class='brace'>}</em>
+<a id='L1709' name='L1709'></a>1709 <em class='brace'>{</em> .mfb
+<a id='L1710' name='L1710'></a>1710         nop.m 999
+<a id='L1711' name='L1711'></a>1711         fma.s.s0 f8 = f1,f1,f0
+<a id='L1712' name='L1712'></a>1712         br.ret.sptk b0
+<a id='L1713' name='L1713'></a>1713 <em class='brace'>}</em>
+<a id='L1714' name='L1714'></a>1714 ;;
+<a id='L1715' name='L1715'></a>1715 
+<a id='L1716' name='L1716'></a>1716 
+<a id='L1717' name='L1717'></a>1717 POW_X_INF:
+<a id='L1718' name='L1718'></a>1718 <em class='comment'>// Here when X is +-inf</em>
+<a id='L1719' name='L1719'></a>1719 
+<a id='L1720' name='L1720'></a>1720 <em class='comment'>// X +inf  Y +inf             +inf</em>
+<a id='L1721' name='L1721'></a>1721 <em class='comment'>// X -inf  Y +inf             +inf</em>
+<a id='L1722' name='L1722'></a>1722 
+<a id='L1723' name='L1723'></a>1723 <em class='comment'>// X +inf  Y &gt;0               +inf</em>
+<a id='L1724' name='L1724'></a>1724 <em class='comment'>// X -inf  Y &gt;0, !odd integer +inf     &lt;== (-inf)^0.5 = +inf !!</em>
+<a id='L1725' name='L1725'></a>1725 <em class='comment'>// X -inf  Y &gt;0,  odd integer -inf</em>
+<a id='L1726' name='L1726'></a>1726 
+<a id='L1727' name='L1727'></a>1727 <em class='comment'>// X +inf  Y -inf             +0</em>
+<a id='L1728' name='L1728'></a>1728 <em class='comment'>// X -inf  Y -inf             +0</em>
+<a id='L1729' name='L1729'></a>1729 
+<a id='L1730' name='L1730'></a>1730 <em class='comment'>// X +inf  Y &lt;0               +0</em>
+<a id='L1731' name='L1731'></a>1731 <em class='comment'>// X -inf  Y &lt;0, !odd integer +0</em>
+<a id='L1732' name='L1732'></a>1732 <em class='comment'>// X -inf  Y &lt;0, odd integer  -0</em>
+<a id='L1733' name='L1733'></a>1733 
+<a id='L1734' name='L1734'></a>1734 <em class='comment'>// X + inf Y=+0                +1</em>
+<a id='L1735' name='L1735'></a>1735 <em class='comment'>// X + inf Y=-0                +1</em>
+<a id='L1736' name='L1736'></a>1736 <em class='comment'>// X - inf Y=+0                +1</em>
+<a id='L1737' name='L1737'></a>1737 <em class='comment'>// X - inf Y=-0                +1</em>
+<a id='L1738' name='L1738'></a>1738 
+<a id='L1739' name='L1739'></a>1739 <em class='comment'>// p13 == Y negative</em>
+<a id='L1740' name='L1740'></a>1740 <em class='comment'>// p14 == Y positive</em>
+<a id='L1741' name='L1741'></a>1741 
+<a id='L1742' name='L1742'></a>1742 <em class='comment'>// p6 == Y is a floating point number outside the integer.</em>
+<a id='L1743' name='L1743'></a>1743 <em class='comment'>//       Hence it is an integer and is even.</em>
+<a id='L1744' name='L1744'></a>1744 <em class='comment'>//       p13 == (Y negative)</em>
+<a id='L1745' name='L1745'></a>1745 <em class='comment'>//          return +inf</em>
+<a id='L1746' name='L1746'></a>1746 <em class='comment'>//       p14 == (Y positive)</em>
+<a id='L1747' name='L1747'></a>1747 <em class='comment'>//          return +0</em>
+<a id='L1748' name='L1748'></a>1748 
+<a id='L1749' name='L1749'></a>1749 <em class='comment'>// p7 == Y is a floating point number within the integer range.</em>
+<a id='L1750' name='L1750'></a>1750 <em class='comment'>//      p9  == (int_Y = NORM_Y), Y is an integer, which may be odd or even.</em>
+<a id='L1751' name='L1751'></a>1751 <em class='comment'>//           p11 odd</em>
+<a id='L1752' name='L1752'></a>1752 <em class='comment'>//              p13 == (Y negative)</em>
+<a id='L1753' name='L1753'></a>1753 <em class='comment'>//                 return (sign_of_x)inf</em>
+<a id='L1754' name='L1754'></a>1754 <em class='comment'>//              p14 == (Y positive)</em>
+<a id='L1755' name='L1755'></a>1755 <em class='comment'>//                 return (sign_of_x)0</em>
+<a id='L1756' name='L1756'></a>1756 <em class='comment'>//           pxx even</em>
+<a id='L1757' name='L1757'></a>1757 <em class='comment'>//              p13 == (Y negative)</em>
+<a id='L1758' name='L1758'></a>1758 <em class='comment'>//                 return +inf</em>
+<a id='L1759' name='L1759'></a>1759 <em class='comment'>//              p14 == (Y positive)</em>
+<a id='L1760' name='L1760'></a>1760 <em class='comment'>//                 return +0</em>
+<a id='L1761' name='L1761'></a>1761 
+<a id='L1762' name='L1762'></a>1762 <em class='comment'>//      pxx == Y is not an integer</em>
+<a id='L1763' name='L1763'></a>1763 <em class='comment'>//           p13 == (Y negative)</em>
+<a id='L1764' name='L1764'></a>1764 <em class='comment'>//                 return +inf</em>
+<a id='L1765' name='L1765'></a>1765 <em class='comment'>//           p14 == (Y positive)</em>
+<a id='L1766' name='L1766'></a>1766 <em class='comment'>//                 return +0</em>
+<a id='L1767' name='L1767'></a>1767 <em class='comment'>//</em>
+<a id='L1768' name='L1768'></a>1768 
+<a id='L1769' name='L1769'></a>1769 <em class='comment'>// If x=inf, test y and flag denormal</em>
+<a id='L1770' name='L1770'></a>1770 <em class='brace'>{</em> .mfi
+<a id='L1771' name='L1771'></a>1771           nop.m 999
+<a id='L1772' name='L1772'></a>1772           fcmp.eq.s0 p10,p11 = f9,f0
+<a id='L1773' name='L1773'></a>1773           nop.i 999
+<a id='L1774' name='L1774'></a>1774 <em class='brace'>}</em>
+<a id='L1775' name='L1775'></a>1775 ;;
+<a id='L1776' name='L1776'></a>1776 
+<a id='L1777' name='L1777'></a>1777 <em class='brace'>{</em> .mfi
+<a id='L1778' name='L1778'></a>1778           nop.m 999
+<a id='L1779' name='L1779'></a>1779           fcmp.lt.s0 p13,p14            = POW_NORM_Y,f0
+<a id='L1780' name='L1780'></a>1780           cmp.gt  p6,p7                 = pow_GR_exp_Y, pow_GR_10033
+<a id='L1781' name='L1781'></a>1781 <em class='brace'>}</em>
+<a id='L1782' name='L1782'></a>1782 <em class='brace'>{</em> .mfi
+<a id='L1783' name='L1783'></a>1783           nop.m 999
+<a id='L1784' name='L1784'></a>1784           fclass.m p12,p0               = f9, 0x23 <em class='comment'>//@inf</em>
+<a id='L1785' name='L1785'></a>1785           nop.i 999
+<a id='L1786' name='L1786'></a>1786 <em class='brace'>}</em>
+<a id='L1787' name='L1787'></a>1787 ;;
+<a id='L1788' name='L1788'></a>1788 
+<a id='L1789' name='L1789'></a>1789 <em class='brace'>{</em> .mfi
+<a id='L1790' name='L1790'></a>1790           nop.m 999
+<a id='L1791' name='L1791'></a>1791           fclass.m p15,p0               = f9, 0x07 <em class='comment'>//@zero</em>
+<a id='L1792' name='L1792'></a>1792           nop.i 999
+<a id='L1793' name='L1793'></a>1793 <em class='brace'>}</em>
+<a id='L1794' name='L1794'></a>1794 ;;
+<a id='L1795' name='L1795'></a>1795 
+<a id='L1796' name='L1796'></a>1796 <em class='brace'>{</em> .mfb
+<a id='L1797' name='L1797'></a>1797           nop.m 999
+<a id='L1798' name='L1798'></a>1798 (p15)     fmerge.s f8 = f1,f1      <em class='comment'>// Return +1.0 if x=inf, y=0</em>
+<a id='L1799' name='L1799'></a>1799 (p15)     br.ret.spnt b0           <em class='comment'>// Exit if x=inf, y=0</em>
+<a id='L1800' name='L1800'></a>1800 <em class='brace'>}</em>
+<a id='L1801' name='L1801'></a>1801 ;;
+<a id='L1802' name='L1802'></a>1802 
+<a id='L1803' name='L1803'></a>1803 <em class='brace'>{</em> .mfi
+<a id='L1804' name='L1804'></a>1804           nop.m 999
+<a id='L1805' name='L1805'></a>1805 (p14)     frcpa.s1 f8,p10 = f1,f0  <em class='comment'>// If x=inf, y&gt;0, assume result +inf</em>
+<a id='L1806' name='L1806'></a>1806           nop.i 999
+<a id='L1807' name='L1807'></a>1807 <em class='brace'>}</em>
+<a id='L1808' name='L1808'></a>1808 <em class='brace'>{</em> .mfb
+<a id='L1809' name='L1809'></a>1809           nop.m 999
+<a id='L1810' name='L1810'></a>1810 (p13)     fma.s.s0 f8 = f0,f0,f0   <em class='comment'>// If x=inf, y&lt;0, assume result +0.0</em>
+<a id='L1811' name='L1811'></a>1811 (p12)     br.ret.spnt b0           <em class='comment'>// Exit if x=inf, y=inf</em>
+<a id='L1812' name='L1812'></a>1812 <em class='brace'>}</em>
+<a id='L1813' name='L1813'></a>1813 ;;
+<a id='L1814' name='L1814'></a>1814 
+<a id='L1815' name='L1815'></a>1815 <em class='comment'>// Here if x=inf, and 0 &lt; |y| &lt; inf.  Need to correct results if y odd integer.</em>
+<a id='L1816' name='L1816'></a>1816 <em class='brace'>{</em> .mfi
+<a id='L1817' name='L1817'></a>1817           nop.m 999
+<a id='L1818' name='L1818'></a>1818 (p7)      fcmp.eq.unc.s1 p9,p0 = POW_float_int_Y,  POW_NORM_Y <em class='comment'>// Is y integer?</em>
+<a id='L1819' name='L1819'></a>1819           nop.i 999
+<a id='L1820' name='L1820'></a>1820 <em class='brace'>}</em>
+<a id='L1821' name='L1821'></a>1821 ;;
+<a id='L1822' name='L1822'></a>1822 
+<a id='L1823' name='L1823'></a>1823 <em class='brace'>{</em> .mfi
+<a id='L1824' name='L1824'></a>1824           nop.m 999
+<a id='L1825' name='L1825'></a>1825           nop.f 999
+<a id='L1826' name='L1826'></a>1826 (p9)      tbit.nz.unc p11,p0 = pow_GR_sig_int_Y,0  <em class='comment'>// Test for y odd integer</em>
+<a id='L1827' name='L1827'></a>1827 <em class='brace'>}</em>
+<a id='L1828' name='L1828'></a>1828 ;;
+<a id='L1829' name='L1829'></a>1829 
+<a id='L1830' name='L1830'></a>1830 <em class='brace'>{</em> .mfb
+<a id='L1831' name='L1831'></a>1831           nop.m 999
+<a id='L1832' name='L1832'></a>1832 (p11)     fmerge.s f8 = POW_NORM_X,f8    <em class='comment'>// If y odd integer use sign of x</em>
+<a id='L1833' name='L1833'></a>1833           br.ret.sptk b0                 <em class='comment'>// Exit for x=inf, 0 &lt; |y| &lt; inf</em>
+<a id='L1834' name='L1834'></a>1834 <em class='brace'>}</em>
+<a id='L1835' name='L1835'></a>1835 ;;
+<a id='L1836' name='L1836'></a>1836 
+<a id='L1837' name='L1837'></a>1837 
+<a id='L1838' name='L1838'></a>1838 POW_X_NEG_Y_NONINT:
+<a id='L1839' name='L1839'></a>1839 <em class='comment'>// When X is negative and Y is a non-integer, IEEE</em>
+<a id='L1840' name='L1840'></a>1840 <em class='comment'>// returns a qnan indefinite.</em>
+<a id='L1841' name='L1841'></a>1841 <em class='comment'>// We call error support with this value</em>
+<a id='L1842' name='L1842'></a>1842 
+<a id='L1843' name='L1843'></a>1843 <em class='brace'>{</em> .mfb
+<a id='L1844' name='L1844'></a>1844          mov pow_GR_tag                 = 34
+<a id='L1845' name='L1845'></a>1845          frcpa.s0 f8,p6                 = f0,f0
+<a id='L1846' name='L1846'></a>1846          br.cond.sptk __libm_error_region
+<a id='L1847' name='L1847'></a>1847 <em class='brace'>}</em>
+<a id='L1848' name='L1848'></a>1848 ;;
+<a id='L1849' name='L1849'></a>1849 
+<a id='L1850' name='L1850'></a>1850 POW_X_NAN:
+<a id='L1851' name='L1851'></a>1851 <em class='comment'>// Here if x=nan, y not nan</em>
+<a id='L1852' name='L1852'></a>1852 <em class='brace'>{</em> .mfi
+<a id='L1853' name='L1853'></a>1853          nop.m 999
+<a id='L1854' name='L1854'></a>1854          fclass.m  p9,p13 = f9, 0x07 <em class='comment'>// Test y=zero</em>
+<a id='L1855' name='L1855'></a>1855          nop.i 999
+<a id='L1856' name='L1856'></a>1856 <em class='brace'>}</em>
+<a id='L1857' name='L1857'></a>1857 ;;
+<a id='L1858' name='L1858'></a>1858 
+<a id='L1859' name='L1859'></a>1859 <em class='brace'>{</em> .mfb
+<a id='L1860' name='L1860'></a>1860          nop.m 999
+<a id='L1861' name='L1861'></a>1861 (p13)    fma.s.s0 f8 = f8,f1,f0
+<a id='L1862' name='L1862'></a>1862 (p13)    br.ret.sptk  b0            <em class='comment'>// Exit if x nan, y anything but zero or nan</em>
+<a id='L1863' name='L1863'></a>1863 <em class='brace'>}</em>
+<a id='L1864' name='L1864'></a>1864 ;;
+<a id='L1865' name='L1865'></a>1865 
+<a id='L1866' name='L1866'></a>1866 POW_X_NAN_Y_0:
+<a id='L1867' name='L1867'></a>1867 <em class='comment'>// When X is a NAN and Y is zero, IEEE returns 1.</em>
+<a id='L1868' name='L1868'></a>1868 <em class='comment'>// We call error support with this value.</em>
+<a id='L1869' name='L1869'></a>1869 <em class='brace'>{</em> .mfi
+<a id='L1870' name='L1870'></a>1870          nop.m 999
+<a id='L1871' name='L1871'></a>1871          fcmp.eq.s0 p6,p0 = f8,f0       <em class='comment'>// Dummy op to set invalid on snan</em>
+<a id='L1872' name='L1872'></a>1872          nop.i 999
+<a id='L1873' name='L1873'></a>1873 <em class='brace'>}</em>
+<a id='L1874' name='L1874'></a>1874 <em class='brace'>{</em> .mfb
+<a id='L1875' name='L1875'></a>1875          mov pow_GR_tag                 = 35
+<a id='L1876' name='L1876'></a>1876          fma.s.s0 f8 = f0,f0,f1
+<a id='L1877' name='L1877'></a>1877          br.cond.sptk __libm_error_region
+<a id='L1878' name='L1878'></a>1878 <em class='brace'>}</em>
+<a id='L1879' name='L1879'></a>1879 ;;
+<a id='L1880' name='L1880'></a>1880 
+<a id='L1881' name='L1881'></a>1881 
+<a id='L1882' name='L1882'></a>1882 POW_OVER_UNDER_X_NOT_INF:
+<a id='L1883' name='L1883'></a>1883 
+<a id='L1884' name='L1884'></a>1884 <em class='comment'>// p8 is TRUE for overflow</em>
+<a id='L1885' name='L1885'></a>1885 <em class='comment'>// p9 is TRUE for underflow</em>
+<a id='L1886' name='L1886'></a>1886 
+<a id='L1887' name='L1887'></a>1887 <em class='comment'>// if y is infinity, we should not over/underflow</em>
+<a id='L1888' name='L1888'></a>1888 
+<a id='L1889' name='L1889'></a>1889 <em class='brace'>{</em> .mfi
+<a id='L1890' name='L1890'></a>1890           nop.m 999
+<a id='L1891' name='L1891'></a>1891           fcmp.eq.s1     p14, p13       = POW_xsq,f1  <em class='comment'>// Test |x|=1</em>
+<a id='L1892' name='L1892'></a>1892           cmp.eq p8,p9                  = pow_GR_sign_Y_Gpr, r0
+<a id='L1893' name='L1893'></a>1893 <em class='brace'>}</em>
+<a id='L1894' name='L1894'></a>1894 ;;
+<a id='L1895' name='L1895'></a>1895 
+<a id='L1896' name='L1896'></a>1896 <em class='brace'>{</em> .mfi
+<a id='L1897' name='L1897'></a>1897           nop.m 999
+<a id='L1898' name='L1898'></a>1898 (p14)     fclass.m.unc       p15, p0    = f9, 0x23 <em class='comment'>// If |x|=1, test y=inf</em>
+<a id='L1899' name='L1899'></a>1899           nop.i 999
+<a id='L1900' name='L1900'></a>1900 <em class='brace'>}</em>
+<a id='L1901' name='L1901'></a>1901 <em class='brace'>{</em> .mfi
+<a id='L1902' name='L1902'></a>1902           nop.m 999
+<a id='L1903' name='L1903'></a>1903 (p13)     fclass.m.unc       p11,p0     = f9, 0x23 <em class='comment'>// If |x| not 1, test y=inf</em>
+<a id='L1904' name='L1904'></a>1904           nop.i 999
+<a id='L1905' name='L1905'></a>1905 <em class='brace'>}</em>
+<a id='L1906' name='L1906'></a>1906 ;;
+<a id='L1907' name='L1907'></a>1907 
+<a id='L1908' name='L1908'></a>1908 <em class='comment'>// p15 = TRUE if |x|=1, y=inf, return +1</em>
+<a id='L1909' name='L1909'></a>1909 <em class='brace'>{</em> .mfb
+<a id='L1910' name='L1910'></a>1910           nop.m 999
+<a id='L1911' name='L1911'></a>1911 (p15)     fma.s.s0          f8          = f1,f1,f0 <em class='comment'>// If |x|=1, y=inf, result +1</em>
+<a id='L1912' name='L1912'></a>1912 (p15)     br.ret.spnt b0                <em class='comment'>// Exit if |x|=1, y=inf</em>
+<a id='L1913' name='L1913'></a>1913 <em class='brace'>}</em>
+<a id='L1914' name='L1914'></a>1914 ;;
+<a id='L1915' name='L1915'></a>1915 
+<a id='L1916' name='L1916'></a>1916 .pred.rel "mutex",p8,p9
+<a id='L1917' name='L1917'></a>1917 <em class='brace'>{</em>  .mfb
+<a id='L1918' name='L1918'></a>1918 (p8)      setf.exp           f8 = pow_GR_17ones <em class='comment'>// If exp(+big), result inf</em>
+<a id='L1919' name='L1919'></a>1919 (p9)      fmerge.s           f8 = f0,f0         <em class='comment'>// If exp(-big), result 0</em>
+<a id='L1920' name='L1920'></a>1920 (p11)     br.ret.sptk b0                <em class='comment'>// Exit if |x| not 1, y=inf</em>
+<a id='L1921' name='L1921'></a>1921 <em class='brace'>}</em>
+<a id='L1922' name='L1922'></a>1922 ;;
+<a id='L1923' name='L1923'></a>1923 
+<a id='L1924' name='L1924'></a>1924 <em class='brace'>{</em> .mfb
+<a id='L1925' name='L1925'></a>1925           nop.m 999
+<a id='L1926' name='L1926'></a>1926           nop.f 999
+<a id='L1927' name='L1927'></a>1927           br.cond.sptk POW_OVER_UNDER_ERROR <em class='comment'>// Branch if y not inf</em>
+<a id='L1928' name='L1928'></a>1928 <em class='brace'>}</em>
+<a id='L1929' name='L1929'></a>1929 ;;
+<a id='L1930' name='L1930'></a>1930 
+<a id='L1931' name='L1931'></a>1931 
+<a id='L1932' name='L1932'></a>1932 POW_Y_NAN:
+<a id='L1933' name='L1933'></a>1933 <em class='comment'>// Here if y=nan, x anything</em>
+<a id='L1934' name='L1934'></a>1934 <em class='comment'>// If x = +1 then result is +1, else result is quiet Y</em>
+<a id='L1935' name='L1935'></a>1935 <em class='brace'>{</em> .mfi
+<a id='L1936' name='L1936'></a>1936        nop.m 999
+<a id='L1937' name='L1937'></a>1937        fcmp.eq.s1         p10,p9        = POW_NORM_X, f1
+<a id='L1938' name='L1938'></a>1938        nop.i 999
+<a id='L1939' name='L1939'></a>1939 <em class='brace'>}</em>
+<a id='L1940' name='L1940'></a>1940 ;;
+<a id='L1941' name='L1941'></a>1941 
+<a id='L1942' name='L1942'></a>1942 <em class='brace'>{</em> .mfi
+<a id='L1943' name='L1943'></a>1943        nop.m 999
+<a id='L1944' name='L1944'></a>1944 (p10)  fcmp.eq.s0 p6,p0 = f9,f1   <em class='comment'>// Set invalid, even if x=+1</em>
+<a id='L1945' name='L1945'></a>1945        nop.i 999
+<a id='L1946' name='L1946'></a>1946 <em class='brace'>}</em>
+<a id='L1947' name='L1947'></a>1947 ;;
+<a id='L1948' name='L1948'></a>1948 
+<a id='L1949' name='L1949'></a>1949 <em class='brace'>{</em> .mfi
+<a id='L1950' name='L1950'></a>1950        nop.m 999
+<a id='L1951' name='L1951'></a>1951 (p10)  fma.s.s0 f8 = f1,f1,f0
+<a id='L1952' name='L1952'></a>1952        nop.i 999
+<a id='L1953' name='L1953'></a>1953 <em class='brace'>}</em>
+<a id='L1954' name='L1954'></a>1954 <em class='brace'>{</em> .mfb
+<a id='L1955' name='L1955'></a>1955        nop.m 999
+<a id='L1956' name='L1956'></a>1956 (p9)   fma.s.s0 f8 = f9,f8,f0
+<a id='L1957' name='L1957'></a>1957        br.ret.sptk b0             <em class='comment'>// Exit y=nan</em>
+<a id='L1958' name='L1958'></a>1958 <em class='brace'>}</em>
+<a id='L1959' name='L1959'></a>1959 ;;
+<a id='L1960' name='L1960'></a>1960 
+<a id='L1961' name='L1961'></a>1961 
+<a id='L1962' name='L1962'></a>1962 POW_OVER_UNDER_ERROR:
+<a id='L1963' name='L1963'></a>1963 <em class='comment'>// Here if we have overflow or underflow.</em>
+<a id='L1964' name='L1964'></a>1964 <em class='comment'>// Enter with p12 true if x negative and y odd int to force -0 or -inf</em>
+<a id='L1965' name='L1965'></a>1965 
+<a id='L1966' name='L1966'></a>1966 <em class='brace'>{</em> .mfi
+<a id='L1967' name='L1967'></a>1967          sub   pow_GR_17ones_m1         = pow_GR_17ones, r0, 1
+<a id='L1968' name='L1968'></a>1968          nop.f 999
+<a id='L1969' name='L1969'></a>1969          mov pow_GR_one                 = 0x1
+<a id='L1970' name='L1970'></a>1970 <em class='brace'>}</em>
+<a id='L1971' name='L1971'></a>1971 ;;
+<a id='L1972' name='L1972'></a>1972 
+<a id='L1973' name='L1973'></a>1973 <em class='comment'>// overflow, force inf with O flag</em>
+<a id='L1974' name='L1974'></a>1974 <em class='brace'>{</em> .mmb
+<a id='L1975' name='L1975'></a>1975 (p8)     mov pow_GR_tag                 = 30
+<a id='L1976' name='L1976'></a>1976 (p8)     setf.exp POW_tmp               = pow_GR_17ones_m1
+<a id='L1977' name='L1977'></a>1977          nop.b 999
+<a id='L1978' name='L1978'></a>1978 <em class='brace'>}</em>
+<a id='L1979' name='L1979'></a>1979 ;;
+<a id='L1980' name='L1980'></a>1980 
+<a id='L1981' name='L1981'></a>1981 <em class='comment'>// underflow, force zero with I, U flags</em>
+<a id='L1982' name='L1982'></a>1982 <em class='brace'>{</em> .mmi
+<a id='L1983' name='L1983'></a>1983 (p9)    mov pow_GR_tag                  = 31
+<a id='L1984' name='L1984'></a>1984 (p9)    setf.exp POW_tmp                = pow_GR_one
+<a id='L1985' name='L1985'></a>1985         nop.i 999
+<a id='L1986' name='L1986'></a>1986 <em class='brace'>}</em>
+<a id='L1987' name='L1987'></a>1987 ;;
+<a id='L1988' name='L1988'></a>1988 
+<a id='L1989' name='L1989'></a>1989 <em class='brace'>{</em> .mfi
+<a id='L1990' name='L1990'></a>1990         nop.m 999
+<a id='L1991' name='L1991'></a>1991         fma.s.s0 f8                     = POW_tmp, POW_tmp, f0
+<a id='L1992' name='L1992'></a>1992         nop.i 999
+<a id='L1993' name='L1993'></a>1993 <em class='brace'>}</em>
+<a id='L1994' name='L1994'></a>1994 ;;
+<a id='L1995' name='L1995'></a>1995 
+<a id='L1996' name='L1996'></a>1996 <em class='comment'>// p12 x is negative and y is an odd integer, change sign of result</em>
+<a id='L1997' name='L1997'></a>1997 <em class='brace'>{</em> .mfi
+<a id='L1998' name='L1998'></a>1998         nop.m 999
+<a id='L1999' name='L1999'></a>1999 (p12)   fnma.s.s0 f8                    = POW_tmp, POW_tmp, f0
+<a id='L2000' name='L2000'></a>2000         nop.i 999
+<a id='L2001' name='L2001'></a>2001 <em class='brace'>}</em>
+<a id='L2002' name='L2002'></a>2002 ;;
+<a id='L2003' name='L2003'></a>2003 
+<a id='L2004' name='L2004'></a>2004 WEAK_LIBM_END(powf)
+<a id='L2005' name='L2005'></a>2005 libm_alias_float_other (__pow, pow)
+<a id='L2006' name='L2006'></a>2006 <em class='sharp'>#ifdef</em> <a href='../D/13935.html' title='Multiple defined in 2 places.'>SHARED</a>
+<a id='L2007' name='L2007'></a>2007 .symver powf,powf@@GLIBC_2.27
+<a id='L2008' name='L2008'></a>2008 .weak __powf_compat
+<a id='L2009' name='L2009'></a>2009 .set __powf_compat,__powf
+<a id='L2010' name='L2010'></a>2010 .symver __powf_compat,powf@GLIBC_2.2
+<a id='L2011' name='L2011'></a>2011 <em class='sharp'>#endif</em>
+<a id='L2012' name='L2012'></a>2012 
+<a id='L2013' name='L2013'></a>2013 
+<a id='L2014' name='L2014'></a>2014 LOCAL_LIBM_ENTRY(__libm_error_region)
+<a id='L2015' name='L2015'></a>2015 
+<a id='L2016' name='L2016'></a>2016 .prologue
+<a id='L2017' name='L2017'></a>2017 <em class='brace'>{</em> .mfi
+<a id='L2018' name='L2018'></a>2018         add   GR_Parameter_Y=-32,sp     <em class='comment'>// Parameter 2 value</em>
+<a id='L2019' name='L2019'></a>2019         nop.f 0
+<a id='L2020' name='L2020'></a>2020 .save   ar.pfs,GR_SAVE_PFS
+<a id='L2021' name='L2021'></a>2021         mov  GR_SAVE_PFS=ar.pfs         <em class='comment'>// Save ar.pfs</em>
+<a id='L2022' name='L2022'></a>2022 <em class='brace'>}</em>
+<a id='L2023' name='L2023'></a>2023 <em class='brace'>{</em> .mfi
+<a id='L2024' name='L2024'></a>2024 .fframe 64
+<a id='L2025' name='L2025'></a>2025         add sp=-64,sp                   <em class='comment'>// Create new stack</em>
+<a id='L2026' name='L2026'></a>2026         nop.f 0
+<a id='L2027' name='L2027'></a>2027         mov GR_SAVE_GP=gp               <em class='comment'>// Save gp</em>
+<a id='L2028' name='L2028'></a>2028 <em class='brace'>}</em>;;
+<a id='L2029' name='L2029'></a>2029 
+<a id='L2030' name='L2030'></a>2030 <em class='brace'>{</em> .mmi
+<a id='L2031' name='L2031'></a>2031         stfs [GR_Parameter_Y] = POW_NORM_Y,16 <em class='comment'>// STORE Parameter 2 on stack</em>
+<a id='L2032' name='L2032'></a>2032         add GR_Parameter_X = 16,sp      <em class='comment'>// Parameter 1 address</em>
+<a id='L2033' name='L2033'></a>2033 .save   b0, GR_SAVE_B0
+<a id='L2034' name='L2034'></a>2034         mov GR_SAVE_B0=b0               <em class='comment'>// Save b0</em>
+<a id='L2035' name='L2035'></a>2035 <em class='brace'>}</em>;;
+<a id='L2036' name='L2036'></a>2036 
+<a id='L2037' name='L2037'></a>2037 .body
+<a id='L2038' name='L2038'></a>2038 <em class='brace'>{</em> .mib
+<a id='L2039' name='L2039'></a>2039         stfs [GR_Parameter_X] = POW_NORM_X <em class='comment'>// STORE Parameter 1 on stack</em>
+<a id='L2040' name='L2040'></a>2040         add   GR_Parameter_RESULT = 0,GR_Parameter_Y    <em class='comment'>// Parameter 3 address</em>
+<a id='L2041' name='L2041'></a>2041         nop.b 0
+<a id='L2042' name='L2042'></a>2042 <em class='brace'>}</em>
+<a id='L2043' name='L2043'></a>2043 <em class='brace'>{</em> .mib
+<a id='L2044' name='L2044'></a>2044         stfs [GR_Parameter_Y] = f8      <em class='comment'>// STORE Parameter 3 on stack</em>
+<a id='L2045' name='L2045'></a>2045         add   GR_Parameter_Y = -16,GR_Parameter_Y
+<a id='L2046' name='L2046'></a>2046         br.call.sptk b0=__libm_error_support# <em class='comment'>// Call error handling function</em>
+<a id='L2047' name='L2047'></a>2047 <em class='brace'>}</em>;;
+<a id='L2048' name='L2048'></a>2048 
+<a id='L2049' name='L2049'></a>2049 <em class='brace'>{</em> .mmi
+<a id='L2050' name='L2050'></a>2050         add   GR_Parameter_RESULT = 48,sp
+<a id='L2051' name='L2051'></a>2051         nop.m 0
+<a id='L2052' name='L2052'></a>2052         nop.i 0
+<a id='L2053' name='L2053'></a>2053 <em class='brace'>}</em>;;
+<a id='L2054' name='L2054'></a>2054 
+<a id='L2055' name='L2055'></a>2055 <em class='brace'>{</em> .mmi
+<a id='L2056' name='L2056'></a>2056         ldfs  f8 = [GR_Parameter_RESULT] <em class='comment'>// Get return result off stack</em>
+<a id='L2057' name='L2057'></a>2057 .restore sp
+<a id='L2058' name='L2058'></a>2058         add   sp = 64,sp                 <em class='comment'>// Restore stack pointer</em>
+<a id='L2059' name='L2059'></a>2059         mov   b0 = GR_SAVE_B0            <em class='comment'>// Restore return address</em>
+<a id='L2060' name='L2060'></a>2060 <em class='brace'>}</em>;;
+<a id='L2061' name='L2061'></a>2061 
+<a id='L2062' name='L2062'></a>2062 <em class='brace'>{</em> .mib
+<a id='L2063' name='L2063'></a>2063         mov   gp = GR_SAVE_GP            <em class='comment'>// Restore gp</em>
+<a id='L2064' name='L2064'></a>2064         mov   ar.pfs = GR_SAVE_PFS       <em class='comment'>// Restore ar.pfs</em>
+<a id='L2065' name='L2065'></a>2065         br.ret.sptk     b0               <em class='comment'>// Return</em>
+<a id='L2066' name='L2066'></a>2066 <em class='brace'>}</em>;;
+<a id='L2067' name='L2067'></a>2067 
+<a id='L2068' name='L2068'></a>2068 LOCAL_LIBM_END(__libm_error_region)
+<a id='L2069' name='L2069'></a>2069 
+<a id='L2070' name='L2070'></a>2070 .type   __libm_error_support#,@function
+<a id='L2071' name='L2071'></a>2071 .global __libm_error_support#
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;][^][v]<a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

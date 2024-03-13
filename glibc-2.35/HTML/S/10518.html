@@ -1,0 +1,111 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>sysdeps/unix/sysv/linux/ia64/clone2.S</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18977.html'>sysdeps</a>/<a href='../files/19246.html'>unix</a>/<a href='../files/19257.html'>sysv</a>/<a href='../files/19258.html'>linux</a>/<a href='../files/19288.html'>ia64</a>/clone2.S</h2>
+<em class='comment'>/* [&lt;][&gt;][^][v][top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* Copyright (C) 2000-2022 Free Software Foundation, Inc.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'></em>
+<a id='L4' name='L4'></a>   4 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'></em>
+<a id='L9' name='L9'></a>   9 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'></em>
+<a id='L14' name='L14'></a>  14 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   License along with the GNU C Library; if not, see</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L17' name='L17'></a>  17 
+<a id='L18' name='L18'></a>  18 
+<a id='L19' name='L19'></a>  19 <em class='sharp'>#include</em> &lt;<a href='../I/5967.html'>sysdep.h</a>&gt;
+<a id='L20' name='L20'></a>  20 <em class='sharp'>#include</em> &lt;<a href='../I/116.html'>asm/errno.h</a>&gt;
+<a id='L21' name='L21'></a>  21 
+<a id='L22' name='L22'></a>  22 
+<a id='L23' name='L23'></a>  23 <em class='comment'>/* int  __clone2(int (*fn) (void *arg), void *child_stack_base,     */</em>
+<a id='L24' name='L24'></a>  24 <em class='comment'>/*           size_t child_stack_size, int flags, void *arg,     */</em>
+<a id='L25' name='L25'></a>  25 <em class='comment'>/*           pid_t *parent_tid, void *tls, pid_t *child_tid)    */</em>
+<a id='L26' name='L26'></a>  26 
+<a id='L27' name='L27'></a>  27 <em class='sharp'>#define</em> CHILD   p8
+<a id='L28' name='L28'></a>  28 <em class='sharp'>#define</em> PARENT  p9
+<a id='L29' name='L29'></a>  29 
+<a id='L30' name='L30'></a>  30 <a href='../D/3651.html' title='Multiple defined in 54 places.'>ENTRY</a>(<a href='../R/13797.html' title='Multiple referred from 17 places.'>__clone2</a>)
+<a id='L31' name='L31'></a>  31     .prologue
+<a id='L32' name='L32'></a>  32     alloc r2=ar.pfs,8,1,6,0
+<a id='L33' name='L33'></a>  33     cmp.eq p6,p0=0,in0
+<a id='L34' name='L34'></a>  34     cmp.eq p7,p0=0,in1
+<a id='L35' name='L35'></a>  35     mov r8=EINVAL
+<a id='L36' name='L36'></a>  36     mov out0=in3        <em class='comment'>/* Flags are first syscall argument.    */</em>
+<a id='L37' name='L37'></a>  37     mov out1=in1        <em class='comment'>/* Stack address.           */</em>
+<a id='L38' name='L38'></a>  38 (p6)    br.cond.spnt.many __syscall_error   <em class='comment'>/* no NULL function pointers */</em>
+<a id='L39' name='L39'></a>  39 (p7)    br.cond.spnt.many __syscall_error   <em class='comment'>/* no NULL stack pointers */</em>
+<a id='L40' name='L40'></a>  40     ;;
+<a id='L41' name='L41'></a>  41     mov out2=in2        <em class='comment'>/* Stack size.              */</em>
+<a id='L42' name='L42'></a>  42     mov out3=in5        <em class='comment'>/* Parent TID Pointer           */</em>
+<a id='L43' name='L43'></a>  43     mov out4=in7        <em class='comment'>/* Child TID Pointer            */</em>
+<a id='L44' name='L44'></a>  44     mov out5=in6        <em class='comment'>/* TLS pointer              */</em>
+<a id='L45' name='L45'></a>  45     <em class='comment'>/*</em>
+<a id='L46' name='L46'></a>  46 <em class='comment'>     * clone2() is special: the child cannot execute br.ret right</em>
+<a id='L47' name='L47'></a>  47 <em class='comment'>     * after the system call returns, because it starts out</em>
+<a id='L48' name='L48'></a>  48 <em class='comment'>     * executing on an empty stack.  Because of this, we can't use</em>
+<a id='L49' name='L49'></a>  49 <em class='comment'>     * the new (lightweight) syscall convention here.  Instead, we</em>
+<a id='L50' name='L50'></a>  50 <em class='comment'>     * just fall back on always using "break".</em>
+<a id='L51' name='L51'></a>  51 <em class='comment'>     *</em>
+<a id='L52' name='L52'></a>  52 <em class='comment'>     * Furthermore, since the child starts with an empty stack, we</em>
+<a id='L53' name='L53'></a>  53 <em class='comment'>     * need to avoid unwinding past invalid memory.  To that end,</em>
+<a id='L54' name='L54'></a>  54 <em class='comment'>     * we'll pretend now that __clone2() is the end of the</em>
+<a id='L55' name='L55'></a>  55 <em class='comment'>     * call-chain.  This is wrong for the parent, but only until</em>
+<a id='L56' name='L56'></a>  56 <em class='comment'>     * it returns from clone2() but it's better than the</em>
+<a id='L57' name='L57'></a>  57 <em class='comment'>     * alternative.</em>
+<a id='L58' name='L58'></a>  58 <em class='comment'>     */</em>
+<a id='L59' name='L59'></a>  59     mov r15=SYS_ify (clone2)
+<a id='L60' name='L60'></a>  60     .save rp, r0
+<a id='L61' name='L61'></a>  61     break __IA64_BREAK_SYSCALL
+<a id='L62' name='L62'></a>  62     .body
+<a id='L63' name='L63'></a>  63     cmp.eq p6,p0=-1,r10
+<a id='L64' name='L64'></a>  64     cmp.eq CHILD,PARENT=0,r8 <em class='comment'>/* Are we the child?   */</em>
+<a id='L65' name='L65'></a>  65 (p6)    br.cond.spnt.many __syscall_error
+<a id='L66' name='L66'></a>  66     ;;
+<a id='L67' name='L67'></a>  67 (CHILD) mov loc0=gp
+<a id='L68' name='L68'></a>  68 (PARENT) ret
+<a id='L69' name='L69'></a>  69     ;;
+<a id='L70' name='L70'></a>  70     ld8 out1=[in0],8    <em class='comment'>/* Retrieve code pointer.   */</em>
+<a id='L71' name='L71'></a>  71     mov out0=in4        <em class='comment'>/* Pass proper argument to fn */</em>
+<a id='L72' name='L72'></a>  72     ;;
+<a id='L73' name='L73'></a>  73     ld8 gp=[in0]        <em class='comment'>/* Load function gp.        */</em>
+<a id='L74' name='L74'></a>  74     mov b6=out1
+<a id='L75' name='L75'></a>  75     br.call.dptk.many rp=b6 <em class='comment'>/* Call fn(arg) in the child    */</em>
+<a id='L76' name='L76'></a>  76     ;;
+<a id='L77' name='L77'></a>  77     mov out0=r8     <em class='comment'>/* Argument to exit     */</em>
+<a id='L78' name='L78'></a>  78     mov gp=loc0
+<a id='L79' name='L79'></a>  79     mov r15=SYS_ify (exit)
+<a id='L80' name='L80'></a>  80     .save rp, r0
+<a id='L81' name='L81'></a>  81     break __IA64_BREAK_SYSCALL
+<a id='L82' name='L82'></a>  82     ret         <em class='comment'>/* Not reached.     */</em>
+<a id='L83' name='L83'></a>  83 PSEUDO_END(__clone2)
+<a id='L84' name='L84'></a>  84 
+<a id='L85' name='L85'></a>  85 libc_hidden_def (__clone2)
+<a id='L86' name='L86'></a>  86 
+<a id='L87' name='L87'></a>  87 <em class='comment'>/* For now we leave __clone undefined.  This is unlikely to be a    */</em>
+<a id='L88' name='L88'></a>  88 <em class='comment'>/* problem, since at least the i386 __clone in glibc always failed  */</em>
+<a id='L89' name='L89'></a>  89 <em class='comment'>/* with a 0 sp (eventhough the kernel explicitly handled it).       */</em>
+<a id='L90' name='L90'></a>  90 <em class='comment'>/* Thus all such calls needed to pass an explicit sp, and as a result,  */</em>
+<a id='L91' name='L91'></a>  91 <em class='comment'>/* would be unlikely to work on ia64.                   */</em>
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;][^][v]<a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

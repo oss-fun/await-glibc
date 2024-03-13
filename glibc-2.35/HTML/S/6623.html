@@ -1,0 +1,247 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>stdlib/tst-setcontext4.c</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18969.html'>stdlib</a>/tst-setcontext4.c</h2>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L31'>[^]</a><a href='#L88'>[v]</a>[top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<h2 class='header'>DEFINITIONS</h2>
+This source file includes following definitions.
+<ol>
+<li><a href='#L31' title='Defined at 31.'>check</a></li>
+<li><a href='#L52' title='Defined at 52.'>signalmask</a></li>
+<li><a href='#L65' title='Defined at 65.'>signalpending</a></li>
+<li><a href='#L82' title='Defined at 82.'>handler</a></li>
+<li><a href='#L88' title='Defined at 88.'>do_test</a></li>
+</ol>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* Testcase checks, if setcontext(), swapcontext() restores signal-mask</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   and if pending signals are delivered after those calls.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'>   Copyright (C) 2018-2022 Free Software Foundation, Inc.</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L5' name='L5'></a>   5 <em class='comment'></em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L10' name='L10'></a>  10 <em class='comment'></em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L15' name='L15'></a>  15 <em class='comment'></em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L17' name='L17'></a>  17 <em class='comment'>   License along with the GNU C Library; if not, see</em>
+<a id='L18' name='L18'></a>  18 <em class='comment'>   &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L19' name='L19'></a>  19 
+<a id='L20' name='L20'></a>  20 <em class='sharp'>#include</em> &lt;<a href='../I/1776.html'>stdio.h</a>&gt;
+<a id='L21' name='L21'></a>  21 <em class='sharp'>#include</em> &lt;<a href='../I/1780.html'>stdlib.h</a>&gt;
+<a id='L22' name='L22'></a>  22 <em class='sharp'>#include</em> &lt;<a href='../I/1786.html'>sys/types.h</a>&gt;
+<a id='L23' name='L23'></a>  23 <em class='sharp'>#include</em> &lt;<a href='../I/1264.html'>signal.h</a>&gt;
+<a id='L24' name='L24'></a>  24 <em class='sharp'>#include</em> &lt;<a href='../I/2036.html'>ucontext.h</a>&gt;
+<a id='L25' name='L25'></a>  25 <em class='sharp'>#include</em> &lt;<a href='../I/1819.html'>unistd.h</a>&gt;
+<a id='L26' name='L26'></a>  26 
+<a id='L27' name='L27'></a>  27 <strong class='reserved'>volatile</strong> <strong class='reserved'>int</strong> <a href='../Y/15661.html' title='Multiple used in 108 places.'>global</a>;
+<a id='L28' name='L28'></a>  28 <strong class='reserved'>volatile</strong> <a href='../S/30.html#L8' title='Defined at 8 in signal/bits/types/sig_atomic_t.h.'>sig_atomic_t</a> <a href='../Y/15925.html' title='Multiple used in 16 places.'>handlerCalled</a>;
+<a id='L29' name='L29'></a>  29 
+<a id='L30' name='L30'></a>  30 <strong class='reserved'>static</strong> <strong class='reserved'>void</strong>
+<a id='L31' name='L31'></a>  31 <a href='../R/17879.html' title='Multiple referred from 529 places.'>check</a> (<strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../Y/15264.html' title='Multiple used in 6 places.'>funcName</a>)
+<a id='L32' name='L32'></a>  32 <em class='brace'>{</em>
+<a id='L33' name='L33'></a>  33   <a href='../S/28.html#L7' title='Defined at 7 in signal/bits/types/sigset_t.h.'>sigset_t</a> <a href='../S/2161.html#L36' title='Defined at 36 in hurd/hurdports.c.'>set</a>;
+<a id='L34' name='L34'></a>  34 
+<a id='L35' name='L35'></a>  35   <em class='comment'>/* check if SIGUSR2 is unblocked after setcontext-call.  */</em>
+<a id='L36' name='L36'></a>  36   <a href='../Y/25434.html' title='Multiple used in 42 places.'>sigprocmask</a> (<a href='../D/14220.html' title='Multiple defined in 10 places.'>SIG_BLOCK</a>, <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>, &amp;<a href='../S/2161.html#L36' title='Defined at 36 in hurd/hurdports.c.'>set</a>);
+<a id='L37' name='L37'></a>  37 
+<a id='L38' name='L38'></a>  38   <strong class='reserved'>if</strong> (<a href='../D/36743.html' title='Multiple defined in 5 places.'>sigismember</a> (&amp;<a href='../S/2161.html#L36' title='Defined at 36 in hurd/hurdports.c.'>set</a>, <a href='../D/14212.html' title='Multiple defined in 7 places.'>SIGUSR2</a>) != 0)
+<a id='L39' name='L39'></a>  39     <em class='brace'>{</em>
+<a id='L40' name='L40'></a>  40       <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("FAIL: SIGUSR2 is blocked after %s.\n", <a href='../Y/15264.html' title='Multiple used in 6 places.'>funcName</a>);
+<a id='L41' name='L41'></a>  41       <a href='../S/6681.html#L141' title='Defined at 141 in stdlib/exit.c.'>exit</a> (1);
+<a id='L42' name='L42'></a>  42     <em class='brace'>}</em>
+<a id='L43' name='L43'></a>  43 
+<a id='L44' name='L44'></a>  44   <strong class='reserved'>if</strong> (<a href='../D/36743.html' title='Multiple defined in 5 places.'>sigismember</a> (&amp;<a href='../S/2161.html#L36' title='Defined at 36 in hurd/hurdports.c.'>set</a>, <a href='../D/14211.html' title='Multiple defined in 7 places.'>SIGUSR1</a>) != 1)
+<a id='L45' name='L45'></a>  45     <em class='brace'>{</em>
+<a id='L46' name='L46'></a>  46       <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("FAIL: SIGUSR1 is not blocked after %s.\n", <a href='../Y/15264.html' title='Multiple used in 6 places.'>funcName</a>);
+<a id='L47' name='L47'></a>  47       <a href='../S/6681.html#L141' title='Defined at 141 in stdlib/exit.c.'>exit</a> (1);
+<a id='L48' name='L48'></a>  48     <em class='brace'>}</em>
+<a id='L49' name='L49'></a>  49 <em class='brace'>}</em>
+<a id='L50' name='L50'></a>  50 
+<a id='L51' name='L51'></a>  51 <strong class='reserved'>static</strong> <strong class='reserved'>void</strong>
+<a id='L52' name='L52'></a>  52 <a href='../R/24445.html' title='Multiple referred from 8 places.'>signalmask</a> (<strong class='reserved'>int</strong> <a href='../Y/16195.html' title='Multiple used in 48 places.'>how</a>, <strong class='reserved'>int</strong> <a href='../D/36761.html' title='Multiple defined in 2 places.'>signum</a>)
+<a id='L53' name='L53'></a>  53 <em class='brace'>{</em>
+<a id='L54' name='L54'></a>  54   <a href='../S/28.html#L7' title='Defined at 7 in signal/bits/types/sigset_t.h.'>sigset_t</a> <a href='../S/2161.html#L36' title='Defined at 36 in hurd/hurdports.c.'>set</a>;
+<a id='L55' name='L55'></a>  55   <a href='../S/77.html#L25' title='Defined at 25 in signal/sigempty.c.'>sigemptyset</a> (&amp;<a href='../S/2161.html#L36' title='Defined at 36 in hurd/hurdports.c.'>set</a>);
+<a id='L56' name='L56'></a>  56   <a href='../S/66.html#L25' title='Defined at 25 in signal/sigaddset.c.'>sigaddset</a> (&amp;<a href='../S/2161.html#L36' title='Defined at 36 in hurd/hurdports.c.'>set</a>, <a href='../D/36761.html' title='Multiple defined in 2 places.'>signum</a>);
+<a id='L57' name='L57'></a>  57   <strong class='reserved'>if</strong> (<a href='../Y/25434.html' title='Multiple used in 42 places.'>sigprocmask</a> (<a href='../Y/16195.html' title='Multiple used in 48 places.'>how</a>, &amp;<a href='../S/2161.html#L36' title='Defined at 36 in hurd/hurdports.c.'>set</a>, <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>) != 0)
+<a id='L58' name='L58'></a>  58     <em class='brace'>{</em>
+<a id='L59' name='L59'></a>  59       <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("FAIL: sigprocmaks (%d, %d, NULL): %m\n", <a href='../Y/16195.html' title='Multiple used in 48 places.'>how</a>, <a href='../D/36761.html' title='Multiple defined in 2 places.'>signum</a>);
+<a id='L60' name='L60'></a>  60       <a href='../S/6681.html#L141' title='Defined at 141 in stdlib/exit.c.'>exit</a> (1);
+<a id='L61' name='L61'></a>  61     <em class='brace'>}</em>
+<a id='L62' name='L62'></a>  62 <em class='brace'>}</em>
+<a id='L63' name='L63'></a>  63 
+<a id='L64' name='L64'></a>  64 <strong class='reserved'>static</strong> <strong class='reserved'>void</strong>
+<a id='L65' name='L65'></a>  65 <a href='../R/24446.html' title='Multiple referred from 4 places.'>signalpending</a> (<strong class='reserved'>int</strong> <a href='../D/36761.html' title='Multiple defined in 2 places.'>signum</a>, <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../S/2176.html#L54' title='Defined at 54 in hurd/intr-msg.c.'>msg</a>)
+<a id='L66' name='L66'></a>  66 <em class='brace'>{</em>
+<a id='L67' name='L67'></a>  67   <a href='../S/28.html#L7' title='Defined at 7 in signal/bits/types/sigset_t.h.'>sigset_t</a> <a href='../S/2161.html#L36' title='Defined at 36 in hurd/hurdports.c.'>set</a>;
+<a id='L68' name='L68'></a>  68   <a href='../S/77.html#L25' title='Defined at 25 in signal/sigempty.c.'>sigemptyset</a> (&amp;<a href='../S/2161.html#L36' title='Defined at 36 in hurd/hurdports.c.'>set</a>);
+<a id='L69' name='L69'></a>  69   <strong class='reserved'>if</strong> (<a href='../D/36764.html' title='Multiple defined in 3 places.'>sigpending</a> (&amp;<a href='../S/2161.html#L36' title='Defined at 36 in hurd/hurdports.c.'>set</a>) != 0)
+<a id='L70' name='L70'></a>  70     <em class='brace'>{</em>
+<a id='L71' name='L71'></a>  71       <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("FAIL: sigpending: %m\n");
+<a id='L72' name='L72'></a>  72       <a href='../S/6681.html#L141' title='Defined at 141 in stdlib/exit.c.'>exit</a> (1);
+<a id='L73' name='L73'></a>  73     <em class='brace'>}</em>
+<a id='L74' name='L74'></a>  74   <strong class='reserved'>if</strong> (<a href='../D/36743.html' title='Multiple defined in 5 places.'>sigismember</a> (&amp;<a href='../S/2161.html#L36' title='Defined at 36 in hurd/hurdports.c.'>set</a>, <a href='../D/14212.html' title='Multiple defined in 7 places.'>SIGUSR2</a>) != 1)
+<a id='L75' name='L75'></a>  75     <em class='brace'>{</em>
+<a id='L76' name='L76'></a>  76       <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("FAIL: Signal %d is not pending %s\n", <a href='../D/36761.html' title='Multiple defined in 2 places.'>signum</a>, <a href='../S/2176.html#L54' title='Defined at 54 in hurd/intr-msg.c.'>msg</a>);
+<a id='L77' name='L77'></a>  77       <a href='../S/6681.html#L141' title='Defined at 141 in stdlib/exit.c.'>exit</a> (1);
+<a id='L78' name='L78'></a>  78     <em class='brace'>}</em>
+<a id='L79' name='L79'></a>  79 <em class='brace'>}</em>
+<a id='L80' name='L80'></a>  80 
+<a id='L81' name='L81'></a>  81 <strong class='reserved'>static</strong> <strong class='reserved'>void</strong>
+<a id='L82' name='L82'></a>  82 <a href='../R/20261.html' title='Multiple referred from 105 places.'>handler</a> (<strong class='reserved'>int</strong> <strong class='reserved'>__attribute__</strong> ((<a href='../S/2757.html#L20' title='Defined at 20 in elf/tst-tlsalign-vars.c.'>unused</a>)) <a href='../D/36761.html' title='Multiple defined in 2 places.'>signum</a>)
+<a id='L83' name='L83'></a>  83 <em class='brace'>{</em>
+<a id='L84' name='L84'></a>  84   <a href='../Y/15925.html' title='Multiple used in 16 places.'>handlerCalled</a> ++;
+<a id='L85' name='L85'></a>  85 <em class='brace'>}</em>
+<a id='L86' name='L86'></a>  86 
+<a id='L87' name='L87'></a>  87 <strong class='reserved'>static</strong> <strong class='reserved'>int</strong>
+<a id='L88' name='L88'></a>  88 <a href='../R/18782.html' title='Multiple referred from 1850 places.'>do_test</a> (<strong class='reserved'>void</strong>)
+<a id='L89' name='L89'></a>  89 <em class='brace'>{</em>
+<a id='L90' name='L90'></a>  90   <a href='../D/38643.html' title='Multiple defined in 50 places.'>ucontext_t</a> <a href='../Y/12249.html' title='Multiple used in 1209 places.'>ctx</a>, <a href='../Y/21640.html' title='Multiple used in 9 places.'>oldctx</a>;
+<a id='L91' name='L91'></a>  91   <strong class='reserved'>struct</strong> <a href='../D/36719.html' title='Multiple defined in 9 places.'>sigaction</a> <a href='../D/27471.html' title='Multiple defined in 2 places.'>action</a>;
+<a id='L92' name='L92'></a>  92   <a href='../D/34727.html' title='Multiple defined in 11 places.'>pid_t</a> <a href='../Y/22398.html' title='Multiple used in 920 places.'>pid</a>;
+<a id='L93' name='L93'></a>  93 
+<a id='L94' name='L94'></a>  94   <a href='../Y/22398.html' title='Multiple used in 920 places.'>pid</a> = <a href='../S/2946.html#L10' title='Defined at 10 in elf/restest2.c.'>getpid</a> ();
+<a id='L95' name='L95'></a>  95 
+<a id='L96' name='L96'></a>  96   <em class='comment'>/* unblock SIGUSR2 */</em>
+<a id='L97' name='L97'></a>  97   <a href='../D/36757.html' title='Multiple defined in 2 places.'>signalmask</a> (<a href='../D/14229.html' title='Multiple defined in 9 places.'>SIG_UNBLOCK</a>, <a href='../D/14212.html' title='Multiple defined in 7 places.'>SIGUSR2</a>);
+<a id='L98' name='L98'></a>  98 
+<a id='L99' name='L99'></a>  99   <em class='comment'>/* block SIGUSR1 */</em>
+<a id='L100' name='L100'></a> 100   <a href='../D/36757.html' title='Multiple defined in 2 places.'>signalmask</a> (<a href='../D/14220.html' title='Multiple defined in 10 places.'>SIG_BLOCK</a>, <a href='../D/14211.html' title='Multiple defined in 7 places.'>SIGUSR1</a>);
+<a id='L101' name='L101'></a> 101 
+<a id='L102' name='L102'></a> 102   <em class='comment'>/* register handler for SIGUSR2  */</em>
+<a id='L103' name='L103'></a> 103   <a href='../D/27471.html' title='Multiple defined in 2 places.'>action</a>.<a href='../Y/24546.html' title='Multiple used in 124 places.'>sa_flags</a> = 0;
+<a id='L104' name='L104'></a> 104   <a href='../D/27471.html' title='Multiple defined in 2 places.'>action</a>.<a href='../D/36336.html' title='Multiple defined in 9 places.'>sa_handler</a> = <a href='../D/31452.html' title='Multiple defined in 29 places.'>handler</a>;
+<a id='L105' name='L105'></a> 105   <a href='../S/77.html#L25' title='Defined at 25 in signal/sigempty.c.'>sigemptyset</a> (&amp;<a href='../D/27471.html' title='Multiple defined in 2 places.'>action</a>.<a href='../Y/24548.html' title='Multiple used in 95 places.'>sa_mask</a>);
+<a id='L106' name='L106'></a> 106   <a href='../D/36719.html' title='Multiple defined in 9 places.'>sigaction</a> (<a href='../D/14212.html' title='Multiple defined in 7 places.'>SIGUSR2</a>, &amp;<a href='../D/27471.html' title='Multiple defined in 2 places.'>action</a>, <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>);
+<a id='L107' name='L107'></a> 107 
+<a id='L108' name='L108'></a> 108   <strong class='reserved'>if</strong> (<a href='../S/6646.html#L22' title='Defined at 22 in stdlib/getcontext.c.'>getcontext</a> (&amp;<a href='../Y/12249.html' title='Multiple used in 1209 places.'>ctx</a>) != 0)
+<a id='L109' name='L109'></a> 109     <em class='brace'>{</em>
+<a id='L110' name='L110'></a> 110       <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("FAIL: getcontext: %m\n");
+<a id='L111' name='L111'></a> 111       <a href='../S/6681.html#L141' title='Defined at 141 in stdlib/exit.c.'>exit</a> (1);
+<a id='L112' name='L112'></a> 112     <em class='brace'>}</em>
+<a id='L113' name='L113'></a> 113 
+<a id='L114' name='L114'></a> 114   <a href='../Y/15661.html' title='Multiple used in 108 places.'>global</a>++;
+<a id='L115' name='L115'></a> 115 
+<a id='L116' name='L116'></a> 116   <strong class='reserved'>if</strong> (<a href='../Y/15661.html' title='Multiple used in 108 places.'>global</a> == 1)
+<a id='L117' name='L117'></a> 117     <em class='brace'>{</em>
+<a id='L118' name='L118'></a> 118       <a href='../Y/23144.html' title='Multiple used in 3983 places.'>puts</a> ("after getcontext");
+<a id='L119' name='L119'></a> 119 
+<a id='L120' name='L120'></a> 120       <em class='comment'>/* block SIGUSR2  */</em>
+<a id='L121' name='L121'></a> 121       <a href='../D/36757.html' title='Multiple defined in 2 places.'>signalmask</a> (<a href='../D/14220.html' title='Multiple defined in 10 places.'>SIG_BLOCK</a>, <a href='../D/14212.html' title='Multiple defined in 7 places.'>SIGUSR2</a>);
+<a id='L122' name='L122'></a> 122 
+<a id='L123' name='L123'></a> 123       <em class='comment'>/* send SIGUSR2 to me  */</em>
+<a id='L124' name='L124'></a> 124       <a href='../Y/15925.html' title='Multiple used in 16 places.'>handlerCalled</a> = 0;
+<a id='L125' name='L125'></a> 125       <a href='../Y/17525.html' title='Multiple used in 101 places.'>kill</a> (<a href='../Y/22398.html' title='Multiple used in 920 places.'>pid</a>, <a href='../D/14212.html' title='Multiple defined in 7 places.'>SIGUSR2</a>);
+<a id='L126' name='L126'></a> 126 
+<a id='L127' name='L127'></a> 127       <em class='comment'>/* was SIGUSR2 handler called?  */</em>
+<a id='L128' name='L128'></a> 128       <strong class='reserved'>if</strong> (<a href='../Y/15925.html' title='Multiple used in 16 places.'>handlerCalled</a> != 0)
+<a id='L129' name='L129'></a> 129     <em class='brace'>{</em>
+<a id='L130' name='L130'></a> 130       <a href='../Y/23144.html' title='Multiple used in 3983 places.'>puts</a> ("FAIL: signal handler was called, but signal was blocked.");
+<a id='L131' name='L131'></a> 131       <a href='../S/6681.html#L141' title='Defined at 141 in stdlib/exit.c.'>exit</a> (1);
+<a id='L132' name='L132'></a> 132     <em class='brace'>}</em>
+<a id='L133' name='L133'></a> 133 
+<a id='L134' name='L134'></a> 134       <em class='comment'>/* is SIGUSR2 pending?  */</em>
+<a id='L135' name='L135'></a> 135       <a href='../D/36758.html' title='Multiple defined in 2 places.'>signalpending</a> (<a href='../D/14212.html' title='Multiple defined in 7 places.'>SIGUSR2</a>, "before setcontext");
+<a id='L136' name='L136'></a> 136 
+<a id='L137' name='L137'></a> 137       <em class='comment'>/* SIGUSR2 will be unblocked by setcontext-call.  */</em>
+<a id='L138' name='L138'></a> 138       <strong class='reserved'>if</strong> (<a href='../D/36549.html' title='Multiple defined in 2 places.'>setcontext</a> (&amp;<a href='../Y/12249.html' title='Multiple used in 1209 places.'>ctx</a>) != 0)
+<a id='L139' name='L139'></a> 139     <em class='brace'>{</em>
+<a id='L140' name='L140'></a> 140       <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("FAIL: setcontext: %m\n");
+<a id='L141' name='L141'></a> 141       <a href='../S/6681.html#L141' title='Defined at 141 in stdlib/exit.c.'>exit</a> (1);
+<a id='L142' name='L142'></a> 142     <em class='brace'>}</em>
+<a id='L143' name='L143'></a> 143     <em class='brace'>}</em>
+<a id='L144' name='L144'></a> 144   <strong class='reserved'>else</strong> <strong class='reserved'>if</strong> (<a href='../Y/15661.html' title='Multiple used in 108 places.'>global</a> == 2)
+<a id='L145' name='L145'></a> 145     <em class='brace'>{</em>
+<a id='L146' name='L146'></a> 146       <a href='../Y/23144.html' title='Multiple used in 3983 places.'>puts</a> ("after setcontext");
+<a id='L147' name='L147'></a> 147 
+<a id='L148' name='L148'></a> 148       <em class='comment'>/* check SIGUSR1/2  */</em>
+<a id='L149' name='L149'></a> 149       <a href='../D/28646.html' title='Multiple defined in 26 places.'>check</a> ("setcontext");
+<a id='L150' name='L150'></a> 150 
+<a id='L151' name='L151'></a> 151       <em class='comment'>/* was SIGUSR2 handler called? */</em>
+<a id='L152' name='L152'></a> 152       <strong class='reserved'>if</strong> (<a href='../Y/15925.html' title='Multiple used in 16 places.'>handlerCalled</a> != 1)
+<a id='L153' name='L153'></a> 153     <em class='brace'>{</em>
+<a id='L154' name='L154'></a> 154       <a href='../Y/23144.html' title='Multiple used in 3983 places.'>puts</a> ("FAIL: signal handler was not called after setcontext.");
+<a id='L155' name='L155'></a> 155       <a href='../S/6681.html#L141' title='Defined at 141 in stdlib/exit.c.'>exit</a> (1);
+<a id='L156' name='L156'></a> 156     <em class='brace'>}</em>
+<a id='L157' name='L157'></a> 157 
+<a id='L158' name='L158'></a> 158       <em class='comment'>/* block SIGUSR2 */</em>
+<a id='L159' name='L159'></a> 159       <a href='../D/36757.html' title='Multiple defined in 2 places.'>signalmask</a> (<a href='../D/14220.html' title='Multiple defined in 10 places.'>SIG_BLOCK</a>, <a href='../D/14212.html' title='Multiple defined in 7 places.'>SIGUSR2</a>);
+<a id='L160' name='L160'></a> 160 
+<a id='L161' name='L161'></a> 161       <em class='comment'>/* send SIGUSR2 to me  */</em>
+<a id='L162' name='L162'></a> 162       <a href='../Y/15925.html' title='Multiple used in 16 places.'>handlerCalled</a> = 0;
+<a id='L163' name='L163'></a> 163       <a href='../Y/17525.html' title='Multiple used in 101 places.'>kill</a> (<a href='../Y/22398.html' title='Multiple used in 920 places.'>pid</a>, <a href='../D/14212.html' title='Multiple defined in 7 places.'>SIGUSR2</a>);
+<a id='L164' name='L164'></a> 164 
+<a id='L165' name='L165'></a> 165       <em class='comment'>/* was SIGUSR2 handler called?  */</em>
+<a id='L166' name='L166'></a> 166       <strong class='reserved'>if</strong> (<a href='../Y/15925.html' title='Multiple used in 16 places.'>handlerCalled</a> != 0)
+<a id='L167' name='L167'></a> 167     <em class='brace'>{</em>
+<a id='L168' name='L168'></a> 168       <a href='../Y/23144.html' title='Multiple used in 3983 places.'>puts</a> ("FAIL: signal handler was called, but signal was blocked.");
+<a id='L169' name='L169'></a> 169       <a href='../S/6681.html#L141' title='Defined at 141 in stdlib/exit.c.'>exit</a> (1);
+<a id='L170' name='L170'></a> 170     <em class='brace'>}</em>
+<a id='L171' name='L171'></a> 171 
+<a id='L172' name='L172'></a> 172       <em class='comment'>/* is SIGUSR2 pending?  */</em>
+<a id='L173' name='L173'></a> 173       <a href='../D/36758.html' title='Multiple defined in 2 places.'>signalpending</a> (<a href='../D/14212.html' title='Multiple defined in 7 places.'>SIGUSR2</a>, "before swapcontext");
+<a id='L174' name='L174'></a> 174 
+<a id='L175' name='L175'></a> 175       <strong class='reserved'>if</strong> (<a href='../D/37368.html' title='Multiple defined in 3 places.'>swapcontext</a> (&amp;<a href='../Y/21640.html' title='Multiple used in 9 places.'>oldctx</a>, &amp;<a href='../Y/12249.html' title='Multiple used in 1209 places.'>ctx</a>) != 0)
+<a id='L176' name='L176'></a> 176     <em class='brace'>{</em>
+<a id='L177' name='L177'></a> 177       <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("FAIL: swapcontext: %m\n");
+<a id='L178' name='L178'></a> 178       <a href='../S/6681.html#L141' title='Defined at 141 in stdlib/exit.c.'>exit</a> (1);
+<a id='L179' name='L179'></a> 179     <em class='brace'>}</em>
+<a id='L180' name='L180'></a> 180 
+<a id='L181' name='L181'></a> 181       <a href='../Y/23144.html' title='Multiple used in 3983 places.'>puts</a> ("FAIL: returned from (&amp;oldctx, &amp;ctx)");
+<a id='L182' name='L182'></a> 182       <a href='../S/6681.html#L141' title='Defined at 141 in stdlib/exit.c.'>exit</a> (1);
+<a id='L183' name='L183'></a> 183     <em class='brace'>}</em>
+<a id='L184' name='L184'></a> 184   <strong class='reserved'>else</strong> <strong class='reserved'>if</strong> ( <a href='../Y/15661.html' title='Multiple used in 108 places.'>global</a> != 3 )
+<a id='L185' name='L185'></a> 185     <em class='brace'>{</em>
+<a id='L186' name='L186'></a> 186       <a href='../Y/23144.html' title='Multiple used in 3983 places.'>puts</a> ("FAIL: 'global' not incremented three times");
+<a id='L187' name='L187'></a> 187       <a href='../S/6681.html#L141' title='Defined at 141 in stdlib/exit.c.'>exit</a> (1);
+<a id='L188' name='L188'></a> 188     <em class='brace'>}</em>
+<a id='L189' name='L189'></a> 189 
+<a id='L190' name='L190'></a> 190   <a href='../Y/23144.html' title='Multiple used in 3983 places.'>puts</a> ("after swapcontext");
+<a id='L191' name='L191'></a> 191   <em class='comment'>/* check SIGUSR1/2  */</em>
+<a id='L192' name='L192'></a> 192   <a href='../D/28646.html' title='Multiple defined in 26 places.'>check</a> ("swapcontext");
+<a id='L193' name='L193'></a> 193 
+<a id='L194' name='L194'></a> 194   <em class='comment'>/* was SIGUSR2 handler called? */</em>
+<a id='L195' name='L195'></a> 195   <strong class='reserved'>if</strong> (<a href='../Y/15925.html' title='Multiple used in 16 places.'>handlerCalled</a> != 1)
+<a id='L196' name='L196'></a> 196     <em class='brace'>{</em>
+<a id='L197' name='L197'></a> 197       <a href='../Y/23144.html' title='Multiple used in 3983 places.'>puts</a> ("FAIL: signal handler was not called after swapcontext.");
+<a id='L198' name='L198'></a> 198       <a href='../S/6681.html#L141' title='Defined at 141 in stdlib/exit.c.'>exit</a> (1);
+<a id='L199' name='L199'></a> 199     <em class='brace'>}</em>
+<a id='L200' name='L200'></a> 200 
+<a id='L201' name='L201'></a> 201   <em class='comment'>/* check sigmask in old context of swapcontext-call  */</em>
+<a id='L202' name='L202'></a> 202   <strong class='reserved'>if</strong> (<a href='../D/36743.html' title='Multiple defined in 5 places.'>sigismember</a> (&amp;<a href='../Y/21640.html' title='Multiple used in 9 places.'>oldctx</a>.<a href='../S/10529.html#L102' title='Defined at 102 in sysdeps/unix/sysv/linux/ia64/sys/ucontext.h.'>uc_sigmask</a>, <a href='../D/14212.html' title='Multiple defined in 7 places.'>SIGUSR2</a>) != 1)
+<a id='L203' name='L203'></a> 203     <em class='brace'>{</em>
+<a id='L204' name='L204'></a> 204       <a href='../Y/23144.html' title='Multiple used in 3983 places.'>puts</a> ("FAIL: SIGUSR2 is not blocked in oldctx.uc_sigmask.");
+<a id='L205' name='L205'></a> 205       <a href='../S/6681.html#L141' title='Defined at 141 in stdlib/exit.c.'>exit</a> (1);
+<a id='L206' name='L206'></a> 206     <em class='brace'>}</em>
+<a id='L207' name='L207'></a> 207 
+<a id='L208' name='L208'></a> 208   <strong class='reserved'>if</strong> (<a href='../D/36743.html' title='Multiple defined in 5 places.'>sigismember</a> (&amp;<a href='../Y/21640.html' title='Multiple used in 9 places.'>oldctx</a>.<a href='../S/10529.html#L102' title='Defined at 102 in sysdeps/unix/sysv/linux/ia64/sys/ucontext.h.'>uc_sigmask</a>, <a href='../D/14211.html' title='Multiple defined in 7 places.'>SIGUSR1</a>) != 1)
+<a id='L209' name='L209'></a> 209     <em class='brace'>{</em>
+<a id='L210' name='L210'></a> 210       <a href='../Y/23144.html' title='Multiple used in 3983 places.'>puts</a> ("FAIL: SIGUSR1 is not blocked in oldctx.uc_sigmaks.");
+<a id='L211' name='L211'></a> 211       <a href='../S/6681.html#L141' title='Defined at 141 in stdlib/exit.c.'>exit</a> (1);
+<a id='L212' name='L212'></a> 212     <em class='brace'>}</em>
+<a id='L213' name='L213'></a> 213 
+<a id='L214' name='L214'></a> 214   <strong class='reserved'>return</strong> 0;
+<a id='L215' name='L215'></a> 215 <em class='brace'>}</em>
+<a id='L216' name='L216'></a> 216 
+<a id='L217' name='L217'></a> 217 <em class='sharp'>#include</em> &lt;support/test-driver.c&gt;
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L31'>[^]</a><a href='#L88'>[v]</a><a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

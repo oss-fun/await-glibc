@@ -1,0 +1,128 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>resource/vtimes.c</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18948.html'>resource</a>/vtimes.c</h2>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L67'>[^]</a><a href='#L92'>[v]</a>[top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<h2 class='header'>DEFINITIONS</h2>
+This source file includes following definitions.
+<ol>
+<li><a href='#L67' title='Defined at 67.'>vtimes_one</a></li>
+<li><a href='#L92' title='Defined at 92.'>__vtimes</a></li>
+</ol>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* Copyright (C) 1991-2022 Free Software Foundation, Inc.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'></em>
+<a id='L4' name='L4'></a>   4 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'></em>
+<a id='L9' name='L9'></a>   9 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'></em>
+<a id='L14' name='L14'></a>  14 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   License along with the GNU C Library; if not, see</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L17' name='L17'></a>  17 
+<a id='L18' name='L18'></a>  18 <em class='sharp'>#include</em> &lt;stddef.h&gt;
+<a id='L19' name='L19'></a>  19 <em class='sharp'>#include</em> &lt;<a href='../I/148.html'>sys/resource.h</a>&gt;
+<a id='L20' name='L20'></a>  20 <em class='sharp'>#include</em> &lt;<a href='17977.html'>shlib-compat.h</a>&gt;
+<a id='L21' name='L21'></a>  21 
+<a id='L22' name='L22'></a>  22 <em class='sharp'>#if</em> <a href='../D/13978.html' title='Multiple defined in 16 places.'>SHLIB_COMPAT</a> (<a href='../D/32623.html' title='Multiple defined in 2 places.'>libc</a>, <a href='../S/1773.html#L416' title='Defined at 416 in nss/getXXbyYY_r.c.'>GLIBC_2_0</a>, <a href='../Y/702.html' title='Multiple used in 22 places.'>GLIBC_2_33</a>)
+<a id='L23' name='L23'></a>  23 
+<a id='L24' name='L24'></a>  24 <em class='comment'>/* Granularity of the `vm_utime' and `vm_stime' fields of a `struct vtimes'.</em>
+<a id='L25' name='L25'></a>  25 <em class='comment'>   (This is the frequency of the machine's power supply, in Hz.)  */</em>
+<a id='L26' name='L26'></a>  26 <em class='sharp'># define</em> <a href='../R/9425.html' title='Multiple referred from 2 places.'>VTIMES_UNITS_PER_SECOND</a> 60
+<a id='L27' name='L27'></a>  27 
+<a id='L28' name='L28'></a>  28 <strong class='reserved'>struct</strong> <a href='../R/26404.html' title='Multiple referred from 3 places.'>vtimes</a>
+<a id='L29' name='L29'></a>  29 <em class='brace'>{</em>
+<a id='L30' name='L30'></a>  30   <em class='comment'>/* User time used in units of 1/VTIMES_UNITS_PER_SECOND seconds.  */</em>
+<a id='L31' name='L31'></a>  31   <strong class='reserved'>int</strong> <a href='../Y/28726.html' title='Multiple used in 2 places.'>vm_utime</a>;
+<a id='L32' name='L32'></a>  32   <em class='comment'>/* System time used in units of 1/VTIMES_UNITS_PER_SECOND seconds.  */</em>
+<a id='L33' name='L33'></a>  33   <strong class='reserved'>int</strong> <a href='../Y/28724.html' title='Multiple used in 2 places.'>vm_stime</a>;
+<a id='L34' name='L34'></a>  34 
+<a id='L35' name='L35'></a>  35   <em class='comment'>/* Amount of data and stack memory used (kilobyte-seconds).  */</em>
+<a id='L36' name='L36'></a>  36   <strong class='reserved'>unsigned</strong> <strong class='reserved'>int</strong> <a href='../Y/28711.html' title='Multiple used in 2 places.'>vm_idsrss</a>;
+<a id='L37' name='L37'></a>  37   <em class='comment'>/* Amount of text memory used (kilobyte-seconds).  */</em>
+<a id='L38' name='L38'></a>  38   <strong class='reserved'>unsigned</strong> <strong class='reserved'>int</strong> vm_ixrss;
+<a id='L39' name='L39'></a>  39   <em class='comment'>/* Maximum resident set size (text, data, and stack) (kilobytes).  */</em>
+<a id='L40' name='L40'></a>  40   <strong class='reserved'>int</strong> vm_maxrss;
+<a id='L41' name='L41'></a>  41 
+<a id='L42' name='L42'></a>  42   <em class='comment'>/* Number of hard page faults (i.e. those that required I/O).  */</em>
+<a id='L43' name='L43'></a>  43   <strong class='reserved'>int</strong> <a href='../Y/28715.html' title='Multiple used in 2 places.'>vm_majflt</a>;
+<a id='L44' name='L44'></a>  44   <em class='comment'>/* Number of soft page faults (i.e. those serviced by reclaiming</em>
+<a id='L45' name='L45'></a>  45 <em class='comment'>     a page from the list of pages awaiting reallocation.  */</em>
+<a id='L46' name='L46'></a>  46   <strong class='reserved'>int</strong> <a href='../Y/28717.html' title='Multiple used in 2 places.'>vm_minflt</a>;
+<a id='L47' name='L47'></a>  47 
+<a id='L48' name='L48'></a>  48   <em class='comment'>/* Number of times a process was swapped out of physical memory.  */</em>
+<a id='L49' name='L49'></a>  49   <strong class='reserved'>int</strong> <a href='../Y/28718.html' title='Multiple used in 2 places.'>vm_nswap</a>;
+<a id='L50' name='L50'></a>  50 
+<a id='L51' name='L51'></a>  51   <em class='comment'>/* Number of input operations via the file system.  Note: This</em>
+<a id='L52' name='L52'></a>  52 <em class='comment'>     and `ru_oublock' do not include operations with the cache.  */</em>
+<a id='L53' name='L53'></a>  53   <strong class='reserved'>int</strong> <a href='../Y/28712.html' title='Multiple used in 2 places.'>vm_inblk</a>;
+<a id='L54' name='L54'></a>  54   <em class='comment'>/* Number of output operations via the file system.  */</em>
+<a id='L55' name='L55'></a>  55   <strong class='reserved'>int</strong> <a href='../Y/28720.html' title='Multiple used in 2 places.'>vm_oublk</a>;
+<a id='L56' name='L56'></a>  56 <em class='brace'>}</em>;
+<a id='L57' name='L57'></a>  57 
+<a id='L58' name='L58'></a>  58 <em class='comment'>/* Return the number of 1/VTIMES_UNITS_PER_SECOND-second</em>
+<a id='L59' name='L59'></a>  59 <em class='comment'>   units in the `struct timeval' TV.  */</em>
+<a id='L60' name='L60'></a>  60 <em class='sharp'># define</em> <a href='../R/8743.html' title='Multiple referred from 2 places.'>TIMEVAL_TO_VTIMES</a>(<a href='../Y/27966.html' title='Multiple used in 215 places.'>tv</a>) \
+<a id='L61' name='L61'></a>  61   ((<a href='../Y/27966.html' title='Multiple used in 215 places.'>tv</a>.<a href='../Y/27976.html' title='Multiple used in 803 places.'>tv_sec</a> * <a href='../S/1678.html#L26' title='Defined at 26 in resource/vtimes.c.'>VTIMES_UNITS_PER_SECOND</a>) \
+<a id='L62' name='L62'></a>  62    + (<a href='../Y/27966.html' title='Multiple used in 215 places.'>tv</a>.<a href='../Y/27978.html' title='Multiple used in 191 places.'>tv_usec</a> * <a href='../S/1678.html#L26' title='Defined at 26 in resource/vtimes.c.'>VTIMES_UNITS_PER_SECOND</a> / 1000000))
+<a id='L63' name='L63'></a>  63 
+<a id='L64' name='L64'></a>  64 <em class='comment'>/* If VT is not NULL, write statistics for WHO into *VT.</em>
+<a id='L65' name='L65'></a>  65 <em class='comment'>   Return 0 for success, -1 for failure.  */</em>
+<a id='L66' name='L66'></a>  66 <strong class='reserved'>static</strong> <strong class='reserved'>int</strong>
+<a id='L67' name='L67'></a>  67 <a href='../R/26405.html' title='Multiple referred from 2 places.'>vtimes_one</a> (<strong class='reserved'>struct</strong> <a href='../S/1678.html#L28' title='Defined at 28 in resource/vtimes.c.'>vtimes</a> *<a href='../Y/28784.html' title='Multiple used in 13 places.'>vt</a>, <strong class='reserved'>enum</strong> <a href='../D/25852.html' title='Multiple defined in 5 places.'>__rusage_who</a> <a href='../Y/29059.html' title='Multiple used in 47 places.'>who</a>)
+<a id='L68' name='L68'></a>  68 <em class='brace'>{</em>
+<a id='L69' name='L69'></a>  69   <strong class='reserved'>if</strong> (<a href='../Y/28784.html' title='Multiple used in 13 places.'>vt</a> != <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>)
+<a id='L70' name='L70'></a>  70     <em class='brace'>{</em>
+<a id='L71' name='L71'></a>  71       <strong class='reserved'>struct</strong> <a href='../S/1666.html#L33' title='Defined at 33 in resource/bits/types/struct_rusage.h.'>rusage</a> <a href='../D/38774.html' title='Multiple defined in 7 places.'>usage</a>;
+<a id='L72' name='L72'></a>  72 
+<a id='L73' name='L73'></a>  73       <strong class='reserved'>if</strong> (<a href='../D/24168.html' title='Multiple defined in 2 places.'>__getrusage</a> (<a href='../Y/29059.html' title='Multiple used in 47 places.'>who</a>, &amp;<a href='../D/38774.html' title='Multiple defined in 7 places.'>usage</a>) &lt; 0)
+<a id='L74' name='L74'></a>  74     <strong class='reserved'>return</strong> -1;
+<a id='L75' name='L75'></a>  75 
+<a id='L76' name='L76'></a>  76       <a href='../Y/28784.html' title='Multiple used in 13 places.'>vt</a>-&gt;<a href='../Y/28726.html' title='Multiple used in 2 places.'>vm_utime</a> = <a href='../S/1678.html#L60' title='Defined at 60 in resource/vtimes.c.'>TIMEVAL_TO_VTIMES</a> (<a href='../D/38774.html' title='Multiple defined in 7 places.'>usage</a>.<a href='../Y/24383.html' title='Multiple used in 9 places.'>ru_utime</a>);
+<a id='L77' name='L77'></a>  77       <a href='../Y/28784.html' title='Multiple used in 13 places.'>vt</a>-&gt;<a href='../Y/28724.html' title='Multiple used in 2 places.'>vm_stime</a> = <a href='../S/1678.html#L60' title='Defined at 60 in resource/vtimes.c.'>TIMEVAL_TO_VTIMES</a> (<a href='../D/38774.html' title='Multiple defined in 7 places.'>usage</a>.<a href='../Y/24381.html' title='Multiple used in 9 places.'>ru_stime</a>);
+<a id='L78' name='L78'></a>  78       <a href='../Y/28784.html' title='Multiple used in 13 places.'>vt</a>-&gt;<a href='../Y/28711.html' title='Multiple used in 2 places.'>vm_idsrss</a> = <a href='../D/38774.html' title='Multiple defined in 7 places.'>usage</a>.<a href='../Y/24366.html' title='Multiple used in 7 places.'>ru_idrss</a> + <a href='../D/38774.html' title='Multiple defined in 7 places.'>usage</a>.<a href='../Y/24368.html' title='Multiple used in 7 places.'>ru_isrss</a>;
+<a id='L79' name='L79'></a>  79       <a href='../Y/28784.html' title='Multiple used in 13 places.'>vt</a>-&gt;<a href='../Y/28715.html' title='Multiple used in 2 places.'>vm_majflt</a> = <a href='../D/38774.html' title='Multiple defined in 7 places.'>usage</a>.<a href='../Y/24370.html' title='Multiple used in 8 places.'>ru_majflt</a>;
+<a id='L80' name='L80'></a>  80       <a href='../Y/28784.html' title='Multiple used in 13 places.'>vt</a>-&gt;<a href='../Y/28717.html' title='Multiple used in 2 places.'>vm_minflt</a> = <a href='../D/38774.html' title='Multiple defined in 7 places.'>usage</a>.<a href='../Y/24372.html' title='Multiple used in 8 places.'>ru_minflt</a>;
+<a id='L81' name='L81'></a>  81       <a href='../Y/28784.html' title='Multiple used in 13 places.'>vt</a>-&gt;<a href='../Y/28718.html' title='Multiple used in 2 places.'>vm_nswap</a> = <a href='../D/38774.html' title='Multiple defined in 7 places.'>usage</a>.<a href='../Y/24378.html' title='Multiple used in 7 places.'>ru_nswap</a>;
+<a id='L82' name='L82'></a>  82       <a href='../Y/28784.html' title='Multiple used in 13 places.'>vt</a>-&gt;<a href='../Y/28712.html' title='Multiple used in 2 places.'>vm_inblk</a> = <a href='../D/38774.html' title='Multiple defined in 7 places.'>usage</a>.<a href='../Y/24367.html' title='Multiple used in 7 places.'>ru_inblock</a>;
+<a id='L83' name='L83'></a>  83       <a href='../Y/28784.html' title='Multiple used in 13 places.'>vt</a>-&gt;<a href='../Y/28720.html' title='Multiple used in 2 places.'>vm_oublk</a> = <a href='../D/38774.html' title='Multiple defined in 7 places.'>usage</a>.<a href='../Y/24380.html' title='Multiple used in 7 places.'>ru_oublock</a>;
+<a id='L84' name='L84'></a>  84     <em class='brace'>}</em>
+<a id='L85' name='L85'></a>  85   <strong class='reserved'>return</strong> 0;
+<a id='L86' name='L86'></a>  86 <em class='brace'>}</em>
+<a id='L87' name='L87'></a>  87 
+<a id='L88' name='L88'></a>  88 <em class='comment'>/* If CURRENT is not NULL, write statistics for the current process into</em>
+<a id='L89' name='L89'></a>  89 <em class='comment'>   *CURRENT.  If CHILD is not NULL, write statistics for all terminated child</em>
+<a id='L90' name='L90'></a>  90 <em class='comment'>   processes into *CHILD.  Returns 0 for success, -1 for failure.  */</em>
+<a id='L91' name='L91'></a>  91 <strong class='reserved'>int</strong>
+<a id='L92' name='L92'></a>  92 <a href='../S/1678.html#L99' title='Referred from 99 in resource/vtimes.c.'>__vtimes</a> (<strong class='reserved'>struct</strong> <a href='../S/1678.html#L28' title='Defined at 28 in resource/vtimes.c.'>vtimes</a> *<a href='../S/2289.html#L34' title='Defined at 34 in locale/lc-ctype.c.'>current</a>, <strong class='reserved'>struct</strong> <a href='../S/1678.html#L28' title='Defined at 28 in resource/vtimes.c.'>vtimes</a> *<a href='../D/28824.html' title='Multiple defined in 4 places.'>child</a>)
+<a id='L93' name='L93'></a>  93 <em class='brace'>{</em>
+<a id='L94' name='L94'></a>  94   <strong class='reserved'>if</strong> (<a href='../S/1678.html#L67' title='Defined at 67 in resource/vtimes.c.'>vtimes_one</a> (<a href='../S/2289.html#L34' title='Defined at 34 in locale/lc-ctype.c.'>current</a>, <a href='../D/11704.html' title='Multiple defined in 15 places.'>RUSAGE_SELF</a>) &lt; 0
+<a id='L95' name='L95'></a>  95       || <a href='../S/1678.html#L67' title='Defined at 67 in resource/vtimes.c.'>vtimes_one</a> (<a href='../D/28824.html' title='Multiple defined in 4 places.'>child</a>, <a href='../D/11703.html' title='Multiple defined in 5 places.'>RUSAGE_CHILDREN</a>) &lt; 0)
+<a id='L96' name='L96'></a>  96     <strong class='reserved'>return</strong> -1;
+<a id='L97' name='L97'></a>  97   <strong class='reserved'>return</strong> 0;
+<a id='L98' name='L98'></a>  98 <em class='brace'>}</em>
+<a id='L99' name='L99'></a>  99 <a href='../D/29028.html' title='Multiple defined in 14 places.'>compat_symbol</a> (<a href='../D/32623.html' title='Multiple defined in 2 places.'>libc</a>, <a href='../S/1678.html#L92' title='Defined at 92 in resource/vtimes.c.'>__vtimes</a>, <a href='../S/1678.html#L28' title='Defined at 28 in resource/vtimes.c.'>vtimes</a>, <a href='../S/1773.html#L416' title='Defined at 416 in nss/getXXbyYY_r.c.'>GLIBC_2_0</a>);
+<a id='L100' name='L100'></a> 100 
+<a id='L101' name='L101'></a> 101 <em class='sharp'>#endif</em> <em class='comment'>/* SHLIB_COMPAT (libc, GLIBC_2_0, GLIBC_2_33)  */</em>
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L67'>[^]</a><a href='#L92'>[v]</a><a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

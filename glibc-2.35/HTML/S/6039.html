@@ -1,0 +1,210 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>crypt/crypt-entry.c</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18862.html'>crypt</a>/crypt-entry.c</h2>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L75'>[^]</a><a href='#L156'>[v]</a>[top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<h2 class='header'>DEFINITIONS</h2>
+This source file includes following definitions.
+<ol>
+<li><a href='#L75' title='Defined at 75.'>__crypt_r</a></li>
+<li><a href='#L156' title='Defined at 156.'>weak_alias</a></li>
+</ol>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/*</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'> * UFC-crypt: ultra fast crypt(3) implementation</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'> *</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'> * Copyright (C) 1991-2022 Free Software Foundation, Inc.</em>
+<a id='L5' name='L5'></a>   5 <em class='comment'> *</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'> * The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'> * modify it under the terms of the GNU Lesser General Public</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'> * License as published by the Free Software Foundation; either</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'> * version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L10' name='L10'></a>  10 <em class='comment'> *</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'> * The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'> * but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'> * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'> * Lesser General Public License for more details.</em>
+<a id='L15' name='L15'></a>  15 <em class='comment'> *</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'> * You should have received a copy of the GNU Lesser General Public</em>
+<a id='L17' name='L17'></a>  17 <em class='comment'> * License along with the GNU C Library; if not, see</em>
+<a id='L18' name='L18'></a>  18 <em class='comment'> * &lt;https://www.gnu.org/licenses/&gt;.</em>
+<a id='L19' name='L19'></a>  19 <em class='comment'> *</em>
+<a id='L20' name='L20'></a>  20 <em class='comment'> * crypt entry points</em>
+<a id='L21' name='L21'></a>  21 <em class='comment'> *</em>
+<a id='L22' name='L22'></a>  22 <em class='comment'> * @(#)crypt-entry.c    1.2 12/20/96</em>
+<a id='L23' name='L23'></a>  23 <em class='comment'> *</em>
+<a id='L24' name='L24'></a>  24 <em class='comment'> */</em>
+<a id='L25' name='L25'></a>  25 
+<a id='L26' name='L26'></a>  26 <em class='sharp'>#ifdef</em> <a href='../Y/267.html' title='Multiple used in 21 places.'>DEBUG</a>
+<a id='L27' name='L27'></a>  27 <em class='sharp'>#include</em> &lt;<a href='../I/1776.html'>stdio.h</a>&gt;
+<a id='L28' name='L28'></a>  28 <em class='sharp'>#endif</em>
+<a id='L29' name='L29'></a>  29 <em class='sharp'>#include</em> &lt;<a href='../I/1973.html'>string.h</a>&gt;
+<a id='L30' name='L30'></a>  30 <em class='sharp'>#include</em> &lt;<a href='../I/116.html'>errno.h</a>&gt;
+<a id='L31' name='L31'></a>  31 <em class='sharp'>#include</em> &lt;<a href='../I/6474.html'>fips-private.h</a>&gt;
+<a id='L32' name='L32'></a>  32 
+<a id='L33' name='L33'></a>  33 <em class='sharp'>#ifndef</em> <a href='../D/14741.html' title='Multiple defined in 12 places.'>STATIC</a>
+<a id='L34' name='L34'></a>  34 <em class='sharp'>#define</em> <a href='../R/8008.html' title='Multiple referred from 24 places.'>STATIC</a> <strong class='reserved'>static</strong>
+<a id='L35' name='L35'></a>  35 <em class='sharp'>#endif</em>
+<a id='L36' name='L36'></a>  36 
+<a id='L37' name='L37'></a>  37 <em class='sharp'>#include</em> "<a href='6033.html'>crypt-private.h</a>"
+<a id='L38' name='L38'></a>  38 <em class='sharp'>#include</em> &lt;<a href='17977.html'>shlib-compat.h</a>&gt;
+<a id='L39' name='L39'></a>  39 
+<a id='L40' name='L40'></a>  40 <em class='comment'>/* Prototypes for local functions.  */</em>
+<a id='L41' name='L41'></a>  41 <em class='sharp'>#ifndef</em> <a href='../D/21629.html' title='Multiple defined in 2 places.'>__GNU_LIBRARY__</a>
+<a id='L42' name='L42'></a>  42 <strong class='reserved'>void</strong> <a href='../D/27359.html' title='Multiple defined in 3 places.'>_ufc_clearmem</a> (<strong class='reserved'>char</strong> *<a href='../D/36987.html' title='Multiple defined in 10 places.'>start</a>, <strong class='reserved'>int</strong> <a href='../D/28982.html' title='Multiple defined in 8 places.'>cnt</a>);
+<a id='L43' name='L43'></a>  43 <em class='sharp'>#else</em>
+<a id='L44' name='L44'></a>  44 <em class='sharp'>#define</em> <a href='../R/16896.html' title='Multiple referred from 13 places.'>_ufc_clearmem</a>(<a href='../D/36987.html' title='Multiple defined in 10 places.'>start</a>, <a href='../D/28982.html' title='Multiple defined in 8 places.'>cnt</a>)   <a href='../D/33462.html' title='Multiple defined in 30 places.'>memset</a>(<a href='../D/36987.html' title='Multiple defined in 10 places.'>start</a>, 0, <a href='../D/28982.html' title='Multiple defined in 8 places.'>cnt</a>)
+<a id='L45' name='L45'></a>  45 <em class='sharp'>#endif</em>
+<a id='L46' name='L46'></a>  46 <strong class='reserved'>extern</strong> <strong class='reserved'>char</strong> *<a href='../S/6025.html#L91' title='Defined at 91 in crypt/md5-crypt.c.'>__md5_crypt_r</a> (<strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../D/32455.html' title='Multiple defined in 4 places.'>key</a>, <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../Y/24557.html' title='Multiple used in 98 places.'>salt</a>, <strong class='reserved'>char</strong> *<a href='../D/28321.html' title='Multiple defined in 7 places.'>buffer</a>,
+<a id='L47' name='L47'></a>  47                 <strong class='reserved'>int</strong> <a href='../D/28326.html' title='Multiple defined in 8 places.'>buflen</a>);
+<a id='L48' name='L48'></a>  48 <strong class='reserved'>extern</strong> <strong class='reserved'>char</strong> *<a href='../S/6025.html#L308' title='Defined at 308 in crypt/md5-crypt.c.'>__md5_crypt</a> (<strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../D/32455.html' title='Multiple defined in 4 places.'>key</a>, <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../Y/24557.html' title='Multiple used in 98 places.'>salt</a>);
+<a id='L49' name='L49'></a>  49 <strong class='reserved'>extern</strong> <strong class='reserved'>char</strong> *<a href='../S/6048.html#L101' title='Defined at 101 in crypt/sha256-crypt.c.'>__sha256_crypt_r</a> (<strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../D/32455.html' title='Multiple defined in 4 places.'>key</a>, <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../Y/24557.html' title='Multiple used in 98 places.'>salt</a>,
+<a id='L50' name='L50'></a>  50                    <strong class='reserved'>char</strong> *<a href='../D/28321.html' title='Multiple defined in 7 places.'>buffer</a>, <strong class='reserved'>int</strong> <a href='../D/28326.html' title='Multiple defined in 8 places.'>buflen</a>);
+<a id='L51' name='L51'></a>  51 <strong class='reserved'>extern</strong> <strong class='reserved'>char</strong> *<a href='../S/6048.html#L397' title='Defined at 397 in crypt/sha256-crypt.c.'>__sha256_crypt</a> (<strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../D/32455.html' title='Multiple defined in 4 places.'>key</a>, <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../Y/24557.html' title='Multiple used in 98 places.'>salt</a>);
+<a id='L52' name='L52'></a>  52 <strong class='reserved'>extern</strong> <strong class='reserved'>char</strong> *<a href='../S/6050.html#L101' title='Defined at 101 in crypt/sha512-crypt.c.'>__sha512_crypt_r</a> (<strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../D/32455.html' title='Multiple defined in 4 places.'>key</a>, <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../Y/24557.html' title='Multiple used in 98 places.'>salt</a>,
+<a id='L53' name='L53'></a>  53                    <strong class='reserved'>char</strong> *<a href='../D/28321.html' title='Multiple defined in 7 places.'>buffer</a>, <strong class='reserved'>int</strong> <a href='../D/28326.html' title='Multiple defined in 8 places.'>buflen</a>);
+<a id='L54' name='L54'></a>  54 <strong class='reserved'>extern</strong> <strong class='reserved'>char</strong> *<a href='../S/6050.html#L419' title='Defined at 419 in crypt/sha512-crypt.c.'>__sha512_crypt</a> (<strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../D/32455.html' title='Multiple defined in 4 places.'>key</a>, <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../Y/24557.html' title='Multiple used in 98 places.'>salt</a>);
+<a id='L55' name='L55'></a>  55 
+<a id='L56' name='L56'></a>  56 <em class='comment'>/* Define our magic string to mark salt for MD5 encryption</em>
+<a id='L57' name='L57'></a>  57 <em class='comment'>   replacement.  This is meant to be the same as for other MD5 based</em>
+<a id='L58' name='L58'></a>  58 <em class='comment'>   encryption implementations.  */</em>
+<a id='L59' name='L59'></a>  59 <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> <a href='../Y/19203.html' title='Multiple used in 9 places.'>md5_salt_prefix</a>[] = "$1$";
+<a id='L60' name='L60'></a>  60 
+<a id='L61' name='L61'></a>  61 <em class='comment'>/* Magic string for SHA256 encryption.  */</em>
+<a id='L62' name='L62'></a>  62 <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> <a href='../Y/25240.html' title='Multiple used in 9 places.'>sha256_salt_prefix</a>[] = "$5$";
+<a id='L63' name='L63'></a>  63 
+<a id='L64' name='L64'></a>  64 <em class='comment'>/* Magic string for SHA512 encryption.  */</em>
+<a id='L65' name='L65'></a>  65 <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> <a href='../Y/25242.html' title='Multiple used in 9 places.'>sha512_salt_prefix</a>[] = "$6$";
+<a id='L66' name='L66'></a>  66 
+<a id='L67' name='L67'></a>  67 <em class='comment'>/* For use by the old, non-reentrant routines (crypt/encrypt/setkey)  */</em>
+<a id='L68' name='L68'></a>  68 <strong class='reserved'>extern</strong> <strong class='reserved'>struct</strong> <a href='../Y/12187.html' title='Multiple used in 27 places.'>crypt_data</a> <a href='../Y/9603.html' title='Multiple used in 6 places.'>_ufc_foobar</a>;
+<a id='L69' name='L69'></a>  69 
+<a id='L70' name='L70'></a>  70 <em class='comment'>/*</em>
+<a id='L71' name='L71'></a>  71 <em class='comment'> * UNIX crypt function</em>
+<a id='L72' name='L72'></a>  72 <em class='comment'> */</em>
+<a id='L73' name='L73'></a>  73 
+<a id='L74' name='L74'></a>  74 <strong class='reserved'>char</strong> *
+<a id='L75' name='L75'></a>  75 <a href='../R/13864.html' title='Multiple referred from 3 places.'>__crypt_r</a> (<strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../D/32455.html' title='Multiple defined in 4 places.'>key</a>, <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../Y/24557.html' title='Multiple used in 98 places.'>salt</a>,
+<a id='L76' name='L76'></a>  76        <strong class='reserved'>struct</strong> <a href='../Y/12187.html' title='Multiple used in 27 places.'>crypt_data</a> * <strong class='reserved'>__restrict</strong> <a href='../D/29309.html' title='Multiple defined in 3 places.'>data</a>)
+<a id='L77' name='L77'></a>  77 <em class='brace'>{</em>
+<a id='L78' name='L78'></a>  78   <a href='../S/6026.html#L21' title='Defined at 21 in crypt/ufc-crypt.h.'>ufc_long</a> <a href='../D/35957.html' title='Multiple defined in 4 places.'>res</a>[4];
+<a id='L79' name='L79'></a>  79   <strong class='reserved'>char</strong> <a href='../Y/17557.html' title='Multiple used in 8 places.'>ktab</a>[9];
+<a id='L80' name='L80'></a>  80   <a href='../S/6026.html#L21' title='Defined at 21 in crypt/ufc-crypt.h.'>ufc_long</a> <a href='../Y/29523.html' title='Multiple used in 226 places.'>xx</a> = 25; <em class='comment'>/* to cope with GCC long long compiler bugs */</em>
+<a id='L81' name='L81'></a>  81 
+<a id='L82' name='L82'></a>  82 <em class='sharp'>#ifdef</em> <a href='../D/19175.html' title='Multiple defined in 5 places.'>_LIBC</a>
+<a id='L83' name='L83'></a>  83   <em class='comment'>/* Try to find out whether we have to use MD5 encryption replacement.  */</em>
+<a id='L84' name='L84'></a>  84   <strong class='reserved'>if</strong> (<a href='../D/37116.html' title='Multiple defined in 12 places.'>strncmp</a> (<a href='../Y/19203.html' title='Multiple used in 9 places.'>md5_salt_prefix</a>, <a href='../Y/24557.html' title='Multiple used in 98 places.'>salt</a>, <strong class='reserved'>sizeof</strong> (<a href='../Y/19203.html' title='Multiple used in 9 places.'>md5_salt_prefix</a>) - 1) == 0)
+<a id='L85' name='L85'></a>  85     <em class='brace'>{</em>
+<a id='L86' name='L86'></a>  86       <em class='comment'>/* FIPS rules out MD5 password encryption.  */</em>
+<a id='L87' name='L87'></a>  87       <strong class='reserved'>if</strong> (<a href='../D/30552.html' title='Multiple defined in 2 places.'>fips_enabled_p</a> ())
+<a id='L88' name='L88'></a>  88     <em class='brace'>{</em>
+<a id='L89' name='L89'></a>  89       <a href='../D/25959.html' title='Multiple defined in 8 places.'>__set_errno</a> (<a href='../D/3685.html' title='Multiple defined in 2 places.'>EPERM</a>);
+<a id='L90' name='L90'></a>  90       <strong class='reserved'>return</strong> <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>;
+<a id='L91' name='L91'></a>  91     <em class='brace'>}</em>
+<a id='L92' name='L92'></a>  92       <strong class='reserved'>return</strong> <a href='../S/6025.html#L91' title='Defined at 91 in crypt/md5-crypt.c.'>__md5_crypt_r</a> (<a href='../D/32455.html' title='Multiple defined in 4 places.'>key</a>, <a href='../Y/24557.html' title='Multiple used in 98 places.'>salt</a>, (<strong class='reserved'>char</strong> *) <a href='../D/29309.html' title='Multiple defined in 3 places.'>data</a>,
+<a id='L93' name='L93'></a>  93                 <strong class='reserved'>sizeof</strong> (<strong class='reserved'>struct</strong> <a href='../Y/12187.html' title='Multiple used in 27 places.'>crypt_data</a>));
+<a id='L94' name='L94'></a>  94     <em class='brace'>}</em>
+<a id='L95' name='L95'></a>  95 
+<a id='L96' name='L96'></a>  96   <em class='comment'>/* Try to find out whether we have to use SHA256 encryption replacement.  */</em>
+<a id='L97' name='L97'></a>  97   <strong class='reserved'>if</strong> (<a href='../D/37116.html' title='Multiple defined in 12 places.'>strncmp</a> (<a href='../Y/25240.html' title='Multiple used in 9 places.'>sha256_salt_prefix</a>, <a href='../Y/24557.html' title='Multiple used in 98 places.'>salt</a>, <strong class='reserved'>sizeof</strong> (<a href='../Y/25240.html' title='Multiple used in 9 places.'>sha256_salt_prefix</a>) - 1) == 0)
+<a id='L98' name='L98'></a>  98     <strong class='reserved'>return</strong> <a href='../S/6048.html#L101' title='Defined at 101 in crypt/sha256-crypt.c.'>__sha256_crypt_r</a> (<a href='../D/32455.html' title='Multiple defined in 4 places.'>key</a>, <a href='../Y/24557.html' title='Multiple used in 98 places.'>salt</a>, (<strong class='reserved'>char</strong> *) <a href='../D/29309.html' title='Multiple defined in 3 places.'>data</a>,
+<a id='L99' name='L99'></a>  99                  <strong class='reserved'>sizeof</strong> (<strong class='reserved'>struct</strong> <a href='../Y/12187.html' title='Multiple used in 27 places.'>crypt_data</a>));
+<a id='L100' name='L100'></a> 100 
+<a id='L101' name='L101'></a> 101   <em class='comment'>/* Try to find out whether we have to use SHA512 encryption replacement.  */</em>
+<a id='L102' name='L102'></a> 102   <strong class='reserved'>if</strong> (<a href='../D/37116.html' title='Multiple defined in 12 places.'>strncmp</a> (<a href='../Y/25242.html' title='Multiple used in 9 places.'>sha512_salt_prefix</a>, <a href='../Y/24557.html' title='Multiple used in 98 places.'>salt</a>, <strong class='reserved'>sizeof</strong> (<a href='../Y/25242.html' title='Multiple used in 9 places.'>sha512_salt_prefix</a>) - 1) == 0)
+<a id='L103' name='L103'></a> 103     <strong class='reserved'>return</strong> <a href='../S/6050.html#L101' title='Defined at 101 in crypt/sha512-crypt.c.'>__sha512_crypt_r</a> (<a href='../D/32455.html' title='Multiple defined in 4 places.'>key</a>, <a href='../Y/24557.html' title='Multiple used in 98 places.'>salt</a>, (<strong class='reserved'>char</strong> *) <a href='../D/29309.html' title='Multiple defined in 3 places.'>data</a>,
+<a id='L104' name='L104'></a> 104                  <strong class='reserved'>sizeof</strong> (<strong class='reserved'>struct</strong> <a href='../Y/12187.html' title='Multiple used in 27 places.'>crypt_data</a>));
+<a id='L105' name='L105'></a> 105 <em class='sharp'>#endif</em>
+<a id='L106' name='L106'></a> 106 
+<a id='L107' name='L107'></a> 107   <em class='comment'>/*</em>
+<a id='L108' name='L108'></a> 108 <em class='comment'>   * Hack DES tables according to salt</em>
+<a id='L109' name='L109'></a> 109 <em class='comment'>   */</em>
+<a id='L110' name='L110'></a> 110   <strong class='reserved'>if</strong> (!<a href='../S/6041.html#L607' title='Defined at 607 in crypt/crypt_util.c.'>_ufc_setup_salt_r</a> (<a href='../Y/24557.html' title='Multiple used in 98 places.'>salt</a>, <a href='../D/29309.html' title='Multiple defined in 3 places.'>data</a>))
+<a id='L111' name='L111'></a> 111     <em class='brace'>{</em>
+<a id='L112' name='L112'></a> 112       <a href='../D/25959.html' title='Multiple defined in 8 places.'>__set_errno</a> (<a href='../D/3156.html' title='Multiple defined in 3 places.'>EINVAL</a>);
+<a id='L113' name='L113'></a> 113       <strong class='reserved'>return</strong> <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>;
+<a id='L114' name='L114'></a> 114     <em class='brace'>}</em>
+<a id='L115' name='L115'></a> 115 
+<a id='L116' name='L116'></a> 116   <em class='comment'>/* FIPS rules out DES password encryption.  */</em>
+<a id='L117' name='L117'></a> 117   <strong class='reserved'>if</strong> (<a href='../D/30552.html' title='Multiple defined in 2 places.'>fips_enabled_p</a> ())
+<a id='L118' name='L118'></a> 118     <em class='brace'>{</em>
+<a id='L119' name='L119'></a> 119       <a href='../D/25959.html' title='Multiple defined in 8 places.'>__set_errno</a> (<a href='../D/3685.html' title='Multiple defined in 2 places.'>EPERM</a>);
+<a id='L120' name='L120'></a> 120       <strong class='reserved'>return</strong> <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>;
+<a id='L121' name='L121'></a> 121     <em class='brace'>}</em>
+<a id='L122' name='L122'></a> 122 
+<a id='L123' name='L123'></a> 123   <em class='comment'>/*</em>
+<a id='L124' name='L124'></a> 124 <em class='comment'>   * Setup key schedule</em>
+<a id='L125' name='L125'></a> 125 <em class='comment'>   */</em>
+<a id='L126' name='L126'></a> 126   <a href='../D/27359.html' title='Multiple defined in 3 places.'>_ufc_clearmem</a> (<a href='../Y/17557.html' title='Multiple used in 8 places.'>ktab</a>, (<strong class='reserved'>int</strong>) <strong class='reserved'>sizeof</strong> (<a href='../Y/17557.html' title='Multiple used in 8 places.'>ktab</a>));
+<a id='L127' name='L127'></a> 127   (<strong class='reserved'>void</strong>) <a href='../D/37121.html' title='Multiple defined in 11 places.'>strncpy</a> (<a href='../Y/17557.html' title='Multiple used in 8 places.'>ktab</a>, <a href='../D/32455.html' title='Multiple defined in 4 places.'>key</a>, 8);
+<a id='L128' name='L128'></a> 128   <a href='../S/6041.html#L666' title='Defined at 666 in crypt/crypt_util.c.'>_ufc_mk_keytab_r</a> (<a href='../Y/17557.html' title='Multiple used in 8 places.'>ktab</a>, <a href='../D/29309.html' title='Multiple defined in 3 places.'>data</a>);
+<a id='L129' name='L129'></a> 129 
+<a id='L130' name='L130'></a> 130   <em class='comment'>/*</em>
+<a id='L131' name='L131'></a> 131 <em class='comment'>   * Go for the 25 DES encryptions</em>
+<a id='L132' name='L132'></a> 132 <em class='comment'>   */</em>
+<a id='L133' name='L133'></a> 133   <a href='../D/27359.html' title='Multiple defined in 3 places.'>_ufc_clearmem</a> ((<strong class='reserved'>char</strong>*) <a href='../D/35957.html' title='Multiple defined in 4 places.'>res</a>, (<strong class='reserved'>int</strong>) <strong class='reserved'>sizeof</strong> (<a href='../D/35957.html' title='Multiple defined in 4 places.'>res</a>));
+<a id='L134' name='L134'></a> 134   <a href='../D/27362.html' title='Multiple defined in 2 places.'>_ufc_doit_r</a> (<a href='../Y/29523.html' title='Multiple used in 226 places.'>xx</a>,  <a href='../D/29309.html' title='Multiple defined in 3 places.'>data</a>, &amp;<a href='../D/35957.html' title='Multiple defined in 4 places.'>res</a>[0]);
+<a id='L135' name='L135'></a> 135 
+<a id='L136' name='L136'></a> 136   <em class='comment'>/*</em>
+<a id='L137' name='L137'></a> 137 <em class='comment'>   * Do final permutations</em>
+<a id='L138' name='L138'></a> 138 <em class='comment'>   */</em>
+<a id='L139' name='L139'></a> 139   <a href='../S/6041.html#L724' title='Defined at 724 in crypt/crypt_util.c.'>_ufc_dofinalperm_r</a> (<a href='../D/35957.html' title='Multiple defined in 4 places.'>res</a>, <a href='../D/29309.html' title='Multiple defined in 3 places.'>data</a>);
+<a id='L140' name='L140'></a> 140 
+<a id='L141' name='L141'></a> 141   <em class='comment'>/*</em>
+<a id='L142' name='L142'></a> 142 <em class='comment'>   * And convert back to 6 bit ASCII</em>
+<a id='L143' name='L143'></a> 143 <em class='comment'>   */</em>
+<a id='L144' name='L144'></a> 144   <a href='../S/6041.html#L766' title='Defined at 766 in crypt/crypt_util.c.'>_ufc_output_conversion_r</a> (<a href='../D/35957.html' title='Multiple defined in 4 places.'>res</a>[0], <a href='../D/35957.html' title='Multiple defined in 4 places.'>res</a>[1], <a href='../Y/24557.html' title='Multiple used in 98 places.'>salt</a>, <a href='../D/29309.html' title='Multiple defined in 3 places.'>data</a>);
+<a id='L145' name='L145'></a> 145 
+<a id='L146' name='L146'></a> 146   <em class='comment'>/*</em>
+<a id='L147' name='L147'></a> 147 <em class='comment'>   * Erase key-dependent intermediate data.  Data dependent only on</em>
+<a id='L148' name='L148'></a> 148 <em class='comment'>   * the salt is not considered sensitive.</em>
+<a id='L149' name='L149'></a> 149 <em class='comment'>   */</em>
+<a id='L150' name='L150'></a> 150   <a href='../D/30147.html' title='Multiple defined in 4 places.'>explicit_bzero</a> (<a href='../Y/17557.html' title='Multiple used in 8 places.'>ktab</a>, <strong class='reserved'>sizeof</strong> (<a href='../Y/17557.html' title='Multiple used in 8 places.'>ktab</a>));
+<a id='L151' name='L151'></a> 151   <a href='../D/30147.html' title='Multiple defined in 4 places.'>explicit_bzero</a> (<a href='../D/29309.html' title='Multiple defined in 3 places.'>data</a>-&gt;<a href='../Y/17516.html' title='Multiple used in 8 places.'>keysched</a>, <strong class='reserved'>sizeof</strong> (<a href='../D/29309.html' title='Multiple defined in 3 places.'>data</a>-&gt;<a href='../Y/17516.html' title='Multiple used in 8 places.'>keysched</a>));
+<a id='L152' name='L152'></a> 152   <a href='../D/30147.html' title='Multiple defined in 4 places.'>explicit_bzero</a> (<a href='../D/35957.html' title='Multiple defined in 4 places.'>res</a>, <strong class='reserved'>sizeof</strong> (<a href='../D/35957.html' title='Multiple defined in 4 places.'>res</a>));
+<a id='L153' name='L153'></a> 153 
+<a id='L154' name='L154'></a> 154   <strong class='reserved'>return</strong> <a href='../D/29309.html' title='Multiple defined in 3 places.'>data</a>-&gt;<a href='../Y/12186.html' title='Multiple used in 8 places.'>crypt_3_buf</a>;
+<a id='L155' name='L155'></a> 155 <em class='brace'>}</em>
+<a id='L156' name='L156'></a> 156 <a href='../R/26489.html' title='Multiple referred from 1703 places.'>weak_alias</a> (<a href='../S/6039.html#L75' title='Defined at 75 in crypt/crypt-entry.c.'>__crypt_r</a>, <a href='../Y/12188.html' title='Multiple used in 3 places.'>crypt_r</a>)
+<a id='L157' name='L157'></a> 157 
+<a id='L158' name='L158'></a> 158 <strong class='reserved'>char</strong> *
+<a id='L159' name='L159'></a> 159 <a href='../S/6029.html#L36' title='Defined at 36 in crypt/crypt.h.'>crypt</a> (<strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../D/32455.html' title='Multiple defined in 4 places.'>key</a>, <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../Y/24557.html' title='Multiple used in 98 places.'>salt</a>)
+<a id='L160' name='L160'></a> 160 <em class='brace'>{</em>
+<a id='L161' name='L161'></a> 161 <em class='sharp'>#ifdef</em> <a href='../D/19175.html' title='Multiple defined in 5 places.'>_LIBC</a>
+<a id='L162' name='L162'></a> 162   <em class='comment'>/* Try to find out whether we have to use MD5 encryption replacement.  */</em>
+<a id='L163' name='L163'></a> 163   <strong class='reserved'>if</strong> (<a href='../D/37116.html' title='Multiple defined in 12 places.'>strncmp</a> (<a href='../Y/19203.html' title='Multiple used in 9 places.'>md5_salt_prefix</a>, <a href='../Y/24557.html' title='Multiple used in 98 places.'>salt</a>, <strong class='reserved'>sizeof</strong> (<a href='../Y/19203.html' title='Multiple used in 9 places.'>md5_salt_prefix</a>) - 1) == 0
+<a id='L164' name='L164'></a> 164       <em class='comment'>/* Let __crypt_r deal with the error code if FIPS is enabled.  */</em>
+<a id='L165' name='L165'></a> 165       &amp;&amp; !<a href='../D/30552.html' title='Multiple defined in 2 places.'>fips_enabled_p</a> ())
+<a id='L166' name='L166'></a> 166     <strong class='reserved'>return</strong> <a href='../S/6025.html#L308' title='Defined at 308 in crypt/md5-crypt.c.'>__md5_crypt</a> (<a href='../D/32455.html' title='Multiple defined in 4 places.'>key</a>, <a href='../Y/24557.html' title='Multiple used in 98 places.'>salt</a>);
+<a id='L167' name='L167'></a> 167 
+<a id='L168' name='L168'></a> 168   <em class='comment'>/* Try to find out whether we have to use SHA256 encryption replacement.  */</em>
+<a id='L169' name='L169'></a> 169   <strong class='reserved'>if</strong> (<a href='../D/37116.html' title='Multiple defined in 12 places.'>strncmp</a> (<a href='../Y/25240.html' title='Multiple used in 9 places.'>sha256_salt_prefix</a>, <a href='../Y/24557.html' title='Multiple used in 98 places.'>salt</a>, <strong class='reserved'>sizeof</strong> (<a href='../Y/25240.html' title='Multiple used in 9 places.'>sha256_salt_prefix</a>) - 1) == 0)
+<a id='L170' name='L170'></a> 170     <strong class='reserved'>return</strong> <a href='../S/6048.html#L397' title='Defined at 397 in crypt/sha256-crypt.c.'>__sha256_crypt</a> (<a href='../D/32455.html' title='Multiple defined in 4 places.'>key</a>, <a href='../Y/24557.html' title='Multiple used in 98 places.'>salt</a>);
+<a id='L171' name='L171'></a> 171 
+<a id='L172' name='L172'></a> 172   <em class='comment'>/* Try to find out whether we have to use SHA512 encryption replacement.  */</em>
+<a id='L173' name='L173'></a> 173   <strong class='reserved'>if</strong> (<a href='../D/37116.html' title='Multiple defined in 12 places.'>strncmp</a> (<a href='../Y/25242.html' title='Multiple used in 9 places.'>sha512_salt_prefix</a>, <a href='../Y/24557.html' title='Multiple used in 98 places.'>salt</a>, <strong class='reserved'>sizeof</strong> (<a href='../Y/25242.html' title='Multiple used in 9 places.'>sha512_salt_prefix</a>) - 1) == 0)
+<a id='L174' name='L174'></a> 174     <strong class='reserved'>return</strong> <a href='../S/6050.html#L419' title='Defined at 419 in crypt/sha512-crypt.c.'>__sha512_crypt</a> (<a href='../D/32455.html' title='Multiple defined in 4 places.'>key</a>, <a href='../Y/24557.html' title='Multiple used in 98 places.'>salt</a>);
+<a id='L175' name='L175'></a> 175 <em class='sharp'>#endif</em>
+<a id='L176' name='L176'></a> 176 
+<a id='L177' name='L177'></a> 177   <strong class='reserved'>return</strong> <a href='../S/6039.html#L75' title='Defined at 75 in crypt/crypt-entry.c.'>__crypt_r</a> (<a href='../D/32455.html' title='Multiple defined in 4 places.'>key</a>, <a href='../Y/24557.html' title='Multiple used in 98 places.'>salt</a>, &amp;<a href='../Y/9603.html' title='Multiple used in 6 places.'>_ufc_foobar</a>);
+<a id='L178' name='L178'></a> 178 <em class='brace'>}</em>
+<a id='L179' name='L179'></a> 179 
+<a id='L180' name='L180'></a> 180 <em class='sharp'>#if</em> <a href='../D/13978.html' title='Multiple defined in 16 places.'>SHLIB_COMPAT</a> (<a href='../Y/18154.html' title='Multiple used in 9 places.'>libcrypt</a>, <a href='../S/1773.html#L416' title='Defined at 416 in nss/getXXbyYY_r.c.'>GLIBC_2_0</a>, <a href='../Y/691.html' title='Multiple used in 55 places.'>GLIBC_2_28</a>)
+<a id='L181' name='L181'></a> 181 <a href='../D/39088.html' title='Multiple defined in 375 places.'>weak_alias</a> (<a href='../S/6029.html#L36' title='Defined at 36 in crypt/crypt.h.'>crypt</a>, <a href='../Y/14403.html' title='Multiple used in 5 places.'>fcrypt</a>)
+<a id='L182' name='L182'></a> 182 <a href='../D/29028.html' title='Multiple defined in 14 places.'>compat_symbol</a> (<a href='../Y/18154.html' title='Multiple used in 9 places.'>libcrypt</a>, <a href='../Y/14403.html' title='Multiple used in 5 places.'>fcrypt</a>, <a href='../Y/14403.html' title='Multiple used in 5 places.'>fcrypt</a>, <a href='../S/1773.html#L416' title='Defined at 416 in nss/getXXbyYY_r.c.'>GLIBC_2_0</a>);
+<a id='L183' name='L183'></a> 183 <em class='sharp'>#endif</em>
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L75'>[^]</a><a href='#L156'>[v]</a><a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

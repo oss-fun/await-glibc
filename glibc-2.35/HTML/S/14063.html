@@ -1,0 +1,194 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>sysdeps/mach/hurd/brk.c</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18977.html'>sysdeps</a>/<a href='../files/19091.html'>mach</a>/<a href='../files/19095.html'>hurd</a>/brk.c</h2>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L41'>[^]</a><a href='#L136'>[v]</a>[top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<h2 class='header'>DEFINITIONS</h2>
+This source file includes following definitions.
+<ol>
+<li><a href='#L41' title='Defined at 41.'>weak_alias</a></li>
+<li><a href='#L61' title='Defined at 61.'>weak_alias</a></li>
+<li><a href='#L136' title='Defined at 136.'>init_brk</a></li>
+</ol>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* Copyright (C) 1991-2022 Free Software Foundation, Inc.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'></em>
+<a id='L4' name='L4'></a>   4 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'></em>
+<a id='L9' name='L9'></a>   9 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'></em>
+<a id='L14' name='L14'></a>  14 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   License along with the GNU C Library; if not, see</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L17' name='L17'></a>  17 
+<a id='L18' name='L18'></a>  18 <em class='sharp'>#include</em> &lt;<a href='../I/116.html'>errno.h</a>&gt;
+<a id='L19' name='L19'></a>  19 <em class='sharp'>#include</em> &lt;<a href='../I/1257.html'>hurd.h</a>&gt;
+<a id='L20' name='L20'></a>  20 <em class='sharp'>#include</em> &lt;<a href='../I/148.html'>hurd/resource.h</a>&gt;
+<a id='L21' name='L21'></a>  21 <em class='sharp'>#include</em> &lt;<a href='../I/2909.html'>lock-intern.h</a>&gt;    <em class='comment'>/* For `struct mutex'.  */</em>
+<a id='L22' name='L22'></a>  22 <em class='sharp'>#include</em> &lt;<a href='14021.html'>vm_param.h</a>&gt;
+<a id='L23' name='L23'></a>  23 
+<a id='L24' name='L24'></a>  24 <em class='sharp'>#include</em> "<a href='17864.html'>set-hooks.h</a>"
+<a id='L25' name='L25'></a>  25 
+<a id='L26' name='L26'></a>  26 
+<a id='L27' name='L27'></a>  27 <em class='comment'>/* Initial maximum size of the data segment (this is arbitrary).  */</em>
+<a id='L28' name='L28'></a>  28 <em class='sharp'>#define</em> <a href='../S/14063.html#L153' title='Referred from 153 in sysdeps/mach/hurd/brk.c.'>DATA_SIZE</a>   (128 * 1024 * 1024)
+<a id='L29' name='L29'></a>  29 
+<a id='L30' name='L30'></a>  30 <em class='comment'>/* Up to the page including this address is allocated from the kernel.</em>
+<a id='L31' name='L31'></a>  31 <em class='comment'>   This address is the data resource limit.  */</em>
+<a id='L32' name='L32'></a>  32 <a href='../Y/28709.html' title='Multiple used in 147 places.'>vm_address_t</a> <a href='../Y/9119.html' title='Multiple used in 10 places.'>_hurd_data_end</a>;
+<a id='L33' name='L33'></a>  33 
+<a id='L34' name='L34'></a>  34 <em class='comment'>/* Up to this address is actually available to the user.</em>
+<a id='L35' name='L35'></a>  35 <em class='comment'>   Pages beyond the one containing this address allow no access.  */</em>
+<a id='L36' name='L36'></a>  36 <a href='../Y/28709.html' title='Multiple used in 147 places.'>vm_address_t</a> <a href='../Y/9115.html' title='Multiple used in 12 places.'>_hurd_brk</a> = 0;
+<a id='L37' name='L37'></a>  37 
+<a id='L38' name='L38'></a>  38 <em class='comment'>/* This name is used by the Linux crtbeginS.o for reasons you don't even</em>
+<a id='L39' name='L39'></a>  39 <em class='comment'>   want to think about it.  It's just easier to provide some definition for</em>
+<a id='L40' name='L40'></a>  40 <em class='comment'>   it than even to explain the braindamage involved.  */</em>
+<a id='L41' name='L41'></a>  41 <a href='../R/26489.html' title='Multiple referred from 1703 places.'>weak_alias</a> (<a href='../Y/9115.html' title='Multiple used in 12 places.'>_hurd_brk</a>, <a href='../Y/3360.html' title='Multiple used in 3 places.'>___brk_addr</a>)
+<a id='L42' name='L42'></a>  42 
+<a id='L43' name='L43'></a>  43 <strong class='reserved'>struct</strong> <a href='../S/5207.html#L98' title='Defined at 98 in mach/lock-intern.h.'>mutex</a> <a href='../Y/9116.html' title='Multiple used in 7 places.'>_hurd_brk_lock</a>;
+<a id='L44' name='L44'></a>  44 
+<a id='L45' name='L45'></a>  45 <strong class='reserved'>static</strong> <a href='../Y/28709.html' title='Multiple used in 147 places.'>vm_address_t</a> <a href='../Y/11009.html' title='Multiple used in 4 places.'>brk_start</a>;
+<a id='L46' name='L46'></a>  46 
+<a id='L47' name='L47'></a>  47 
+<a id='L48' name='L48'></a>  48 <em class='comment'>/* Set the end of the process's data space to INADDR.</em>
+<a id='L49' name='L49'></a>  49 <em class='comment'>   Return 0 if successful, -1 if not.  */</em>
+<a id='L50' name='L50'></a>  50 <strong class='reserved'>int</strong>
+<a id='L51' name='L51'></a>  51 <a href='../D/23335.html' title='Multiple defined in 3 places.'>__brk</a> (<strong class='reserved'>void</strong> *<a href='../Y/16710.html' title='Multiple used in 8 places.'>inaddr</a>)
+<a id='L52' name='L52'></a>  52 <em class='brace'>{</em>
+<a id='L53' name='L53'></a>  53   <strong class='reserved'>int</strong> <a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a>;
+<a id='L54' name='L54'></a>  54   <a href='../S/2121.html#L276' title='Defined at 276 in hurd/hurd/signal.h.'>HURD_CRITICAL_BEGIN</a>;
+<a id='L55' name='L55'></a>  55   <a href='../S/5207.html#L117' title='Defined at 117 in mach/lock-intern.h.'>__mutex_lock</a> (&amp;<a href='../Y/9116.html' title='Multiple used in 7 places.'>_hurd_brk_lock</a>);
+<a id='L56' name='L56'></a>  56   <a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a> = <a href='../Y/9182.html' title='Multiple used in 4 places.'>_hurd_set_brk</a> ((<a href='../Y/28709.html' title='Multiple used in 147 places.'>vm_address_t</a>) <a href='../Y/16710.html' title='Multiple used in 8 places.'>inaddr</a>);
+<a id='L57' name='L57'></a>  57   <a href='../S/5207.html#L129' title='Defined at 129 in mach/lock-intern.h.'>__mutex_unlock</a> (&amp;<a href='../Y/9116.html' title='Multiple used in 7 places.'>_hurd_brk_lock</a>);
+<a id='L58' name='L58'></a>  58   <a href='../S/2121.html#L278' title='Defined at 278 in hurd/hurd/signal.h.'>HURD_CRITICAL_END</a>;
+<a id='L59' name='L59'></a>  59   <strong class='reserved'>return</strong> <a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a>;
+<a id='L60' name='L60'></a>  60 <em class='brace'>}</em>
+<a id='L61' name='L61'></a>  61 <a href='../R/26489.html' title='Multiple referred from 1703 places.'>weak_alias</a> (<a href='../D/23335.html' title='Multiple defined in 3 places.'>__brk</a>, <a href='../Y/11008.html' title='Multiple used in 34 places.'>brk</a>)
+<a id='L62' name='L62'></a>  62 
+<a id='L63' name='L63'></a>  63 
+<a id='L64' name='L64'></a>  64 <strong class='reserved'>int</strong>
+<a id='L65' name='L65'></a>  65 <a href='../Y/9182.html' title='Multiple used in 4 places.'>_hurd_set_brk</a> (<a href='../Y/28709.html' title='Multiple used in 147 places.'>vm_address_t</a> <a href='../S/2561.html#L5' title='Defined at 5 in elf/nodelmod3.c.'>addr</a>)
+<a id='L66' name='L66'></a>  66 <em class='brace'>{</em>
+<a id='L67' name='L67'></a>  67   <a href='../D/30030.html' title='Multiple defined in 4 places.'>error_t</a> <a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a> = 0;
+<a id='L68' name='L68'></a>  68   <a href='../Y/28709.html' title='Multiple used in 147 places.'>vm_address_t</a> <a href='../Y/22168.html' title='Multiple used in 14 places.'>pagend</a> = <a href='../S/5183.html#L44' title='Defined at 44 in mach/mach_init.h.'>round_page</a> (<a href='../S/2561.html#L5' title='Defined at 5 in elf/nodelmod3.c.'>addr</a>);
+<a id='L69' name='L69'></a>  69   <a href='../Y/28709.html' title='Multiple used in 147 places.'>vm_address_t</a> <a href='../Y/22165.html' title='Multiple used in 9 places.'>pagebrk</a> = <a href='../S/5183.html#L44' title='Defined at 44 in mach/mach_init.h.'>round_page</a> (<a href='../Y/9115.html' title='Multiple used in 12 places.'>_hurd_brk</a>);
+<a id='L70' name='L70'></a>  70   <strong class='reserved'>long</strong> <strong class='reserved'>int</strong> <a href='../D/36086.html' title='Multiple defined in 5 places.'>rlimit</a>;
+<a id='L71' name='L71'></a>  71 
+<a id='L72' name='L72'></a>  72   <strong class='reserved'>if</strong> (<a href='../Y/22168.html' title='Multiple used in 14 places.'>pagend</a> &lt;= <a href='../Y/22165.html' title='Multiple used in 9 places.'>pagebrk</a>)
+<a id='L73' name='L73'></a>  73     <em class='brace'>{</em>
+<a id='L74' name='L74'></a>  74       <strong class='reserved'>if</strong> (<a href='../Y/22168.html' title='Multiple used in 14 places.'>pagend</a> &lt; <a href='../Y/22165.html' title='Multiple used in 9 places.'>pagebrk</a>)
+<a id='L75' name='L75'></a>  75     <em class='brace'>{</em>
+<a id='L76' name='L76'></a>  76       <em class='comment'>/* XXX wish this were atomic... */</em>
+<a id='L77' name='L77'></a>  77       <em class='comment'>/* First deallocate the memory to release its backing space.  */</em>
+<a id='L78' name='L78'></a>  78       <a href='../Y/8423.html' title='Multiple used in 70 places.'>__vm_deallocate</a> (<a href='../S/5183.html#L31' title='Defined at 31 in mach/mach_init.h.'>__mach_task_self</a> (), <a href='../Y/22168.html' title='Multiple used in 14 places.'>pagend</a>, <a href='../Y/22165.html' title='Multiple used in 9 places.'>pagebrk</a> - <a href='../Y/22168.html' title='Multiple used in 14 places.'>pagend</a>);
+<a id='L79' name='L79'></a>  79       <em class='comment'>/* Now reallocate it with no access allowed.  */</em>
+<a id='L80' name='L80'></a>  80       <a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a> = <a href='../Y/8424.html' title='Multiple used in 14 places.'>__vm_map</a> (<a href='../S/5183.html#L31' title='Defined at 31 in mach/mach_init.h.'>__mach_task_self</a> (),
+<a id='L81' name='L81'></a>  81               &amp;<a href='../Y/22168.html' title='Multiple used in 14 places.'>pagend</a>, <a href='../Y/22165.html' title='Multiple used in 9 places.'>pagebrk</a> - <a href='../Y/22168.html' title='Multiple used in 14 places.'>pagend</a>,
+<a id='L82' name='L82'></a>  82               0, 0, <a href='../Y/1165.html' title='Multiple used in 414 places.'>MACH_PORT_NULL</a>, 0, 0,
+<a id='L83' name='L83'></a>  83               0, <a href='../Y/2125.html' title='Multiple used in 10 places.'>VM_PROT_READ</a>|<a href='../Y/2126.html' title='Multiple used in 10 places.'>VM_PROT_WRITE</a>|<a href='../Y/2123.html' title='Multiple used in 9 places.'>VM_PROT_EXECUTE</a>,
+<a id='L84' name='L84'></a>  84               <a href='../Y/2118.html' title='Multiple used in 8 places.'>VM_INHERIT_COPY</a>);
+<a id='L85' name='L85'></a>  85       <em class='comment'>/* XXX what if error? */</em>
+<a id='L86' name='L86'></a>  86     <em class='brace'>}</em>
+<a id='L87' name='L87'></a>  87       <a href='../Y/9115.html' title='Multiple used in 12 places.'>_hurd_brk</a> = <a href='../S/2561.html#L5' title='Defined at 5 in elf/nodelmod3.c.'>addr</a>;
+<a id='L88' name='L88'></a>  88       <strong class='reserved'>return</strong> 0;
+<a id='L89' name='L89'></a>  89     <em class='brace'>}</em>
+<a id='L90' name='L90'></a>  90 
+<a id='L91' name='L91'></a>  91   <a href='../S/5207.html#L117' title='Defined at 117 in mach/lock-intern.h.'>__mutex_lock</a> (&amp;<a href='../Y/9180.html' title='Multiple used in 13 places.'>_hurd_rlimit_lock</a>);
+<a id='L92' name='L92'></a>  92   <a href='../D/36086.html' title='Multiple defined in 5 places.'>rlimit</a> = <a href='../Y/9181.html' title='Multiple used in 14 places.'>_hurd_rlimits</a>[<a href='../D/11382.html' title='Multiple defined in 15 places.'>RLIMIT_DATA</a>].<a href='../Y/24102.html' title='Multiple used in 128 places.'>rlim_cur</a>;
+<a id='L93' name='L93'></a>  93   <a href='../S/5207.html#L129' title='Defined at 129 in mach/lock-intern.h.'>__mutex_unlock</a> (&amp;<a href='../Y/9180.html' title='Multiple used in 13 places.'>_hurd_rlimit_lock</a>);
+<a id='L94' name='L94'></a>  94 
+<a id='L95' name='L95'></a>  95   <strong class='reserved'>if</strong> (<a href='../S/2561.html#L5' title='Defined at 5 in elf/nodelmod3.c.'>addr</a> - <a href='../Y/11009.html' title='Multiple used in 4 places.'>brk_start</a> &gt; <a href='../D/36086.html' title='Multiple defined in 5 places.'>rlimit</a>)
+<a id='L96' name='L96'></a>  96     <em class='brace'>{</em>
+<a id='L97' name='L97'></a>  97       <em class='comment'>/* Need to increase the resource limit.  */</em>
+<a id='L98' name='L98'></a>  98       <a href='../D/30023.html' title='Multiple defined in 13 places.'>errno</a> = <a href='../D/3621.html' title='Multiple defined in 3 places.'>ENOMEM</a>;
+<a id='L99' name='L99'></a>  99       <strong class='reserved'>return</strong> -1;
+<a id='L100' name='L100'></a> 100     <em class='brace'>}</em>
+<a id='L101' name='L101'></a> 101 
+<a id='L102' name='L102'></a> 102   <strong class='reserved'>if</strong> (<a href='../Y/22168.html' title='Multiple used in 14 places.'>pagend</a> &gt; <a href='../Y/9119.html' title='Multiple used in 10 places.'>_hurd_data_end</a>)
+<a id='L103' name='L103'></a> 103     <em class='brace'>{</em>
+<a id='L104' name='L104'></a> 104       <a href='../Y/28709.html' title='Multiple used in 147 places.'>vm_address_t</a> <a href='../Y/10150.html' title='Multiple used in 5 places.'>alloc_start</a> = <a href='../Y/9119.html' title='Multiple used in 10 places.'>_hurd_data_end</a>;
+<a id='L105' name='L105'></a> 105 
+<a id='L106' name='L106'></a> 106       <em class='comment'>/* We didn't allocate enough space!  Hopefully we can get some more!  */</em>
+<a id='L107' name='L107'></a> 107 
+<a id='L108' name='L108'></a> 108       <strong class='reserved'>if</strong> (<a href='../Y/9119.html' title='Multiple used in 10 places.'>_hurd_data_end</a> &gt; <a href='../Y/22165.html' title='Multiple used in 9 places.'>pagebrk</a>)
+<a id='L109' name='L109'></a> 109     <em class='comment'>/* First finish allocation.  */</em>
+<a id='L110' name='L110'></a> 110     <a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a> = <a href='../Y/8428.html' title='Multiple used in 5 places.'>__vm_protect</a> (<a href='../S/5183.html#L31' title='Defined at 31 in mach/mach_init.h.'>__mach_task_self</a> (), <a href='../Y/22165.html' title='Multiple used in 9 places.'>pagebrk</a>,
+<a id='L111' name='L111'></a> 111                 <a href='../Y/10150.html' title='Multiple used in 5 places.'>alloc_start</a> - <a href='../Y/22165.html' title='Multiple used in 9 places.'>pagebrk</a>, 0,
+<a id='L112' name='L112'></a> 112                 <a href='../Y/2125.html' title='Multiple used in 10 places.'>VM_PROT_READ</a>|<a href='../Y/2126.html' title='Multiple used in 10 places.'>VM_PROT_WRITE</a>|<a href='../Y/2123.html' title='Multiple used in 9 places.'>VM_PROT_EXECUTE</a>);
+<a id='L113' name='L113'></a> 113       <strong class='reserved'>if</strong> (! <a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a>)
+<a id='L114' name='L114'></a> 114     <a href='../Y/9115.html' title='Multiple used in 12 places.'>_hurd_brk</a> = <a href='../Y/10150.html' title='Multiple used in 5 places.'>alloc_start</a>;
+<a id='L115' name='L115'></a> 115 
+<a id='L116' name='L116'></a> 116       <strong class='reserved'>if</strong> (! <a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a>)
+<a id='L117' name='L117'></a> 117     <a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a> = <a href='../Y/8420.html' title='Multiple used in 14 places.'>__vm_allocate</a> (<a href='../S/5183.html#L31' title='Defined at 31 in mach/mach_init.h.'>__mach_task_self</a> (), &amp;<a href='../Y/10150.html' title='Multiple used in 5 places.'>alloc_start</a>,
+<a id='L118' name='L118'></a> 118                  <a href='../Y/22168.html' title='Multiple used in 14 places.'>pagend</a> - <a href='../Y/10150.html' title='Multiple used in 5 places.'>alloc_start</a>, 0);
+<a id='L119' name='L119'></a> 119 
+<a id='L120' name='L120'></a> 120       <strong class='reserved'>if</strong> (! <a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a>)
+<a id='L121' name='L121'></a> 121     <a href='../Y/9119.html' title='Multiple used in 10 places.'>_hurd_data_end</a> = <a href='../Y/22168.html' title='Multiple used in 14 places.'>pagend</a>;
+<a id='L122' name='L122'></a> 122     <em class='brace'>}</em>
+<a id='L123' name='L123'></a> 123   <strong class='reserved'>else</strong>
+<a id='L124' name='L124'></a> 124     <em class='comment'>/* Make the memory accessible.  */</em>
+<a id='L125' name='L125'></a> 125     <a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a> = <a href='../Y/8428.html' title='Multiple used in 5 places.'>__vm_protect</a> (<a href='../S/5183.html#L31' title='Defined at 31 in mach/mach_init.h.'>__mach_task_self</a> (), <a href='../Y/22165.html' title='Multiple used in 9 places.'>pagebrk</a>, <a href='../Y/22168.html' title='Multiple used in 14 places.'>pagend</a> - <a href='../Y/22165.html' title='Multiple used in 9 places.'>pagebrk</a>,
+<a id='L126' name='L126'></a> 126             0, <a href='../Y/2125.html' title='Multiple used in 10 places.'>VM_PROT_READ</a>|<a href='../Y/2126.html' title='Multiple used in 10 places.'>VM_PROT_WRITE</a>|<a href='../Y/2123.html' title='Multiple used in 9 places.'>VM_PROT_EXECUTE</a>);
+<a id='L127' name='L127'></a> 127 
+<a id='L128' name='L128'></a> 128   <strong class='reserved'>if</strong> (<a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a>)
+<a id='L129' name='L129'></a> 129     <strong class='reserved'>return</strong> <a href='../S/2110.html#L55' title='Defined at 55 in hurd/hurd.h.'>__hurd_fail</a> (<a href='../D/30003.html' title='Multiple defined in 4 places.'>err</a>);
+<a id='L130' name='L130'></a> 130 
+<a id='L131' name='L131'></a> 131   <a href='../Y/9115.html' title='Multiple used in 12 places.'>_hurd_brk</a> = <a href='../S/2561.html#L5' title='Defined at 5 in elf/nodelmod3.c.'>addr</a>;
+<a id='L132' name='L132'></a> 132   <strong class='reserved'>return</strong> 0;
+<a id='L133' name='L133'></a> 133 <em class='brace'>}</em>
+<a id='L134' name='L134'></a> 134 
+<a id='L135' name='L135'></a> 135 <strong class='reserved'>static</strong> <strong class='reserved'>void</strong> <a href='../D/27950.html' title='Multiple defined in 2 places.'>attribute_used_retain</a>
+<a id='L136' name='L136'></a> 136 <a href='../S/14063.html#L166' title='Referred from 166 in sysdeps/mach/hurd/brk.c.'>init_brk</a> (<strong class='reserved'>void</strong>)
+<a id='L137' name='L137'></a> 137 <em class='brace'>{</em>
+<a id='L138' name='L138'></a> 138   <a href='../Y/28709.html' title='Multiple used in 147 places.'>vm_address_t</a> <a href='../Y/22168.html' title='Multiple used in 14 places.'>pagend</a>;
+<a id='L139' name='L139'></a> 139 
+<a id='L140' name='L140'></a> 140   <a href='../S/5173.html#L23' title='Defined at 23 in mach/mutex-init.c.'>__mutex_init</a> (&amp;<a href='../Y/9116.html' title='Multiple used in 7 places.'>_hurd_brk_lock</a>);
+<a id='L141' name='L141'></a> 141 
+<a id='L142' name='L142'></a> 142   <a href='../Y/11009.html' title='Multiple used in 4 places.'>brk_start</a> = (<a href='../Y/28709.html' title='Multiple used in 147 places.'>vm_address_t</a>) <a href='../S/14021.html#L22' title='Defined at 22 in sysdeps/mach/hurd/i386/vm_param.h.'>BRK_START</a>;
+<a id='L143' name='L143'></a> 143 
+<a id='L144' name='L144'></a> 144   <em class='comment'>/* If _hurd_brk is already set, don't change it.  The assumption is that</em>
+<a id='L145' name='L145'></a> 145 <em class='comment'>     it was set in a previous run before something like Emacs's unexec was</em>
+<a id='L146' name='L146'></a> 146 <em class='comment'>     called and dumped all the data up to the break at that point.  */</em>
+<a id='L147' name='L147'></a> 147   <strong class='reserved'>if</strong> (<a href='../Y/9115.html' title='Multiple used in 12 places.'>_hurd_brk</a> == 0) <em class='brace'>{</em>
+<a id='L148' name='L148'></a> 148     <a href='../Y/9115.html' title='Multiple used in 12 places.'>_hurd_brk</a> = (<a href='../Y/28709.html' title='Multiple used in 147 places.'>vm_address_t</a>) <a href='../S/14021.html#L22' title='Defined at 22 in sysdeps/mach/hurd/i386/vm_param.h.'>BRK_START</a>;
+<a id='L149' name='L149'></a> 149   <em class='brace'>}</em>
+<a id='L150' name='L150'></a> 150 
+<a id='L151' name='L151'></a> 151   <a href='../Y/22168.html' title='Multiple used in 14 places.'>pagend</a> = <a href='../S/5183.html#L44' title='Defined at 44 in mach/mach_init.h.'>round_page</a> (<a href='../Y/9115.html' title='Multiple used in 12 places.'>_hurd_brk</a>);
+<a id='L152' name='L152'></a> 152 
+<a id='L153' name='L153'></a> 153   <a href='../Y/9119.html' title='Multiple used in 10 places.'>_hurd_data_end</a> = <a href='../S/5183.html#L44' title='Defined at 44 in mach/mach_init.h.'>round_page</a> (<a href='../Y/11009.html' title='Multiple used in 4 places.'>brk_start</a> + <a href='../S/14063.html#L28' title='Defined at 28 in sysdeps/mach/hurd/brk.c.'>DATA_SIZE</a>);
+<a id='L154' name='L154'></a> 154 
+<a id='L155' name='L155'></a> 155   <strong class='reserved'>if</strong> (<a href='../Y/22168.html' title='Multiple used in 14 places.'>pagend</a> &lt; <a href='../Y/9119.html' title='Multiple used in 10 places.'>_hurd_data_end</a>)
+<a id='L156' name='L156'></a> 156     <em class='brace'>{</em>
+<a id='L157' name='L157'></a> 157       <em class='comment'>/* We use vm_map to allocate and change permissions atomically.  */</em>
+<a id='L158' name='L158'></a> 158       <strong class='reserved'>if</strong> (<a href='../Y/8424.html' title='Multiple used in 14 places.'>__vm_map</a> (<a href='../S/5183.html#L31' title='Defined at 31 in mach/mach_init.h.'>__mach_task_self</a> (), &amp;<a href='../Y/22168.html' title='Multiple used in 14 places.'>pagend</a>, <a href='../Y/9119.html' title='Multiple used in 10 places.'>_hurd_data_end</a> - <a href='../Y/22168.html' title='Multiple used in 14 places.'>pagend</a>,
+<a id='L159' name='L159'></a> 159             0, 0, <a href='../Y/1165.html' title='Multiple used in 414 places.'>MACH_PORT_NULL</a>, 0, 0,
+<a id='L160' name='L160'></a> 160             0, <a href='../Y/2125.html' title='Multiple used in 10 places.'>VM_PROT_READ</a>|<a href='../Y/2126.html' title='Multiple used in 10 places.'>VM_PROT_WRITE</a>|<a href='../Y/2123.html' title='Multiple used in 9 places.'>VM_PROT_EXECUTE</a>,
+<a id='L161' name='L161'></a> 161             <a href='../Y/2118.html' title='Multiple used in 8 places.'>VM_INHERIT_COPY</a>))
+<a id='L162' name='L162'></a> 162     <em class='comment'>/* Couldn't allocate the memory.  The break will be very short.  */</em>
+<a id='L163' name='L163'></a> 163     <a href='../Y/9119.html' title='Multiple used in 10 places.'>_hurd_data_end</a> = <a href='../Y/22168.html' title='Multiple used in 14 places.'>pagend</a>;
+<a id='L164' name='L164'></a> 164     <em class='brace'>}</em>
+<a id='L165' name='L165'></a> 165 <em class='brace'>}</em>
+<a id='L166' name='L166'></a> 166 <a href='../D/13838.html' title='Multiple defined in 3 places.'>SET_RELHOOK</a> (<a href='../Y/9175.html' title='Multiple used in 7 places.'>_hurd_preinit_hook</a>, <a href='../S/14063.html#L136' title='Defined at 136 in sysdeps/mach/hurd/brk.c.'>init_brk</a>);
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L41'>[^]</a><a href='#L136'>[v]</a><a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

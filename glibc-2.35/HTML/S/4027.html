@@ -1,0 +1,247 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>time/tst-strptime.c</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/19402.html'>time</a>/tst-strptime.c</h2>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L93'>[^]</a><a href='#L149'>[v]</a>[top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<h2 class='header'>DEFINITIONS</h2>
+This source file includes following definitions.
+<ol>
+<li><a href='#L93' title='Defined at 93.'>test_tm</a></li>
+<li><a href='#L149' title='Defined at 149.'>do_test</a></li>
+</ol>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* Test for strptime.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   Copyright (C) 1998-2022 Free Software Foundation, Inc.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'></em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'></em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'></em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   License along with the GNU C Library; if not, see</em>
+<a id='L17' name='L17'></a>  17 <em class='comment'>   &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L18' name='L18'></a>  18 
+<a id='L19' name='L19'></a>  19 <em class='sharp'>#include</em> &lt;<a href='../I/1758.html'>locale.h</a>&gt;
+<a id='L20' name='L20'></a>  20 <em class='sharp'>#include</em> &lt;<a href='../I/1776.html'>stdio.h</a>&gt;
+<a id='L21' name='L21'></a>  21 <em class='sharp'>#include</em> &lt;<a href='../I/1780.html'>stdlib.h</a>&gt;
+<a id='L22' name='L22'></a>  22 <em class='sharp'>#include</em> &lt;<a href='../I/1973.html'>string.h</a>&gt;
+<a id='L23' name='L23'></a>  23 <em class='sharp'>#include</em> &lt;<a href='../I/176.html'>time.h</a>&gt;
+<a id='L24' name='L24'></a>  24 
+<a id='L25' name='L25'></a>  25 
+<a id='L26' name='L26'></a>  26 <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <strong class='reserved'>struct</strong>
+<a id='L27' name='L27'></a>  27 <em class='brace'>{</em>
+<a id='L28' name='L28'></a>  28   <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../S/307.html#L309' title='Defined at 309 in intl/l10nflist.c.'>locale</a>;
+<a id='L29' name='L29'></a>  29   <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../S/879.html#L43' title='Defined at 43 in gshadow/tst-fgetsgent_r.c.'>input</a>;
+<a id='L30' name='L30'></a>  30   <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../Y/14825.html' title='Multiple used in 818 places.'>format</a>;
+<a id='L31' name='L31'></a>  31   <strong class='reserved'>int</strong> <a href='../Y/29001.html' title='Multiple used in 35 places.'>wday</a>;
+<a id='L32' name='L32'></a>  32   <strong class='reserved'>int</strong> <a href='../Y/29547.html' title='Multiple used in 20 places.'>yday</a>;
+<a id='L33' name='L33'></a>  33   <strong class='reserved'>int</strong> <a href='../Y/19534.html' title='Multiple used in 22 places.'>mon</a>;
+<a id='L34' name='L34'></a>  34   <strong class='reserved'>int</strong> <a href='../Y/19206.html' title='Multiple used in 11 places.'>mday</a>;
+<a id='L35' name='L35'></a>  35 <em class='brace'>}</em> <a href='../Y/12503.html' title='Multiple used in 18 places.'>day_tests</a>[] =
+<a id='L36' name='L36'></a>  36 <em class='brace'>{</em>
+<a id='L37' name='L37'></a>  37   <em class='brace'>{</em> "C", "2000-01-01", "%Y-%m-%d", 6, 0, 0, 1 <em class='brace'>}</em>,
+<a id='L38' name='L38'></a>  38   <em class='brace'>{</em> "C", "03/03/00", "%D", 5, 62, 2, 3 <em class='brace'>}</em>,
+<a id='L39' name='L39'></a>  39   <em class='brace'>{</em> "C", "9/9/99", "%x", 4, 251, 8, 9 <em class='brace'>}</em>,
+<a id='L40' name='L40'></a>  40   <em class='brace'>{</em> "C", "19990502123412", "%Y%m%d%H%M%S", 0, 121, 4, 2 <em class='brace'>}</em>,
+<a id='L41' name='L41'></a>  41   <em class='brace'>{</em> "C", "2001 20 Mon", "%Y %U %a", 1, 140, 4, 21 <em class='brace'>}</em>,
+<a id='L42' name='L42'></a>  42   <em class='brace'>{</em> "C", "2001 21 Mon", "%Y %W %a", 1, 140, 4, 21 <em class='brace'>}</em>,
+<a id='L43' name='L43'></a>  43   <em class='brace'>{</em> "C", "2001 21 Mon", "%2000Y %W %a", 1, 140, 4, 21 <em class='brace'>}</em>,
+<a id='L44' name='L44'></a>  44   <em class='brace'>{</em> "C", "2001 21 Mon", "%^Y %W %a", 1, 140, 4, 21 <em class='brace'>}</em>,
+<a id='L45' name='L45'></a>  45   <em class='brace'>{</em> "C", "2001 EST 21 Mon", "%Y %Z %W %a", 1, 140, 4, 21 <em class='brace'>}</em>,
+<a id='L46' name='L46'></a>  46   <em class='brace'>{</em> "C", "2012 00 Sun", "%Y %W %a", 0, 0, 0, 1 <em class='brace'>}</em>,
+<a id='L47' name='L47'></a>  47   <em class='brace'>{</em> "ja_JP.EUC-JP", "2000-01-01 08:12:21 AM", "%Y-%m-%d %I:%M:%S %p",
+<a id='L48' name='L48'></a>  48     6, 0, 0, 1 <em class='brace'>}</em>,
+<a id='L49' name='L49'></a>  49   <em class='brace'>{</em> "en_US.ISO-8859-1", "2000-01-01 08:12:21 PM", "%Y-%m-%d %I:%M:%S %p",
+<a id='L50' name='L50'></a>  50     6, 0, 0, 1 <em class='brace'>}</em>,
+<a id='L51' name='L51'></a>  51   <em class='brace'>{</em> "ja_JP.EUC-JP", "2001 20 \xb7\xee", "%Y %U %a", 1, 140, 4, 21 <em class='brace'>}</em>,
+<a id='L52' name='L52'></a>  52   <em class='brace'>{</em> "ja_JP.EUC-JP", "2001 21 \xb7\xee", "%Y %W %a", 1, 140, 4, 21 <em class='brace'>}</em>,
+<a id='L53' name='L53'></a>  53   <em class='comment'>/* Most of the languages do not need the declension of the month names</em>
+<a id='L54' name='L54'></a>  54 <em class='comment'>     and do not distinguish between %B and %OB.  */</em>
+<a id='L55' name='L55'></a>  55   <em class='brace'>{</em> "en_US.ISO-8859-1", "November 17, 2017", "%B %e, %Y", 5, 320, 10, 17 <em class='brace'>}</em>,
+<a id='L56' name='L56'></a>  56   <em class='brace'>{</em> "de_DE.ISO-8859-1", "18. Nov 2017", "%d. %b %Y", 6, 321, 10, 18 <em class='brace'>}</em>,
+<a id='L57' name='L57'></a>  57   <em class='brace'>{</em> "fr_FR.UTF-8", "19 novembre 2017", "%d %OB %Y", 0, 322, 10, 19 <em class='brace'>}</em>,
+<a id='L58' name='L58'></a>  58   <em class='brace'>{</em> "es_ES.UTF-8", "20 de nov de 2017", "%d de %Ob de %Y", 1, 323, 10, 20 <em class='brace'>}</em>,
+<a id='L59' name='L59'></a>  59   <em class='comment'>/* Some languages do need the declension of the month names.  */</em>
+<a id='L60' name='L60'></a>  60   <em class='brace'>{</em> "pl_PL.UTF-8", "21 lis 2017", "%d %b %Y", 2, 324, 10, 21 <em class='brace'>}</em>,
+<a id='L61' name='L61'></a>  61   <em class='brace'>{</em> "pl_PL.UTF-8", "22 LIS 2017", "%d %B %Y", 3, 325, 10, 22 <em class='brace'>}</em>,
+<a id='L62' name='L62'></a>  62   <em class='brace'>{</em> "pl_PL.UTF-8", "23 listopada 2017", "%d %B %Y", 4, 326, 10, 23 <em class='brace'>}</em>,
+<a id='L63' name='L63'></a>  63   <em class='comment'>/* The nominative case is incorrect here but it is parseable.  */</em>
+<a id='L64' name='L64'></a>  64   <em class='brace'>{</em> "pl_PL.UTF-8", "24 listopad 2017", "%d %OB %Y", 5, 327, 10, 24 <em class='brace'>}</em>,
+<a id='L65' name='L65'></a>  65   <em class='brace'>{</em> "pl_PL.UTF-8", "25 lis 2017", "%d %Ob %Y", 6, 328, 10, 25 <em class='brace'>}</em>,
+<a id='L66' name='L66'></a>  66   <em class='comment'>/* ноя - pronounce: 'noya' - "Nov" (abbreviated "November") in Russian.  */</em>
+<a id='L67' name='L67'></a>  67   <em class='brace'>{</em> "ru_RU.UTF-8", "26 ноя 2017", "%d %b %Y", 0, 329, 10, 26 <em class='brace'>}</em>,
+<a id='L68' name='L68'></a>  68   <em class='comment'>/* мая - pronounce: 'maya' - "of May" (the genitive case, both full and</em>
+<a id='L69' name='L69'></a>  69 <em class='comment'>     abbreviated) in Russian.  */</em>
+<a id='L70' name='L70'></a>  70   <em class='brace'>{</em> "ru_RU.UTF-8", "19 мая 2018", "%d %b %Y", 6, 138, 4, 19 <em class='brace'>}</em>,
+<a id='L71' name='L71'></a>  71   <em class='comment'>/* май - pronounce: 'may' - "May" (the nominative case, both full and</em>
+<a id='L72' name='L72'></a>  72 <em class='comment'>     abbreviated) in Russian.</em>
+<a id='L73' name='L73'></a>  73 <em class='comment'>     The nominative case is incorrect here but it is parseable.  */</em>
+<a id='L74' name='L74'></a>  74   <em class='brace'>{</em> "ru_RU.UTF-8", "20 май 2018", "%d %Ob %Y", 0, 139, 4, 20 <em class='brace'>}</em>,
+<a id='L75' name='L75'></a>  75 <em class='brace'>}</em>;
+<a id='L76' name='L76'></a>  76 
+<a id='L77' name='L77'></a>  77 
+<a id='L78' name='L78'></a>  78 <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <strong class='reserved'>struct</strong>
+<a id='L79' name='L79'></a>  79 <em class='brace'>{</em>
+<a id='L80' name='L80'></a>  80   <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../S/879.html#L43' title='Defined at 43 in gshadow/tst-fgetsgent_r.c.'>input</a>;
+<a id='L81' name='L81'></a>  81   <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../Y/14825.html' title='Multiple used in 818 places.'>format</a>;
+<a id='L82' name='L82'></a>  82   <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../Y/21998.html' title='Multiple used in 138 places.'>output</a>;
+<a id='L83' name='L83'></a>  83   <strong class='reserved'>int</strong> <a href='../Y/29001.html' title='Multiple used in 35 places.'>wday</a>;
+<a id='L84' name='L84'></a>  84   <strong class='reserved'>int</strong> <a href='../Y/29547.html' title='Multiple used in 20 places.'>yday</a>;
+<a id='L85' name='L85'></a>  85 <em class='brace'>}</em> <a href='../Y/27418.html' title='Multiple used in 13 places.'>tm_tests</a> [] =
+<a id='L86' name='L86'></a>  86 <em class='brace'>{</em>
+<a id='L87' name='L87'></a>  87   <em class='brace'>{</em>"17410105012000", "%H%M%S%d%m%Y", "2000-01-05 17:41:01", 3, 4<em class='brace'>}</em>
+<a id='L88' name='L88'></a>  88 <em class='brace'>}</em>;
+<a id='L89' name='L89'></a>  89 
+<a id='L90' name='L90'></a>  90 
+<a id='L91' name='L91'></a>  91 
+<a id='L92' name='L92'></a>  92 <strong class='reserved'>static</strong> <strong class='reserved'>int</strong>
+<a id='L93' name='L93'></a>  93 <a href='../S/4027.html#L214' title='Referred from 214 in time/tst-strptime.c.'>test_tm</a> (<strong class='reserved'>void</strong>)
+<a id='L94' name='L94'></a>  94 <em class='brace'>{</em>
+<a id='L95' name='L95'></a>  95   <strong class='reserved'>struct</strong> <a href='../S/3988.html#L7' title='Defined at 7 in time/bits/types/struct_tm.h.'>tm</a> <a href='../S/3988.html#L7' title='Defined at 7 in time/bits/types/struct_tm.h.'>tm</a>;
+<a id='L96' name='L96'></a>  96   <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>;
+<a id='L97' name='L97'></a>  97   <strong class='reserved'>int</strong> <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a> = 0;
+<a id='L98' name='L98'></a>  98   <strong class='reserved'>char</strong> <a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>[100];
+<a id='L99' name='L99'></a>  99 
+<a id='L100' name='L100'></a> 100   <strong class='reserved'>for</strong> (<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> = 0; <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> &lt; <strong class='reserved'>sizeof</strong> (<a href='../Y/27418.html' title='Multiple used in 13 places.'>tm_tests</a>) / <strong class='reserved'>sizeof</strong> (<a href='../Y/27418.html' title='Multiple used in 13 places.'>tm_tests</a>[0]); ++<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>)
+<a id='L101' name='L101'></a> 101     <em class='brace'>{</em>
+<a id='L102' name='L102'></a> 102       <a href='../D/33462.html' title='Multiple defined in 30 places.'>memset</a> (&amp;<a href='../S/3988.html#L7' title='Defined at 7 in time/bits/types/struct_tm.h.'>tm</a>, '\0', <strong class='reserved'>sizeof</strong> (<a href='../S/3988.html#L7' title='Defined at 7 in time/bits/types/struct_tm.h.'>tm</a>));
+<a id='L103' name='L103'></a> 103 
+<a id='L104' name='L104'></a> 104       <strong class='reserved'>char</strong> *<a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a> = <a href='../D/37128.html' title='Multiple defined in 3 places.'>strptime</a> (<a href='../Y/27418.html' title='Multiple used in 13 places.'>tm_tests</a>[<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>].<a href='../S/879.html#L43' title='Defined at 43 in gshadow/tst-fgetsgent_r.c.'>input</a>, <a href='../Y/27418.html' title='Multiple used in 13 places.'>tm_tests</a>[<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>].<a href='../Y/14825.html' title='Multiple used in 818 places.'>format</a>, &amp;<a href='../S/3988.html#L7' title='Defined at 7 in time/bits/types/struct_tm.h.'>tm</a>);
+<a id='L105' name='L105'></a> 105       <strong class='reserved'>if</strong> (<a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a> == <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>)
+<a id='L106' name='L106'></a> 106     <em class='brace'>{</em>
+<a id='L107' name='L107'></a> 107       <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("strptime returned NULL for `%s'\n", <a href='../Y/27418.html' title='Multiple used in 13 places.'>tm_tests</a>[<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>].<a href='../S/879.html#L43' title='Defined at 43 in gshadow/tst-fgetsgent_r.c.'>input</a>);
+<a id='L108' name='L108'></a> 108       <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a> = 1;
+<a id='L109' name='L109'></a> 109       <strong class='reserved'>continue</strong>;
+<a id='L110' name='L110'></a> 110     <em class='brace'>}</em>
+<a id='L111' name='L111'></a> 111       <strong class='reserved'>else</strong> <strong class='reserved'>if</strong> (*<a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a> != '\0')
+<a id='L112' name='L112'></a> 112     <em class='brace'>{</em>
+<a id='L113' name='L113'></a> 113       <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("not all of `%s' read\n", <a href='../Y/27418.html' title='Multiple used in 13 places.'>tm_tests</a>[<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>].<a href='../S/879.html#L43' title='Defined at 43 in gshadow/tst-fgetsgent_r.c.'>input</a>);
+<a id='L114' name='L114'></a> 114       <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a> = 1;
+<a id='L115' name='L115'></a> 115     <em class='brace'>}</em>
+<a id='L116' name='L116'></a> 116       <a href='../D/37086.html' title='Multiple defined in 5 places.'>strftime</a> (<a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>, <strong class='reserved'>sizeof</strong> (<a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>), "%F %T", &amp;<a href='../S/3988.html#L7' title='Defined at 7 in time/bits/types/struct_tm.h.'>tm</a>);
+<a id='L117' name='L117'></a> 117       <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("strptime (\"%s\", \"%s\", ...)\n"
+<a id='L118' name='L118'></a> 118           "\tshould be: %s, wday = %d, yday = %3d\n"
+<a id='L119' name='L119'></a> 119           "\t       is: %s, wday = %d, yday = %3d\n",
+<a id='L120' name='L120'></a> 120           <a href='../Y/27418.html' title='Multiple used in 13 places.'>tm_tests</a>[<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>].<a href='../S/879.html#L43' title='Defined at 43 in gshadow/tst-fgetsgent_r.c.'>input</a>, <a href='../Y/27418.html' title='Multiple used in 13 places.'>tm_tests</a>[<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>].<a href='../Y/14825.html' title='Multiple used in 818 places.'>format</a>,
+<a id='L121' name='L121'></a> 121           <a href='../Y/27418.html' title='Multiple used in 13 places.'>tm_tests</a>[<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>].<a href='../Y/21998.html' title='Multiple used in 138 places.'>output</a>,
+<a id='L122' name='L122'></a> 122           <a href='../Y/27418.html' title='Multiple used in 13 places.'>tm_tests</a>[<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>].<a href='../Y/29001.html' title='Multiple used in 35 places.'>wday</a>, <a href='../Y/27418.html' title='Multiple used in 13 places.'>tm_tests</a>[<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>].<a href='../Y/29547.html' title='Multiple used in 20 places.'>yday</a>,
+<a id='L123' name='L123'></a> 123           <a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>, <a href='../S/3988.html#L7' title='Defined at 7 in time/bits/types/struct_tm.h.'>tm</a>.<a href='../Y/27419.html' title='Multiple used in 67 places.'>tm_wday</a>, <a href='../S/3988.html#L7' title='Defined at 7 in time/bits/types/struct_tm.h.'>tm</a>.<a href='../Y/27420.html' title='Multiple used in 44 places.'>tm_yday</a>);
+<a id='L124' name='L124'></a> 124 
+<a id='L125' name='L125'></a> 125       <strong class='reserved'>if</strong> (<a href='../D/37067.html' title='Multiple defined in 17 places.'>strcmp</a> (<a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>, <a href='../Y/27418.html' title='Multiple used in 13 places.'>tm_tests</a>[<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>].<a href='../Y/21998.html' title='Multiple used in 138 places.'>output</a>) != 0)
+<a id='L126' name='L126'></a> 126     <em class='brace'>{</em>
+<a id='L127' name='L127'></a> 127       <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("Time and date are not correct.\n");
+<a id='L128' name='L128'></a> 128       <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a> = 1;
+<a id='L129' name='L129'></a> 129     <em class='brace'>}</em>
+<a id='L130' name='L130'></a> 130       <strong class='reserved'>if</strong> (<a href='../S/3988.html#L7' title='Defined at 7 in time/bits/types/struct_tm.h.'>tm</a>.<a href='../Y/27419.html' title='Multiple used in 67 places.'>tm_wday</a> != <a href='../Y/27418.html' title='Multiple used in 13 places.'>tm_tests</a>[<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>].<a href='../Y/29001.html' title='Multiple used in 35 places.'>wday</a>)
+<a id='L131' name='L131'></a> 131     <em class='brace'>{</em>
+<a id='L132' name='L132'></a> 132       <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("weekday for `%s' incorrect: %d instead of %d\n",
+<a id='L133' name='L133'></a> 133           <a href='../Y/27418.html' title='Multiple used in 13 places.'>tm_tests</a>[<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>].<a href='../S/879.html#L43' title='Defined at 43 in gshadow/tst-fgetsgent_r.c.'>input</a>, <a href='../S/3988.html#L7' title='Defined at 7 in time/bits/types/struct_tm.h.'>tm</a>.<a href='../Y/27419.html' title='Multiple used in 67 places.'>tm_wday</a>, <a href='../Y/27418.html' title='Multiple used in 13 places.'>tm_tests</a>[<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>].<a href='../Y/29001.html' title='Multiple used in 35 places.'>wday</a>);
+<a id='L134' name='L134'></a> 134       <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a> = 1;
+<a id='L135' name='L135'></a> 135     <em class='brace'>}</em>
+<a id='L136' name='L136'></a> 136       <strong class='reserved'>if</strong> (<a href='../S/3988.html#L7' title='Defined at 7 in time/bits/types/struct_tm.h.'>tm</a>.<a href='../Y/27420.html' title='Multiple used in 44 places.'>tm_yday</a> != <a href='../Y/27418.html' title='Multiple used in 13 places.'>tm_tests</a>[<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>].<a href='../Y/29547.html' title='Multiple used in 20 places.'>yday</a>)
+<a id='L137' name='L137'></a> 137     <em class='brace'>{</em>
+<a id='L138' name='L138'></a> 138       <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("yearday for `%s' incorrect: %d instead of %d\n",
+<a id='L139' name='L139'></a> 139           <a href='../Y/27418.html' title='Multiple used in 13 places.'>tm_tests</a>[<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>].<a href='../S/879.html#L43' title='Defined at 43 in gshadow/tst-fgetsgent_r.c.'>input</a>, <a href='../S/3988.html#L7' title='Defined at 7 in time/bits/types/struct_tm.h.'>tm</a>.<a href='../Y/27420.html' title='Multiple used in 44 places.'>tm_yday</a>, <a href='../Y/27418.html' title='Multiple used in 13 places.'>tm_tests</a>[<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>].<a href='../Y/29547.html' title='Multiple used in 20 places.'>yday</a>);
+<a id='L140' name='L140'></a> 140       <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a> = 1;
+<a id='L141' name='L141'></a> 141     <em class='brace'>}</em>
+<a id='L142' name='L142'></a> 142     <em class='brace'>}</em>
+<a id='L143' name='L143'></a> 143 
+<a id='L144' name='L144'></a> 144   <strong class='reserved'>return</strong> <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a>;
+<a id='L145' name='L145'></a> 145 <em class='brace'>}</em>
+<a id='L146' name='L146'></a> 146 
+<a id='L147' name='L147'></a> 147 
+<a id='L148' name='L148'></a> 148 <strong class='reserved'>static</strong> <strong class='reserved'>int</strong>
+<a id='L149' name='L149'></a> 149 <a href='../R/18782.html' title='Multiple referred from 1850 places.'>do_test</a> (<strong class='reserved'>void</strong>)
+<a id='L150' name='L150'></a> 150 <em class='brace'>{</em>
+<a id='L151' name='L151'></a> 151   <strong class='reserved'>struct</strong> <a href='../S/3988.html#L7' title='Defined at 7 in time/bits/types/struct_tm.h.'>tm</a> <a href='../S/3988.html#L7' title='Defined at 7 in time/bits/types/struct_tm.h.'>tm</a>;
+<a id='L152' name='L152'></a> 152   <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>;
+<a id='L153' name='L153'></a> 153   <strong class='reserved'>int</strong> <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a> = 0;
+<a id='L154' name='L154'></a> 154 
+<a id='L155' name='L155'></a> 155   <strong class='reserved'>for</strong> (<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> = 0; <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> &lt; <strong class='reserved'>sizeof</strong> (<a href='../Y/12503.html' title='Multiple used in 18 places.'>day_tests</a>) / <strong class='reserved'>sizeof</strong> (<a href='../Y/12503.html' title='Multiple used in 18 places.'>day_tests</a>[0]); ++<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>)
+<a id='L156' name='L156'></a> 156     <em class='brace'>{</em>
+<a id='L157' name='L157'></a> 157       <a href='../D/33462.html' title='Multiple defined in 30 places.'>memset</a> (&amp;<a href='../S/3988.html#L7' title='Defined at 7 in time/bits/types/struct_tm.h.'>tm</a>, '\0', <strong class='reserved'>sizeof</strong> (<a href='../S/3988.html#L7' title='Defined at 7 in time/bits/types/struct_tm.h.'>tm</a>));
+<a id='L158' name='L158'></a> 158 
+<a id='L159' name='L159'></a> 159       <strong class='reserved'>if</strong> (<a href='../S/2220.html#L217' title='Defined at 217 in locale/setlocale.c.'>setlocale</a> (<a href='../S/2285.html#L41' title='Defined at 41 in locale/locale.h.'>LC_ALL</a>, <a href='../Y/12503.html' title='Multiple used in 18 places.'>day_tests</a>[<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>].<a href='../S/307.html#L309' title='Defined at 309 in intl/l10nflist.c.'>locale</a>) == <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>)
+<a id='L160' name='L160'></a> 160     <em class='brace'>{</em>
+<a id='L161' name='L161'></a> 161       <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("cannot set locale %s: %m\n", <a href='../Y/12503.html' title='Multiple used in 18 places.'>day_tests</a>[<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>].<a href='../S/307.html#L309' title='Defined at 309 in intl/l10nflist.c.'>locale</a>);
+<a id='L162' name='L162'></a> 162       <a href='../S/6681.html#L141' title='Defined at 141 in stdlib/exit.c.'>exit</a> (<a href='../D/3872.html' title='Multiple defined in 4 places.'>EXIT_FAILURE</a>);
+<a id='L163' name='L163'></a> 163     <em class='brace'>}</em>
+<a id='L164' name='L164'></a> 164 
+<a id='L165' name='L165'></a> 165       <strong class='reserved'>char</strong> *<a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a> = <a href='../D/37128.html' title='Multiple defined in 3 places.'>strptime</a> (<a href='../Y/12503.html' title='Multiple used in 18 places.'>day_tests</a>[<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>].<a href='../S/879.html#L43' title='Defined at 43 in gshadow/tst-fgetsgent_r.c.'>input</a>, <a href='../Y/12503.html' title='Multiple used in 18 places.'>day_tests</a>[<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>].<a href='../Y/14825.html' title='Multiple used in 818 places.'>format</a>, &amp;<a href='../S/3988.html#L7' title='Defined at 7 in time/bits/types/struct_tm.h.'>tm</a>);
+<a id='L166' name='L166'></a> 166       <strong class='reserved'>if</strong> (<a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a> == <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>)
+<a id='L167' name='L167'></a> 167     <em class='brace'>{</em>
+<a id='L168' name='L168'></a> 168       <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("strptime returned NULL for `%s'\n", <a href='../Y/12503.html' title='Multiple used in 18 places.'>day_tests</a>[<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>].<a href='../S/879.html#L43' title='Defined at 43 in gshadow/tst-fgetsgent_r.c.'>input</a>);
+<a id='L169' name='L169'></a> 169       <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a> = 1;
+<a id='L170' name='L170'></a> 170       <strong class='reserved'>continue</strong>;
+<a id='L171' name='L171'></a> 171     <em class='brace'>}</em>
+<a id='L172' name='L172'></a> 172       <strong class='reserved'>else</strong> <strong class='reserved'>if</strong> (*<a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a> != '\0')
+<a id='L173' name='L173'></a> 173     <em class='brace'>{</em>
+<a id='L174' name='L174'></a> 174       <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("not all of `%s' read\n", <a href='../Y/12503.html' title='Multiple used in 18 places.'>day_tests</a>[<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>].<a href='../S/879.html#L43' title='Defined at 43 in gshadow/tst-fgetsgent_r.c.'>input</a>);
+<a id='L175' name='L175'></a> 175       <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a> = 1;
+<a id='L176' name='L176'></a> 176     <em class='brace'>}</em>
+<a id='L177' name='L177'></a> 177 
+<a id='L178' name='L178'></a> 178       <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("strptime (\"%s\", \"%s\", ...)\n"
+<a id='L179' name='L179'></a> 179           "\tshould be: wday = %d, yday = %3d, mon = %2d, mday = %2d\n"
+<a id='L180' name='L180'></a> 180           "\t       is: wday = %d, yday = %3d, mon = %2d, mday = %2d\n",
+<a id='L181' name='L181'></a> 181           <a href='../Y/12503.html' title='Multiple used in 18 places.'>day_tests</a>[<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>].<a href='../S/879.html#L43' title='Defined at 43 in gshadow/tst-fgetsgent_r.c.'>input</a>, <a href='../Y/12503.html' title='Multiple used in 18 places.'>day_tests</a>[<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>].<a href='../Y/14825.html' title='Multiple used in 818 places.'>format</a>,
+<a id='L182' name='L182'></a> 182           <a href='../Y/12503.html' title='Multiple used in 18 places.'>day_tests</a>[<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>].<a href='../Y/29001.html' title='Multiple used in 35 places.'>wday</a>, <a href='../Y/12503.html' title='Multiple used in 18 places.'>day_tests</a>[<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>].<a href='../Y/29547.html' title='Multiple used in 20 places.'>yday</a>,
+<a id='L183' name='L183'></a> 183           <a href='../Y/12503.html' title='Multiple used in 18 places.'>day_tests</a>[<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>].<a href='../Y/19534.html' title='Multiple used in 22 places.'>mon</a>, <a href='../Y/12503.html' title='Multiple used in 18 places.'>day_tests</a>[<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>].<a href='../Y/19206.html' title='Multiple used in 11 places.'>mday</a>,
+<a id='L184' name='L184'></a> 184           <a href='../S/3988.html#L7' title='Defined at 7 in time/bits/types/struct_tm.h.'>tm</a>.<a href='../Y/27419.html' title='Multiple used in 67 places.'>tm_wday</a>, <a href='../S/3988.html#L7' title='Defined at 7 in time/bits/types/struct_tm.h.'>tm</a>.<a href='../Y/27420.html' title='Multiple used in 44 places.'>tm_yday</a>, <a href='../S/3988.html#L7' title='Defined at 7 in time/bits/types/struct_tm.h.'>tm</a>.<a href='../Y/27415.html' title='Multiple used in 93 places.'>tm_mon</a>, <a href='../S/3988.html#L7' title='Defined at 7 in time/bits/types/struct_tm.h.'>tm</a>.<a href='../Y/27413.html' title='Multiple used in 76 places.'>tm_mday</a>);
+<a id='L185' name='L185'></a> 185 
+<a id='L186' name='L186'></a> 186       <strong class='reserved'>if</strong> (<a href='../S/3988.html#L7' title='Defined at 7 in time/bits/types/struct_tm.h.'>tm</a>.<a href='../Y/27419.html' title='Multiple used in 67 places.'>tm_wday</a> != <a href='../Y/12503.html' title='Multiple used in 18 places.'>day_tests</a>[<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>].<a href='../Y/29001.html' title='Multiple used in 35 places.'>wday</a>)
+<a id='L187' name='L187'></a> 187     <em class='brace'>{</em>
+<a id='L188' name='L188'></a> 188       <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("weekday for `%s' incorrect: %d instead of %d\n",
+<a id='L189' name='L189'></a> 189           <a href='../Y/12503.html' title='Multiple used in 18 places.'>day_tests</a>[<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>].<a href='../S/879.html#L43' title='Defined at 43 in gshadow/tst-fgetsgent_r.c.'>input</a>, <a href='../S/3988.html#L7' title='Defined at 7 in time/bits/types/struct_tm.h.'>tm</a>.<a href='../Y/27419.html' title='Multiple used in 67 places.'>tm_wday</a>, <a href='../Y/12503.html' title='Multiple used in 18 places.'>day_tests</a>[<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>].<a href='../Y/29001.html' title='Multiple used in 35 places.'>wday</a>);
+<a id='L190' name='L190'></a> 190       <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a> = 1;
+<a id='L191' name='L191'></a> 191     <em class='brace'>}</em>
+<a id='L192' name='L192'></a> 192       <strong class='reserved'>if</strong> (<a href='../S/3988.html#L7' title='Defined at 7 in time/bits/types/struct_tm.h.'>tm</a>.<a href='../Y/27420.html' title='Multiple used in 44 places.'>tm_yday</a> != <a href='../Y/12503.html' title='Multiple used in 18 places.'>day_tests</a>[<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>].<a href='../Y/29547.html' title='Multiple used in 20 places.'>yday</a>)
+<a id='L193' name='L193'></a> 193     <em class='brace'>{</em>
+<a id='L194' name='L194'></a> 194       <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("yearday for `%s' incorrect: %d instead of %d\n",
+<a id='L195' name='L195'></a> 195           <a href='../Y/12503.html' title='Multiple used in 18 places.'>day_tests</a>[<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>].<a href='../S/879.html#L43' title='Defined at 43 in gshadow/tst-fgetsgent_r.c.'>input</a>, <a href='../S/3988.html#L7' title='Defined at 7 in time/bits/types/struct_tm.h.'>tm</a>.<a href='../Y/27420.html' title='Multiple used in 44 places.'>tm_yday</a>, <a href='../Y/12503.html' title='Multiple used in 18 places.'>day_tests</a>[<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>].<a href='../Y/29547.html' title='Multiple used in 20 places.'>yday</a>);
+<a id='L196' name='L196'></a> 196       <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a> = 1;
+<a id='L197' name='L197'></a> 197     <em class='brace'>}</em>
+<a id='L198' name='L198'></a> 198       <strong class='reserved'>if</strong> (<a href='../S/3988.html#L7' title='Defined at 7 in time/bits/types/struct_tm.h.'>tm</a>.<a href='../Y/27415.html' title='Multiple used in 93 places.'>tm_mon</a> != <a href='../Y/12503.html' title='Multiple used in 18 places.'>day_tests</a>[<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>].<a href='../Y/19534.html' title='Multiple used in 22 places.'>mon</a>)
+<a id='L199' name='L199'></a> 199     <em class='brace'>{</em>
+<a id='L200' name='L200'></a> 200       <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("month for `%s' incorrect: %d instead of %d\n",
+<a id='L201' name='L201'></a> 201           <a href='../Y/12503.html' title='Multiple used in 18 places.'>day_tests</a>[<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>].<a href='../S/879.html#L43' title='Defined at 43 in gshadow/tst-fgetsgent_r.c.'>input</a>, <a href='../S/3988.html#L7' title='Defined at 7 in time/bits/types/struct_tm.h.'>tm</a>.<a href='../Y/27415.html' title='Multiple used in 93 places.'>tm_mon</a>, <a href='../Y/12503.html' title='Multiple used in 18 places.'>day_tests</a>[<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>].<a href='../Y/19534.html' title='Multiple used in 22 places.'>mon</a>);
+<a id='L202' name='L202'></a> 202       <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a> = 1;
+<a id='L203' name='L203'></a> 203     <em class='brace'>}</em>
+<a id='L204' name='L204'></a> 204       <strong class='reserved'>if</strong> (<a href='../S/3988.html#L7' title='Defined at 7 in time/bits/types/struct_tm.h.'>tm</a>.<a href='../Y/27413.html' title='Multiple used in 76 places.'>tm_mday</a> != <a href='../Y/12503.html' title='Multiple used in 18 places.'>day_tests</a>[<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>].<a href='../Y/19206.html' title='Multiple used in 11 places.'>mday</a>)
+<a id='L205' name='L205'></a> 205     <em class='brace'>{</em>
+<a id='L206' name='L206'></a> 206       <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("monthday for `%s' incorrect: %d instead of %d\n",
+<a id='L207' name='L207'></a> 207           <a href='../Y/12503.html' title='Multiple used in 18 places.'>day_tests</a>[<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>].<a href='../S/879.html#L43' title='Defined at 43 in gshadow/tst-fgetsgent_r.c.'>input</a>, <a href='../S/3988.html#L7' title='Defined at 7 in time/bits/types/struct_tm.h.'>tm</a>.<a href='../Y/27413.html' title='Multiple used in 76 places.'>tm_mday</a>, <a href='../Y/12503.html' title='Multiple used in 18 places.'>day_tests</a>[<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>].<a href='../Y/19206.html' title='Multiple used in 11 places.'>mday</a>);
+<a id='L208' name='L208'></a> 208       <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a> = 1;
+<a id='L209' name='L209'></a> 209     <em class='brace'>}</em>
+<a id='L210' name='L210'></a> 210     <em class='brace'>}</em>
+<a id='L211' name='L211'></a> 211 
+<a id='L212' name='L212'></a> 212   <a href='../S/2220.html#L217' title='Defined at 217 in locale/setlocale.c.'>setlocale</a> (<a href='../S/2285.html#L41' title='Defined at 41 in locale/locale.h.'>LC_ALL</a>, "C");
+<a id='L213' name='L213'></a> 213 
+<a id='L214' name='L214'></a> 214   <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a> |= <a href='../S/4027.html#L93' title='Defined at 93 in time/tst-strptime.c.'>test_tm</a> ();
+<a id='L215' name='L215'></a> 215 
+<a id='L216' name='L216'></a> 216   <strong class='reserved'>return</strong> <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a>;
+<a id='L217' name='L217'></a> 217 <em class='brace'>}</em>
+<a id='L218' name='L218'></a> 218 
+<a id='L219' name='L219'></a> 219 <em class='sharp'>#define</em> <a href='../R/8619.html' title='Multiple referred from 7 places.'>TEST_FUNCTION</a> <a href='../D/29701.html' title='Multiple defined in 1421 places.'>do_test</a> ()
+<a id='L220' name='L220'></a> 220 <em class='sharp'>#include</em> "../test-skeleton.c"
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L93'>[^]</a><a href='#L149'>[v]</a><a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

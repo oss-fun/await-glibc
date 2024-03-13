@@ -1,0 +1,110 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>posix/tst-preadwrite-common.c</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18938.html'>posix</a>/tst-preadwrite-common.c</h2>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L38'>[^]</a><a href='#L47'>[v]</a>[top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<h2 class='header'>DEFINITIONS</h2>
+This source file includes following definitions.
+<ol>
+<li><a href='#L38' title='Defined at 38.'>do_prepare</a></li>
+<li><a href='#L47' title='Defined at 47.'>do_test_with_offset</a></li>
+</ol>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* Common definitions for pread and pwrite.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   Copyright (C) 2016-2022 Free Software Foundation, Inc.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'></em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'></em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'></em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   License along with the GNU C Library; if not, see</em>
+<a id='L17' name='L17'></a>  17 <em class='comment'>   &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L18' name='L18'></a>  18 
+<a id='L19' name='L19'></a>  19 <em class='sharp'>#include</em> &lt;<a href='../I/116.html'>errno.h</a>&gt;
+<a id='L20' name='L20'></a>  20 <em class='sharp'>#include</em> &lt;<a href='../I/1753.html'>error.h</a>&gt;
+<a id='L21' name='L21'></a>  21 <em class='sharp'>#include</em> &lt;<a href='../I/1973.html'>string.h</a>&gt;
+<a id='L22' name='L22'></a>  22 <em class='sharp'>#include</em> &lt;<a href='../I/1819.html'>unistd.h</a>&gt;
+<a id='L23' name='L23'></a>  23 <em class='sharp'>#include</em> &lt;<a href='../I/167.html'>sys/stat.h</a>&gt;
+<a id='L24' name='L24'></a>  24 
+<a id='L25' name='L25'></a>  25 <strong class='reserved'>static</strong> <strong class='reserved'>void</strong> <a href='../D/29648.html' title='Multiple defined in 52 places.'>do_prepare</a> (<strong class='reserved'>void</strong>);
+<a id='L26' name='L26'></a>  26 <em class='sharp'>#define</em> <a href='../R/6187.html' title='Multiple referred from 32 places.'>PREPARE</a>(<a href='../Y/10354.html' title='Multiple used in 866 places.'>argc</a>, <a href='../Y/10408.html' title='Multiple used in 1144 places.'>argv</a>) <a href='../D/29648.html' title='Multiple defined in 52 places.'>do_prepare</a> ()
+<a id='L27' name='L27'></a>  27 <strong class='reserved'>static</strong> <strong class='reserved'>int</strong> <a href='../D/29701.html' title='Multiple defined in 1421 places.'>do_test</a> (<strong class='reserved'>void</strong>);
+<a id='L28' name='L28'></a>  28 <em class='sharp'>#define</em> <a href='../R/8619.html' title='Multiple referred from 7 places.'>TEST_FUNCTION</a>       <a href='../D/29701.html' title='Multiple defined in 1421 places.'>do_test</a> ()
+<a id='L29' name='L29'></a>  29 
+<a id='L30' name='L30'></a>  30 <em class='comment'>/* This defines the `main' function and some more.  */</em>
+<a id='L31' name='L31'></a>  31 <em class='sharp'>#include</em> &lt;test-skeleton.c&gt;
+<a id='L32' name='L32'></a>  32 
+<a id='L33' name='L33'></a>  33 <em class='comment'>/* These are for the temporary file we generate.  */</em>
+<a id='L34' name='L34'></a>  34 <strong class='reserved'>static</strong> <strong class='reserved'>char</strong> *<a href='../D/33817.html' title='Multiple defined in 21 places.'>name</a>;
+<a id='L35' name='L35'></a>  35 <strong class='reserved'>static</strong> <strong class='reserved'>int</strong> <a href='../S/1663.html#L52' title='Defined at 52 in nscd/initgrcache.c.'>fd</a>;
+<a id='L36' name='L36'></a>  36 
+<a id='L37' name='L37'></a>  37 <strong class='reserved'>static</strong> <strong class='reserved'>void</strong>
+<a id='L38' name='L38'></a>  38 <a href='../R/18735.html' title='Multiple referred from 81 places.'>do_prepare</a> (<strong class='reserved'>void</strong>)
+<a id='L39' name='L39'></a>  39 <em class='brace'>{</em>
+<a id='L40' name='L40'></a>  40   <a href='../S/1663.html#L52' title='Defined at 52 in nscd/initgrcache.c.'>fd</a> = <a href='../S/5785.html#L104' title='Defined at 104 in support/temp_file.c.'>create_temp_file</a> ("tst-preadwrite.", &amp;<a href='../D/33817.html' title='Multiple defined in 21 places.'>name</a>);
+<a id='L41' name='L41'></a>  41   <strong class='reserved'>if</strong> (<a href='../S/1663.html#L52' title='Defined at 52 in nscd/initgrcache.c.'>fd</a> == -1)
+<a id='L42' name='L42'></a>  42     <a href='../D/30024.html' title='Multiple defined in 4 places.'>error</a> (<a href='../D/3872.html' title='Multiple defined in 4 places.'>EXIT_FAILURE</a>, <a href='../D/30023.html' title='Multiple defined in 13 places.'>errno</a>, "cannot create temporary file");
+<a id='L43' name='L43'></a>  43 <em class='brace'>}</em>
+<a id='L44' name='L44'></a>  44 
+<a id='L45' name='L45'></a>  45 
+<a id='L46' name='L46'></a>  46 <strong class='reserved'>static</strong> <a href='../D/36972.html' title='Multiple defined in 5 places.'>ssize_t</a>
+<a id='L47' name='L47'></a>  47 <a href='../R/18838.html' title='Multiple referred from 17 places.'>do_test_with_offset</a> (<a href='../D/34492.html' title='Multiple defined in 12 places.'>off_t</a> <a href='../S/13710.html#L51' title='Defined at 51 in sysdeps/aarch64/strncmp.S.'>offset</a>)
+<a id='L48' name='L48'></a>  48 <em class='brace'>{</em>
+<a id='L49' name='L49'></a>  49   <strong class='reserved'>char</strong> <a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>[1000];
+<a id='L50' name='L50'></a>  50   <strong class='reserved'>char</strong> <a href='../D/35957.html' title='Multiple defined in 4 places.'>res</a>[1000];
+<a id='L51' name='L51'></a>  51   <strong class='reserved'>int</strong> <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>;
+<a id='L52' name='L52'></a>  52   <a href='../D/36972.html' title='Multiple defined in 5 places.'>ssize_t</a> <a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a>;
+<a id='L53' name='L53'></a>  53 
+<a id='L54' name='L54'></a>  54   <a href='../D/33462.html' title='Multiple defined in 30 places.'>memset</a> (<a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>, '\0', <strong class='reserved'>sizeof</strong> (<a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>));
+<a id='L55' name='L55'></a>  55   <a href='../D/33462.html' title='Multiple defined in 30 places.'>memset</a> (<a href='../D/35957.html' title='Multiple defined in 4 places.'>res</a>, '\xff', <strong class='reserved'>sizeof</strong> (<a href='../D/35957.html' title='Multiple defined in 4 places.'>res</a>));
+<a id='L56' name='L56'></a>  56 
+<a id='L57' name='L57'></a>  57   <strong class='reserved'>if</strong> (<a href='../Y/29153.html' title='Multiple used in 258 places.'>write</a> (<a href='../S/1663.html#L52' title='Defined at 52 in nscd/initgrcache.c.'>fd</a>, <a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>, <strong class='reserved'>sizeof</strong> (<a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>)) != <strong class='reserved'>sizeof</strong> (<a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>))
+<a id='L58' name='L58'></a>  58     <a href='../D/30024.html' title='Multiple defined in 4 places.'>error</a> (<a href='../D/3872.html' title='Multiple defined in 4 places.'>EXIT_FAILURE</a>, <a href='../D/30023.html' title='Multiple defined in 13 places.'>errno</a>, "during write");
+<a id='L59' name='L59'></a>  59 
+<a id='L60' name='L60'></a>  60   <strong class='reserved'>for</strong> (<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> = 100; <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> &lt; 200; ++<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>)
+<a id='L61' name='L61'></a>  61     <a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>[<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>] = <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>;
+<a id='L62' name='L62'></a>  62   <a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a> = <a href='../S/1192.html#L414' title='Defined at 414 in posix/unistd.h.'>pwrite</a> (<a href='../S/1663.html#L52' title='Defined at 52 in nscd/initgrcache.c.'>fd</a>, <a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a> + 100, 100, <a href='../S/13710.html#L51' title='Defined at 51 in sysdeps/aarch64/strncmp.S.'>offset</a> + 100);
+<a id='L63' name='L63'></a>  63   <strong class='reserved'>if</strong> (<a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a> == -1)
+<a id='L64' name='L64'></a>  64     <a href='../D/30024.html' title='Multiple defined in 4 places.'>error</a> (<a href='../D/3872.html' title='Multiple defined in 4 places.'>EXIT_FAILURE</a>, <a href='../D/30023.html' title='Multiple defined in 13 places.'>errno</a>, "during pwrite");
+<a id='L65' name='L65'></a>  65 
+<a id='L66' name='L66'></a>  66   <strong class='reserved'>for</strong> (<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> = 450; <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> &lt; 600; ++<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>)
+<a id='L67' name='L67'></a>  67     <a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>[<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>] = <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>;
+<a id='L68' name='L68'></a>  68   <a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a> = <a href='../S/1192.html#L414' title='Defined at 414 in posix/unistd.h.'>pwrite</a> (<a href='../S/1663.html#L52' title='Defined at 52 in nscd/initgrcache.c.'>fd</a>, <a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a> + 450, 150, <a href='../S/13710.html#L51' title='Defined at 51 in sysdeps/aarch64/strncmp.S.'>offset</a> + 450);
+<a id='L69' name='L69'></a>  69   <strong class='reserved'>if</strong> (<a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a> == -1)
+<a id='L70' name='L70'></a>  70     <a href='../D/30024.html' title='Multiple defined in 4 places.'>error</a> (<a href='../D/3872.html' title='Multiple defined in 4 places.'>EXIT_FAILURE</a>, <a href='../D/30023.html' title='Multiple defined in 13 places.'>errno</a>, "during pwrite");
+<a id='L71' name='L71'></a>  71 
+<a id='L72' name='L72'></a>  72   <a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a> = <a href='../D/34852.html' title='Multiple defined in 2 places.'>pread</a> (<a href='../S/1663.html#L52' title='Defined at 52 in nscd/initgrcache.c.'>fd</a>, <a href='../D/35957.html' title='Multiple defined in 4 places.'>res</a>, <strong class='reserved'>sizeof</strong> (<a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a>) - 50, <a href='../S/13710.html#L51' title='Defined at 51 in sysdeps/aarch64/strncmp.S.'>offset</a> + 50);
+<a id='L73' name='L73'></a>  73   <strong class='reserved'>if</strong> (<a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a> == -1)
+<a id='L74' name='L74'></a>  74     <a href='../D/30024.html' title='Multiple defined in 4 places.'>error</a> (<a href='../D/3872.html' title='Multiple defined in 4 places.'>EXIT_FAILURE</a>, <a href='../D/30023.html' title='Multiple defined in 13 places.'>errno</a>, "during pread");
+<a id='L75' name='L75'></a>  75 
+<a id='L76' name='L76'></a>  76   <strong class='reserved'>if</strong> (<a href='../D/33446.html' title='Multiple defined in 22 places.'>memcmp</a> (<a href='../S/18198.html#L48' title='Defined at 48 in sunrpc/clnt_perr.c.'>buf</a> + 50, <a href='../D/35957.html' title='Multiple defined in 4 places.'>res</a>, <a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a>) != 0)
+<a id='L77' name='L77'></a>  77     <em class='brace'>{</em>
+<a id='L78' name='L78'></a>  78       <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("error: read of pread != write of pwrite\n");
+<a id='L79' name='L79'></a>  79       <strong class='reserved'>return</strong> -1;
+<a id='L80' name='L80'></a>  80     <em class='brace'>}</em>
+<a id='L81' name='L81'></a>  81 
+<a id='L82' name='L82'></a>  82   <strong class='reserved'>return</strong> <a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a>;
+<a id='L83' name='L83'></a>  83 <em class='brace'>}</em>
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L38'>[^]</a><a href='#L47'>[v]</a><a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

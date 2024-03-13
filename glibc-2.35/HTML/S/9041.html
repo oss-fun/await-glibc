@@ -1,0 +1,122 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>sysdeps/ieee754/dbl-64/s_tanh.c</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18977.html'>sysdeps</a>/<a href='../files/19058.html'>ieee754</a>/<a href='../files/19059.html'>dbl-64</a>/s_tanh.c</h2>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L50'>[^]</a>[v][top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<h2 class='header'>DEFINITIONS</h2>
+This source file includes following definitions.
+<ol>
+<li><a href='#L50' title='Defined at 50.'>__tanh</a></li>
+</ol>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* @(#)s_tanh.c 5.1 93/09/24 */</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>/*</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'> * ====================================================</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'> * Copyright (C) 1993 by Sun Microsystems, Inc. All rights reserved.</em>
+<a id='L5' name='L5'></a>   5 <em class='comment'> *</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'> * Developed at SunPro, a Sun Microsystems, Inc. business.</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'> * Permission to use, copy, modify, and distribute this</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'> * software is freely granted, provided that this notice</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'> * is preserved.</em>
+<a id='L10' name='L10'></a>  10 <em class='comment'> * ====================================================</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'> */</em>
+<a id='L12' name='L12'></a>  12 
+<a id='L13' name='L13'></a>  13 <em class='sharp'>#if</em> <strong class='reserved'>defined</strong>(<a href='../Y/1036.html' title='Multiple used in 79 places.'>LIBM_SCCS</a>) &amp;&amp; !<strong class='reserved'>defined</strong>(<a href='../Y/18254.html' title='Multiple used in 93 places.'>lint</a>)
+<a id='L14' name='L14'></a>  14 <strong class='reserved'>static</strong> <strong class='reserved'>char</strong> <a href='../Y/23485.html' title='Multiple used in 79 places.'>rcsid</a>[] = "$NetBSD: s_tanh.c,v 1.7 1995/05/10 20:48:22 jtc Exp $";
+<a id='L15' name='L15'></a>  15 <em class='sharp'>#endif</em>
+<a id='L16' name='L16'></a>  16 
+<a id='L17' name='L17'></a>  17 <em class='comment'>/* Tanh(x)</em>
+<a id='L18' name='L18'></a>  18 <em class='comment'> * Return the Hyperbolic Tangent of x</em>
+<a id='L19' name='L19'></a>  19 <em class='comment'> *</em>
+<a id='L20' name='L20'></a>  20 <em class='comment'> * Method :</em>
+<a id='L21' name='L21'></a>  21 <em class='comment'> *                     x    -x</em>
+<a id='L22' name='L22'></a>  22 <em class='comment'> *                    e  - e</em>
+<a id='L23' name='L23'></a>  23 <em class='comment'> *  0. tanh(x) is defined to be -----------</em>
+<a id='L24' name='L24'></a>  24 <em class='comment'> *                     x    -x</em>
+<a id='L25' name='L25'></a>  25 <em class='comment'> *                    e  + e</em>
+<a id='L26' name='L26'></a>  26 <em class='comment'> *  1. reduce x to non-negative by tanh(-x) = -tanh(x).</em>
+<a id='L27' name='L27'></a>  27 <em class='comment'> *  2.  0      &lt;= x &lt;= 2**-55 : tanh(x) := x*(one+x)</em>
+<a id='L28' name='L28'></a>  28 <em class='comment'> *                          -t</em>
+<a id='L29' name='L29'></a>  29 <em class='comment'> *      2**-55 &lt;  x &lt;=  1     : tanh(x) := -----; t = expm1(-2x)</em>
+<a id='L30' name='L30'></a>  30 <em class='comment'> *                         t + 2</em>
+<a id='L31' name='L31'></a>  31 <em class='comment'> *                           2</em>
+<a id='L32' name='L32'></a>  32 <em class='comment'> *      1      &lt;= x &lt;=  22.0  : tanh(x) := 1-  ----- ; t=expm1(2x)</em>
+<a id='L33' name='L33'></a>  33 <em class='comment'> *                         t + 2</em>
+<a id='L34' name='L34'></a>  34 <em class='comment'> *      22.0   &lt;  x &lt;= INF    : tanh(x) := 1.</em>
+<a id='L35' name='L35'></a>  35 <em class='comment'> *</em>
+<a id='L36' name='L36'></a>  36 <em class='comment'> * Special cases:</em>
+<a id='L37' name='L37'></a>  37 <em class='comment'> *  tanh(NaN) is NaN;</em>
+<a id='L38' name='L38'></a>  38 <em class='comment'> *  only tanh(0)=0 is exact for finite argument.</em>
+<a id='L39' name='L39'></a>  39 <em class='comment'> */</em>
+<a id='L40' name='L40'></a>  40 
+<a id='L41' name='L41'></a>  41 <em class='sharp'>#include</em> &lt;<a href='18104.html'>float.h</a>&gt;
+<a id='L42' name='L42'></a>  42 <em class='sharp'>#include</em> &lt;<a href='../I/1890.html'>math.h</a>&gt;
+<a id='L43' name='L43'></a>  43 <em class='sharp'>#include</em> &lt;<a href='../I/5892.html'>math_private.h</a>&gt;
+<a id='L44' name='L44'></a>  44 <em class='sharp'>#include</em> &lt;<a href='3493.html'>math-underflow.h</a>&gt;
+<a id='L45' name='L45'></a>  45 <em class='sharp'>#include</em> &lt;<a href='../I/6503.html'>libm-alias-double.h</a>&gt;
+<a id='L46' name='L46'></a>  46 
+<a id='L47' name='L47'></a>  47 <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <strong class='reserved'>double</strong> <a href='../D/34513.html' title='Multiple defined in 9 places.'>one</a> = 1.0, <a href='../Y/27991.html' title='Multiple used in 119 places.'>two</a> = 2.0, <a href='../Y/27356.html' title='Multiple used in 128 places.'>tiny</a> = 1.0e-300;
+<a id='L48' name='L48'></a>  48 
+<a id='L49' name='L49'></a>  49 <strong class='reserved'>double</strong>
+<a id='L50' name='L50'></a>  50 <a href='../R/16155.html' title='Multiple referred from 8 places.'>__tanh</a> (<strong class='reserved'>double</strong> <a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a>)
+<a id='L51' name='L51'></a>  51 <em class='brace'>{</em>
+<a id='L52' name='L52'></a>  52   <strong class='reserved'>double</strong> <a href='../S/4165.html#L39' title='Defined at 39 in wcsmbs/tst-mbrtowc2.c.'>t</a>, <a href='../D/39723.html' title='Multiple defined in 4 places.'>z</a>;
+<a id='L53' name='L53'></a>  53   <a href='../S/137.html#L26' title='Defined at 26 in bits/stdint-intn.h.'>int32_t</a> <a href='../Y/17418.html' title='Multiple used in 52 places.'>jx</a>, <a href='../Y/17332.html' title='Multiple used in 1266 places.'>ix</a>, <a href='../Y/18743.html' title='Multiple used in 575 places.'>lx</a>;
+<a id='L54' name='L54'></a>  54 
+<a id='L55' name='L55'></a>  55   <em class='comment'>/* High word of |x|. */</em>
+<a id='L56' name='L56'></a>  56   <a href='../S/12155.html#L73' title='Defined at 73 in sysdeps/generic/math_private.h.'>EXTRACT_WORDS</a> (<a href='../Y/17418.html' title='Multiple used in 52 places.'>jx</a>, <a href='../Y/18743.html' title='Multiple used in 575 places.'>lx</a>, <a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a>);
+<a id='L57' name='L57'></a>  57   <a href='../Y/17332.html' title='Multiple used in 1266 places.'>ix</a> = <a href='../Y/17418.html' title='Multiple used in 52 places.'>jx</a> &amp; 0x7fffffff;
+<a id='L58' name='L58'></a>  58 
+<a id='L59' name='L59'></a>  59   <em class='comment'>/* x is INF or NaN */</em>
+<a id='L60' name='L60'></a>  60   <strong class='reserved'>if</strong> (<a href='../Y/17332.html' title='Multiple used in 1266 places.'>ix</a> &gt;= 0x7ff00000)
+<a id='L61' name='L61'></a>  61     <em class='brace'>{</em>
+<a id='L62' name='L62'></a>  62       <strong class='reserved'>if</strong> (<a href='../Y/17418.html' title='Multiple used in 52 places.'>jx</a> &gt;= 0)
+<a id='L63' name='L63'></a>  63     <strong class='reserved'>return</strong> <a href='../D/34513.html' title='Multiple defined in 9 places.'>one</a> / <a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a> + <a href='../D/34513.html' title='Multiple defined in 9 places.'>one</a>;               <em class='comment'>/* tanh(+-inf)=+-1 */</em>
+<a id='L64' name='L64'></a>  64       <strong class='reserved'>else</strong>
+<a id='L65' name='L65'></a>  65     <strong class='reserved'>return</strong> <a href='../D/34513.html' title='Multiple defined in 9 places.'>one</a> / <a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a> - <a href='../D/34513.html' title='Multiple defined in 9 places.'>one</a>;               <em class='comment'>/* tanh(NaN) = NaN */</em>
+<a id='L66' name='L66'></a>  66     <em class='brace'>}</em>
+<a id='L67' name='L67'></a>  67 
+<a id='L68' name='L68'></a>  68   <em class='comment'>/* |x| &lt; 22 */</em>
+<a id='L69' name='L69'></a>  69   <strong class='reserved'>if</strong> (<a href='../Y/17332.html' title='Multiple used in 1266 places.'>ix</a> &lt; 0x40360000)                  <em class='comment'>/* |x|&lt;22 */</em>
+<a id='L70' name='L70'></a>  70     <em class='brace'>{</em>
+<a id='L71' name='L71'></a>  71       <strong class='reserved'>if</strong> ((<a href='../Y/17332.html' title='Multiple used in 1266 places.'>ix</a> | <a href='../Y/18743.html' title='Multiple used in 575 places.'>lx</a>) == 0)
+<a id='L72' name='L72'></a>  72     <strong class='reserved'>return</strong> <a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a>;                       <em class='comment'>/* x == +-0 */</em>
+<a id='L73' name='L73'></a>  73       <strong class='reserved'>if</strong> (<a href='../Y/17332.html' title='Multiple used in 1266 places.'>ix</a> &lt; 0x3c800000)              <em class='comment'>/* |x|&lt;2**-55 */</em>
+<a id='L74' name='L74'></a>  74     <em class='brace'>{</em>
+<a id='L75' name='L75'></a>  75       <a href='../S/3493.html#L41' title='Defined at 41 in math/math-underflow.h.'>math_check_force_underflow</a> (<a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a>);
+<a id='L76' name='L76'></a>  76       <strong class='reserved'>return</strong> <a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a> * (<a href='../D/34513.html' title='Multiple defined in 9 places.'>one</a> + <a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a>);           <em class='comment'>/* tanh(small) = small */</em>
+<a id='L77' name='L77'></a>  77     <em class='brace'>}</em>
+<a id='L78' name='L78'></a>  78       <strong class='reserved'>if</strong> (<a href='../Y/17332.html' title='Multiple used in 1266 places.'>ix</a> &gt;= 0x3ff00000)             <em class='comment'>/* |x|&gt;=1  */</em>
+<a id='L79' name='L79'></a>  79     <em class='brace'>{</em>
+<a id='L80' name='L80'></a>  80       <a href='../S/4165.html#L39' title='Defined at 39 in wcsmbs/tst-mbrtowc2.c.'>t</a> = <a href='../D/23767.html' title='Multiple defined in 2 places.'>__expm1</a> (<a href='../Y/27991.html' title='Multiple used in 119 places.'>two</a> * <a href='../S/3342.html#L815' title='Defined at 815 in math/tgmath.h.'>fabs</a> (<a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a>));
+<a id='L81' name='L81'></a>  81       <a href='../D/39723.html' title='Multiple defined in 4 places.'>z</a> = <a href='../D/34513.html' title='Multiple defined in 9 places.'>one</a> - <a href='../Y/27991.html' title='Multiple used in 119 places.'>two</a> / (<a href='../S/4165.html#L39' title='Defined at 39 in wcsmbs/tst-mbrtowc2.c.'>t</a> + <a href='../Y/27991.html' title='Multiple used in 119 places.'>two</a>);
+<a id='L82' name='L82'></a>  82     <em class='brace'>}</em>
+<a id='L83' name='L83'></a>  83       <strong class='reserved'>else</strong>
+<a id='L84' name='L84'></a>  84     <em class='brace'>{</em>
+<a id='L85' name='L85'></a>  85       <a href='../S/4165.html#L39' title='Defined at 39 in wcsmbs/tst-mbrtowc2.c.'>t</a> = <a href='../D/23767.html' title='Multiple defined in 2 places.'>__expm1</a> (-<a href='../Y/27991.html' title='Multiple used in 119 places.'>two</a> * <a href='../S/3342.html#L815' title='Defined at 815 in math/tgmath.h.'>fabs</a> (<a href='../D/39201.html' title='Multiple defined in 9 places.'>x</a>));
+<a id='L86' name='L86'></a>  86       <a href='../D/39723.html' title='Multiple defined in 4 places.'>z</a> = -<a href='../S/4165.html#L39' title='Defined at 39 in wcsmbs/tst-mbrtowc2.c.'>t</a> / (<a href='../S/4165.html#L39' title='Defined at 39 in wcsmbs/tst-mbrtowc2.c.'>t</a> + <a href='../Y/27991.html' title='Multiple used in 119 places.'>two</a>);
+<a id='L87' name='L87'></a>  87     <em class='brace'>}</em>
+<a id='L88' name='L88'></a>  88       <em class='comment'>/* |x| &gt; 22, return +-1 */</em>
+<a id='L89' name='L89'></a>  89     <em class='brace'>}</em>
+<a id='L90' name='L90'></a>  90   <strong class='reserved'>else</strong>
+<a id='L91' name='L91'></a>  91     <em class='brace'>{</em>
+<a id='L92' name='L92'></a>  92       <a href='../D/39723.html' title='Multiple defined in 4 places.'>z</a> = <a href='../D/34513.html' title='Multiple defined in 9 places.'>one</a> - <a href='../Y/27356.html' title='Multiple used in 128 places.'>tiny</a>;                   <em class='comment'>/* raised inexact flag */</em>
+<a id='L93' name='L93'></a>  93     <em class='brace'>}</em>
+<a id='L94' name='L94'></a>  94   <strong class='reserved'>return</strong> (<a href='../Y/17418.html' title='Multiple used in 52 places.'>jx</a> &gt;= 0) ? <a href='../D/39723.html' title='Multiple defined in 4 places.'>z</a> : -<a href='../D/39723.html' title='Multiple defined in 4 places.'>z</a>;
+<a id='L95' name='L95'></a>  95 <em class='brace'>}</em>
+<a id='L96' name='L96'></a>  96 <a href='../D/32822.html' title='Multiple defined in 18 places.'>libm_alias_double</a> (<a href='../S/9041.html#L50' title='Defined at 50 in sysdeps/ieee754/dbl-64/s_tanh.c.'>__tanh</a>, <a href='../S/3342.html#L749' title='Defined at 749 in math/tgmath.h.'>tanh</a>)
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;][^]<a href='#L50'>[v]</a><a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

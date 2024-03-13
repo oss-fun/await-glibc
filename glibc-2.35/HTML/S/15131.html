@@ -1,0 +1,273 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>sysdeps/x86_64/fpu/multiarch/svml_d_cbrt8_core_avx512.S</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18977.html'>sysdeps</a>/<a href='../files/19391.html'>x86_64</a>/<a href='../files/19392.html'>fpu</a>/<a href='../files/19393.html'>multiarch</a>/svml_d_cbrt8_core_avx512.S</h2>
+<em class='comment'>/* [&lt;][&gt;][^][v][top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* Function cbrt vectorized with AVX-512.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   Copyright (C) 2021-2022 Free Software Foundation, Inc.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'></em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'></em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'></em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   License along with the GNU C Library; if not, see</em>
+<a id='L17' name='L17'></a>  17 <em class='comment'>   https://www.gnu.org/licenses/.  */</em>
+<a id='L18' name='L18'></a>  18 
+<a id='L19' name='L19'></a>  19 <em class='comment'>/*</em>
+<a id='L20' name='L20'></a>  20 <em class='comment'> * ALGORITHM DESCRIPTION:</em>
+<a id='L21' name='L21'></a>  21 <em class='comment'> *</em>
+<a id='L22' name='L22'></a>  22 <em class='comment'> *   x=2^{3*k+j} * 1.b1 b2 ... b5 b6 ... b52</em>
+<a id='L23' name='L23'></a>  23 <em class='comment'> *   Let r=(x*2^{-3k-j} - 1.b1 b2 ... b5 1)* rcp[b1 b2 ..b5],</em>
+<a id='L24' name='L24'></a>  24 <em class='comment'> *   where rcp[b1 b2 .. b5]=1/(1.b1 b2 b3 b4 b5 1) in double precision</em>
+<a id='L25' name='L25'></a>  25 <em class='comment'> *   cbrt(2^j * 1. b1 b2 .. b5 1) is approximated as T[j][b1..b5]+D[j][b1..b5]</em>
+<a id='L26' name='L26'></a>  26 <em class='comment'> *   (T stores the high 53 bits, D stores the low order bits)</em>
+<a id='L27' name='L27'></a>  27 <em class='comment'> *   Result=2^k*T+(2^k*T*r)*P+2^k*D</em>
+<a id='L28' name='L28'></a>  28 <em class='comment'> *   where P=p1+p2*r+..+p8*r^7</em>
+<a id='L29' name='L29'></a>  29 <em class='comment'> *</em>
+<a id='L30' name='L30'></a>  30 <em class='comment'> */</em>
+<a id='L31' name='L31'></a>  31 
+<a id='L32' name='L32'></a>  32 <em class='comment'>/* Offsets for data table __svml_dcbrt_data_internal_avx512</em>
+<a id='L33' name='L33'></a>  33 <em class='comment'> */</em>
+<a id='L34' name='L34'></a>  34 <em class='sharp'>#define</em> etbl_H                          0
+<a id='L35' name='L35'></a>  35 <em class='sharp'>#define</em> etbl_L                          64
+<a id='L36' name='L36'></a>  36 <em class='sharp'>#define</em> cbrt_tbl_H                      128
+<a id='L37' name='L37'></a>  37 <em class='sharp'>#define</em> BiasL                           256
+<a id='L38' name='L38'></a>  38 <em class='sharp'>#define</em> SZero                           320
+<a id='L39' name='L39'></a>  39 <em class='sharp'>#define</em> OneThird                        384
+<a id='L40' name='L40'></a>  40 <em class='sharp'>#define</em> Bias3                           448
+<a id='L41' name='L41'></a>  41 <em class='sharp'>#define</em> Three                           512
+<a id='L42' name='L42'></a>  42 <em class='sharp'>#define</em> One                             576
+<a id='L43' name='L43'></a>  43 <em class='sharp'>#define</em> poly_coeff10                    640
+<a id='L44' name='L44'></a>  44 <em class='sharp'>#define</em> poly_coeff9                     704
+<a id='L45' name='L45'></a>  45 <em class='sharp'>#define</em> poly_coeff8                     768
+<a id='L46' name='L46'></a>  46 <em class='sharp'>#define</em> poly_coeff7                     832
+<a id='L47' name='L47'></a>  47 <em class='sharp'>#define</em> poly_coeff6                     896
+<a id='L48' name='L48'></a>  48 <em class='sharp'>#define</em> poly_coeff5                     960
+<a id='L49' name='L49'></a>  49 <em class='sharp'>#define</em> poly_coeff4                     1024
+<a id='L50' name='L50'></a>  50 <em class='sharp'>#define</em> poly_coeff3                     1088
+<a id='L51' name='L51'></a>  51 <em class='sharp'>#define</em> poly_coeff2                     1152
+<a id='L52' name='L52'></a>  52 <em class='sharp'>#define</em> poly_coeff1                     1216
+<a id='L53' name='L53'></a>  53 
+<a id='L54' name='L54'></a>  54 <em class='sharp'>#include</em> &lt;<a href='../I/5967.html'>sysdep.h</a>&gt;
+<a id='L55' name='L55'></a>  55 
+<a id='L56' name='L56'></a>  56         .text
+<a id='L57' name='L57'></a>  57     .section .text.evex512,"ax",@progbits
+<a id='L58' name='L58'></a>  58 <a href='../D/3651.html' title='Multiple defined in 54 places.'>ENTRY</a>(_ZGVeN8v_cbrt_skx)
+<a id='L59' name='L59'></a>  59         vgetmantpd $0, <em class='brace'>{</em>sae<em class='brace'>}</em>, %zmm0, %zmm14
+<a id='L60' name='L60'></a>  60 
+<a id='L61' name='L61'></a>  61 <em class='comment'>/* GetExp(x) */</em>
+<a id='L62' name='L62'></a>  62         vgetexppd <em class='brace'>{</em>sae<em class='brace'>}</em>, %zmm0, %zmm7
+<a id='L63' name='L63'></a>  63         vmovups   BiasL+__svml_dcbrt_data_internal_avx512(%rip), %zmm8
+<a id='L64' name='L64'></a>  64 
+<a id='L65' name='L65'></a>  65 <em class='comment'>/* exponent/3 */</em>
+<a id='L66' name='L66'></a>  66         vmovups   OneThird+__svml_dcbrt_data_internal_avx512(%rip), %zmm9
+<a id='L67' name='L67'></a>  67         vmovups   Bias3+__svml_dcbrt_data_internal_avx512(%rip), %zmm10
+<a id='L68' name='L68'></a>  68 
+<a id='L69' name='L69'></a>  69 <em class='comment'>/* Reduced argument: R = DblRcp*Mantissa - 1 */</em>
+<a id='L70' name='L70'></a>  70         vmovups   One+__svml_dcbrt_data_internal_avx512(%rip), %zmm2
+<a id='L71' name='L71'></a>  71 
+<a id='L72' name='L72'></a>  72 <em class='comment'>/* exponent%3 (to be used as index) */</em>
+<a id='L73' name='L73'></a>  73         vmovups   Three+__svml_dcbrt_data_internal_avx512(%rip), %zmm11
+<a id='L74' name='L74'></a>  74 
+<a id='L75' name='L75'></a>  75 <em class='comment'>/* DblRcp ~ 1/Mantissa */</em>
+<a id='L76' name='L76'></a>  76         vrcp14pd  %zmm14, %zmm13
+<a id='L77' name='L77'></a>  77         vaddpd    <em class='brace'>{</em>rn-sae<em class='brace'>}</em>, %zmm8, %zmm7, %zmm12
+<a id='L78' name='L78'></a>  78         vandpd    SZero+__svml_dcbrt_data_internal_avx512(%rip), %zmm0, %zmm6
+<a id='L79' name='L79'></a>  79 
+<a id='L80' name='L80'></a>  80 <em class='comment'>/* round DblRcp to 3 fractional bits (RN mode, no Precision exception) */</em>
+<a id='L81' name='L81'></a>  81         vrndscalepd $72, <em class='brace'>{</em>sae<em class='brace'>}</em>, %zmm13, %zmm15
+<a id='L82' name='L82'></a>  82         vfmsub231pd <em class='brace'>{</em>rn-sae<em class='brace'>}</em>, %zmm12, %zmm9, %zmm10
+<a id='L83' name='L83'></a>  83 
+<a id='L84' name='L84'></a>  84 <em class='comment'>/* polynomial */</em>
+<a id='L85' name='L85'></a>  85         vmovups   poly_coeff10+__svml_dcbrt_data_internal_avx512(%rip), %zmm0
+<a id='L86' name='L86'></a>  86         vmovups   poly_coeff8+__svml_dcbrt_data_internal_avx512(%rip), %zmm7
+<a id='L87' name='L87'></a>  87         vmovups   poly_coeff7+__svml_dcbrt_data_internal_avx512(%rip), %zmm9
+<a id='L88' name='L88'></a>  88         vfmsub231pd <em class='brace'>{</em>rn-sae<em class='brace'>}</em>, %zmm15, %zmm14, %zmm2
+<a id='L89' name='L89'></a>  89         vrndscalepd $9, <em class='brace'>{</em>sae<em class='brace'>}</em>, %zmm10, %zmm5
+<a id='L90' name='L90'></a>  90 
+<a id='L91' name='L91'></a>  91 <em class='comment'>/* Table lookup */</em>
+<a id='L92' name='L92'></a>  92         vmovups   cbrt_tbl_H+__svml_dcbrt_data_internal_avx512(%rip), %zmm10
+<a id='L93' name='L93'></a>  93         vmovups   poly_coeff6+__svml_dcbrt_data_internal_avx512(%rip), %zmm8
+<a id='L94' name='L94'></a>  94         vmovups   poly_coeff3+__svml_dcbrt_data_internal_avx512(%rip), %zmm13
+<a id='L95' name='L95'></a>  95         vfmadd231pd <em class='brace'>{</em>rn-sae<em class='brace'>}</em>, %zmm2, %zmm7, %zmm9
+<a id='L96' name='L96'></a>  96         vfnmadd231pd <em class='brace'>{</em>rn-sae<em class='brace'>}</em>, %zmm5, %zmm11, %zmm12
+<a id='L97' name='L97'></a>  97         vmovups   poly_coeff5+__svml_dcbrt_data_internal_avx512(%rip), %zmm11
+<a id='L98' name='L98'></a>  98         vmovups   poly_coeff1+__svml_dcbrt_data_internal_avx512(%rip), %zmm14
+<a id='L99' name='L99'></a>  99 
+<a id='L100' name='L100'></a> 100 <em class='comment'>/* Prepare table index */</em>
+<a id='L101' name='L101'></a> 101         vpsrlq    $49, %zmm15, %zmm1
+<a id='L102' name='L102'></a> 102 
+<a id='L103' name='L103'></a> 103 <em class='comment'>/* Table lookup: 2^(exponent%3) */</em>
+<a id='L104' name='L104'></a> 104         vpermpd   __svml_dcbrt_data_internal_avx512(%rip), %zmm12, %zmm4
+<a id='L105' name='L105'></a> 105         vpermpd   etbl_L+__svml_dcbrt_data_internal_avx512(%rip), %zmm12, %zmm3
+<a id='L106' name='L106'></a> 106         vpermt2pd cbrt_tbl_H+64+__svml_dcbrt_data_internal_avx512(%rip), %zmm1, %zmm10
+<a id='L107' name='L107'></a> 107         vmovups   poly_coeff9+__svml_dcbrt_data_internal_avx512(%rip), %zmm1
+<a id='L108' name='L108'></a> 108         vfmadd231pd <em class='brace'>{</em>rn-sae<em class='brace'>}</em>, %zmm2, %zmm8, %zmm11
+<a id='L109' name='L109'></a> 109         vmovups   poly_coeff2+__svml_dcbrt_data_internal_avx512(%rip), %zmm12
+<a id='L110' name='L110'></a> 110         vscalefpd <em class='brace'>{</em>rn-sae<em class='brace'>}</em>, %zmm5, %zmm10, %zmm15
+<a id='L111' name='L111'></a> 111         vfmadd231pd <em class='brace'>{</em>rn-sae<em class='brace'>}</em>, %zmm2, %zmm0, %zmm1
+<a id='L112' name='L112'></a> 112         vmovups   poly_coeff4+__svml_dcbrt_data_internal_avx512(%rip), %zmm5
+<a id='L113' name='L113'></a> 113         vfmadd231pd <em class='brace'>{</em>rn-sae<em class='brace'>}</em>, %zmm2, %zmm12, %zmm14
+<a id='L114' name='L114'></a> 114         vmulpd    <em class='brace'>{</em>rn-sae<em class='brace'>}</em>, %zmm2, %zmm2, %zmm0
+<a id='L115' name='L115'></a> 115         vfmadd231pd <em class='brace'>{</em>rn-sae<em class='brace'>}</em>, %zmm2, %zmm5, %zmm13
+<a id='L116' name='L116'></a> 116 
+<a id='L117' name='L117'></a> 117 <em class='comment'>/* Sh*R */</em>
+<a id='L118' name='L118'></a> 118         vmulpd    <em class='brace'>{</em>rn-sae<em class='brace'>}</em>, %zmm2, %zmm4, %zmm2
+<a id='L119' name='L119'></a> 119         vfmadd213pd <em class='brace'>{</em>rn-sae<em class='brace'>}</em>, %zmm9, %zmm0, %zmm1
+<a id='L120' name='L120'></a> 120         vfmadd213pd <em class='brace'>{</em>rn-sae<em class='brace'>}</em>, %zmm11, %zmm0, %zmm1
+<a id='L121' name='L121'></a> 121         vfmadd213pd <em class='brace'>{</em>rn-sae<em class='brace'>}</em>, %zmm13, %zmm0, %zmm1
+<a id='L122' name='L122'></a> 122         vfmadd213pd <em class='brace'>{</em>rn-sae<em class='brace'>}</em>, %zmm14, %zmm0, %zmm1
+<a id='L123' name='L123'></a> 123 
+<a id='L124' name='L124'></a> 124 <em class='comment'>/* Sl + (Sh*R)*Poly */</em>
+<a id='L125' name='L125'></a> 125         vfmadd213pd <em class='brace'>{</em>rn-sae<em class='brace'>}</em>, %zmm3, %zmm1, %zmm2
+<a id='L126' name='L126'></a> 126 
+<a id='L127' name='L127'></a> 127 <em class='comment'>/*</em>
+<a id='L128' name='L128'></a> 128 <em class='comment'> * branch-free</em>
+<a id='L129' name='L129'></a> 129 <em class='comment'> * scaled_Th*(Sh+Sl+Sh*R*Poly)</em>
+<a id='L130' name='L130'></a> 130 <em class='comment'> */</em>
+<a id='L131' name='L131'></a> 131         vaddpd    <em class='brace'>{</em>rn-sae<em class='brace'>}</em>, %zmm4, %zmm2, %zmm3
+<a id='L132' name='L132'></a> 132         vmulpd    <em class='brace'>{</em>rn-sae<em class='brace'>}</em>, %zmm15, %zmm3, %zmm4
+<a id='L133' name='L133'></a> 133         vorpd     %zmm6, %zmm4, %zmm0
+<a id='L134' name='L134'></a> 134         ret
+<a id='L135' name='L135'></a> 135 
+<a id='L136' name='L136'></a> 136 END(_ZGVeN8v_cbrt_skx)
+<a id='L137' name='L137'></a> 137 
+<a id='L138' name='L138'></a> 138         .section .rodata, "a"
+<a id='L139' name='L139'></a> 139         .align 64
+<a id='L140' name='L140'></a> 140 
+<a id='L141' name='L141'></a> 141 <em class='sharp'>#ifdef</em> __svml_dcbrt_data_internal_avx512_typedef
+<a id='L142' name='L142'></a> 142 typedef unsigned int VUINT32;
+<a id='L143' name='L143'></a> 143 typedef struct <em class='brace'>{</em>
+<a id='L144' name='L144'></a> 144         __declspec(align(64)) VUINT32 etbl_H[8][2];
+<a id='L145' name='L145'></a> 145         __declspec(align(64)) VUINT32 etbl_L[8][2];
+<a id='L146' name='L146'></a> 146         __declspec(align(64)) VUINT32 cbrt_tbl_H[16][2];
+<a id='L147' name='L147'></a> 147         __declspec(align(64)) VUINT32 BiasL[8][2];
+<a id='L148' name='L148'></a> 148         __declspec(align(64)) VUINT32 SZero[8][2];
+<a id='L149' name='L149'></a> 149         __declspec(align(64)) VUINT32 OneThird[8][2];
+<a id='L150' name='L150'></a> 150         __declspec(align(64)) VUINT32 Bias3[8][2];
+<a id='L151' name='L151'></a> 151         __declspec(align(64)) VUINT32 Three[8][2];
+<a id='L152' name='L152'></a> 152         __declspec(align(64)) VUINT32 One[8][2];
+<a id='L153' name='L153'></a> 153         __declspec(align(64)) VUINT32 poly_coeff10[8][2];
+<a id='L154' name='L154'></a> 154         __declspec(align(64)) VUINT32 poly_coeff9[8][2];
+<a id='L155' name='L155'></a> 155         __declspec(align(64)) VUINT32 poly_coeff8[8][2];
+<a id='L156' name='L156'></a> 156         __declspec(align(64)) VUINT32 poly_coeff7[8][2];
+<a id='L157' name='L157'></a> 157         __declspec(align(64)) VUINT32 poly_coeff6[8][2];
+<a id='L158' name='L158'></a> 158         __declspec(align(64)) VUINT32 poly_coeff5[8][2];
+<a id='L159' name='L159'></a> 159         __declspec(align(64)) VUINT32 poly_coeff4[8][2];
+<a id='L160' name='L160'></a> 160         __declspec(align(64)) VUINT32 poly_coeff3[8][2];
+<a id='L161' name='L161'></a> 161         __declspec(align(64)) VUINT32 poly_coeff2[8][2];
+<a id='L162' name='L162'></a> 162         __declspec(align(64)) VUINT32 poly_coeff1[8][2];
+<a id='L163' name='L163'></a> 163     <em class='brace'>}</em> __svml_dcbrt_data_internal_avx512;
+<a id='L164' name='L164'></a> 164 <em class='sharp'>#endif</em>
+<a id='L165' name='L165'></a> 165 __svml_dcbrt_data_internal_avx512:
+<a id='L166' name='L166'></a> 166         <em class='comment'>/*== etbl_H ==*/</em>
+<a id='L167' name='L167'></a> 167         .quad 0x3ff0000000000000
+<a id='L168' name='L168'></a> 168         .quad 0x3ff428a2f98d728b
+<a id='L169' name='L169'></a> 169         .quad 0x3ff965fea53d6e3d
+<a id='L170' name='L170'></a> 170         .quad 0x0000000000000000
+<a id='L171' name='L171'></a> 171         .quad 0xbff0000000000000
+<a id='L172' name='L172'></a> 172         .quad 0xbff428a2f98d728b
+<a id='L173' name='L173'></a> 173         .quad 0xbff965fea53d6e3d
+<a id='L174' name='L174'></a> 174         .quad 0x0000000000000000
+<a id='L175' name='L175'></a> 175         <em class='comment'>/*== etbl_L ==*/</em>
+<a id='L176' name='L176'></a> 176         .align 64
+<a id='L177' name='L177'></a> 177         .quad 0x0000000000000000
+<a id='L178' name='L178'></a> 178         .quad 0xbc7ddc22548ea41e
+<a id='L179' name='L179'></a> 179         .quad 0xbc9f53e999952f09
+<a id='L180' name='L180'></a> 180         .quad 0x0000000000000000
+<a id='L181' name='L181'></a> 181         .quad 0x0000000000000000
+<a id='L182' name='L182'></a> 182         .quad 0x3c7ddc22548ea41e
+<a id='L183' name='L183'></a> 183         .quad 0x3c9f53e999952f09
+<a id='L184' name='L184'></a> 184         .quad 0x0000000000000000
+<a id='L185' name='L185'></a> 185         <em class='comment'>/*== cbrt_tbl_H ==*/</em>
+<a id='L186' name='L186'></a> 186         .align 64
+<a id='L187' name='L187'></a> 187         .quad 0x3ff428a2f98d728b
+<a id='L188' name='L188'></a> 188         .quad 0x3ff361f35ca116ff
+<a id='L189' name='L189'></a> 189         .quad 0x3ff2b6b5edf6b54a
+<a id='L190' name='L190'></a> 190         .quad 0x3ff220e6dd675180
+<a id='L191' name='L191'></a> 191         .quad 0x3ff19c3b38e975a8
+<a id='L192' name='L192'></a> 192         .quad 0x3ff12589c21fb842
+<a id='L193' name='L193'></a> 193         .quad 0x3ff0ba6ee5f9aad4
+<a id='L194' name='L194'></a> 194         .quad 0x3ff059123d3a9848
+<a id='L195' name='L195'></a> 195         .quad 0x3ff0000000000000
+<a id='L196' name='L196'></a> 196         .quad 0x0000000000000000
+<a id='L197' name='L197'></a> 197         .quad 0x0000000000000000
+<a id='L198' name='L198'></a> 198         .quad 0x0000000000000000
+<a id='L199' name='L199'></a> 199         .quad 0x0000000000000000
+<a id='L200' name='L200'></a> 200         .quad 0x0000000000000000
+<a id='L201' name='L201'></a> 201         .quad 0x0000000000000000
+<a id='L202' name='L202'></a> 202         .quad 0x0000000000000000
+<a id='L203' name='L203'></a> 203         <em class='comment'>/*== BiasL ==*/</em>
+<a id='L204' name='L204'></a> 204         .align 64
+<a id='L205' name='L205'></a> 205         .quad 0x4338000000000000, 0x4338000000000000, 0x4338000000000000, 0x4338000000000000, 0x4338000000000000, 0x4338000000000000, 0x4338000000000000, 0x4338000000000000
+<a id='L206' name='L206'></a> 206         <em class='comment'>/*== Zero ==*/</em>
+<a id='L207' name='L207'></a> 207         .align 64
+<a id='L208' name='L208'></a> 208         .quad 0x8000000000000000, 0x8000000000000000, 0x8000000000000000, 0x8000000000000000, 0x8000000000000000, 0x8000000000000000, 0x8000000000000000, 0x8000000000000000
+<a id='L209' name='L209'></a> 209         <em class='comment'>/*== OneThird ==*/</em>
+<a id='L210' name='L210'></a> 210         .align 64
+<a id='L211' name='L211'></a> 211         .quad 0x3fd5555555555556, 0x3fd5555555555556, 0x3fd5555555555556, 0x3fd5555555555556, 0x3fd5555555555556, 0x3fd5555555555556, 0x3fd5555555555556, 0x3fd5555555555556
+<a id='L212' name='L212'></a> 212         <em class='comment'>/*== Bias3 ==*/</em>
+<a id='L213' name='L213'></a> 213         .align 64
+<a id='L214' name='L214'></a> 214         .quad 0x4320000000000000, 0x4320000000000000, 0x4320000000000000, 0x4320000000000000, 0x4320000000000000, 0x4320000000000000, 0x4320000000000000, 0x4320000000000000
+<a id='L215' name='L215'></a> 215         <em class='comment'>/*== Three ==*/</em>
+<a id='L216' name='L216'></a> 216         .align 64
+<a id='L217' name='L217'></a> 217         .quad 0x4008000000000000, 0x4008000000000000, 0x4008000000000000, 0x4008000000000000, 0x4008000000000000, 0x4008000000000000, 0x4008000000000000, 0x4008000000000000
+<a id='L218' name='L218'></a> 218         <em class='comment'>/*==One ==*/</em>
+<a id='L219' name='L219'></a> 219         .align 64
+<a id='L220' name='L220'></a> 220         .quad 0x3ff0000000000000, 0x3ff0000000000000, 0x3ff0000000000000, 0x3ff0000000000000, 0x3ff0000000000000, 0x3ff0000000000000, 0x3ff0000000000000, 0x3ff0000000000000
+<a id='L221' name='L221'></a> 221         <em class='comment'>/*== poly_coeff10 ==*/</em>
+<a id='L222' name='L222'></a> 222         .align 64
+<a id='L223' name='L223'></a> 223         .quad 0xbf882e3b6adeca62, 0xbf882e3b6adeca62, 0xbf882e3b6adeca62, 0xbf882e3b6adeca62, 0xbf882e3b6adeca62, 0xbf882e3b6adeca62, 0xbf882e3b6adeca62, 0xbf882e3b6adeca62
+<a id='L224' name='L224'></a> 224         <em class='comment'>/*== poly_coeff9 ==*/</em>
+<a id='L225' name='L225'></a> 225         .align 64
+<a id='L226' name='L226'></a> 226         .quad 0x3f8bda24bae48875, 0x3f8bda24bae48875, 0x3f8bda24bae48875, 0x3f8bda24bae48875, 0x3f8bda24bae48875, 0x3f8bda24bae48875, 0x3f8bda24bae48875, 0x3f8bda24bae48875
+<a id='L227' name='L227'></a> 227         <em class='comment'>/*== poly_coeff8 ==*/</em>
+<a id='L228' name='L228'></a> 228         .align 64
+<a id='L229' name='L229'></a> 229         .quad 0xbf9036b87c71d55f, 0xbf9036b87c71d55f, 0xbf9036b87c71d55f, 0xbf9036b87c71d55f, 0xbf9036b87c71d55f, 0xbf9036b87c71d55f, 0xbf9036b87c71d55f, 0xbf9036b87c71d55f
+<a id='L230' name='L230'></a> 230         <em class='comment'>/*== poly_coeff7 ==*/</em>
+<a id='L231' name='L231'></a> 231         .align 64
+<a id='L232' name='L232'></a> 232         .quad 0x3f9374ed9398b914, 0x3f9374ed9398b914, 0x3f9374ed9398b914, 0x3f9374ed9398b914, 0x3f9374ed9398b914, 0x3f9374ed9398b914, 0x3f9374ed9398b914, 0x3f9374ed9398b914
+<a id='L233' name='L233'></a> 233         <em class='comment'>/*== poly_coeff6 ==*/</em>
+<a id='L234' name='L234'></a> 234         .align 64
+<a id='L235' name='L235'></a> 235         .quad 0xbf98090d77f2468e, 0xbf98090d77f2468e, 0xbf98090d77f2468e, 0xbf98090d77f2468e, 0xbf98090d77f2468e, 0xbf98090d77f2468e, 0xbf98090d77f2468e, 0xbf98090d77f2468e
+<a id='L236' name='L236'></a> 236         <em class='comment'>/*== poly_coeff5 ==*/</em>
+<a id='L237' name='L237'></a> 237         .align 64
+<a id='L238' name='L238'></a> 238         .quad 0x3f9ee71141dcf569, 0x3f9ee71141dcf569, 0x3f9ee71141dcf569, 0x3f9ee71141dcf569, 0x3f9ee71141dcf569, 0x3f9ee71141dcf569, 0x3f9ee71141dcf569, 0x3f9ee71141dcf569
+<a id='L239' name='L239'></a> 239         <em class='comment'>/*== poly_coeff4 ==*/</em>
+<a id='L240' name='L240'></a> 240         .align 64
+<a id='L241' name='L241'></a> 241         .quad 0xbfa511e8d2b0363e, 0xbfa511e8d2b0363e, 0xbfa511e8d2b0363e, 0xbfa511e8d2b0363e, 0xbfa511e8d2b0363e, 0xbfa511e8d2b0363e, 0xbfa511e8d2b0363e, 0xbfa511e8d2b0363e
+<a id='L242' name='L242'></a> 242         <em class='comment'>/*== poly_coeff3 ==*/</em>
+<a id='L243' name='L243'></a> 243         .align 64
+<a id='L244' name='L244'></a> 244         .quad 0x3faf9add3c0b7e31, 0x3faf9add3c0b7e31, 0x3faf9add3c0b7e31, 0x3faf9add3c0b7e31, 0x3faf9add3c0b7e31, 0x3faf9add3c0b7e31, 0x3faf9add3c0b7e31, 0x3faf9add3c0b7e31
+<a id='L245' name='L245'></a> 245         <em class='comment'>/*== poly_coeff2 ==*/</em>
+<a id='L246' name='L246'></a> 246         .align 64
+<a id='L247' name='L247'></a> 247         .quad 0xbfbc71c71c71c741, 0xbfbc71c71c71c741, 0xbfbc71c71c71c741, 0xbfbc71c71c71c741, 0xbfbc71c71c71c741, 0xbfbc71c71c71c741, 0xbfbc71c71c71c741, 0xbfbc71c71c71c741
+<a id='L248' name='L248'></a> 248         <em class='comment'>/*== poly_coeff1 ==*/</em>
+<a id='L249' name='L249'></a> 249         .align 64
+<a id='L250' name='L250'></a> 250         .quad 0x3fd5555555555557, 0x3fd5555555555557, 0x3fd5555555555557, 0x3fd5555555555557, 0x3fd5555555555557, 0x3fd5555555555557, 0x3fd5555555555557, 0x3fd5555555555557
+<a id='L251' name='L251'></a> 251         .align 64
+<a id='L252' name='L252'></a> 252         .type   __svml_dcbrt_data_internal_avx512,@object
+<a id='L253' name='L253'></a> 253         .size   __svml_dcbrt_data_internal_avx512,.-__svml_dcbrt_data_internal_avx512
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;][^][v]<a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

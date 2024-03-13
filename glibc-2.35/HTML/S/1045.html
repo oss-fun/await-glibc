@@ -1,0 +1,925 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>posix/annexc.c</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18938.html'>posix</a>/annexc.c</h2>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L637'>[^]</a><a href='#L801'>[v]</a>[top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<h2 class='header'>DEFINITIONS</h2>
+This source file includes following definitions.
+<ol>
+<li><a href='#L637' title='Defined at 637.'>main</a></li>
+<li><a href='#L669' title='Defined at 669.'>xstrndup</a></li>
+<li><a href='#L684' title='Defined at 684.'>xsystem</a></li>
+<li><a href='#L708' title='Defined at 708.'>get_null_defines</a></li>
+<li><a href='#L801' title='Defined at 801.'>check_header</a></li>
+</ol>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* Copyright (C) 1998-2022 Free Software Foundation, Inc.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'></em>
+<a id='L4' name='L4'></a>   4 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'></em>
+<a id='L9' name='L9'></a>   9 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'></em>
+<a id='L14' name='L14'></a>  14 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   License along with the GNU C Library; if not, see</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L17' name='L17'></a>  17 
+<a id='L18' name='L18'></a>  18 <em class='sharp'>#include</em> &lt;<a href='../I/252.html'>ctype.h</a>&gt;
+<a id='L19' name='L19'></a>  19 <em class='sharp'>#include</em> &lt;<a href='../I/1850.html'>fnmatch.h</a>&gt;
+<a id='L20' name='L20'></a>  20 <em class='sharp'>#include</em> &lt;<a href='../I/1776.html'>stdio.h</a>&gt;
+<a id='L21' name='L21'></a>  21 <em class='sharp'>#include</em> &lt;<a href='../I/1780.html'>stdlib.h</a>&gt;
+<a id='L22' name='L22'></a>  22 <em class='sharp'>#include</em> &lt;<a href='../I/1973.html'>string.h</a>&gt;
+<a id='L23' name='L23'></a>  23 <em class='sharp'>#include</em> &lt;<a href='../I/1819.html'>unistd.h</a>&gt;
+<a id='L24' name='L24'></a>  24 <em class='sharp'>#include</em> &lt;<a href='../I/1264.html'>signal.h</a>&gt;
+<a id='L25' name='L25'></a>  25 <em class='sharp'>#include</em> &lt;<a href='../I/2025.html'>sys/wait.h</a>&gt;
+<a id='L26' name='L26'></a>  26 
+<a id='L27' name='L27'></a>  27 <em class='sharp'>#define</em> <a href='../S/6800.html#L217' title='Referred from 217 in stdlib/isomac.c.'>HEADER_MAX</a>          256
+<a id='L28' name='L28'></a>  28 
+<a id='L29' name='L29'></a>  29 <strong class='reserved'>static</strong> <strong class='reserved'>char</strong> <a href='../Y/18827.html' title='Multiple used in 23 places.'>macrofile</a>[] = "/tmp/annexc.XXXXXX";
+<a id='L30' name='L30'></a>  30 
+<a id='L31' name='L31'></a>  31 <em class='comment'>/* &lt;aio.h&gt;.  */</em>
+<a id='L32' name='L32'></a>  32 <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<strong class='reserved'>const</strong> aio_syms[] =
+<a id='L33' name='L33'></a>  33 <em class='brace'>{</em>
+<a id='L34' name='L34'></a>  34   "AIO_ALLDONE", "AIO_CANCELED", "AIO_NOTCANCELED", "LIO_NOP", "LIO_NOWAIT",
+<a id='L35' name='L35'></a>  35   "LIO_READ", "LIO_WAIT", "LIO_WRITE",
+<a id='L36' name='L36'></a>  36   <em class='comment'>/* From &lt;fcntl.h&gt;.  */</em>
+<a id='L37' name='L37'></a>  37   "FD_CLOEXEC", "F_DUPFD", "F_GETFD", "F_GETFL", "F_GETLK", "F_RDLCK",
+<a id='L38' name='L38'></a>  38   "F_SETFD", "F_SETFL", "F_SETLK", "F_SETLKW", "F_UNLCK", "F_WRLCK",
+<a id='L39' name='L39'></a>  39   "O_ACCMODE", "O_APPEND", "O_CREAT", "O_DSYNC", "O_EXCL", "O_NOCTTY",
+<a id='L40' name='L40'></a>  40   "O_NONBLOCK", "O_RDONLY", "O_RDWR", "O_RSYNC", "O_SYNC", "O_TRUNC",
+<a id='L41' name='L41'></a>  41   "O_WRONLY",
+<a id='L42' name='L42'></a>  42   <em class='comment'>/* From &lt;signal.h&gt;.  */</em>
+<a id='L43' name='L43'></a>  43   "SA_NOCLDSTOP", "SA_SIGINFO", "SIGABRT", "SIGALRM", "SIGBUS", "SIGCHLD",
+<a id='L44' name='L44'></a>  44   "SIGCONT", "SIGEV_NONE", "SIGEV_SIGNAL", "SIGEV_SIGNAL", "SIGEV_THREAD",
+<a id='L45' name='L45'></a>  45   "SIGFPE", "SIGHUP", "SIGILL", "SIGINT", "SIGKILL", "SIGPIPE", "SIGQUIT",
+<a id='L46' name='L46'></a>  46   "SIGRTMAX", "SIGRTMIN", "SIGSEGV", "SIGSTOP", "SIGTERM", "SIGTSTP",
+<a id='L47' name='L47'></a>  47   "SIGTTIN", "SIGTTOU", "SIGUSR1", "SIGUSR2", "SIG_BLOCK", "SIG_DFL",
+<a id='L48' name='L48'></a>  48   "SIG_ERR", "SIG_IGN", "SIG_SETMASK", "SIG_UNBLOCK", "SI_ASYNCIO",
+<a id='L49' name='L49'></a>  49   "SI_MESGQ", "SI_QUEUE", "SI_TIMER", "SI_USER"
+<a id='L50' name='L50'></a>  50 <em class='brace'>}</em>;
+<a id='L51' name='L51'></a>  51 <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<strong class='reserved'>const</strong> aio_maybe[] =
+<a id='L52' name='L52'></a>  52 <em class='brace'>{</em>
+<a id='L53' name='L53'></a>  53   "aio_cancel", "aio_error", "aio_fsync", "aio_read", "aio_return",
+<a id='L54' name='L54'></a>  54   "aio_suspend", "aio_write", "lio_listio",
+<a id='L55' name='L55'></a>  55   <em class='comment'>/* From &lt;fcntl.h&gt;.  */</em>
+<a id='L56' name='L56'></a>  56   "creat", "fcntl", "open", "SEEK_CUR", "SEEK_END", "SEEK_SET", "S_IRGRP",
+<a id='L57' name='L57'></a>  57   "S_IROTH", "S_IRUSR", "S_IRWXG", "S_IRWXO", "S_IRWXU", "S_ISBLK",
+<a id='L58' name='L58'></a>  58   "S_ISCHR", "S_ISDIR", "S_ISFIFO", "S_ISGID", "S_ISREG", "S_ISUID",
+<a id='L59' name='L59'></a>  59   "S_IWGRP", "S_IWOTH", "S_IWUSR", "S_IXGRP", "S_IXOTH", "S_IXUSR",
+<a id='L60' name='L60'></a>  60   <em class='comment'>/* From &lt;signal.h&gt;.  */</em>
+<a id='L61' name='L61'></a>  61   "kill", "raise", "sigaction", "sigaddset", "sigdelset", "sigemptyset",
+<a id='L62' name='L62'></a>  62   "sigfillset", "sigismember", "signal", "sigpending", "sigprocmask",
+<a id='L63' name='L63'></a>  63   "sigqueue", "sigsuspend", "sigtimedwait", "sigwait", "sigwaitinfo"
+<a id='L64' name='L64'></a>  64 <em class='brace'>}</em>;
+<a id='L65' name='L65'></a>  65 
+<a id='L66' name='L66'></a>  66 <em class='comment'>/* &lt;assert.h&gt;.  */</em>
+<a id='L67' name='L67'></a>  67 <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<strong class='reserved'>const</strong> assert_syms[] =
+<a id='L68' name='L68'></a>  68 <em class='brace'>{</em>
+<a id='L69' name='L69'></a>  69   "assert"
+<a id='L70' name='L70'></a>  70 <em class='brace'>}</em>;
+<a id='L71' name='L71'></a>  71 <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<strong class='reserved'>const</strong> assert_maybe[] =
+<a id='L72' name='L72'></a>  72 <em class='brace'>{</em>
+<a id='L73' name='L73'></a>  73 <em class='brace'>}</em>;
+<a id='L74' name='L74'></a>  74 
+<a id='L75' name='L75'></a>  75 <em class='comment'>/* &lt;ctype.h&gt;.   */</em>
+<a id='L76' name='L76'></a>  76 <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<strong class='reserved'>const</strong> ctype_syms[] =
+<a id='L77' name='L77'></a>  77 <em class='brace'>{</em>
+<a id='L78' name='L78'></a>  78 <em class='brace'>}</em>;
+<a id='L79' name='L79'></a>  79 <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<strong class='reserved'>const</strong> ctype_maybe[] =
+<a id='L80' name='L80'></a>  80 <em class='brace'>{</em>
+<a id='L81' name='L81'></a>  81   "isalnum", "isalpha", "iscntrl", "isdigit", "isgraph", "islower",
+<a id='L82' name='L82'></a>  82   "isprint", "ispunct", "isspace", "isupper", "isxdigit", "tolower",
+<a id='L83' name='L83'></a>  83   "toupper"
+<a id='L84' name='L84'></a>  84 <em class='brace'>}</em>;
+<a id='L85' name='L85'></a>  85 
+<a id='L86' name='L86'></a>  86 <em class='comment'>/* &lt;dirent.h&gt;.  */</em>
+<a id='L87' name='L87'></a>  87 <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<strong class='reserved'>const</strong> dirent_syms[] =
+<a id='L88' name='L88'></a>  88 <em class='brace'>{</em>
+<a id='L89' name='L89'></a>  89 <em class='brace'>}</em>;
+<a id='L90' name='L90'></a>  90 <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<strong class='reserved'>const</strong> dirent_maybe[] =
+<a id='L91' name='L91'></a>  91 <em class='brace'>{</em>
+<a id='L92' name='L92'></a>  92   "closedir", "opendir", "readdir", "readdir_r", "rewinddir"
+<a id='L93' name='L93'></a>  93 <em class='brace'>}</em>;
+<a id='L94' name='L94'></a>  94 
+<a id='L95' name='L95'></a>  95 <em class='comment'>/* &lt;errno.h&gt;.  */</em>
+<a id='L96' name='L96'></a>  96 <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<strong class='reserved'>const</strong> errno_syms[] =
+<a id='L97' name='L97'></a>  97 <em class='brace'>{</em>
+<a id='L98' name='L98'></a>  98   "E2BIG", "EACCES", "EAGAIN", "EBADF", "EBADMSG", "EBUSY", "ECANCELED",
+<a id='L99' name='L99'></a>  99   "ECHILD", "EDEADLK", "EDOM", "EEXIST", "EFAULT", "EFBIG", "EINPROGRESS",
+<a id='L100' name='L100'></a> 100   "EINTR", "EINVAL", "EIO", "EISDIR", "EMFILE", "EMLINK", "EMSGSIZE",
+<a id='L101' name='L101'></a> 101   "ENAMETOOLONG", "ENFILE", "ENODEV", "ENOENT", "ENOEXEC", "ENOLCK",
+<a id='L102' name='L102'></a> 102   "ENOMEM", "ENOSPC", "ENOSYS", "ENOTDIR", "ENOTEMPTY", "ENOTSUP",
+<a id='L103' name='L103'></a> 103   "ENOTTY", "ENXIO", "EPERM", "EPIPE", "ERANGE", "EROFS", "ESPIPE",
+<a id='L104' name='L104'></a> 104   "ESRCH", "ETIMEDOUT", "EXDEV"
+<a id='L105' name='L105'></a> 105 <em class='brace'>}</em>;
+<a id='L106' name='L106'></a> 106 <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<strong class='reserved'>const</strong> errno_maybe[] =
+<a id='L107' name='L107'></a> 107 <em class='brace'>{</em>
+<a id='L108' name='L108'></a> 108   "errno", "E*"
+<a id='L109' name='L109'></a> 109 <em class='brace'>}</em>;
+<a id='L110' name='L110'></a> 110 
+<a id='L111' name='L111'></a> 111 <em class='comment'>/* &lt;fcntl.h&gt;.  */</em>
+<a id='L112' name='L112'></a> 112 <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<strong class='reserved'>const</strong> fcntl_syms[] =
+<a id='L113' name='L113'></a> 113 <em class='brace'>{</em>
+<a id='L114' name='L114'></a> 114   "FD_CLOEXEC", "F_DUPFD", "F_GETFD", "F_GETFL", "F_GETLK", "F_RDLCK",
+<a id='L115' name='L115'></a> 115   "F_SETFD", "F_SETFL", "F_SETLK", "F_SETLKW", "F_UNLCK", "F_WRLCK",
+<a id='L116' name='L116'></a> 116   "O_ACCMODE", "O_APPEND", "O_CREAT", "O_DSYNC", "O_EXCL", "O_NOCTTY",
+<a id='L117' name='L117'></a> 117   "O_NONBLOCK", "O_RDONLY", "O_RDWR", "O_RSYNC", "O_SYNC", "O_TRUNC",
+<a id='L118' name='L118'></a> 118   "O_WRONLY"
+<a id='L119' name='L119'></a> 119 <em class='brace'>}</em>;
+<a id='L120' name='L120'></a> 120 <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<strong class='reserved'>const</strong> fcntl_maybe[] =
+<a id='L121' name='L121'></a> 121 <em class='brace'>{</em>
+<a id='L122' name='L122'></a> 122   "creat", "fcntl", "open", "SEEK_CUR", "SEEK_END", "SEEK_SET", "S_IRGRP",
+<a id='L123' name='L123'></a> 123   "S_IROTH", "S_IRUSR", "S_IRWXG", "S_IRWXO", "S_IRWXU", "S_ISBLK",
+<a id='L124' name='L124'></a> 124   "S_ISCHR", "S_ISDIR", "S_ISFIFO", "S_ISGID", "S_ISREG", "S_ISUID",
+<a id='L125' name='L125'></a> 125   "S_IWGRP", "S_IWOTH", "S_IWUSR", "S_IXGRP", "S_IXOTH", "S_IXUSR"
+<a id='L126' name='L126'></a> 126 <em class='brace'>}</em>;
+<a id='L127' name='L127'></a> 127 
+<a id='L128' name='L128'></a> 128 <em class='comment'>/* &lt;float.h&gt;.  */</em>
+<a id='L129' name='L129'></a> 129 <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<strong class='reserved'>const</strong> float_syms[] =
+<a id='L130' name='L130'></a> 130 <em class='brace'>{</em>
+<a id='L131' name='L131'></a> 131   "DBL_DIG", "DBL_EPSILON", "DBL_MANT_DIG", "DBL_MAX", "DBL_MAX_10_EXP",
+<a id='L132' name='L132'></a> 132   "DBL_MAX_EXP", "DBL_MIN", "DBL_MIN_10_EXP", "DBL_MIN_EXP", "FLT_DIG",
+<a id='L133' name='L133'></a> 133   "FLT_EPSILON", "FLT_MANT_DIG", "FLT_MAX", "FLT_MAX_10_EXP", "FLT_MAX_EXP",
+<a id='L134' name='L134'></a> 134   "FLT_MIN", "FLT_MIN_10_EXP", "FLT_MIN_EXP", "FLT_RADIX", "FLT_ROUNDS",
+<a id='L135' name='L135'></a> 135   "LDBL_DIG", "LDBL_EPSILON", "LDBL_MANT_DIG", "LDBL_MAX", "LDBL_MAX_10_EXP",
+<a id='L136' name='L136'></a> 136   "LDBL_MAX_EXP", "LDBL_MIN", "LDBL_MIN_10_EXP", "LDBL_MIN_EXP"
+<a id='L137' name='L137'></a> 137 <em class='brace'>}</em>;
+<a id='L138' name='L138'></a> 138 <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<strong class='reserved'>const</strong> float_maybe[] =
+<a id='L139' name='L139'></a> 139 <em class='brace'>{</em>
+<a id='L140' name='L140'></a> 140 <em class='brace'>}</em>;
+<a id='L141' name='L141'></a> 141 
+<a id='L142' name='L142'></a> 142 <em class='comment'>/* &lt;grp.h&gt;.  */</em>
+<a id='L143' name='L143'></a> 143 <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<strong class='reserved'>const</strong> grp_syms[] =
+<a id='L144' name='L144'></a> 144 <em class='brace'>{</em>
+<a id='L145' name='L145'></a> 145 <em class='brace'>}</em>;
+<a id='L146' name='L146'></a> 146 <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<strong class='reserved'>const</strong> grp_maybe[] =
+<a id='L147' name='L147'></a> 147 <em class='brace'>{</em>
+<a id='L148' name='L148'></a> 148   "getgrgid", "getgrgid_r", "getgrnam", "getgrnam_r"
+<a id='L149' name='L149'></a> 149 <em class='brace'>}</em>;
+<a id='L150' name='L150'></a> 150 
+<a id='L151' name='L151'></a> 151 <em class='comment'>/* &lt;limits.h&gt;.  */</em>
+<a id='L152' name='L152'></a> 152 <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<strong class='reserved'>const</strong> limits_syms[] =
+<a id='L153' name='L153'></a> 153 <em class='brace'>{</em>
+<a id='L154' name='L154'></a> 154   "_POSIX_AIO_LISTIO_MAX", "_POSIX_AIO_MAX", "_POSIX_ARG_MAX",
+<a id='L155' name='L155'></a> 155   "_POSIX_CHILD_MAX", "_POSIX_CLOCKRES_MAX", "_POSIX_DELAYTIMER_MAX",
+<a id='L156' name='L156'></a> 156   "_POSIX_LINK_MAX", "_POSIX_LOGIN_NAME_MAX", "_POSIX_MAX_CANON",
+<a id='L157' name='L157'></a> 157   "_POSIX_MAX_INPUT", "_POSIX_MQ_OPEN_MAX", "_POSIX_MQ_PRIO_MAX",
+<a id='L158' name='L158'></a> 158   "_POSIX_NAME_MAX", "_POSIX_NGROUPS_MAX", "_POSIX_OPEN_MAX",
+<a id='L159' name='L159'></a> 159   "_POSIX_PATH_MAX", "_POSIX_PIPE_BUF", "_POSIX_RTSIG_MAX",
+<a id='L160' name='L160'></a> 160   "_POSIX_SEM_NSEMS_MAX", "_POSIX_SEM_VALUE_MAX", "_POSIX_SIGQUEUE_MAX",
+<a id='L161' name='L161'></a> 161   "_POSIX_SSIZE_MAX", "_POSIX_STREAM_MAX",
+<a id='L162' name='L162'></a> 162   "_POSIX_THREAD_DESTRUCTOR_ITERATIONS", "_POSIX_THREAD_KEYS_MAX",
+<a id='L163' name='L163'></a> 163   "_POSIX_THREAD_THREADS_MAX", "_POSIX_TIMER_MAX", "_POSIX_TTY_NAME_MAX",
+<a id='L164' name='L164'></a> 164   "_POSIX_TZNAME_MAX", "_POSIX_THREAD_DESTRUCTOR_ITERATIONS",
+<a id='L165' name='L165'></a> 165   "CHAR_BIT", "CHAR_MAX", "CHAR_MIN", "INT_MAX", "INT_MIN", "LONG_MAX",
+<a id='L166' name='L166'></a> 166   "LONG_MIN", "MB_LEN_MAX", "NGROUPS_MAX", "PAGESIZE", "SCHAR_MAX",
+<a id='L167' name='L167'></a> 167   "SCHAR_MIN", "SHRT_MAX", "SHRT_MIN", "UCHAR_MAX", "UINT_MAX",
+<a id='L168' name='L168'></a> 168   "ULONG_MAX", "USHRT_MAX"
+<a id='L169' name='L169'></a> 169 <em class='brace'>}</em>;
+<a id='L170' name='L170'></a> 170 <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<strong class='reserved'>const</strong> limits_maybe[] =
+<a id='L171' name='L171'></a> 171 <em class='brace'>{</em>
+<a id='L172' name='L172'></a> 172   "AIO_LISTIO_MAX", "AIO_MAX", "ARG_MAX", "CHILD_MAX", "DELAYTIMER_MAX",
+<a id='L173' name='L173'></a> 173   "LINK_MAX", "LOGIN_NAME_MAX", "LONG_MAX", "LONG_MIN", "MAX_CANON",
+<a id='L174' name='L174'></a> 174   "MAX_INPUT", "MQ_OPEN_MAX", "MQ_PRIO_MAX", "NAME_MAX", "OPEN_MAX",
+<a id='L175' name='L175'></a> 175   "PATH_MAX", "PIPE_BUF", "RTSIG_MAX", "PTHREAD_DESTRUCTOR_ITERATIONS",
+<a id='L176' name='L176'></a> 176   "PTHREAD_KEYS_MAX", "PTHREAD_STACK_MIN", "PTHREAD_THREADS_MAX"
+<a id='L177' name='L177'></a> 177 <em class='brace'>}</em>;
+<a id='L178' name='L178'></a> 178 
+<a id='L179' name='L179'></a> 179 <em class='comment'>/* &lt;locale.h&gt;.  */</em>
+<a id='L180' name='L180'></a> 180 <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<strong class='reserved'>const</strong> locale_syms[] =
+<a id='L181' name='L181'></a> 181 <em class='brace'>{</em>
+<a id='L182' name='L182'></a> 182   "LC_ALL", "LC_COLLATE", "LC_CTYPE", "LC_MONETARY", "LC_NUMERIC",
+<a id='L183' name='L183'></a> 183   "LC_TIME", "NULL"
+<a id='L184' name='L184'></a> 184 <em class='brace'>}</em>;
+<a id='L185' name='L185'></a> 185 <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<strong class='reserved'>const</strong> locale_maybe[] =
+<a id='L186' name='L186'></a> 186 <em class='brace'>{</em>
+<a id='L187' name='L187'></a> 187   "LC_*", "localeconv", "setlocale"
+<a id='L188' name='L188'></a> 188 <em class='brace'>}</em>;
+<a id='L189' name='L189'></a> 189 
+<a id='L190' name='L190'></a> 190 <em class='comment'>/* &lt;math.h&gt;.  */</em>
+<a id='L191' name='L191'></a> 191 <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<strong class='reserved'>const</strong> math_syms[] =
+<a id='L192' name='L192'></a> 192 <em class='brace'>{</em>
+<a id='L193' name='L193'></a> 193   "HUGE_VAL"
+<a id='L194' name='L194'></a> 194 <em class='brace'>}</em>;
+<a id='L195' name='L195'></a> 195 <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<strong class='reserved'>const</strong> math_maybe[] =
+<a id='L196' name='L196'></a> 196 <em class='brace'>{</em>
+<a id='L197' name='L197'></a> 197   "acos", "asin", "atan2", "atan", "ceil", "cos", "cosh", "exp",
+<a id='L198' name='L198'></a> 198   "fabs", "floor", "fmod", "frexp", "ldexp", "log10", "log", "modf",
+<a id='L199' name='L199'></a> 199   "pow", "sin", "sinh", "sqrt", "tan", "tanh",
+<a id='L200' name='L200'></a> 200   "acosf", "asinf", "atan2f", "atanf", "ceilf", "cosf", "coshf", "expf",
+<a id='L201' name='L201'></a> 201   "fabsf", "floorf", "fmodf", "frexpf", "ldexpf", "log10f", "logf", "modff",
+<a id='L202' name='L202'></a> 202   "powf", "sinf", "sinhf", "sqrtf", "tanf", "tanhf",
+<a id='L203' name='L203'></a> 203   "acosl", "asinl", "atan2l", "atanl", "ceill", "cosl", "coshl", "expl",
+<a id='L204' name='L204'></a> 204   "fabsl", "floorl", "fmodl", "frexpl", "ldexpl", "log10l", "logl", "modfl",
+<a id='L205' name='L205'></a> 205   "powl", "sinl", "sinhl", "sqrtl", "tanl", "tanhl"
+<a id='L206' name='L206'></a> 206 <em class='brace'>}</em>;
+<a id='L207' name='L207'></a> 207 
+<a id='L208' name='L208'></a> 208 <em class='comment'>/* &lt;mqueue.h&gt;.  */</em>
+<a id='L209' name='L209'></a> 209 <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<strong class='reserved'>const</strong> mqueue_syms[] =
+<a id='L210' name='L210'></a> 210 <em class='brace'>{</em>
+<a id='L211' name='L211'></a> 211 <em class='brace'>}</em>;
+<a id='L212' name='L212'></a> 212 <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<strong class='reserved'>const</strong> mqueue_maybe[] =
+<a id='L213' name='L213'></a> 213 <em class='brace'>{</em>
+<a id='L214' name='L214'></a> 214   "mq_close", "mq_getattr", "mq_notify", "mq_open", "mq_receive",
+<a id='L215' name='L215'></a> 215   "mq_send", "mq_setattr", "mq_unlink"
+<a id='L216' name='L216'></a> 216 <em class='brace'>}</em>;
+<a id='L217' name='L217'></a> 217 
+<a id='L218' name='L218'></a> 218 <em class='comment'>/* &lt;pthread.h&gt;.  */</em>
+<a id='L219' name='L219'></a> 219 <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<strong class='reserved'>const</strong> pthread_syms[] =
+<a id='L220' name='L220'></a> 220 <em class='brace'>{</em>
+<a id='L221' name='L221'></a> 221   "PTHREAD_CANCELED", "PTHREAD_CANCEL_ASYNCHRONOUS",
+<a id='L222' name='L222'></a> 222   "PTHREAD_CANCEL_DEFERRED", "PTHREAD_CANCEL_DISABLE", "PTHREAD_CANCEL_ENABLE",
+<a id='L223' name='L223'></a> 223   "PTHREAD_COND_INITIALIZER", "PTHREAD_CREATE_DETACHED",
+<a id='L224' name='L224'></a> 224   "PTHREAD_CREATE_JOINABLE", "PTHREAD_EXPLICIT_SCHED",
+<a id='L225' name='L225'></a> 225   "PTHREAD_INHERIT_SCHED", "PTHREAD_MUTEX_INITIALIZER",
+<a id='L226' name='L226'></a> 226   "PTHREAD_ONCE_INIT", "PTHREAD_PRIO_INHERIT", "PTHREAD_PRIO_NONE",
+<a id='L227' name='L227'></a> 227   "PTHREAD_PRIO_PROTECT", "PTHREAD_PROCESS_PRIVATE",
+<a id='L228' name='L228'></a> 228   "PTHREAD_PROCESS_SHARED", "PTHREAD_SCOPE_PROCESS", "PTHREAD_SCOPE_SYSTEM",
+<a id='L229' name='L229'></a> 229   <em class='comment'>/* These come from &lt;sched.h&gt;.  */</em>
+<a id='L230' name='L230'></a> 230   "SCHED_FIFO", "SCHED_OTHER", "SCHED_RR",
+<a id='L231' name='L231'></a> 231   <em class='comment'>/* These come from &lt;time.h&gt;.  */</em>
+<a id='L232' name='L232'></a> 232   "CLK_TCK", "CLOCKS_PER_SEC", "CLOCK_REALTIME", "NULL", "TIMER_ABSTIME"
+<a id='L233' name='L233'></a> 233 <em class='brace'>}</em>;
+<a id='L234' name='L234'></a> 234 <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<strong class='reserved'>const</strong> pthread_maybe[] =
+<a id='L235' name='L235'></a> 235 <em class='brace'>{</em>
+<a id='L236' name='L236'></a> 236   "pthread_atfork", "pthread_attr_destroy", "pthread_attr_getdetachstate",
+<a id='L237' name='L237'></a> 237   "pthread_attr_getinheritsched", "pthread_attr_getschedparam",
+<a id='L238' name='L238'></a> 238   "pthread_attr_getschedpolicy", "pthread_attr_getscope",
+<a id='L239' name='L239'></a> 239   "pthread_attr_getstackaddr", "pthread_attr_getstacksize",
+<a id='L240' name='L240'></a> 240   "pthread_attr_init", "pthread_attr_setdetachstate",
+<a id='L241' name='L241'></a> 241   "pthread_attr_setinheritsched", "pthread_attr_setschedparam",
+<a id='L242' name='L242'></a> 242   "pthread_attr_setschedpolicy", "pthread_attr_setscope",
+<a id='L243' name='L243'></a> 243   "pthread_attr_setstackaddr", "pthread_attr_setstacksize",
+<a id='L244' name='L244'></a> 244   "pthread_cleanup_pop", "pthread_cleanup_push", "pthread_cond_broadcast",
+<a id='L245' name='L245'></a> 245   "pthread_cond_destroy", "pthread_cond_init", "pthread_cond_signal",
+<a id='L246' name='L246'></a> 246   "pthread_cond_timedwait", "pthread_cond_wait", "pthread_condattr_destroy",
+<a id='L247' name='L247'></a> 247   "pthread_condattr_getpshared", "pthread_condattr_init",
+<a id='L248' name='L248'></a> 248   "pthread_condattr_setpshared", "pthread_create", "pthread_detach",
+<a id='L249' name='L249'></a> 249   "pthread_equal", "pthread_exit", "pthread_getspecific", "pthread_join",
+<a id='L250' name='L250'></a> 250   "pthread_key_create", "pthread_key_destroy", "pthread_kill",
+<a id='L251' name='L251'></a> 251   "pthread_mutex_destroy", "pthread_mutex_getprioceiling",
+<a id='L252' name='L252'></a> 252   "pthread_mutex_init", "pthread_mutex_lock", "pthread_mutex_setprioceiling",
+<a id='L253' name='L253'></a> 253   "pthread_mutex_trylock", "pthread_mutex_unlock", "pthread_mutexattr_destroy",
+<a id='L254' name='L254'></a> 254   "pthread_mutexattr_getprioceiling", "pthread_mutexattr_getprotocol",
+<a id='L255' name='L255'></a> 255   "pthread_mutexattr_getpshared", "pthread_mutexattr_init",
+<a id='L256' name='L256'></a> 256   "pthread_mutexattr_setprioceiling", "pthread_mutexattr_setprotocol",
+<a id='L257' name='L257'></a> 257   "pthread_mutexattr_setpshared", "pthread_once", "pthread_self",
+<a id='L258' name='L258'></a> 258   "pthread_setcancelstate", "pthread_setcanceltype", "pthread_setspecific",
+<a id='L259' name='L259'></a> 259   "pthread_sigmask", "pthread_testcancel"
+<a id='L260' name='L260'></a> 260   <em class='comment'>/* These come from &lt;sched.h&gt;.  */</em>
+<a id='L261' name='L261'></a> 261   "sched_get_priority_max", "sched_get_priority_min",
+<a id='L262' name='L262'></a> 262   "sched_get_rr_interval", "sched_getparam", "sched_getscheduler",
+<a id='L263' name='L263'></a> 263   "sched_setparam", "sched_setscheduler", "sched_yield",
+<a id='L264' name='L264'></a> 264   <em class='comment'>/* These come from &lt;time.h&gt;.  */</em>
+<a id='L265' name='L265'></a> 265   "asctime", "asctime_r", "clock", "clock_getres", "clock_gettime",
+<a id='L266' name='L266'></a> 266   "clock_settime", "ctime", "ctime_r", "difftime", "gmtime", "gmtime_r",
+<a id='L267' name='L267'></a> 267   "localtime", "localtime_r", "mktime", "nanosleep", "strftime", "time",
+<a id='L268' name='L268'></a> 268   "timer_create", "timer_delete", "timer_getoverrun", "timer_gettime",
+<a id='L269' name='L269'></a> 269   "timer_settime", "tzset"
+<a id='L270' name='L270'></a> 270 <em class='brace'>}</em>;
+<a id='L271' name='L271'></a> 271 
+<a id='L272' name='L272'></a> 272 <em class='comment'>/* &lt;pwd.h&gt;.  */</em>
+<a id='L273' name='L273'></a> 273 <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<strong class='reserved'>const</strong> pwd_syms[] =
+<a id='L274' name='L274'></a> 274 <em class='brace'>{</em>
+<a id='L275' name='L275'></a> 275 <em class='brace'>}</em>;
+<a id='L276' name='L276'></a> 276 <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<strong class='reserved'>const</strong> pwd_maybe[] =
+<a id='L277' name='L277'></a> 277 <em class='brace'>{</em>
+<a id='L278' name='L278'></a> 278   "getpwnam", "getpwnam_r", "getpwuid", "getpwuid_r"
+<a id='L279' name='L279'></a> 279 <em class='brace'>}</em>;
+<a id='L280' name='L280'></a> 280 
+<a id='L281' name='L281'></a> 281 <em class='comment'>/* &lt;sched.h&gt;.  */</em>
+<a id='L282' name='L282'></a> 282 <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<strong class='reserved'>const</strong> sched_syms[] =
+<a id='L283' name='L283'></a> 283 <em class='brace'>{</em>
+<a id='L284' name='L284'></a> 284   "SCHED_FIFO", "SCHED_OTHER", "SCHED_RR",
+<a id='L285' name='L285'></a> 285 <em class='brace'>}</em>;
+<a id='L286' name='L286'></a> 286 <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<strong class='reserved'>const</strong> sched_maybe[] =
+<a id='L287' name='L287'></a> 287 <em class='brace'>{</em>
+<a id='L288' name='L288'></a> 288   "sched_get_priority_max", "sched_get_priority_min",
+<a id='L289' name='L289'></a> 289   "sched_get_rr_interval", "sched_getparam", "sched_getscheduler",
+<a id='L290' name='L290'></a> 290   "sched_setparam", "sched_setscheduler", "sched_yield",
+<a id='L291' name='L291'></a> 291   <em class='comment'>/* These come from &lt;time.h&gt;.  */</em>
+<a id='L292' name='L292'></a> 292   "CLK_TCK", "CLOCKS_PER_SEC", "CLOCK_REALTIME", "NULL", "TIMER_ABSTIME"
+<a id='L293' name='L293'></a> 293   "asctime", "asctime_r", "clock", "clock_getres", "clock_gettime",
+<a id='L294' name='L294'></a> 294   "clock_settime", "ctime", "ctime_r", "difftime", "gmtime", "gmtime_r",
+<a id='L295' name='L295'></a> 295   "localtime", "localtime_r", "mktime", "nanosleep", "strftime", "time",
+<a id='L296' name='L296'></a> 296   "timer_create", "timer_delete", "timer_getoverrun", "timer_gettime",
+<a id='L297' name='L297'></a> 297   "timer_settime", "tzset"
+<a id='L298' name='L298'></a> 298 <em class='brace'>}</em>;
+<a id='L299' name='L299'></a> 299 
+<a id='L300' name='L300'></a> 300 <em class='comment'>/* &lt;semaphore.h&gt;.  */</em>
+<a id='L301' name='L301'></a> 301 <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<strong class='reserved'>const</strong> semaphore_syms[] =
+<a id='L302' name='L302'></a> 302 <em class='brace'>{</em>
+<a id='L303' name='L303'></a> 303 <em class='brace'>}</em>;
+<a id='L304' name='L304'></a> 304 <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<strong class='reserved'>const</strong> semaphore_maybe[] =
+<a id='L305' name='L305'></a> 305 <em class='brace'>{</em>
+<a id='L306' name='L306'></a> 306   "sem_close", "sem_destroy", "sem_getvalue", "sem_init", "sem_open",
+<a id='L307' name='L307'></a> 307   "sen_post", "sem_trywait", "sem_unlink", "sem_wait"
+<a id='L308' name='L308'></a> 308 <em class='brace'>}</em>;
+<a id='L309' name='L309'></a> 309 
+<a id='L310' name='L310'></a> 310 <em class='comment'>/* &lt;setjmp.h&gt;.  */</em>
+<a id='L311' name='L311'></a> 311 <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<strong class='reserved'>const</strong> setjmp_syms[] =
+<a id='L312' name='L312'></a> 312 <em class='brace'>{</em>
+<a id='L313' name='L313'></a> 313 <em class='brace'>}</em>;
+<a id='L314' name='L314'></a> 314 <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<strong class='reserved'>const</strong> setjmp_maybe[] =
+<a id='L315' name='L315'></a> 315 <em class='brace'>{</em>
+<a id='L316' name='L316'></a> 316   "longjmp", "setjmp", "siglongjmp", "sigsetjmp"
+<a id='L317' name='L317'></a> 317 <em class='brace'>}</em>;
+<a id='L318' name='L318'></a> 318 
+<a id='L319' name='L319'></a> 319 <em class='comment'>/* &lt;signal.h&gt;.  */</em>
+<a id='L320' name='L320'></a> 320 <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<strong class='reserved'>const</strong> signal_syms[] =
+<a id='L321' name='L321'></a> 321 <em class='brace'>{</em>
+<a id='L322' name='L322'></a> 322   "SA_NOCLDSTOP", "SA_SIGINFO", "SIGABRT", "SIGALRM", "SIGBUS", "SIGCHLD",
+<a id='L323' name='L323'></a> 323   "SIGCONT", "SIGEV_NONE", "SIGEV_SIGNAL", "SIGEV_THREAD",
+<a id='L324' name='L324'></a> 324   "SIGFPE", "SIGHUP", "SIGILL", "SIGINT", "SIGKILL", "SIGPIPE", "SIGQUIT",
+<a id='L325' name='L325'></a> 325   "SIGRTMAX", "SIGRTMIN", "SIGSEGV", "SIGSTOP", "SIGTERM", "SIGTSTP",
+<a id='L326' name='L326'></a> 326   "SIGTTIN", "SIGTTOU", "SIGUSR1", "SIGUSR2", "SIG_BLOCK", "SIG_DFL",
+<a id='L327' name='L327'></a> 327   "SIG_ERR", "SIG_IGN", "SIG_SETMASK", "SIG_UNBLOCK", "SI_ASYNCIO",
+<a id='L328' name='L328'></a> 328   "SI_MESGQ", "SI_QUEUE", "SI_TIMER", "SI_USER"
+<a id='L329' name='L329'></a> 329 <em class='brace'>}</em>;
+<a id='L330' name='L330'></a> 330 <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<strong class='reserved'>const</strong> signal_maybe[] =
+<a id='L331' name='L331'></a> 331 <em class='brace'>{</em>
+<a id='L332' name='L332'></a> 332   "kill", "raise", "sigaction", "sigaddset", "sigdelset", "sigemptyset",
+<a id='L333' name='L333'></a> 333   "sigfillset", "sigismember", "signal", "sigpending", "sigprocmask",
+<a id='L334' name='L334'></a> 334   "sigqueue", "sigsuspend", "sigtimedwait", "sigwait", "sigwaitinfo"
+<a id='L335' name='L335'></a> 335 <em class='brace'>}</em>;
+<a id='L336' name='L336'></a> 336 
+<a id='L337' name='L337'></a> 337 <em class='comment'>/* &lt;stdarg.h&gt;.  */</em>
+<a id='L338' name='L338'></a> 338 <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<strong class='reserved'>const</strong> stdarg_syms[] =
+<a id='L339' name='L339'></a> 339 <em class='brace'>{</em>
+<a id='L340' name='L340'></a> 340   "va_arg", "va_end", "va_start"
+<a id='L341' name='L341'></a> 341 <em class='brace'>}</em>;
+<a id='L342' name='L342'></a> 342 <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<strong class='reserved'>const</strong> stdarg_maybe[] =
+<a id='L343' name='L343'></a> 343 <em class='brace'>{</em>
+<a id='L344' name='L344'></a> 344   "va_list"
+<a id='L345' name='L345'></a> 345 <em class='brace'>}</em>;
+<a id='L346' name='L346'></a> 346 
+<a id='L347' name='L347'></a> 347 <em class='comment'>/* &lt;stddef.h&gt;.  */</em>
+<a id='L348' name='L348'></a> 348 <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<strong class='reserved'>const</strong> stddef_syms[] =
+<a id='L349' name='L349'></a> 349 <em class='brace'>{</em>
+<a id='L350' name='L350'></a> 350   "NULL", "offsetof"
+<a id='L351' name='L351'></a> 351 <em class='brace'>}</em>;
+<a id='L352' name='L352'></a> 352 <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<strong class='reserved'>const</strong> stddef_maybe[] =
+<a id='L353' name='L353'></a> 353 <em class='brace'>{</em>
+<a id='L354' name='L354'></a> 354 <em class='brace'>}</em>;
+<a id='L355' name='L355'></a> 355 
+<a id='L356' name='L356'></a> 356 <em class='comment'>/* &lt;stdio.h&gt;.  */</em>
+<a id='L357' name='L357'></a> 357 <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<strong class='reserved'>const</strong> stdio_syms[] =
+<a id='L358' name='L358'></a> 358 <em class='brace'>{</em>
+<a id='L359' name='L359'></a> 359   "BUFSIZ", "EOF", "FILENAME_MAX", "FOPEN_MAX", "L_ctermid", "L_cuserid",
+<a id='L360' name='L360'></a> 360   "L_tmpnam", "NULL", "SEEK_CUR", "SEEK_END", "SEEK_SET", "STREAM_MAX",
+<a id='L361' name='L361'></a> 361   "TMP_MAX", "stderr", "stdin", "stdout", "_IOFBF", "_IOLBF", "_IONBF"
+<a id='L362' name='L362'></a> 362 <em class='brace'>}</em>;
+<a id='L363' name='L363'></a> 363 <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<strong class='reserved'>const</strong> stdio_maybe[] =
+<a id='L364' name='L364'></a> 364 <em class='brace'>{</em>
+<a id='L365' name='L365'></a> 365   "clearerr", "fclose", "fdopen", "feof", "ferror", "fflush", "fgetc",
+<a id='L366' name='L366'></a> 366   "fgetpos", "fgets", "fileno", "flockfile", "fopen", "fprintf", "fputc",
+<a id='L367' name='L367'></a> 367   "fputs", "fread", "freopen", "fscanf", "fseek", "fsetpos", "ftell",
+<a id='L368' name='L368'></a> 368   "ftrylockfile", "funlockfile", "fwrite", "getc", "getchar",
+<a id='L369' name='L369'></a> 369   "getchar_unlocked", "getc_unlocked", "gets", "perror", "printf", "putc",
+<a id='L370' name='L370'></a> 370   "putchar", "putchar_unlocked", "putc_unlocked", "puts", "remove", "rename",
+<a id='L371' name='L371'></a> 371   "rewind", "scanf", "setbuf", "setvbuf", "sprintf", "sscanf", "tmpfile",
+<a id='L372' name='L372'></a> 372   "tmpnam", "ungetc", "vfprintf", "vprintf", "vsprintf"
+<a id='L373' name='L373'></a> 373 <em class='brace'>}</em>;
+<a id='L374' name='L374'></a> 374 
+<a id='L375' name='L375'></a> 375 <em class='comment'>/* &lt;stdlib.h&gt;.  */</em>
+<a id='L376' name='L376'></a> 376 <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<strong class='reserved'>const</strong> stdlib_syms[] =
+<a id='L377' name='L377'></a> 377 <em class='brace'>{</em>
+<a id='L378' name='L378'></a> 378   "EXIT_FAILURE", "EXIT_SUCCESS", "MB_CUR_MAX", "NULL", "RAND_MAX"
+<a id='L379' name='L379'></a> 379 <em class='brace'>}</em>;
+<a id='L380' name='L380'></a> 380 <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<strong class='reserved'>const</strong> stdlib_maybe[] =
+<a id='L381' name='L381'></a> 381 <em class='brace'>{</em>
+<a id='L382' name='L382'></a> 382   "abort", "abs", "atexit", "atof", "atoi", "atol", "bsearch", "calloc",
+<a id='L383' name='L383'></a> 383   "div", "exit", "free", "getenv", "labs", "ldiv", "malloc", "mblen",
+<a id='L384' name='L384'></a> 384   "mbstowcs", "mbtowc", "qsort", "rand", "rand_r", "realloc", "srand",
+<a id='L385' name='L385'></a> 385   "strtod", "strtol", "strtoul", "system", "wcstombs", "wctomb"
+<a id='L386' name='L386'></a> 386 <em class='brace'>}</em>;
+<a id='L387' name='L387'></a> 387 
+<a id='L388' name='L388'></a> 388 <em class='comment'>/* &lt;string.h&gt;.  */</em>
+<a id='L389' name='L389'></a> 389 <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<strong class='reserved'>const</strong> string_syms[] =
+<a id='L390' name='L390'></a> 390 <em class='brace'>{</em>
+<a id='L391' name='L391'></a> 391   "NULL"
+<a id='L392' name='L392'></a> 392 <em class='brace'>}</em>;
+<a id='L393' name='L393'></a> 393 <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<strong class='reserved'>const</strong> string_maybe[] =
+<a id='L394' name='L394'></a> 394 <em class='brace'>{</em>
+<a id='L395' name='L395'></a> 395   "memchr", "memcmp", "memcpy", "memmove", "memset", "strcat", "strchr",
+<a id='L396' name='L396'></a> 396   "strcmp", "strcoll", "strcpy", "strcspn", "strerror", "strlen",
+<a id='L397' name='L397'></a> 397   "strncat", "strncmp", "strncpy", "strpbrk", "strrchr", "strspn",
+<a id='L398' name='L398'></a> 398   "strstr", "strtok", "strtok_r", "strxfrm"
+<a id='L399' name='L399'></a> 399 <em class='brace'>}</em>;
+<a id='L400' name='L400'></a> 400 
+<a id='L401' name='L401'></a> 401 <em class='comment'>/* &lt;sys/mman.h&gt;.  */</em>
+<a id='L402' name='L402'></a> 402 <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<strong class='reserved'>const</strong> mman_syms[] =
+<a id='L403' name='L403'></a> 403 <em class='brace'>{</em>
+<a id='L404' name='L404'></a> 404   "MAP_FAILED", "MAP_FIXED", "MAP_PRIVATE", "MAP_SHARED", "MCL_CURRENT",
+<a id='L405' name='L405'></a> 405   "MCL_FUTURE", "MS_ASYNC", "MS_INVALIDATE", "MS_SYNC", "PROT_EXEC",
+<a id='L406' name='L406'></a> 406   "PROT_NONE", "PROT_READ", "PROT_WRITE"
+<a id='L407' name='L407'></a> 407 <em class='brace'>}</em>;
+<a id='L408' name='L408'></a> 408 <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<strong class='reserved'>const</strong> mman_maybe[] =
+<a id='L409' name='L409'></a> 409 <em class='brace'>{</em>
+<a id='L410' name='L410'></a> 410   "mlock", "mlockall", "mmap", "mprotect", "msync", "munlock", "munlockall",
+<a id='L411' name='L411'></a> 411   "munmap", "shm_open", "shm_unlock"
+<a id='L412' name='L412'></a> 412 <em class='brace'>}</em>;
+<a id='L413' name='L413'></a> 413 
+<a id='L414' name='L414'></a> 414 <em class='comment'>/* &lt;sys/stat.h&gt;.  */</em>
+<a id='L415' name='L415'></a> 415 <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<strong class='reserved'>const</strong> stat_syms[] =
+<a id='L416' name='L416'></a> 416 <em class='brace'>{</em>
+<a id='L417' name='L417'></a> 417   "S_IRGRP", "S_IROTH", "S_IRUSR", "S_IRWXG", "S_IRWXO", "S_IRWXU",
+<a id='L418' name='L418'></a> 418   "S_ISBLK", "S_ISCHR", "S_ISDIR", "S_ISFIFO", "S_ISGID", "S_ISREG",
+<a id='L419' name='L419'></a> 419   "S_ISUID", "S_IWGRP", "S_IWOTH", "S_IWUSR", "S_IXGRP", "S_IXOTH",
+<a id='L420' name='L420'></a> 420   "S_IXUSR", "S_TYPEISMQ", "S_TYPEISSEM", "S_TYPEISSHM"
+<a id='L421' name='L421'></a> 421 <em class='brace'>}</em>;
+<a id='L422' name='L422'></a> 422 <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<strong class='reserved'>const</strong> stat_maybe[] =
+<a id='L423' name='L423'></a> 423 <em class='brace'>{</em>
+<a id='L424' name='L424'></a> 424   "chmod", "fchmod", "fstat", "mkdir", "mkfifo", "stat", "umask"
+<a id='L425' name='L425'></a> 425 <em class='brace'>}</em>;
+<a id='L426' name='L426'></a> 426 
+<a id='L427' name='L427'></a> 427 <em class='comment'>/* &lt;sys/times.h&gt;.  */</em>
+<a id='L428' name='L428'></a> 428 <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<strong class='reserved'>const</strong> times_syms[] =
+<a id='L429' name='L429'></a> 429 <em class='brace'>{</em>
+<a id='L430' name='L430'></a> 430 <em class='brace'>}</em>;
+<a id='L431' name='L431'></a> 431 <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<strong class='reserved'>const</strong> times_maybe[] =
+<a id='L432' name='L432'></a> 432 <em class='brace'>{</em>
+<a id='L433' name='L433'></a> 433   "times"
+<a id='L434' name='L434'></a> 434 <em class='brace'>}</em>;
+<a id='L435' name='L435'></a> 435 
+<a id='L436' name='L436'></a> 436 <em class='comment'>/* &lt;sys/types.h&gt;.  */</em>
+<a id='L437' name='L437'></a> 437 <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<strong class='reserved'>const</strong> types_syms[] =
+<a id='L438' name='L438'></a> 438 <em class='brace'>{</em>
+<a id='L439' name='L439'></a> 439 <em class='brace'>}</em>;
+<a id='L440' name='L440'></a> 440 <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<strong class='reserved'>const</strong> types_maybe[] =
+<a id='L441' name='L441'></a> 441 <em class='brace'>{</em>
+<a id='L442' name='L442'></a> 442 <em class='brace'>}</em>;
+<a id='L443' name='L443'></a> 443 
+<a id='L444' name='L444'></a> 444 <em class='comment'>/* &lt;sys/utsname.h&gt;.  */</em>
+<a id='L445' name='L445'></a> 445 <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<strong class='reserved'>const</strong> utsname_syms[] =
+<a id='L446' name='L446'></a> 446 <em class='brace'>{</em>
+<a id='L447' name='L447'></a> 447 <em class='brace'>}</em>;
+<a id='L448' name='L448'></a> 448 <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<strong class='reserved'>const</strong> utsname_maybe[] =
+<a id='L449' name='L449'></a> 449 <em class='brace'>{</em>
+<a id='L450' name='L450'></a> 450   "uname"
+<a id='L451' name='L451'></a> 451 <em class='brace'>}</em>;
+<a id='L452' name='L452'></a> 452 
+<a id='L453' name='L453'></a> 453 <em class='comment'>/* &lt;sys/wait.h&gt;.  */</em>
+<a id='L454' name='L454'></a> 454 <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<strong class='reserved'>const</strong> wait_syms[] =
+<a id='L455' name='L455'></a> 455 <em class='brace'>{</em>
+<a id='L456' name='L456'></a> 456   "WEXITSTATUS", "WIFEXITED", "WIFSIGNALED", "WIFSTOPPED", "WNOHANG",
+<a id='L457' name='L457'></a> 457   "WSTOPSIG", "WTERMSIG", "WUNTRACED"
+<a id='L458' name='L458'></a> 458 <em class='brace'>}</em>;
+<a id='L459' name='L459'></a> 459 <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<strong class='reserved'>const</strong> wait_maybe[] =
+<a id='L460' name='L460'></a> 460 <em class='brace'>{</em>
+<a id='L461' name='L461'></a> 461   "wait", "waitpid"
+<a id='L462' name='L462'></a> 462 <em class='brace'>}</em>;
+<a id='L463' name='L463'></a> 463 
+<a id='L464' name='L464'></a> 464 <em class='comment'>/* &lt;termios.h&gt;.  */</em>
+<a id='L465' name='L465'></a> 465 <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<strong class='reserved'>const</strong> termios_syms[] =
+<a id='L466' name='L466'></a> 466 <em class='brace'>{</em>
+<a id='L467' name='L467'></a> 467   "B0", "B110", "B1200", "B134", "B150", "B1800", "B19200", "B200", "B2400",
+<a id='L468' name='L468'></a> 468   "B300", "B38400", "B4800", "B50", "B600", "B75", "B9600", "BRKINT", "CLOCAL",
+<a id='L469' name='L469'></a> 469   "CREAD", "CS5", "CS6", "CS7", "CS8", "CSIZE", "CSTOPN", "ECHO", "ECHOE",
+<a id='L470' name='L470'></a> 470   "ECHOK", "ECHONL", "HUPCL", "ICANON", "ICRNL", "IEXTEN", "IGNBRK", "IGNCR",
+<a id='L471' name='L471'></a> 471   "IGNPAR", "INCLR", "INPCK", "ISIG", "ISTRIP", "IXOFF", "IXON", "NCCS",
+<a id='L472' name='L472'></a> 472   "NOFLSH", "OPOST", "PARENB", "PARMRK", "PARODD", "TCIFLUSH", "TCIOFF",
+<a id='L473' name='L473'></a> 473   "TCIOFLUSH", "TCOFLUSH", "TCOOFF", "TCOON", "TCSADRAIN", "TCSAFLUSH",
+<a id='L474' name='L474'></a> 474   "TCSANOW", "TOSTOP", "VEOF", "VEOL", "VERASE", "VINTR", "VKILL", "VMIN",
+<a id='L475' name='L475'></a> 475   "VQUIT", "VSTART", "VSTOP", "VSUSP", "VTIME"
+<a id='L476' name='L476'></a> 476 <em class='brace'>}</em>;
+<a id='L477' name='L477'></a> 477 <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<strong class='reserved'>const</strong> termios_maybe[] =
+<a id='L478' name='L478'></a> 478 <em class='brace'>{</em>
+<a id='L479' name='L479'></a> 479   "cfgetispeed", "cfgetospeed", "cfsetispeed", "cfsetospeed", "tcdrain",
+<a id='L480' name='L480'></a> 480   "tcflow", "tcflush", "tcgetattr", "tcsendbrk", "tcsetattr"
+<a id='L481' name='L481'></a> 481 <em class='brace'>}</em>;
+<a id='L482' name='L482'></a> 482 
+<a id='L483' name='L483'></a> 483 <em class='comment'>/* &lt;time.h&gt;.  */</em>
+<a id='L484' name='L484'></a> 484 <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<strong class='reserved'>const</strong> time_syms[] =
+<a id='L485' name='L485'></a> 485 <em class='brace'>{</em>
+<a id='L486' name='L486'></a> 486   "CLK_TCK", "CLOCKS_PER_SEC", "CLOCK_REALTIME", "NULL", "TIMER_ABSTIME"
+<a id='L487' name='L487'></a> 487 <em class='brace'>}</em>;
+<a id='L488' name='L488'></a> 488 <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<strong class='reserved'>const</strong> time_maybe[] =
+<a id='L489' name='L489'></a> 489 <em class='brace'>{</em>
+<a id='L490' name='L490'></a> 490   "asctime", "asctime_r", "clock", "clock_getres", "clock_gettime",
+<a id='L491' name='L491'></a> 491   "clock_settime", "ctime", "ctime_r", "difftime", "gmtime", "gmtime_r",
+<a id='L492' name='L492'></a> 492   "localtime", "localtime_r", "mktime", "nanosleep", "strftime", "time",
+<a id='L493' name='L493'></a> 493   "timer_create", "timer_delete", "timer_getoverrun", "timer_gettime",
+<a id='L494' name='L494'></a> 494   "timer_settime", "tzset"
+<a id='L495' name='L495'></a> 495 <em class='brace'>}</em>;
+<a id='L496' name='L496'></a> 496 
+<a id='L497' name='L497'></a> 497 <em class='comment'>/* &lt;unistd.h&gt;.  */</em>
+<a id='L498' name='L498'></a> 498 <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<strong class='reserved'>const</strong> unistd_syms[] =
+<a id='L499' name='L499'></a> 499 <em class='brace'>{</em>
+<a id='L500' name='L500'></a> 500   "F_OK", "NULL", "R_OK", "SEEK_CUR", "SEEK_END", "SEEK_SET", "STDERR_FILENO",
+<a id='L501' name='L501'></a> 501   "STDIN_FILENO", "STDOUT_FILENO", "W_OK", "X_OK",
+<a id='L502' name='L502'></a> 502   "_PC_ASYNC_IO", "_PC_CHOWN_RESTRICTED", "_PC_LINK_MAX", "_PC_MAX_CANON",
+<a id='L503' name='L503'></a> 503   "_PC_MAX_INPUT", "_PC_NAME_MAX", "_PC_NO_TRUNC", "_PC_PATH_MAX",
+<a id='L504' name='L504'></a> 504   "_PC_PIPE_BUF", "_PC_PRIO_IO", "_PC_SYNC_IO", "_PC_VDISABLE",
+<a id='L505' name='L505'></a> 505   "_SC_AIO_LISTIO_MAX", "_SC_AIO_MAX", "_SC_AIO_PRIO_DELTA_MAX",
+<a id='L506' name='L506'></a> 506   "_SC_ARG_MAX", "_SC_ASYNCHRONOUS_IO", "_SC_CHILD_MAX", "_SC_CLK_TCK",
+<a id='L507' name='L507'></a> 507   "_SC_DELAYTIMER_MAX", "_SC_FSYNC", "_SC_GETGR_R_SIZE_MAX",
+<a id='L508' name='L508'></a> 508   "_SC_GETPW_R_SIZE_MAX", "_SC_JOB_CONTROL", "_SC_LOGIN_NAME_MAX",
+<a id='L509' name='L509'></a> 509   "_SC_MAPPED_FILES", "_SC_MEMLOCK", "_SC_MEMLOCK_RANGE",
+<a id='L510' name='L510'></a> 510   "_SC_MEMORY_PROTECTION", "_SC_MESSAGE_PASSING", "_SC_MQ_OPEN_MAX",
+<a id='L511' name='L511'></a> 511   "_SC_MQ_PRIO_MAX", "_SC_NGROUPS_MAX", "_SC_OPEN_MAX", "_SC_PAGESIZE",
+<a id='L512' name='L512'></a> 512   "_SC_PRIORITIZED_IO", "_SC_PRIORITY_SCHEDULING", "_SC_REALTIME_SIGNALS",
+<a id='L513' name='L513'></a> 513   "_SC_RTSIG_MAX", "_SC_SAVED_IDS", "_SC_SEMAPHORES", "_SC_SEM_NSEMS_MAX",
+<a id='L514' name='L514'></a> 514   "_SC_SEM_VALUE_MAX", "_SC_SHARED_MEMORY_OBJECTS", "_SC_SIGQUEUE_MAX",
+<a id='L515' name='L515'></a> 515   "_SC_STREAM_MAX", "_SC_SYNCHRONIZED_IO", "_SC_THREADS",
+<a id='L516' name='L516'></a> 516   "_SC_THREAD_ATTR_STACKADDR", "_SC_THREAD_ATTR_STACKSIZE",
+<a id='L517' name='L517'></a> 517   "_SC_THREAD_DESTRUCTOR_ITERATIONS", "_SC_THREAD_PRIO_INHERIT",
+<a id='L518' name='L518'></a> 518   "_SC_THREAD_PRIORITY_SCHEDULING", "_SC_THREAD_PRIO_PROTECT",
+<a id='L519' name='L519'></a> 519   "_SC_THREAD_PROCESS_SHARED", "_SC_THREAD_SAFE_FUNCTIONS",
+<a id='L520' name='L520'></a> 520   "_SC_THREAD_STACK_MIN", "_SC_THREAD_THREADS_MAX", "_SC_TIMERS",
+<a id='L521' name='L521'></a> 521   "_SC_TIMER_MAX", "_SC_TTY_NAME_MAX", "_SC_TZNAME_MAX", "_SC_VERSION"
+<a id='L522' name='L522'></a> 522 <em class='brace'>}</em>;
+<a id='L523' name='L523'></a> 523 <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<strong class='reserved'>const</strong> unistd_maybe[] =
+<a id='L524' name='L524'></a> 524 <em class='brace'>{</em>
+<a id='L525' name='L525'></a> 525   "_POSIX_ASYNCHRONOUS_IO", "_POSIX_ASYNC_IO", "_POSIX_CHOWN_RESTRICTED",
+<a id='L526' name='L526'></a> 526   "_POSIX_FSYNC", "_POSIX_JOB_CONTROL", "_POSIX_MAPPED_FILES",
+<a id='L527' name='L527'></a> 527   "_POSIX_MEMLOCK", "_POSIX_MEMLOCK_RANGE", "_MEMORY_PROTECTION",
+<a id='L528' name='L528'></a> 528   "_POSIX_MESSAGE_PASSING", "_POSIX_NO_TRUNC", "_POSIX_PRIORITIZED_IO",
+<a id='L529' name='L529'></a> 529   "_POSIX_PRIORITY_SCHEDULING", "_POSIX_PRIO_IO", "_POSIX_REATIME_SIGNALS",
+<a id='L530' name='L530'></a> 530   "_POSIX_SAVED_IDS", "_POSIX_SEMAPHORES", "_POSIX_SHARED_MEMORY_OBJECTS",
+<a id='L531' name='L531'></a> 531   "_POSIX_SYNCHRONIZED_IO", "_POSIX_SYNC_IO", "_POSIX_THREADS",
+<a id='L532' name='L532'></a> 532   "_POSIX_THREAD_ATTR_STACKADDR", "_POSIX_THREAD_ATTR_STACKSIZE",
+<a id='L533' name='L533'></a> 533   "_POSIX_THREAD_PRIO_INHERIT", "_POSIX_THREAD_PRIO_PROTECT",
+<a id='L534' name='L534'></a> 534   "_POSIX_THREAD_PROCESS_SHARED", "_POSIX_THREAD_SAFE_FUNCTIONS",
+<a id='L535' name='L535'></a> 535   "_POSIX_THREAD_PRIORITY_SCHEDULING", "_POSIX_TIMERS",
+<a id='L536' name='L536'></a> 536   "_POSIX_VDISABLE", "_POSIX_VERSION",
+<a id='L537' name='L537'></a> 537   "_exit", "access", "alarm", "chdir", "chown", "close", "ctermid", "cuserid",
+<a id='L538' name='L538'></a> 538   "dup2", "dup", "execl", "execle", "execlp", "execv", "execve", "execvp",
+<a id='L539' name='L539'></a> 539   "fdatasync", "fork", "fpathconf", "fsync", "ftruncate", "getcwd", "getegid",
+<a id='L540' name='L540'></a> 540   "geteuid", "getgid", "getgroups", "getlogin", "getlogin_r", "getpgrp",
+<a id='L541' name='L541'></a> 541   "getpid", "getppid", "getuid", "isatty", "link", "lseek", "pathconf",
+<a id='L542' name='L542'></a> 542   "pause", "pipe", "read", "rmdir", "setgid", "setgpid", "setsid", "setuid",
+<a id='L543' name='L543'></a> 543   "sleep", "sleep", "sysconf", "tcgetpgrp", "tcsetpgrp", "ttyname",
+<a id='L544' name='L544'></a> 544   "ttyname_r", "unlink", "write"
+<a id='L545' name='L545'></a> 545 <em class='brace'>}</em>;
+<a id='L546' name='L546'></a> 546 
+<a id='L547' name='L547'></a> 547 <em class='comment'>/* &lt;utime.h&gt;.  */</em>
+<a id='L548' name='L548'></a> 548 <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<strong class='reserved'>const</strong> utime_syms[] =
+<a id='L549' name='L549'></a> 549 <em class='brace'>{</em>
+<a id='L550' name='L550'></a> 550 <em class='brace'>}</em>;
+<a id='L551' name='L551'></a> 551 <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<strong class='reserved'>const</strong> utime_maybe[] =
+<a id='L552' name='L552'></a> 552 <em class='brace'>{</em>
+<a id='L553' name='L553'></a> 553   "utime"
+<a id='L554' name='L554'></a> 554 <em class='brace'>}</em>;
+<a id='L555' name='L555'></a> 555 
+<a id='L556' name='L556'></a> 556 
+<a id='L557' name='L557'></a> 557 <strong class='reserved'>static</strong> <strong class='reserved'>struct</strong> <a href='../R/20284.html' title='Multiple referred from 410 places.'>header</a>
+<a id='L558' name='L558'></a> 558 <em class='brace'>{</em>
+<a id='L559' name='L559'></a> 559   <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../D/33817.html' title='Multiple defined in 21 places.'>name</a>;
+<a id='L560' name='L560'></a> 560   <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<strong class='reserved'>const</strong> *<a href='../Y/26630.html' title='Multiple used in 16 places.'>syms</a>;
+<a id='L561' name='L561'></a> 561   <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/21286.html' title='Multiple used in 6 places.'>nsyms</a>;
+<a id='L562' name='L562'></a> 562   <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<strong class='reserved'>const</strong> *<a href='../Y/19122.html' title='Multiple used in 7 places.'>maybe</a>;
+<a id='L563' name='L563'></a> 563   <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/20946.html' title='Multiple used in 3 places.'>nmaybe</a>;
+<a id='L564' name='L564'></a> 564   <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../Y/26457.html' title='Multiple used in 3 places.'>subset</a>;
+<a id='L565' name='L565'></a> 565 <em class='brace'>}</em> <a href='../Y/16051.html' title='Multiple used in 3 places.'>headers</a>[] =
+<a id='L566' name='L566'></a> 566 <em class='brace'>{</em>
+<a id='L567' name='L567'></a> 567 <em class='sharp'>#define</em> <a href='../R/3177.html' title='Multiple referred from 125 places.'>H</a>(<a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>) \
+<a id='L568' name='L568'></a> 568   <em class='brace'>{</em> #<a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a> ".h", <a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>##<a href='../Y/9535.html' title='Multiple used in 3 places.'>_syms</a>, <strong class='reserved'>sizeof</strong> (<a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>##<a href='../Y/9535.html' title='Multiple used in 3 places.'>_syms</a>) / <strong class='reserved'>sizeof</strong> (<a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>##<a href='../Y/9535.html' title='Multiple used in 3 places.'>_syms</a>[0]), \
+<a id='L569' name='L569'></a> 569     <a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>##<a href='../Y/9256.html' title='Multiple used in 3 places.'>_maybe</a>, <strong class='reserved'>sizeof</strong> (<a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>##<a href='../Y/9256.html' title='Multiple used in 3 places.'>_maybe</a>) / <strong class='reserved'>sizeof</strong> (<a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>##<a href='../Y/9256.html' title='Multiple used in 3 places.'>_maybe</a>[0]), <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a> <em class='brace'>}</em>
+<a id='L570' name='L570'></a> 570 <em class='sharp'>#define</em> <a href='../S/1045.html#L587' title='Referred from 587 in posix/annexc.c.'>Hc</a>(<a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>, <a href='../D/36247.html' title='Multiple defined in 13 places.'>s</a>) \
+<a id='L571' name='L571'></a> 571   <em class='brace'>{</em> #<a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a> ".h", <a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>##<a href='../Y/9535.html' title='Multiple used in 3 places.'>_syms</a>, <strong class='reserved'>sizeof</strong> (<a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>##<a href='../Y/9535.html' title='Multiple used in 3 places.'>_syms</a>) / <strong class='reserved'>sizeof</strong> (<a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>##<a href='../Y/9535.html' title='Multiple used in 3 places.'>_syms</a>[0]), \
+<a id='L572' name='L572'></a> 572     <a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>##<a href='../Y/9256.html' title='Multiple used in 3 places.'>_maybe</a>, <strong class='reserved'>sizeof</strong> (<a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>##<a href='../Y/9256.html' title='Multiple used in 3 places.'>_maybe</a>) / <strong class='reserved'>sizeof</strong> (<a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>##<a href='../Y/9256.html' title='Multiple used in 3 places.'>_maybe</a>[0]), <a href='../D/36247.html' title='Multiple defined in 13 places.'>s</a> <em class='brace'>}</em>
+<a id='L573' name='L573'></a> 573 <em class='sharp'>#define</em> <a href='../R/3591.html' title='Multiple referred from 6 places.'>Hs</a>(<a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>) \
+<a id='L574' name='L574'></a> 574   <em class='brace'>{</em> "sys/" #<a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a> ".h", <a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>##<a href='../Y/9535.html' title='Multiple used in 3 places.'>_syms</a>, <strong class='reserved'>sizeof</strong> (<a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>##<a href='../Y/9535.html' title='Multiple used in 3 places.'>_syms</a>) / <strong class='reserved'>sizeof</strong> (<a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>##<a href='../Y/9535.html' title='Multiple used in 3 places.'>_syms</a>[0]), \
+<a id='L575' name='L575'></a> 575     <a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>##<a href='../Y/9256.html' title='Multiple used in 3 places.'>_maybe</a>, <strong class='reserved'>sizeof</strong> (<a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>##<a href='../Y/9256.html' title='Multiple used in 3 places.'>_maybe</a>) / <strong class='reserved'>sizeof</strong> (<a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>##<a href='../Y/9256.html' title='Multiple used in 3 places.'>_maybe</a>[0]), <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a> <em class='brace'>}</em>
+<a id='L576' name='L576'></a> 576   <a href='../D/5204.html' title='Multiple defined in 2 places.'>H</a>(aio),
+<a id='L577' name='L577'></a> 577   <a href='../D/5204.html' title='Multiple defined in 2 places.'>H</a>(<a href='../D/27838.html' title='Multiple defined in 9 places.'>assert</a>),
+<a id='L578' name='L578'></a> 578   <a href='../D/5204.html' title='Multiple defined in 2 places.'>H</a>(<a href='../Y/12253.html' title='Multiple used in 517 places.'>ctype</a>),
+<a id='L579' name='L579'></a> 579   <a href='../D/5204.html' title='Multiple defined in 2 places.'>H</a>(<a href='../D/29474.html' title='Multiple defined in 10 places.'>dirent</a>),
+<a id='L580' name='L580'></a> 580   <a href='../D/5204.html' title='Multiple defined in 2 places.'>H</a>(<a href='../D/30023.html' title='Multiple defined in 13 places.'>errno</a>),
+<a id='L581' name='L581'></a> 581   <a href='../D/5204.html' title='Multiple defined in 2 places.'>H</a>(<a href='../D/30373.html' title='Multiple defined in 5 places.'>fcntl</a>),
+<a id='L582' name='L582'></a> 582   <a href='../D/5204.html' title='Multiple defined in 2 places.'>H</a>(<strong class='reserved'>float</strong>),
+<a id='L583' name='L583'></a> 583   <a href='../D/5204.html' title='Multiple defined in 2 places.'>H</a>(<a href='../Y/15827.html' title='Multiple used in 69 places.'>grp</a>),
+<a id='L584' name='L584'></a> 584   <a href='../D/5204.html' title='Multiple defined in 2 places.'>H</a>(<a href='../D/32935.html' title='Multiple defined in 2 places.'>limits</a>),
+<a id='L585' name='L585'></a> 585   <a href='../D/5204.html' title='Multiple defined in 2 places.'>H</a>(<a href='../S/307.html#L309' title='Defined at 309 in intl/l10nflist.c.'>locale</a>),
+<a id='L586' name='L586'></a> 586   <a href='../D/5204.html' title='Multiple defined in 2 places.'>H</a>(<a href='../Y/18999.html' title='Multiple used in 6 places.'>math</a>),
+<a id='L587' name='L587'></a> 587   <a href='../S/1045.html#L570' title='Defined at 570 in posix/annexc.c.'>Hc</a>(mqueue, "_POSIX_MESSAGE_PASSING"),
+<a id='L588' name='L588'></a> 588   <a href='../D/5204.html' title='Multiple defined in 2 places.'>H</a>(<a href='../D/35082.html' title='Multiple defined in 2 places.'>pthread</a>),
+<a id='L589' name='L589'></a> 589   <a href='../D/5204.html' title='Multiple defined in 2 places.'>H</a>(<a href='../Y/23169.html' title='Multiple used in 179 places.'>pwd</a>),
+<a id='L590' name='L590'></a> 590   <a href='../D/5204.html' title='Multiple defined in 2 places.'>H</a>(sched),
+<a id='L591' name='L591'></a> 591   <a href='../D/5204.html' title='Multiple defined in 2 places.'>H</a>(semaphore),
+<a id='L592' name='L592'></a> 592   <a href='../D/5204.html' title='Multiple defined in 2 places.'>H</a>(<a href='../D/36566.html' title='Multiple defined in 26 places.'>setjmp</a>),
+<a id='L593' name='L593'></a> 593   <a href='../D/5204.html' title='Multiple defined in 2 places.'>H</a>(<a href='../D/36747.html' title='Multiple defined in 2 places.'>signal</a>),
+<a id='L594' name='L594'></a> 594   <a href='../D/5204.html' title='Multiple defined in 2 places.'>H</a>(<a href='../Y/26164.html' title='Multiple used in 2 places.'>stdarg</a>),
+<a id='L595' name='L595'></a> 595   <a href='../D/5204.html' title='Multiple defined in 2 places.'>H</a>(stddef),
+<a id='L596' name='L596'></a> 596   <a href='../D/5204.html' title='Multiple defined in 2 places.'>H</a>(<a href='../Y/26178.html' title='Multiple used in 6 places.'>stdio</a>),
+<a id='L597' name='L597'></a> 597   <a href='../D/5204.html' title='Multiple defined in 2 places.'>H</a>(<a href='../Y/26186.html' title='Multiple used in 10 places.'>stdlib</a>),
+<a id='L598' name='L598'></a> 598   <a href='../D/5204.html' title='Multiple defined in 2 places.'>H</a>(<a href='../S/2281.html#L117' title='Defined at 117 in locale/localeinfo.h.'>string</a>),
+<a id='L599' name='L599'></a> 599   <a href='../S/1045.html#L573' title='Defined at 573 in posix/annexc.c.'>Hs</a>(<a href='../Y/19421.html' title='Multiple used in 3 places.'>mman</a>),
+<a id='L600' name='L600'></a> 600   <a href='../S/1045.html#L573' title='Defined at 573 in posix/annexc.c.'>Hs</a>(<a href='../D/37012.html' title='Multiple defined in 29 places.'>stat</a>),
+<a id='L601' name='L601'></a> 601   <a href='../S/1045.html#L573' title='Defined at 573 in posix/annexc.c.'>Hs</a>(<a href='../Y/27343.html' title='Multiple used in 37 places.'>times</a>),
+<a id='L602' name='L602'></a> 602   <a href='../S/1045.html#L573' title='Defined at 573 in posix/annexc.c.'>Hs</a>(<a href='../Y/28051.html' title='Multiple used in 68 places.'>types</a>),
+<a id='L603' name='L603'></a> 603   <a href='../S/1045.html#L573' title='Defined at 573 in posix/annexc.c.'>Hs</a>(<a href='../S/1064.html#L48' title='Defined at 48 in posix/sys/utsname.h.'>utsname</a>),
+<a id='L604' name='L604'></a> 604   <a href='../S/1045.html#L573' title='Defined at 573 in posix/annexc.c.'>Hs</a>(<a href='../Y/28815.html' title='Multiple used in 43 places.'>wait</a>),
+<a id='L605' name='L605'></a> 605   <a href='../D/5204.html' title='Multiple defined in 2 places.'>H</a>(<a href='../D/37583.html' title='Multiple defined in 5 places.'>termios</a>),
+<a id='L606' name='L606'></a> 606   <a href='../D/5204.html' title='Multiple defined in 2 places.'>H</a>(<a href='../D/38101.html' title='Multiple defined in 5 places.'>time</a>),
+<a id='L607' name='L607'></a> 607   <a href='../D/5204.html' title='Multiple defined in 2 places.'>H</a>(<a href='../Y/28300.html' title='Multiple used in 6 places.'>unistd</a>),
+<a id='L608' name='L608'></a> 608   <a href='../D/5204.html' title='Multiple defined in 2 places.'>H</a>(<a href='../D/38832.html' title='Multiple defined in 3 places.'>utime</a>)
+<a id='L609' name='L609'></a> 609 <em class='brace'>}</em>;
+<a id='L610' name='L610'></a> 610 
+<a id='L611' name='L611'></a> 611 <em class='sharp'>#define</em> <a href='../R/5650.html' title='Multiple referred from 2 places.'>NUMBER_OF_HEADERS</a>              (<strong class='reserved'>sizeof</strong> <a href='../Y/16051.html' title='Multiple used in 3 places.'>headers</a> / <strong class='reserved'>sizeof</strong> *<a href='../Y/16051.html' title='Multiple used in 3 places.'>headers</a>)
+<a id='L612' name='L612'></a> 612 
+<a id='L613' name='L613'></a> 613 
+<a id='L614' name='L614'></a> 614 <em class='comment'>/* Format string to build command to invoke compiler.  */</em>
+<a id='L615' name='L615'></a> 615 <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> <a href='../S/6618.html#L121' title='Defined at 121 in stdlib/gen-tst-strtod-round.c.'>fmt</a>[] = "\
+<a id='L616' name='L616'></a> 616 echo \"#include &lt;%s&gt;\" |\
+<a id='L617' name='L617'></a> 617 %s -E -dM -D_POSIX_SOURCE %s \
+<a id='L618' name='L618'></a> 618 -isystem `%s --print-prog-name=include` - &gt; %s";
+<a id='L619' name='L619'></a> 619 
+<a id='L620' name='L620'></a> 620 <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> <a href='../Y/27060.html' title='Multiple used in 2 places.'>testfmt</a>[] = "\
+<a id='L621' name='L621'></a> 621 echo \"#include &lt;unistd.h&gt;\n#if !defined %s || %s == -1\n#error not defined\n#endif\n\" |\
+<a id='L622' name='L622'></a> 622 %s -E -dM -D_POSIX_SOURCE %s \
+<a id='L623' name='L623'></a> 623 -isystem `%s --print-prog-name=include` - 2&gt; /dev/null &gt; %s";
+<a id='L624' name='L624'></a> 624 
+<a id='L625' name='L625'></a> 625 
+<a id='L626' name='L626'></a> 626 <em class='comment'>/* The compiler we use (given on the command line).  */</em>
+<a id='L627' name='L627'></a> 627 <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../Y/177.html' title='Multiple used in 13 places.'>CC</a>;
+<a id='L628' name='L628'></a> 628 <em class='comment'>/* The -I parameters for CC to find all headers.  */</em>
+<a id='L629' name='L629'></a> 629 <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../D/6050.html' title='Multiple defined in 2 places.'>INC</a>;
+<a id='L630' name='L630'></a> 630 
+<a id='L631' name='L631'></a> 631 <strong class='reserved'>static</strong> <strong class='reserved'>char</strong> *<a href='../D/39635.html' title='Multiple defined in 3 places.'>xstrndup</a> (<strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *, <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a>);
+<a id='L632' name='L632'></a> 632 <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> **<a href='../D/31132.html' title='Multiple defined in 2 places.'>get_null_defines</a> (<strong class='reserved'>void</strong>);
+<a id='L633' name='L633'></a> 633 <strong class='reserved'>static</strong> <strong class='reserved'>int</strong> <a href='../D/28716.html' title='Multiple defined in 2 places.'>check_header</a> (<strong class='reserved'>const</strong> <strong class='reserved'>struct</strong> <a href='../D/31480.html' title='Multiple defined in 5 places.'>header</a> *, <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> **);
+<a id='L634' name='L634'></a> 634 <strong class='reserved'>static</strong> <strong class='reserved'>int</strong> <a href='../S/1045.html#L684' title='Defined at 684 in posix/annexc.c.'>xsystem</a> (<strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *);
+<a id='L635' name='L635'></a> 635 
+<a id='L636' name='L636'></a> 636 <strong class='reserved'>int</strong>
+<a id='L637' name='L637'></a> 637 <a href='../R/21622.html' title='Multiple referred from 22 places.'>main</a> (<strong class='reserved'>int</strong> <a href='../Y/10354.html' title='Multiple used in 866 places.'>argc</a>, <strong class='reserved'>char</strong> *<a href='../Y/10408.html' title='Multiple used in 1144 places.'>argv</a>[])
+<a id='L638' name='L638'></a> 638 <em class='brace'>{</em>
+<a id='L639' name='L639'></a> 639   <strong class='reserved'>int</strong> <a href='../D/31427.html' title='Multiple defined in 6 places.'>h</a>;
+<a id='L640' name='L640'></a> 640   <strong class='reserved'>int</strong> <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a> = 0;
+<a id='L641' name='L641'></a> 641   <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> **<a href='../Y/16611.html' title='Multiple used in 6 places.'>ignore_list</a>;
+<a id='L642' name='L642'></a> 642 
+<a id='L643' name='L643'></a> 643   <a href='../Y/177.html' title='Multiple used in 13 places.'>CC</a> = <a href='../Y/10354.html' title='Multiple used in 866 places.'>argc</a> &gt; 1 ? <a href='../Y/10408.html' title='Multiple used in 1144 places.'>argv</a>[1] : "gcc";
+<a id='L644' name='L644'></a> 644   <a href='../D/6050.html' title='Multiple defined in 2 places.'>INC</a> = <a href='../Y/10354.html' title='Multiple used in 866 places.'>argc</a> &gt; 2 ? <a href='../Y/10408.html' title='Multiple used in 1144 places.'>argv</a>[2] : "";
+<a id='L645' name='L645'></a> 645 
+<a id='L646' name='L646'></a> 646   <strong class='reserved'>if</strong> (<a href='../Y/26683.html' title='Multiple used in 59 places.'>system</a> (<a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>) == 0)
+<a id='L647' name='L647'></a> 647     <em class='brace'>{</em>
+<a id='L648' name='L648'></a> 648       <a href='../Y/23144.html' title='Multiple used in 3983 places.'>puts</a> ("Sorry, no command processor.");
+<a id='L649' name='L649'></a> 649       <strong class='reserved'>return</strong> <a href='../D/3872.html' title='Multiple defined in 4 places.'>EXIT_FAILURE</a>;
+<a id='L650' name='L650'></a> 650     <em class='brace'>}</em>
+<a id='L651' name='L651'></a> 651 
+<a id='L652' name='L652'></a> 652   <em class='comment'>/* First get list of symbols which are defined by the compiler.  */</em>
+<a id='L653' name='L653'></a> 653   <a href='../Y/16611.html' title='Multiple used in 6 places.'>ignore_list</a> = <a href='../D/31132.html' title='Multiple defined in 2 places.'>get_null_defines</a> ();
+<a id='L654' name='L654'></a> 654 
+<a id='L655' name='L655'></a> 655   <a href='../S/17955.html#L201' title='Defined at 201 in include/stdio.h.'>fputs</a> ("Tested files:\n", <a href='../D/37041.html' title='Multiple defined in 3 places.'>stdout</a>);
+<a id='L656' name='L656'></a> 656 
+<a id='L657' name='L657'></a> 657   <strong class='reserved'>for</strong> (<a href='../D/31427.html' title='Multiple defined in 6 places.'>h</a> = 0; <a href='../D/31427.html' title='Multiple defined in 6 places.'>h</a> &lt; <a href='../D/9289.html' title='Multiple defined in 2 places.'>NUMBER_OF_HEADERS</a>; ++<a href='../D/31427.html' title='Multiple defined in 6 places.'>h</a>)
+<a id='L658' name='L658'></a> 658     <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a> |= <a href='../D/28716.html' title='Multiple defined in 2 places.'>check_header</a> (&amp;<a href='../Y/16051.html' title='Multiple used in 3 places.'>headers</a>[<a href='../D/31427.html' title='Multiple defined in 6 places.'>h</a>], <a href='../Y/16611.html' title='Multiple used in 6 places.'>ignore_list</a>);
+<a id='L659' name='L659'></a> 659 
+<a id='L660' name='L660'></a> 660   <a href='../D/35901.html' title='Multiple defined in 2 places.'>remove</a> (<a href='../Y/18827.html' title='Multiple used in 23 places.'>macrofile</a>);
+<a id='L661' name='L661'></a> 661 
+<a id='L662' name='L662'></a> 662   <em class='comment'>/* The test suite should return errors but for now this is not</em>
+<a id='L663' name='L663'></a> 663 <em class='comment'>     practical.  Give a warning and ask the user to correct the bugs.  */</em>
+<a id='L664' name='L664'></a> 664   <strong class='reserved'>return</strong> <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a>;
+<a id='L665' name='L665'></a> 665 <em class='brace'>}</em>
+<a id='L666' name='L666'></a> 666 
+<a id='L667' name='L667'></a> 667 
+<a id='L668' name='L668'></a> 668 <strong class='reserved'>static</strong> <strong class='reserved'>char</strong> *
+<a id='L669' name='L669'></a> 669 <a href='../R/26835.html' title='Multiple referred from 7 places.'>xstrndup</a> (<strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../D/36247.html' title='Multiple defined in 13 places.'>s</a>, <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>)
+<a id='L670' name='L670'></a> 670 <em class='brace'>{</em>
+<a id='L671' name='L671'></a> 671   <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../D/32598.html' title='Multiple defined in 10 places.'>len</a> = <a href='../D/33809.html' title='Multiple defined in 8 places.'>n</a>;
+<a id='L672' name='L672'></a> 672   <strong class='reserved'>char</strong> *<a href='../Y/20433.html' title='Multiple used in 561 places.'>new</a> = <a href='../D/33276.html' title='Multiple defined in 8 places.'>malloc</a> (<a href='../D/32598.html' title='Multiple defined in 10 places.'>len</a> + 1);
+<a id='L673' name='L673'></a> 673 
+<a id='L674' name='L674'></a> 674   <strong class='reserved'>if</strong> (<a href='../Y/20433.html' title='Multiple used in 561 places.'>new</a> == <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>)
+<a id='L675' name='L675'></a> 675     <strong class='reserved'>return</strong> <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>;
+<a id='L676' name='L676'></a> 676 
+<a id='L677' name='L677'></a> 677   <a href='../Y/20433.html' title='Multiple used in 561 places.'>new</a>[<a href='../D/32598.html' title='Multiple defined in 10 places.'>len</a>] = '\0';
+<a id='L678' name='L678'></a> 678   <strong class='reserved'>return</strong> <a href='../D/33450.html' title='Multiple defined in 47 places.'>memcpy</a> (<a href='../Y/20433.html' title='Multiple used in 561 places.'>new</a>, <a href='../D/36247.html' title='Multiple defined in 13 places.'>s</a>, <a href='../D/32598.html' title='Multiple defined in 10 places.'>len</a>);
+<a id='L679' name='L679'></a> 679 <em class='brace'>}</em>
+<a id='L680' name='L680'></a> 680 
+<a id='L681' name='L681'></a> 681 
+<a id='L682' name='L682'></a> 682 <em class='comment'>/* Like system but propagate interrupt and quit signals.  */</em>
+<a id='L683' name='L683'></a> 683 <strong class='reserved'>int</strong>
+<a id='L684' name='L684'></a> 684 <a href='../R/26838.html' title='Multiple referred from 4 places.'>xsystem</a> (<strong class='reserved'>const</strong> <strong class='reserved'>char</strong> *<a href='../S/6310.html#L66' title='Defined at 66 in resolv/res_hconf.c.'>cmd</a>)
+<a id='L685' name='L685'></a> 685 <em class='brace'>{</em>
+<a id='L686' name='L686'></a> 686   <strong class='reserved'>int</strong> <a href='../D/37029.html' title='Multiple defined in 7 places.'>status</a>;
+<a id='L687' name='L687'></a> 687 
+<a id='L688' name='L688'></a> 688   <a href='../D/37029.html' title='Multiple defined in 7 places.'>status</a> = <a href='../Y/26683.html' title='Multiple used in 59 places.'>system</a> (<a href='../S/6310.html#L66' title='Defined at 66 in resolv/res_hconf.c.'>cmd</a>);
+<a id='L689' name='L689'></a> 689   <strong class='reserved'>if</strong> (<a href='../D/37029.html' title='Multiple defined in 7 places.'>status</a> != -1)
+<a id='L690' name='L690'></a> 690     <em class='brace'>{</em>
+<a id='L691' name='L691'></a> 691       <strong class='reserved'>if</strong> (<a href='../D/17221.html' title='Multiple defined in 2 places.'>WIFSIGNALED</a> (<a href='../D/37029.html' title='Multiple defined in 7 places.'>status</a>))
+<a id='L692' name='L692'></a> 692     <em class='brace'>{</em>
+<a id='L693' name='L693'></a> 693       <strong class='reserved'>if</strong> (<a href='../D/17437.html' title='Multiple defined in 2 places.'>WTERMSIG</a> (<a href='../D/37029.html' title='Multiple defined in 7 places.'>status</a>) == <a href='../S/183.html#L48' title='Defined at 48 in bits/signum-generic.h.'>SIGINT</a> || <a href='../D/17437.html' title='Multiple defined in 2 places.'>WTERMSIG</a> (<a href='../D/37029.html' title='Multiple defined in 7 places.'>status</a>) == <a href='../S/183.html#L57' title='Defined at 57 in bits/signum-generic.h.'>SIGQUIT</a>)
+<a id='L694' name='L694'></a> 694         <a href='../D/35435.html' title='Multiple defined in 3 places.'>raise</a> (<a href='../D/17437.html' title='Multiple defined in 2 places.'>WTERMSIG</a> (<a href='../D/37029.html' title='Multiple defined in 7 places.'>status</a>));
+<a id='L695' name='L695'></a> 695     <em class='brace'>}</em>
+<a id='L696' name='L696'></a> 696       <strong class='reserved'>else</strong> <strong class='reserved'>if</strong> (<a href='../D/17220.html' title='Multiple defined in 3 places.'>WIFEXITED</a> (<a href='../D/37029.html' title='Multiple defined in 7 places.'>status</a>))
+<a id='L697' name='L697'></a> 697     <em class='brace'>{</em>
+<a id='L698' name='L698'></a> 698       <strong class='reserved'>if</strong> (<a href='../D/17208.html' title='Multiple defined in 3 places.'>WEXITSTATUS</a> (<a href='../D/37029.html' title='Multiple defined in 7 places.'>status</a>) == <a href='../S/183.html#L48' title='Defined at 48 in bits/signum-generic.h.'>SIGINT</a> + 128
+<a id='L699' name='L699'></a> 699           || <a href='../D/17208.html' title='Multiple defined in 3 places.'>WEXITSTATUS</a> (<a href='../D/37029.html' title='Multiple defined in 7 places.'>status</a>) == <a href='../S/183.html#L57' title='Defined at 57 in bits/signum-generic.h.'>SIGQUIT</a> + 128)
+<a id='L700' name='L700'></a> 700         <a href='../D/35435.html' title='Multiple defined in 3 places.'>raise</a> (<a href='../D/17208.html' title='Multiple defined in 3 places.'>WEXITSTATUS</a> (<a href='../D/37029.html' title='Multiple defined in 7 places.'>status</a>) - 128);
+<a id='L701' name='L701'></a> 701     <em class='brace'>}</em>
+<a id='L702' name='L702'></a> 702     <em class='brace'>}</em>
+<a id='L703' name='L703'></a> 703   <strong class='reserved'>return</strong> <a href='../D/37029.html' title='Multiple defined in 7 places.'>status</a>;
+<a id='L704' name='L704'></a> 704 <em class='brace'>}</em>
+<a id='L705' name='L705'></a> 705 
+<a id='L706' name='L706'></a> 706 
+<a id='L707' name='L707'></a> 707 <strong class='reserved'>static</strong> <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> **
+<a id='L708' name='L708'></a> 708 <a href='../R/19964.html' title='Multiple referred from 4 places.'>get_null_defines</a> (<strong class='reserved'>void</strong>)
+<a id='L709' name='L709'></a> 709 <em class='brace'>{</em>
+<a id='L710' name='L710'></a> 710   <strong class='reserved'>char</strong> <a href='../Y/18209.html' title='Multiple used in 710 places.'>line</a>[<a href='../S/5479.html#L99' title='Defined at 99 in libio/stdio.h.'>BUFSIZ</a>], *<a href='../Y/11865.html' title='Multiple used in 67 places.'>command</a>;
+<a id='L711' name='L711'></a> 711   <strong class='reserved'>char</strong> **<a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a> = <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>;
+<a id='L712' name='L712'></a> 712   <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/23938.html' title='Multiple used in 24 places.'>result_len</a> = 0;
+<a id='L713' name='L713'></a> 713   <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/23939.html' title='Multiple used in 14 places.'>result_max</a> = 0;
+<a id='L714' name='L714'></a> 714   <a href='../S/5474.html#L7' title='Defined at 7 in libio/bits/types/FILE.h.'>FILE</a> *<a href='../S/879.html#L43' title='Defined at 43 in gshadow/tst-fgetsgent_r.c.'>input</a>;
+<a id='L715' name='L715'></a> 715   <strong class='reserved'>int</strong> <a href='../D/30553.html' title='Multiple defined in 2 places.'>first</a> = 1;
+<a id='L716' name='L716'></a> 716 
+<a id='L717' name='L717'></a> 717   <strong class='reserved'>int</strong> <a href='../S/1663.html#L52' title='Defined at 52 in nscd/initgrcache.c.'>fd</a> = <a href='../D/33528.html' title='Multiple defined in 2 places.'>mkstemp</a> (<a href='../Y/18827.html' title='Multiple used in 23 places.'>macrofile</a>);
+<a id='L718' name='L718'></a> 718   <strong class='reserved'>if</strong> (<a href='../S/1663.html#L52' title='Defined at 52 in nscd/initgrcache.c.'>fd</a> == -1)
+<a id='L719' name='L719'></a> 719     <em class='brace'>{</em>
+<a id='L720' name='L720'></a> 720       <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("mkstemp failed: %m\n");
+<a id='L721' name='L721'></a> 721       <a href='../S/6681.html#L141' title='Defined at 141 in stdlib/exit.c.'>exit</a> (1);
+<a id='L722' name='L722'></a> 722     <em class='brace'>}</em>
+<a id='L723' name='L723'></a> 723   <a href='../S/284.html#L449' title='Defined at 449 in intl/loadmsgcat.c.'>close</a> (<a href='../S/1663.html#L52' title='Defined at 52 in nscd/initgrcache.c.'>fd</a>);
+<a id='L724' name='L724'></a> 724 
+<a id='L725' name='L725'></a> 725   <a href='../Y/11865.html' title='Multiple used in 67 places.'>command</a> = <a href='../D/33276.html' title='Multiple defined in 8 places.'>malloc</a> (<strong class='reserved'>sizeof</strong> <a href='../S/6618.html#L121' title='Defined at 121 in stdlib/gen-tst-strtod-round.c.'>fmt</a> + <strong class='reserved'>sizeof</strong> "/dev/null" + 2 * <a href='../D/37108.html' title='Multiple defined in 42 places.'>strlen</a> (<a href='../Y/177.html' title='Multiple used in 13 places.'>CC</a>)
+<a id='L726' name='L726'></a> 726             + <a href='../D/37108.html' title='Multiple defined in 42 places.'>strlen</a> (<a href='../D/6050.html' title='Multiple defined in 2 places.'>INC</a>) + <a href='../D/37108.html' title='Multiple defined in 42 places.'>strlen</a> (<a href='../Y/18827.html' title='Multiple used in 23 places.'>macrofile</a>));
+<a id='L727' name='L727'></a> 727 
+<a id='L728' name='L728'></a> 728   <strong class='reserved'>if</strong> (<a href='../Y/11865.html' title='Multiple used in 67 places.'>command</a> == <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>)
+<a id='L729' name='L729'></a> 729     <em class='brace'>{</em>
+<a id='L730' name='L730'></a> 730       <a href='../Y/23144.html' title='Multiple used in 3983 places.'>puts</a> ("No more memory.");
+<a id='L731' name='L731'></a> 731       <a href='../S/6681.html#L141' title='Defined at 141 in stdlib/exit.c.'>exit</a> (1);
+<a id='L732' name='L732'></a> 732     <em class='brace'>}</em>
+<a id='L733' name='L733'></a> 733 
+<a id='L734' name='L734'></a> 734   <a href='../D/36942.html' title='Multiple defined in 2 places.'>sprintf</a> (<a href='../Y/11865.html' title='Multiple used in 67 places.'>command</a>, <a href='../S/6618.html#L121' title='Defined at 121 in stdlib/gen-tst-strtod-round.c.'>fmt</a>, "/dev/null", <a href='../Y/177.html' title='Multiple used in 13 places.'>CC</a>, <a href='../D/6050.html' title='Multiple defined in 2 places.'>INC</a>, <a href='../Y/177.html' title='Multiple used in 13 places.'>CC</a>, <a href='../Y/18827.html' title='Multiple used in 23 places.'>macrofile</a>);
+<a id='L735' name='L735'></a> 735 
+<a id='L736' name='L736'></a> 736   <strong class='reserved'>if</strong> (<a href='../S/1045.html#L684' title='Defined at 684 in posix/annexc.c.'>xsystem</a> (<a href='../Y/11865.html' title='Multiple used in 67 places.'>command</a>))
+<a id='L737' name='L737'></a> 737     <em class='brace'>{</em>
+<a id='L738' name='L738'></a> 738       <a href='../Y/23144.html' title='Multiple used in 3983 places.'>puts</a> ("system() returned nonzero");
+<a id='L739' name='L739'></a> 739       <strong class='reserved'>return</strong> <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>;
+<a id='L740' name='L740'></a> 740     <em class='brace'>}</em>
+<a id='L741' name='L741'></a> 741   <a href='../D/30785.html' title='Multiple defined in 5 places.'>free</a> (<a href='../Y/11865.html' title='Multiple used in 67 places.'>command</a>);
+<a id='L742' name='L742'></a> 742   <a href='../S/879.html#L43' title='Defined at 43 in gshadow/tst-fgetsgent_r.c.'>input</a> = <a href='../D/30674.html' title='Multiple defined in 2 places.'>fopen</a> (<a href='../Y/18827.html' title='Multiple used in 23 places.'>macrofile</a>, "r");
+<a id='L743' name='L743'></a> 743 
+<a id='L744' name='L744'></a> 744   <strong class='reserved'>if</strong> (<a href='../S/879.html#L43' title='Defined at 43 in gshadow/tst-fgetsgent_r.c.'>input</a> == <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>)
+<a id='L745' name='L745'></a> 745     <em class='brace'>{</em>
+<a id='L746' name='L746'></a> 746       <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("Could not read %s: ", <a href='../Y/18827.html' title='Multiple used in 23 places.'>macrofile</a>);
+<a id='L747' name='L747'></a> 747       <a href='../S/6137.html#L47' title='Defined at 47 in stdio-common/perror.c.'>perror</a> (<a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>);
+<a id='L748' name='L748'></a> 748       <strong class='reserved'>return</strong> <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>;
+<a id='L749' name='L749'></a> 749     <em class='brace'>}</em>
+<a id='L750' name='L750'></a> 750 
+<a id='L751' name='L751'></a> 751   <strong class='reserved'>while</strong> (<a href='../D/30471.html' title='Multiple defined in 2 places.'>fgets</a> (<a href='../Y/18209.html' title='Multiple used in 710 places.'>line</a>, <strong class='reserved'>sizeof</strong> <a href='../Y/18209.html' title='Multiple used in 710 places.'>line</a>, <a href='../S/879.html#L43' title='Defined at 43 in gshadow/tst-fgetsgent_r.c.'>input</a>) != <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>)
+<a id='L752' name='L752'></a> 752     <em class='brace'>{</em>
+<a id='L753' name='L753'></a> 753       <strong class='reserved'>char</strong> *<a href='../D/36987.html' title='Multiple defined in 10 places.'>start</a>;
+<a id='L754' name='L754'></a> 754       <strong class='reserved'>if</strong> (<a href='../D/37108.html' title='Multiple defined in 42 places.'>strlen</a> (<a href='../Y/18209.html' title='Multiple used in 710 places.'>line</a>) &lt; 9 || <a href='../Y/18209.html' title='Multiple used in 710 places.'>line</a>[7] != ' ')
+<a id='L755' name='L755'></a> 755     <em class='brace'>{</em> <em class='comment'>/* "#define A" */</em>
+<a id='L756' name='L756'></a> 756       <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("Malformed input, expected '#define MACRO'\ngot '%s'\n",
+<a id='L757' name='L757'></a> 757           <a href='../Y/18209.html' title='Multiple used in 710 places.'>line</a>);
+<a id='L758' name='L758'></a> 758       <strong class='reserved'>continue</strong>;
+<a id='L759' name='L759'></a> 759     <em class='brace'>}</em>
+<a id='L760' name='L760'></a> 760       <strong class='reserved'>if</strong> (<a href='../Y/18209.html' title='Multiple used in 710 places.'>line</a>[8] == '_')
+<a id='L761' name='L761'></a> 761     <em class='comment'>/* It's a safe identifier.  */</em>
+<a id='L762' name='L762'></a> 762     <strong class='reserved'>continue</strong>;
+<a id='L763' name='L763'></a> 763       <strong class='reserved'>if</strong> (<a href='../Y/23938.html' title='Multiple used in 24 places.'>result_len</a> == <a href='../Y/23939.html' title='Multiple used in 14 places.'>result_max</a>)
+<a id='L764' name='L764'></a> 764     <em class='brace'>{</em>
+<a id='L765' name='L765'></a> 765       <a href='../Y/23939.html' title='Multiple used in 14 places.'>result_max</a> += 10;
+<a id='L766' name='L766'></a> 766       <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a> = <a href='../D/35623.html' title='Multiple defined in 6 places.'>realloc</a> (<a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a>, <a href='../Y/23939.html' title='Multiple used in 14 places.'>result_max</a> * <strong class='reserved'>sizeof</strong> (<strong class='reserved'>char</strong> **));
+<a id='L767' name='L767'></a> 767       <strong class='reserved'>if</strong> (<a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a> == <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>)
+<a id='L768' name='L768'></a> 768         <em class='brace'>{</em>
+<a id='L769' name='L769'></a> 769           <a href='../Y/23144.html' title='Multiple used in 3983 places.'>puts</a> ("No more memory.");
+<a id='L770' name='L770'></a> 770           <a href='../S/6681.html#L141' title='Defined at 141 in stdlib/exit.c.'>exit</a> (1);
+<a id='L771' name='L771'></a> 771         <em class='brace'>}</em>
+<a id='L772' name='L772'></a> 772     <em class='brace'>}</em>
+<a id='L773' name='L773'></a> 773       <a href='../D/36987.html' title='Multiple defined in 10 places.'>start</a> = &amp;<a href='../Y/18209.html' title='Multiple used in 710 places.'>line</a>[8];
+<a id='L774' name='L774'></a> 774       <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a>[<a href='../Y/23938.html' title='Multiple used in 24 places.'>result_len</a>++] = <a href='../D/39635.html' title='Multiple defined in 3 places.'>xstrndup</a> (<a href='../D/36987.html' title='Multiple defined in 10 places.'>start</a>, <a href='../D/37070.html' title='Multiple defined in 15 places.'>strcspn</a> (<a href='../D/36987.html' title='Multiple defined in 10 places.'>start</a>, " ("));
+<a id='L775' name='L775'></a> 775 
+<a id='L776' name='L776'></a> 776       <strong class='reserved'>if</strong> (<a href='../D/30553.html' title='Multiple defined in 2 places.'>first</a>)
+<a id='L777' name='L777'></a> 777     <em class='brace'>{</em>
+<a id='L778' name='L778'></a> 778       <a href='../S/17955.html#L201' title='Defined at 201 in include/stdio.h.'>fputs</a> ("The following identifiers will be ignored since the compiler defines them\nby default:\n", <a href='../D/37041.html' title='Multiple defined in 3 places.'>stdout</a>);
+<a id='L779' name='L779'></a> 779       <a href='../D/30553.html' title='Multiple defined in 2 places.'>first</a> = 0;
+<a id='L780' name='L780'></a> 780     <em class='brace'>}</em>
+<a id='L781' name='L781'></a> 781       <a href='../Y/23144.html' title='Multiple used in 3983 places.'>puts</a> (<a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a>[<a href='../Y/23938.html' title='Multiple used in 24 places.'>result_len</a> - 1]);
+<a id='L782' name='L782'></a> 782     <em class='brace'>}</em>
+<a id='L783' name='L783'></a> 783   <strong class='reserved'>if</strong> (<a href='../Y/23938.html' title='Multiple used in 24 places.'>result_len</a> == <a href='../Y/23939.html' title='Multiple used in 14 places.'>result_max</a>)
+<a id='L784' name='L784'></a> 784     <em class='brace'>{</em>
+<a id='L785' name='L785'></a> 785       <a href='../Y/23939.html' title='Multiple used in 14 places.'>result_max</a> += 1;
+<a id='L786' name='L786'></a> 786       <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a> = <a href='../D/35623.html' title='Multiple defined in 6 places.'>realloc</a> (<a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a>, <a href='../Y/23939.html' title='Multiple used in 14 places.'>result_max</a> * <strong class='reserved'>sizeof</strong> (<strong class='reserved'>char</strong> **));
+<a id='L787' name='L787'></a> 787       <strong class='reserved'>if</strong> (<a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a> == <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>)
+<a id='L788' name='L788'></a> 788     <em class='brace'>{</em>
+<a id='L789' name='L789'></a> 789       <a href='../Y/23144.html' title='Multiple used in 3983 places.'>puts</a> ("No more memory.");
+<a id='L790' name='L790'></a> 790       <a href='../S/6681.html#L141' title='Defined at 141 in stdlib/exit.c.'>exit</a> (1);
+<a id='L791' name='L791'></a> 791     <em class='brace'>}</em>
+<a id='L792' name='L792'></a> 792     <em class='brace'>}</em>
+<a id='L793' name='L793'></a> 793   <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a>[<a href='../Y/23938.html' title='Multiple used in 24 places.'>result_len</a>] = <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>;
+<a id='L794' name='L794'></a> 794   <a href='../S/17955.html#L194' title='Defined at 194 in include/stdio.h.'>fclose</a> (<a href='../S/879.html#L43' title='Defined at 43 in gshadow/tst-fgetsgent_r.c.'>input</a>);
+<a id='L795' name='L795'></a> 795 
+<a id='L796' name='L796'></a> 796   <strong class='reserved'>return</strong> (<strong class='reserved'>const</strong> <strong class='reserved'>char</strong> **) <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a>;
+<a id='L797' name='L797'></a> 797 <em class='brace'>}</em>
+<a id='L798' name='L798'></a> 798 
+<a id='L799' name='L799'></a> 799 
+<a id='L800' name='L800'></a> 800 <strong class='reserved'>static</strong> <strong class='reserved'>int</strong>
+<a id='L801' name='L801'></a> 801 <a href='../R/17947.html' title='Multiple referred from 4 places.'>check_header</a> (<strong class='reserved'>const</strong> <strong class='reserved'>struct</strong> <a href='../D/31480.html' title='Multiple defined in 5 places.'>header</a> *<a href='../D/31480.html' title='Multiple defined in 5 places.'>header</a>, <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> **<a href='../Y/14042.html' title='Multiple used in 8 places.'>except</a>)
+<a id='L802' name='L802'></a> 802 <em class='brace'>{</em>
+<a id='L803' name='L803'></a> 803   <strong class='reserved'>char</strong> <a href='../Y/18209.html' title='Multiple used in 710 places.'>line</a>[<a href='../S/5479.html#L99' title='Defined at 99 in libio/stdio.h.'>BUFSIZ</a>], <a href='../Y/11865.html' title='Multiple used in 67 places.'>command</a>[<strong class='reserved'>sizeof</strong> <a href='../S/6618.html#L121' title='Defined at 121 in stdlib/gen-tst-strtod-round.c.'>fmt</a> + <a href='../D/37108.html' title='Multiple defined in 42 places.'>strlen</a> (<a href='../D/31480.html' title='Multiple defined in 5 places.'>header</a>-&gt;<a href='../D/33817.html' title='Multiple defined in 21 places.'>name</a>)
+<a id='L804' name='L804'></a> 804                  + 2 * <a href='../D/37108.html' title='Multiple defined in 42 places.'>strlen</a> (<a href='../Y/177.html' title='Multiple used in 13 places.'>CC</a>)
+<a id='L805' name='L805'></a> 805                  + <a href='../D/37108.html' title='Multiple defined in 42 places.'>strlen</a> (<a href='../D/6050.html' title='Multiple defined in 2 places.'>INC</a>) + <a href='../D/37108.html' title='Multiple defined in 42 places.'>strlen</a> (<a href='../Y/18827.html' title='Multiple used in 23 places.'>macrofile</a>)];
+<a id='L806' name='L806'></a> 806   <a href='../S/5474.html#L7' title='Defined at 7 in libio/bits/types/FILE.h.'>FILE</a> *<a href='../S/879.html#L43' title='Defined at 43 in gshadow/tst-fgetsgent_r.c.'>input</a>;
+<a id='L807' name='L807'></a> 807   <strong class='reserved'>int</strong> <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a> = 0;
+<a id='L808' name='L808'></a> 808   <strong class='reserved'>int</strong> <a href='../S/1663.html#L43' title='Defined at 43 in nscd/initgrcache.c.'>found</a>[<a href='../D/31480.html' title='Multiple defined in 5 places.'>header</a>-&gt;<a href='../Y/21286.html' title='Multiple used in 6 places.'>nsyms</a>];
+<a id='L809' name='L809'></a> 809   <strong class='reserved'>int</strong> <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>;
+<a id='L810' name='L810'></a> 810 
+<a id='L811' name='L811'></a> 811   <a href='../D/33462.html' title='Multiple defined in 30 places.'>memset</a> (<a href='../S/1663.html#L43' title='Defined at 43 in nscd/initgrcache.c.'>found</a>, '\0', <a href='../D/31480.html' title='Multiple defined in 5 places.'>header</a>-&gt;<a href='../Y/21286.html' title='Multiple used in 6 places.'>nsyms</a> * <strong class='reserved'>sizeof</strong> (<strong class='reserved'>int</strong>));
+<a id='L812' name='L812'></a> 812 
+<a id='L813' name='L813'></a> 813   <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("=== %s ===\n", <a href='../D/31480.html' title='Multiple defined in 5 places.'>header</a>-&gt;<a href='../D/33817.html' title='Multiple defined in 21 places.'>name</a>);
+<a id='L814' name='L814'></a> 814   <a href='../D/36942.html' title='Multiple defined in 2 places.'>sprintf</a> (<a href='../Y/11865.html' title='Multiple used in 67 places.'>command</a>, <a href='../S/6618.html#L121' title='Defined at 121 in stdlib/gen-tst-strtod-round.c.'>fmt</a>, <a href='../D/31480.html' title='Multiple defined in 5 places.'>header</a>-&gt;<a href='../D/33817.html' title='Multiple defined in 21 places.'>name</a>, <a href='../Y/177.html' title='Multiple used in 13 places.'>CC</a>, <a href='../D/6050.html' title='Multiple defined in 2 places.'>INC</a>, <a href='../Y/177.html' title='Multiple used in 13 places.'>CC</a>, <a href='../Y/18827.html' title='Multiple used in 23 places.'>macrofile</a>);
+<a id='L815' name='L815'></a> 815 
+<a id='L816' name='L816'></a> 816   <em class='comment'>/* First see whether this subset is supported at all.  */</em>
+<a id='L817' name='L817'></a> 817   <strong class='reserved'>if</strong> (<a href='../D/31480.html' title='Multiple defined in 5 places.'>header</a>-&gt;<a href='../Y/26457.html' title='Multiple used in 3 places.'>subset</a> != <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>)
+<a id='L818' name='L818'></a> 818     <em class='brace'>{</em>
+<a id='L819' name='L819'></a> 819       <a href='../D/36942.html' title='Multiple defined in 2 places.'>sprintf</a> (<a href='../Y/18209.html' title='Multiple used in 710 places.'>line</a>, <a href='../Y/27060.html' title='Multiple used in 2 places.'>testfmt</a>, <a href='../D/31480.html' title='Multiple defined in 5 places.'>header</a>-&gt;<a href='../Y/26457.html' title='Multiple used in 3 places.'>subset</a>, <a href='../D/31480.html' title='Multiple defined in 5 places.'>header</a>-&gt;<a href='../Y/26457.html' title='Multiple used in 3 places.'>subset</a>, <a href='../Y/177.html' title='Multiple used in 13 places.'>CC</a>, <a href='../D/6050.html' title='Multiple defined in 2 places.'>INC</a>, <a href='../Y/177.html' title='Multiple used in 13 places.'>CC</a>,
+<a id='L820' name='L820'></a> 820            <a href='../Y/18827.html' title='Multiple used in 23 places.'>macrofile</a>);
+<a id='L821' name='L821'></a> 821       <strong class='reserved'>if</strong> (<a href='../S/1045.html#L684' title='Defined at 684 in posix/annexc.c.'>xsystem</a> (<a href='../Y/18209.html' title='Multiple used in 710 places.'>line</a>))
+<a id='L822' name='L822'></a> 822     <em class='brace'>{</em>
+<a id='L823' name='L823'></a> 823       <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("!! not available\n");
+<a id='L824' name='L824'></a> 824       <strong class='reserved'>return</strong> 0;
+<a id='L825' name='L825'></a> 825     <em class='brace'>}</em>
+<a id='L826' name='L826'></a> 826     <em class='brace'>}</em>
+<a id='L827' name='L827'></a> 827 
+<a id='L828' name='L828'></a> 828   <strong class='reserved'>if</strong> (<a href='../S/1045.html#L684' title='Defined at 684 in posix/annexc.c.'>xsystem</a> (<a href='../Y/11865.html' title='Multiple used in 67 places.'>command</a>))
+<a id='L829' name='L829'></a> 829     <em class='brace'>{</em>
+<a id='L830' name='L830'></a> 830       <a href='../Y/23144.html' title='Multiple used in 3983 places.'>puts</a> ("system() returned nonzero");
+<a id='L831' name='L831'></a> 831       <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a> = 1;
+<a id='L832' name='L832'></a> 832     <em class='brace'>}</em>
+<a id='L833' name='L833'></a> 833   <a href='../S/879.html#L43' title='Defined at 43 in gshadow/tst-fgetsgent_r.c.'>input</a> = <a href='../D/30674.html' title='Multiple defined in 2 places.'>fopen</a> (<a href='../Y/18827.html' title='Multiple used in 23 places.'>macrofile</a>, "r");
+<a id='L834' name='L834'></a> 834 
+<a id='L835' name='L835'></a> 835   <strong class='reserved'>if</strong> (<a href='../S/879.html#L43' title='Defined at 43 in gshadow/tst-fgetsgent_r.c.'>input</a> == <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>)
+<a id='L836' name='L836'></a> 836     <em class='brace'>{</em>
+<a id='L837' name='L837'></a> 837       <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("Could not read %s: ", <a href='../Y/18827.html' title='Multiple used in 23 places.'>macrofile</a>);
+<a id='L838' name='L838'></a> 838       <a href='../S/6137.html#L47' title='Defined at 47 in stdio-common/perror.c.'>perror</a> (<a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>);
+<a id='L839' name='L839'></a> 839       <strong class='reserved'>return</strong> 1;
+<a id='L840' name='L840'></a> 840     <em class='brace'>}</em>
+<a id='L841' name='L841'></a> 841 
+<a id='L842' name='L842'></a> 842   <strong class='reserved'>while</strong> (<a href='../D/30471.html' title='Multiple defined in 2 places.'>fgets</a> (<a href='../Y/18209.html' title='Multiple used in 710 places.'>line</a>, <strong class='reserved'>sizeof</strong> <a href='../Y/18209.html' title='Multiple used in 710 places.'>line</a>, <a href='../S/879.html#L43' title='Defined at 43 in gshadow/tst-fgetsgent_r.c.'>input</a>) != <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>)
+<a id='L843' name='L843'></a> 843     <em class='brace'>{</em>
+<a id='L844' name='L844'></a> 844       <strong class='reserved'>const</strong> <strong class='reserved'>char</strong> **<a href='../D/31718.html' title='Multiple defined in 2 places.'>ignore</a>;
+<a id='L845' name='L845'></a> 845       <strong class='reserved'>if</strong> (<a href='../D/37108.html' title='Multiple defined in 42 places.'>strlen</a> (<a href='../Y/18209.html' title='Multiple used in 710 places.'>line</a>) &lt; 9 || <a href='../Y/18209.html' title='Multiple used in 710 places.'>line</a>[7] != ' ')
+<a id='L846' name='L846'></a> 846     <em class='brace'>{</em> <em class='comment'>/* "#define A" */</em>
+<a id='L847' name='L847'></a> 847       <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("Malformed input, expected '#define MACRO'\ngot '%s'\n",
+<a id='L848' name='L848'></a> 848           <a href='../Y/18209.html' title='Multiple used in 710 places.'>line</a>);
+<a id='L849' name='L849'></a> 849       <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a> = 1;
+<a id='L850' name='L850'></a> 850       <strong class='reserved'>continue</strong>;
+<a id='L851' name='L851'></a> 851     <em class='brace'>}</em>
+<a id='L852' name='L852'></a> 852 
+<a id='L853' name='L853'></a> 853       <em class='comment'>/* Find next char after the macro identifier; this can be either</em>
+<a id='L854' name='L854'></a> 854 <em class='comment'>     a space or an open parenthesis.  */</em>
+<a id='L855' name='L855'></a> 855       <a href='../Y/18209.html' title='Multiple used in 710 places.'>line</a>[8 + <a href='../D/37070.html' title='Multiple defined in 15 places.'>strcspn</a> (&amp;<a href='../Y/18209.html' title='Multiple used in 710 places.'>line</a>[8], " (")] = '\0';
+<a id='L856' name='L856'></a> 856 
+<a id='L857' name='L857'></a> 857       <em class='comment'>/* Now check whether it's one of the required macros.  */</em>
+<a id='L858' name='L858'></a> 858       <strong class='reserved'>for</strong> (<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> = 0; <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> &lt; <a href='../D/31480.html' title='Multiple defined in 5 places.'>header</a>-&gt;<a href='../Y/21286.html' title='Multiple used in 6 places.'>nsyms</a>; ++<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>)
+<a id='L859' name='L859'></a> 859     <strong class='reserved'>if</strong> (!<a href='../D/37067.html' title='Multiple defined in 17 places.'>strcmp</a> (&amp;<a href='../Y/18209.html' title='Multiple used in 710 places.'>line</a>[8], <a href='../D/31480.html' title='Multiple defined in 5 places.'>header</a>-&gt;<a href='../Y/26630.html' title='Multiple used in 16 places.'>syms</a>[<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>]))
+<a id='L860' name='L860'></a> 860       <strong class='reserved'>break</strong>;
+<a id='L861' name='L861'></a> 861       <strong class='reserved'>if</strong> (<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> &lt; <a href='../D/31480.html' title='Multiple defined in 5 places.'>header</a>-&gt;<a href='../Y/21286.html' title='Multiple used in 6 places.'>nsyms</a>)
+<a id='L862' name='L862'></a> 862     <em class='brace'>{</em>
+<a id='L863' name='L863'></a> 863       <a href='../S/1663.html#L43' title='Defined at 43 in nscd/initgrcache.c.'>found</a>[<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>] = 1;
+<a id='L864' name='L864'></a> 864       <strong class='reserved'>continue</strong>;
+<a id='L865' name='L865'></a> 865     <em class='brace'>}</em>
+<a id='L866' name='L866'></a> 866 
+<a id='L867' name='L867'></a> 867       <em class='comment'>/* Symbols starting with "_" are ok.  */</em>
+<a id='L868' name='L868'></a> 868       <strong class='reserved'>if</strong> (<a href='../Y/18209.html' title='Multiple used in 710 places.'>line</a>[8] == '_')
+<a id='L869' name='L869'></a> 869     <strong class='reserved'>continue</strong>;
+<a id='L870' name='L870'></a> 870 
+<a id='L871' name='L871'></a> 871       <em class='comment'>/* Maybe one of the symbols which are always defined.  */</em>
+<a id='L872' name='L872'></a> 872       <strong class='reserved'>for</strong> (<a href='../D/31718.html' title='Multiple defined in 2 places.'>ignore</a> = <a href='../Y/14042.html' title='Multiple used in 8 places.'>except</a>; *<a href='../D/31718.html' title='Multiple defined in 2 places.'>ignore</a> != <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>; ++<a href='../D/31718.html' title='Multiple defined in 2 places.'>ignore</a>)
+<a id='L873' name='L873'></a> 873     <strong class='reserved'>if</strong> (! <a href='../D/37067.html' title='Multiple defined in 17 places.'>strcmp</a> (&amp;<a href='../Y/18209.html' title='Multiple used in 710 places.'>line</a>[8], *<a href='../D/31718.html' title='Multiple defined in 2 places.'>ignore</a>))
+<a id='L874' name='L874'></a> 874       <strong class='reserved'>break</strong>;
+<a id='L875' name='L875'></a> 875       <strong class='reserved'>if</strong> (*<a href='../D/31718.html' title='Multiple defined in 2 places.'>ignore</a> != <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>)
+<a id='L876' name='L876'></a> 876     <strong class='reserved'>continue</strong>;
+<a id='L877' name='L877'></a> 877 
+<a id='L878' name='L878'></a> 878       <em class='comment'>/* Otherwise the symbol better should match one of the following.  */</em>
+<a id='L879' name='L879'></a> 879       <strong class='reserved'>for</strong> (<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> = 0; <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> &lt; <a href='../D/31480.html' title='Multiple defined in 5 places.'>header</a>-&gt;<a href='../Y/20946.html' title='Multiple used in 3 places.'>nmaybe</a>; ++<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>)
+<a id='L880' name='L880'></a> 880     <strong class='reserved'>if</strong> (<a href='../D/30659.html' title='Multiple defined in 3 places.'>fnmatch</a> (<a href='../D/31480.html' title='Multiple defined in 5 places.'>header</a>-&gt;<a href='../Y/19122.html' title='Multiple used in 7 places.'>maybe</a>[<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>], &amp;<a href='../Y/18209.html' title='Multiple used in 710 places.'>line</a>[8], 0) == 0)
+<a id='L881' name='L881'></a> 881       <strong class='reserved'>break</strong>;
+<a id='L882' name='L882'></a> 882       <strong class='reserved'>if</strong> (<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> &lt; <a href='../D/31480.html' title='Multiple defined in 5 places.'>header</a>-&gt;<a href='../Y/20946.html' title='Multiple used in 3 places.'>nmaybe</a>)
+<a id='L883' name='L883'></a> 883     <strong class='reserved'>continue</strong>;
+<a id='L884' name='L884'></a> 884 
+<a id='L885' name='L885'></a> 885       <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("*  invalid macro `%s'\n", &amp;<a href='../Y/18209.html' title='Multiple used in 710 places.'>line</a>[8]);
+<a id='L886' name='L886'></a> 886       <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a> |= 1;
+<a id='L887' name='L887'></a> 887     <em class='brace'>}</em>
+<a id='L888' name='L888'></a> 888   <a href='../S/17955.html#L194' title='Defined at 194 in include/stdio.h.'>fclose</a> (<a href='../S/879.html#L43' title='Defined at 43 in gshadow/tst-fgetsgent_r.c.'>input</a>);
+<a id='L889' name='L889'></a> 889 
+<a id='L890' name='L890'></a> 890   <strong class='reserved'>for</strong> (<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> = 0; <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> &lt; <a href='../D/31480.html' title='Multiple defined in 5 places.'>header</a>-&gt;<a href='../Y/21286.html' title='Multiple used in 6 places.'>nsyms</a>; ++<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>)
+<a id='L891' name='L891'></a> 891     <strong class='reserved'>if</strong> (<a href='../S/1663.html#L43' title='Defined at 43 in nscd/initgrcache.c.'>found</a>[<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>] == 0)
+<a id='L892' name='L892'></a> 892       <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("** macro `%s' not defined\n", <a href='../D/31480.html' title='Multiple defined in 5 places.'>header</a>-&gt;<a href='../Y/26630.html' title='Multiple used in 16 places.'>syms</a>[<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>]);
+<a id='L893' name='L893'></a> 893 
+<a id='L894' name='L894'></a> 894   <strong class='reserved'>return</strong> <a href='../D/36050.html' title='Multiple defined in 17 places.'>result</a>;
+<a id='L895' name='L895'></a> 895 <em class='brace'>}</em>
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L637'>[^]</a><a href='#L801'>[v]</a><a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

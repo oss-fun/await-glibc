@@ -1,0 +1,423 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>nptl/tst-default-attr.c</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18931.html'>nptl</a>/tst-default-attr.c</h2>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L49'>[^]</a><a href='#L359'>[v]</a>[top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<h2 class='header'>DEFINITIONS</h2>
+This source file includes following definitions.
+<ol>
+<li><a href='#L49' title='Defined at 49.'>thr</a></li>
+<li><a href='#L90' title='Defined at 90.'>run_threads</a></li>
+<li><a href='#L135' title='Defined at 135.'>verify_detach_result</a></li>
+<li><a href='#L151' title='Defined at 151.'>do_detach_test</a></li>
+<li><a href='#L164' title='Defined at 164.'>verify_affinity_result</a></li>
+<li><a href='#L179' title='Defined at 179.'>do_affinity_test</a></li>
+<li><a href='#L207' title='Defined at 207.'>verify_sched_result</a></li>
+<li><a href='#L238' title='Defined at 238.'>do_sched_test</a></li>
+<li><a href='#L268' title='Defined at 268.'>verify_guardsize_result</a></li>
+<li><a href='#L284' title='Defined at 284.'>do_guardsize_test</a></li>
+<li><a href='#L307' title='Defined at 307.'>verify_stacksize_result</a></li>
+<li><a href='#L323' title='Defined at 323.'>do_stacksize_test</a></li>
+<li><a href='#L359' title='Defined at 359.'>do_test</a></li>
+</ol>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* Verify that pthread_[gs]etattr_default_np work correctly.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'></em>
+<a id='L3' name='L3'></a>   3 <em class='comment'>   Copyright (C) 2013-2022 Free Software Foundation, Inc.</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L5' name='L5'></a>   5 <em class='comment'></em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L10' name='L10'></a>  10 <em class='comment'></em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L15' name='L15'></a>  15 <em class='comment'></em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L17' name='L17'></a>  17 <em class='comment'>   License along with the GNU C Library; if not, see</em>
+<a id='L18' name='L18'></a>  18 <em class='comment'>   &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L19' name='L19'></a>  19 
+<a id='L20' name='L20'></a>  20 <em class='sharp'>#include</em> &lt;<a href='../I/1919.html'>pthread.h</a>&gt;
+<a id='L21' name='L21'></a>  21 <em class='sharp'>#include</em> &lt;<a href='../I/1776.html'>stdio.h</a>&gt;
+<a id='L22' name='L22'></a>  22 <em class='sharp'>#include</em> &lt;<a href='../I/1969.html'>stdint.h</a>&gt;
+<a id='L23' name='L23'></a>  23 <em class='sharp'>#include</em> &lt;<a href='../I/1973.html'>string.h</a>&gt;
+<a id='L24' name='L24'></a>  24 <em class='sharp'>#include</em> &lt;<a href='../I/1819.html'>unistd.h</a>&gt;
+<a id='L25' name='L25'></a>  25 <em class='sharp'>#include</em> &lt;<a href='../I/116.html'>errno.h</a>&gt;
+<a id='L26' name='L26'></a>  26 <em class='sharp'>#include</em> &lt;stdbool.h&gt;
+<a id='L27' name='L27'></a>  27 
+<a id='L28' name='L28'></a>  28 <em class='sharp'>#define</em> <a href='../R/6823.html' title='Multiple referred from 36 places.'>RETURN_IF_FAIL</a>(<a href='../D/30173.html' title='Multiple defined in 17 places.'>f</a>, ...) \
+<a id='L29' name='L29'></a>  29   (<em class='brace'>{</em>                                          \
+<a id='L30' name='L30'></a>  30     <strong class='reserved'>int</strong> <a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a> = <a href='../D/30173.html' title='Multiple defined in 17 places.'>f</a> (<a href='../Y/3326.html' title='Multiple used in 135 places.'>__VA_ARGS__</a>);                            \
+<a id='L31' name='L31'></a>  31     <strong class='reserved'>if</strong> (<a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a> != 0)                                 \
+<a id='L32' name='L32'></a>  32       <em class='brace'>{</em>                                       \
+<a id='L33' name='L33'></a>  33     <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("%s:%d: %s returned %d (errno = %d)\n", <a href='../Y/2931.html' title='Multiple used in 107 places.'>__FILE__</a>, <a href='../Y/3237.html' title='Multiple used in 9441 places.'>__LINE__</a>,   \
+<a id='L34' name='L34'></a>  34         #<a href='../D/30173.html' title='Multiple defined in 17 places.'>f</a>, <a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a>, <a href='../D/30023.html' title='Multiple defined in 13 places.'>errno</a>);                          \
+<a id='L35' name='L35'></a>  35     <strong class='reserved'>return</strong> <a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a>;                               \
+<a id='L36' name='L36'></a>  36       <em class='brace'>}</em>                                       \
+<a id='L37' name='L37'></a>  37   <em class='brace'>}</em>)
+<a id='L38' name='L38'></a>  38 
+<a id='L39' name='L39'></a>  39 <strong class='reserved'>static</strong> <strong class='reserved'>int</strong> (*<a href='../Y/28656.html' title='Multiple used in 8 places.'>verify_result</a>) (<a href='../D/35089.html' title='Multiple defined in 4 places.'>pthread_attr_t</a> *);
+<a id='L40' name='L40'></a>  40 <strong class='reserved'>static</strong> <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/26060.html' title='Multiple used in 144 places.'>stacksize</a> = 1024 * 1024;
+<a id='L41' name='L41'></a>  41 <strong class='reserved'>static</strong> <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/15863.html' title='Multiple used in 98 places.'>guardsize</a>;
+<a id='L42' name='L42'></a>  42 <strong class='reserved'>static</strong> <a href='../S/3749.html#L624' title='Defined at 624 in timezone/private.h.'>bool</a> <a href='../Y/13096.html' title='Multiple used in 5 places.'>do_join</a> = <a href='../D/38483.html' title='Multiple defined in 5 places.'>true</a>;
+<a id='L43' name='L43'></a>  43 <strong class='reserved'>static</strong> <strong class='reserved'>int</strong> <a href='../Y/24403.html' title='Multiple used in 46 places.'>running</a> = 0;
+<a id='L44' name='L44'></a>  44 <strong class='reserved'>static</strong> <strong class='reserved'>int</strong> <a href='../Y/12724.html' title='Multiple used in 3 places.'>detach_failed</a> = 0;
+<a id='L45' name='L45'></a>  45 <strong class='reserved'>static</strong> <a href='../D/35134.html' title='Multiple defined in 2 places.'>pthread_mutex_t</a> <a href='../D/33231.html' title='Multiple defined in 2 places.'>m</a> = <a href='../D/10365.html' title='Multiple defined in 2 places.'>PTHREAD_MUTEX_INITIALIZER</a>;
+<a id='L46' name='L46'></a>  46 <strong class='reserved'>static</strong> <a href='../D/35112.html' title='Multiple defined in 2 places.'>pthread_cond_t</a> <a href='../D/28364.html' title='Multiple defined in 2 places.'>c</a> = <a href='../D/10335.html' title='Multiple defined in 2 places.'>PTHREAD_COND_INITIALIZER</a>;
+<a id='L47' name='L47'></a>  47 
+<a id='L48' name='L48'></a>  48 <strong class='reserved'>static</strong> <strong class='reserved'>void</strong> *
+<a id='L49' name='L49'></a>  49 <a href='../R/25534.html' title='Multiple referred from 133 places.'>thr</a> (<strong class='reserved'>void</strong> *<a href='../S/2757.html#L20' title='Defined at 20 in elf/tst-tlsalign-vars.c.'>unused</a> <strong class='reserved'>__attribute__</strong> ((<a href='../S/2757.html#L20' title='Defined at 20 in elf/tst-tlsalign-vars.c.'>unused</a>)))
+<a id='L50' name='L50'></a>  50 <em class='brace'>{</em>
+<a id='L51' name='L51'></a>  51   <a href='../D/35089.html' title='Multiple defined in 4 places.'>pthread_attr_t</a> <a href='../Y/10555.html' title='Multiple used in 1022 places.'>attr</a>;
+<a id='L52' name='L52'></a>  52   <strong class='reserved'>int</strong> <a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a>;
+<a id='L53' name='L53'></a>  53 
+<a id='L54' name='L54'></a>  54   <a href='../D/33462.html' title='Multiple defined in 30 places.'>memset</a> (&amp;<a href='../Y/10555.html' title='Multiple used in 1022 places.'>attr</a>, 0xab, <strong class='reserved'>sizeof</strong> <a href='../Y/10555.html' title='Multiple used in 1022 places.'>attr</a>);
+<a id='L55' name='L55'></a>  55   <em class='comment'>/* To verify that the pthread_setattr_default_np worked.  */</em>
+<a id='L56' name='L56'></a>  56   <strong class='reserved'>if</strong> ((<a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a> = <a href='../Y/22985.html' title='Multiple used in 8 places.'>pthread_getattr_default_np</a> (&amp;<a href='../Y/10555.html' title='Multiple used in 1022 places.'>attr</a>)) != 0)
+<a id='L57' name='L57'></a>  57     <em class='brace'>{</em>
+<a id='L58' name='L58'></a>  58       <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("pthread_getattr_default_np failed: %s\n", <a href='../S/1932.html#L22' title='Defined at 22 in string/strerror.c.'>strerror</a> (<a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a>));
+<a id='L59' name='L59'></a>  59       <strong class='reserved'>goto</strong> <a href='../S/1663.html#L112' title='Defined at 112 in nscd/initgrcache.c.'>out</a>;
+<a id='L60' name='L60'></a>  60     <em class='brace'>}</em>
+<a id='L61' name='L61'></a>  61 
+<a id='L62' name='L62'></a>  62   <strong class='reserved'>if</strong> ((<a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a> = (*<a href='../Y/28656.html' title='Multiple used in 8 places.'>verify_result</a>) (&amp;<a href='../Y/10555.html' title='Multiple used in 1022 places.'>attr</a>)) != 0)
+<a id='L63' name='L63'></a>  63     <strong class='reserved'>goto</strong> <a href='../S/1663.html#L112' title='Defined at 112 in nscd/initgrcache.c.'>out</a>;
+<a id='L64' name='L64'></a>  64 
+<a id='L65' name='L65'></a>  65   <a href='../D/33462.html' title='Multiple defined in 30 places.'>memset</a> (&amp;<a href='../Y/10555.html' title='Multiple used in 1022 places.'>attr</a>, 0xab, <strong class='reserved'>sizeof</strong> <a href='../Y/10555.html' title='Multiple used in 1022 places.'>attr</a>);
+<a id='L66' name='L66'></a>  66   <em class='comment'>/* To verify that the attributes actually got applied.  */</em>
+<a id='L67' name='L67'></a>  67   <strong class='reserved'>if</strong> ((<a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a> = <a href='../Y/22986.html' title='Multiple used in 14 places.'>pthread_getattr_np</a> (<a href='../Y/23020.html' title='Multiple used in 91 places.'>pthread_self</a> (), &amp;<a href='../Y/10555.html' title='Multiple used in 1022 places.'>attr</a>)) != 0)
+<a id='L68' name='L68'></a>  68     <em class='brace'>{</em>
+<a id='L69' name='L69'></a>  69       <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("pthread_getattr_default_np failed: %s\n", <a href='../S/1932.html#L22' title='Defined at 22 in string/strerror.c.'>strerror</a> (<a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a>));
+<a id='L70' name='L70'></a>  70       <strong class='reserved'>goto</strong> <a href='../S/1663.html#L112' title='Defined at 112 in nscd/initgrcache.c.'>out</a>;
+<a id='L71' name='L71'></a>  71     <em class='brace'>}</em>
+<a id='L72' name='L72'></a>  72 
+<a id='L73' name='L73'></a>  73   <a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a> = (*<a href='../Y/28656.html' title='Multiple used in 8 places.'>verify_result</a>) (&amp;<a href='../Y/10555.html' title='Multiple used in 1022 places.'>attr</a>);
+<a id='L74' name='L74'></a>  74 
+<a id='L75' name='L75'></a>  75 <a href='../S/1663.html#L112' title='Defined at 112 in nscd/initgrcache.c.'>out</a>:
+<a id='L76' name='L76'></a>  76   <strong class='reserved'>if</strong> (!<a href='../Y/13096.html' title='Multiple used in 5 places.'>do_join</a>)
+<a id='L77' name='L77'></a>  77     <em class='brace'>{</em>
+<a id='L78' name='L78'></a>  78       <a href='../Y/23002.html' title='Multiple used in 212 places.'>pthread_mutex_lock</a> (&amp;<a href='../D/33231.html' title='Multiple defined in 2 places.'>m</a>);
+<a id='L79' name='L79'></a>  79       <a href='../Y/24403.html' title='Multiple used in 46 places.'>running</a>--;
+<a id='L80' name='L80'></a>  80       <a href='../Y/22975.html' title='Multiple used in 43 places.'>pthread_cond_signal</a> (&amp;<a href='../D/28364.html' title='Multiple defined in 2 places.'>c</a>);
+<a id='L81' name='L81'></a>  81       <a href='../Y/23005.html' title='Multiple used in 191 places.'>pthread_mutex_unlock</a> (&amp;<a href='../D/33231.html' title='Multiple defined in 2 places.'>m</a>);
+<a id='L82' name='L82'></a>  82 
+<a id='L83' name='L83'></a>  83       <a href='../Y/12724.html' title='Multiple used in 3 places.'>detach_failed</a> |= <a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a>;
+<a id='L84' name='L84'></a>  84     <em class='brace'>}</em>
+<a id='L85' name='L85'></a>  85 
+<a id='L86' name='L86'></a>  86   <strong class='reserved'>return</strong> (<strong class='reserved'>void</strong> *) (<a href='../D/38692.html' title='Multiple defined in 2 places.'>uintptr_t</a>) <a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a>;
+<a id='L87' name='L87'></a>  87 <em class='brace'>}</em>
+<a id='L88' name='L88'></a>  88 
+<a id='L89' name='L89'></a>  89 <strong class='reserved'>static</strong> <strong class='reserved'>int</strong>
+<a id='L90' name='L90'></a>  90 <a href='../R/24010.html' title='Multiple referred from 6 places.'>run_threads</a> (<strong class='reserved'>const</strong> <a href='../D/35089.html' title='Multiple defined in 4 places.'>pthread_attr_t</a> *<a href='../Y/10555.html' title='Multiple used in 1022 places.'>attr</a>)
+<a id='L91' name='L91'></a>  91 <em class='brace'>{</em>
+<a id='L92' name='L92'></a>  92   <a href='../D/35174.html' title='Multiple defined in 2 places.'>pthread_t</a> <a href='../S/4165.html#L39' title='Defined at 39 in wcsmbs/tst-mbrtowc2.c.'>t</a>;
+<a id='L93' name='L93'></a>  93   <strong class='reserved'>void</strong> *<a href='../Y/27791.html' title='Multiple used in 25 places.'>tret</a> = <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>;
+<a id='L94' name='L94'></a>  94 
+<a id='L95' name='L95'></a>  95   <a href='../D/11251.html' title='Multiple defined in 2 places.'>RETURN_IF_FAIL</a> (<a href='../Y/23021.html' title='Multiple used in 8 places.'>pthread_setattr_default_np</a>, <a href='../Y/10555.html' title='Multiple used in 1022 places.'>attr</a>);
+<a id='L96' name='L96'></a>  96 
+<a id='L97' name='L97'></a>  97   <em class='comment'>/* Run twice to ensure that the attributes do not get overwritten in the</em>
+<a id='L98' name='L98'></a>  98 <em class='comment'>     first run somehow.  */</em>
+<a id='L99' name='L99'></a>  99   <strong class='reserved'>for</strong> (<strong class='reserved'>int</strong> <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> = 0; <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> &lt; 2; <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>++)
+<a id='L100' name='L100'></a> 100     <em class='brace'>{</em>
+<a id='L101' name='L101'></a> 101       <a href='../D/11251.html' title='Multiple defined in 2 places.'>RETURN_IF_FAIL</a> (<a href='../Y/22978.html' title='Multiple used in 248 places.'>pthread_create</a>, &amp;<a href='../S/4165.html#L39' title='Defined at 39 in wcsmbs/tst-mbrtowc2.c.'>t</a>, <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>, <a href='../D/38029.html' title='Multiple defined in 9 places.'>thr</a>, <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>);
+<a id='L102' name='L102'></a> 102       <strong class='reserved'>if</strong> (<a href='../Y/13096.html' title='Multiple used in 5 places.'>do_join</a>)
+<a id='L103' name='L103'></a> 103     <a href='../D/11251.html' title='Multiple defined in 2 places.'>RETURN_IF_FAIL</a> (<a href='../Y/22992.html' title='Multiple used in 204 places.'>pthread_join</a>, <a href='../S/4165.html#L39' title='Defined at 39 in wcsmbs/tst-mbrtowc2.c.'>t</a>, &amp;<a href='../Y/27791.html' title='Multiple used in 25 places.'>tret</a>);
+<a id='L104' name='L104'></a> 104       <strong class='reserved'>else</strong>
+<a id='L105' name='L105'></a> 105     <em class='brace'>{</em>
+<a id='L106' name='L106'></a> 106       <a href='../Y/23002.html' title='Multiple used in 212 places.'>pthread_mutex_lock</a> (&amp;<a href='../D/33231.html' title='Multiple defined in 2 places.'>m</a>);
+<a id='L107' name='L107'></a> 107       <a href='../Y/24403.html' title='Multiple used in 46 places.'>running</a>++;
+<a id='L108' name='L108'></a> 108       <a href='../Y/23005.html' title='Multiple used in 191 places.'>pthread_mutex_unlock</a> (&amp;<a href='../D/33231.html' title='Multiple defined in 2 places.'>m</a>);
+<a id='L109' name='L109'></a> 109     <em class='brace'>}</em>
+<a id='L110' name='L110'></a> 110 
+<a id='L111' name='L111'></a> 111       <strong class='reserved'>if</strong> (<a href='../Y/27791.html' title='Multiple used in 25 places.'>tret</a> != <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>)
+<a id='L112' name='L112'></a> 112     <em class='brace'>{</em>
+<a id='L113' name='L113'></a> 113       <a href='../Y/23144.html' title='Multiple used in 3983 places.'>puts</a> ("Thread failed");
+<a id='L114' name='L114'></a> 114       <strong class='reserved'>return</strong> 1;
+<a id='L115' name='L115'></a> 115     <em class='brace'>}</em>
+<a id='L116' name='L116'></a> 116     <em class='brace'>}</em>
+<a id='L117' name='L117'></a> 117 
+<a id='L118' name='L118'></a> 118   <em class='comment'>/* Stay in sync for detached threads and get their status.  */</em>
+<a id='L119' name='L119'></a> 119   <strong class='reserved'>while</strong> (!<a href='../Y/13096.html' title='Multiple used in 5 places.'>do_join</a>)
+<a id='L120' name='L120'></a> 120     <em class='brace'>{</em>
+<a id='L121' name='L121'></a> 121       <a href='../Y/23002.html' title='Multiple used in 212 places.'>pthread_mutex_lock</a> (&amp;<a href='../D/33231.html' title='Multiple defined in 2 places.'>m</a>);
+<a id='L122' name='L122'></a> 122       <strong class='reserved'>if</strong> (<a href='../Y/24403.html' title='Multiple used in 46 places.'>running</a> == 0)
+<a id='L123' name='L123'></a> 123     <em class='brace'>{</em>
+<a id='L124' name='L124'></a> 124       <a href='../Y/23005.html' title='Multiple used in 191 places.'>pthread_mutex_unlock</a> (&amp;<a href='../D/33231.html' title='Multiple defined in 2 places.'>m</a>);
+<a id='L125' name='L125'></a> 125       <strong class='reserved'>break</strong>;
+<a id='L126' name='L126'></a> 126     <em class='brace'>}</em>
+<a id='L127' name='L127'></a> 127       <a href='../Y/22976.html' title='Multiple used in 50 places.'>pthread_cond_wait</a> (&amp;<a href='../D/28364.html' title='Multiple defined in 2 places.'>c</a>, &amp;<a href='../D/33231.html' title='Multiple defined in 2 places.'>m</a>);
+<a id='L128' name='L128'></a> 128       <a href='../Y/23005.html' title='Multiple used in 191 places.'>pthread_mutex_unlock</a> (&amp;<a href='../D/33231.html' title='Multiple defined in 2 places.'>m</a>);
+<a id='L129' name='L129'></a> 129     <em class='brace'>}</em>
+<a id='L130' name='L130'></a> 130 
+<a id='L131' name='L131'></a> 131   <strong class='reserved'>return</strong> 0;
+<a id='L132' name='L132'></a> 132 <em class='brace'>}</em>
+<a id='L133' name='L133'></a> 133 
+<a id='L134' name='L134'></a> 134 <strong class='reserved'>static</strong> <strong class='reserved'>int</strong>
+<a id='L135' name='L135'></a> 135 <a href='../S/18389.html#L378' title='Referred from 378 in nptl/tst-default-attr.c.'>verify_detach_result</a> (<a href='../D/35089.html' title='Multiple defined in 4 places.'>pthread_attr_t</a> *<a href='../Y/10555.html' title='Multiple used in 1022 places.'>attr</a>)
+<a id='L136' name='L136'></a> 136 <em class='brace'>{</em>
+<a id='L137' name='L137'></a> 137   <strong class='reserved'>int</strong> <a href='../S/735.html#L29' title='Defined at 29 in iconvdata/tst-loading.c.'>state</a>;
+<a id='L138' name='L138'></a> 138 
+<a id='L139' name='L139'></a> 139   <a href='../D/11251.html' title='Multiple defined in 2 places.'>RETURN_IF_FAIL</a> (<a href='../Y/22953.html' title='Multiple used in 13 places.'>pthread_attr_getdetachstate</a>, <a href='../Y/10555.html' title='Multiple used in 1022 places.'>attr</a>, &amp;<a href='../S/735.html#L29' title='Defined at 29 in iconvdata/tst-loading.c.'>state</a>);
+<a id='L140' name='L140'></a> 140 
+<a id='L141' name='L141'></a> 141   <strong class='reserved'>if</strong> (<a href='../S/735.html#L29' title='Defined at 29 in iconvdata/tst-loading.c.'>state</a> != <a href='../D/10336.html' title='Multiple defined in 4 places.'>PTHREAD_CREATE_DETACHED</a>)
+<a id='L142' name='L142'></a> 142     <em class='brace'>{</em>
+<a id='L143' name='L143'></a> 143       <a href='../Y/23144.html' title='Multiple used in 3983 places.'>puts</a> ("failed to set detach state");
+<a id='L144' name='L144'></a> 144       <strong class='reserved'>return</strong> 1;
+<a id='L145' name='L145'></a> 145     <em class='brace'>}</em>
+<a id='L146' name='L146'></a> 146 
+<a id='L147' name='L147'></a> 147   <strong class='reserved'>return</strong> 0;
+<a id='L148' name='L148'></a> 148 <em class='brace'>}</em>
+<a id='L149' name='L149'></a> 149 
+<a id='L150' name='L150'></a> 150 <strong class='reserved'>static</strong> <strong class='reserved'>int</strong>
+<a id='L151' name='L151'></a> 151 <a href='../S/18389.html#L379' title='Referred from 379 in nptl/tst-default-attr.c.'>do_detach_test</a> (<strong class='reserved'>void</strong>)
+<a id='L152' name='L152'></a> 152 <em class='brace'>{</em>
+<a id='L153' name='L153'></a> 153   <a href='../D/35089.html' title='Multiple defined in 4 places.'>pthread_attr_t</a> <a href='../Y/10555.html' title='Multiple used in 1022 places.'>attr</a>;
+<a id='L154' name='L154'></a> 154 
+<a id='L155' name='L155'></a> 155   <a href='../Y/13096.html' title='Multiple used in 5 places.'>do_join</a> = <a href='../D/30360.html' title='Multiple defined in 5 places.'>false</a>;
+<a id='L156' name='L156'></a> 156   <a href='../D/11251.html' title='Multiple defined in 2 places.'>RETURN_IF_FAIL</a> (<a href='../S/17100.html#L81' title='Defined at 81 in sysdeps/htl/pthread.h.'>pthread_attr_init</a>, &amp;<a href='../Y/10555.html' title='Multiple used in 1022 places.'>attr</a>);
+<a id='L157' name='L157'></a> 157   <a href='../D/11251.html' title='Multiple defined in 2 places.'>RETURN_IF_FAIL</a> (<a href='../Y/22964.html' title='Multiple used in 21 places.'>pthread_attr_setdetachstate</a>, &amp;<a href='../Y/10555.html' title='Multiple used in 1022 places.'>attr</a>, <a href='../D/10336.html' title='Multiple defined in 4 places.'>PTHREAD_CREATE_DETACHED</a>);
+<a id='L158' name='L158'></a> 158 
+<a id='L159' name='L159'></a> 159   <a href='../D/11251.html' title='Multiple defined in 2 places.'>RETURN_IF_FAIL</a> (<a href='../S/18389.html#L90' title='Defined at 90 in nptl/tst-default-attr.c.'>run_threads</a>, &amp;<a href='../Y/10555.html' title='Multiple used in 1022 places.'>attr</a>);
+<a id='L160' name='L160'></a> 160   <strong class='reserved'>return</strong> <a href='../Y/12724.html' title='Multiple used in 3 places.'>detach_failed</a>;
+<a id='L161' name='L161'></a> 161 <em class='brace'>}</em>
+<a id='L162' name='L162'></a> 162 
+<a id='L163' name='L163'></a> 163 <strong class='reserved'>static</strong> <strong class='reserved'>int</strong>
+<a id='L164' name='L164'></a> 164 <a href='../S/18389.html#L374' title='Referred from 374 in nptl/tst-default-attr.c.'>verify_affinity_result</a> (<a href='../D/35089.html' title='Multiple defined in 4 places.'>pthread_attr_t</a> *<a href='../Y/10555.html' title='Multiple used in 1022 places.'>attr</a>)
+<a id='L165' name='L165'></a> 165 <em class='brace'>{</em>
+<a id='L166' name='L166'></a> 166   <a href='../S/911.html#L42' title='Defined at 42 in posix/bits/cpu-set.h.'>cpu_set_t</a> <a href='../Y/12145.html' title='Multiple used in 81 places.'>cpuset</a>;
+<a id='L167' name='L167'></a> 167 
+<a id='L168' name='L168'></a> 168   <a href='../D/11251.html' title='Multiple defined in 2 places.'>RETURN_IF_FAIL</a> (<a href='../Y/22952.html' title='Multiple used in 11 places.'>pthread_attr_getaffinity_np</a>, <a href='../Y/10555.html' title='Multiple used in 1022 places.'>attr</a>, <strong class='reserved'>sizeof</strong> (<a href='../Y/12145.html' title='Multiple used in 81 places.'>cpuset</a>), &amp;<a href='../Y/12145.html' title='Multiple used in 81 places.'>cpuset</a>);
+<a id='L169' name='L169'></a> 169   <strong class='reserved'>if</strong> (!<a href='../S/977.html#L94' title='Defined at 94 in posix/sched.h.'>CPU_ISSET</a> (0, &amp;<a href='../Y/12145.html' title='Multiple used in 81 places.'>cpuset</a>))
+<a id='L170' name='L170'></a> 170     <em class='brace'>{</em>
+<a id='L171' name='L171'></a> 171       <a href='../Y/23144.html' title='Multiple used in 3983 places.'>puts</a> ("failed to set cpu affinity");
+<a id='L172' name='L172'></a> 172       <strong class='reserved'>return</strong> 1;
+<a id='L173' name='L173'></a> 173     <em class='brace'>}</em>
+<a id='L174' name='L174'></a> 174 
+<a id='L175' name='L175'></a> 175   <strong class='reserved'>return</strong> 0;
+<a id='L176' name='L176'></a> 176 <em class='brace'>}</em>
+<a id='L177' name='L177'></a> 177 
+<a id='L178' name='L178'></a> 178 <strong class='reserved'>static</strong> <strong class='reserved'>int</strong>
+<a id='L179' name='L179'></a> 179 <a href='../S/18389.html#L375' title='Referred from 375 in nptl/tst-default-attr.c.'>do_affinity_test</a> (<strong class='reserved'>void</strong>)
+<a id='L180' name='L180'></a> 180 <em class='brace'>{</em>
+<a id='L181' name='L181'></a> 181   <a href='../D/35089.html' title='Multiple defined in 4 places.'>pthread_attr_t</a> <a href='../Y/10555.html' title='Multiple used in 1022 places.'>attr</a>;
+<a id='L182' name='L182'></a> 182 
+<a id='L183' name='L183'></a> 183   <a href='../D/11251.html' title='Multiple defined in 2 places.'>RETURN_IF_FAIL</a> (<a href='../S/17100.html#L81' title='Defined at 81 in sysdeps/htl/pthread.h.'>pthread_attr_init</a>, &amp;<a href='../Y/10555.html' title='Multiple used in 1022 places.'>attr</a>);
+<a id='L184' name='L184'></a> 184 
+<a id='L185' name='L185'></a> 185   <em class='comment'>/* Processor affinity.  Like scheduling policy, this could fail if the user</em>
+<a id='L186' name='L186'></a> 186 <em class='comment'>     does not have the necessary privileges.  So we only spew a warning if</em>
+<a id='L187' name='L187'></a> 187 <em class='comment'>     pthread_create fails with EPERM.  A computer has at least one CPU.  */</em>
+<a id='L188' name='L188'></a> 188   <a href='../S/911.html#L42' title='Defined at 42 in posix/bits/cpu-set.h.'>cpu_set_t</a> <a href='../Y/12145.html' title='Multiple used in 81 places.'>cpuset</a>;
+<a id='L189' name='L189'></a> 189   <a href='../S/977.html#L96' title='Defined at 96 in posix/sched.h.'>CPU_ZERO</a> (&amp;<a href='../Y/12145.html' title='Multiple used in 81 places.'>cpuset</a>);
+<a id='L190' name='L190'></a> 190   <a href='../S/977.html#L92' title='Defined at 92 in posix/sched.h.'>CPU_SET</a> (0, &amp;<a href='../Y/12145.html' title='Multiple used in 81 places.'>cpuset</a>);
+<a id='L191' name='L191'></a> 191   <a href='../D/11251.html' title='Multiple defined in 2 places.'>RETURN_IF_FAIL</a> (<a href='../Y/22963.html' title='Multiple used in 10 places.'>pthread_attr_setaffinity_np</a>, &amp;<a href='../Y/10555.html' title='Multiple used in 1022 places.'>attr</a>, <strong class='reserved'>sizeof</strong> (<a href='../Y/12145.html' title='Multiple used in 81 places.'>cpuset</a>), &amp;<a href='../Y/12145.html' title='Multiple used in 81 places.'>cpuset</a>);
+<a id='L192' name='L192'></a> 192 
+<a id='L193' name='L193'></a> 193   <strong class='reserved'>int</strong> <a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a> = <a href='../S/18389.html#L90' title='Defined at 90 in nptl/tst-default-attr.c.'>run_threads</a> (&amp;<a href='../Y/10555.html' title='Multiple used in 1022 places.'>attr</a>);
+<a id='L194' name='L194'></a> 194 
+<a id='L195' name='L195'></a> 195   <strong class='reserved'>if</strong> (<a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a> == <a href='../D/3685.html' title='Multiple defined in 2 places.'>EPERM</a>)
+<a id='L196' name='L196'></a> 196     <em class='brace'>{</em>
+<a id='L197' name='L197'></a> 197       <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("Skipping CPU Affinity test: %s\n", <a href='../S/1932.html#L22' title='Defined at 22 in string/strerror.c.'>strerror</a> (<a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a>));
+<a id='L198' name='L198'></a> 198       <strong class='reserved'>return</strong> 0;
+<a id='L199' name='L199'></a> 199     <em class='brace'>}</em>
+<a id='L200' name='L200'></a> 200   <strong class='reserved'>else</strong> <strong class='reserved'>if</strong> (<a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a> != 0)
+<a id='L201' name='L201'></a> 201     <strong class='reserved'>return</strong> <a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a>;
+<a id='L202' name='L202'></a> 202 
+<a id='L203' name='L203'></a> 203   <strong class='reserved'>return</strong> 0;
+<a id='L204' name='L204'></a> 204 <em class='brace'>}</em>
+<a id='L205' name='L205'></a> 205 
+<a id='L206' name='L206'></a> 206 <strong class='reserved'>static</strong> <strong class='reserved'>int</strong>
+<a id='L207' name='L207'></a> 207 <a href='../S/18389.html#L370' title='Referred from 370 in nptl/tst-default-attr.c.'>verify_sched_result</a> (<a href='../D/35089.html' title='Multiple defined in 4 places.'>pthread_attr_t</a> *<a href='../Y/10555.html' title='Multiple used in 1022 places.'>attr</a>)
+<a id='L208' name='L208'></a> 208 <em class='brace'>{</em>
+<a id='L209' name='L209'></a> 209   <strong class='reserved'>int</strong> <a href='../Y/16796.html' title='Multiple used in 3 places.'>inherited</a>, <a href='../Y/22517.html' title='Multiple used in 47 places.'>policy</a>;
+<a id='L210' name='L210'></a> 210   <strong class='reserved'>struct</strong> <a href='../S/186.html#L23' title='Defined at 23 in bits/types/struct_sched_param.h.'>sched_param</a> <a href='../Y/22178.html' title='Multiple used in 113 places.'>param</a>;
+<a id='L211' name='L211'></a> 211 
+<a id='L212' name='L212'></a> 212   <a href='../D/11251.html' title='Multiple defined in 2 places.'>RETURN_IF_FAIL</a> (<a href='../Y/22954.html' title='Multiple used in 13 places.'>pthread_attr_getinheritsched</a>, <a href='../Y/10555.html' title='Multiple used in 1022 places.'>attr</a>, &amp;<a href='../Y/16796.html' title='Multiple used in 3 places.'>inherited</a>);
+<a id='L213' name='L213'></a> 213   <strong class='reserved'>if</strong> (<a href='../Y/16796.html' title='Multiple used in 3 places.'>inherited</a> != <a href='../D/10342.html' title='Multiple defined in 4 places.'>PTHREAD_EXPLICIT_SCHED</a>)
+<a id='L214' name='L214'></a> 214     <em class='brace'>{</em>
+<a id='L215' name='L215'></a> 215       <a href='../Y/23144.html' title='Multiple used in 3983 places.'>puts</a> ("failed to set EXPLICIT_SCHED (%d != %d)");
+<a id='L216' name='L216'></a> 216       <strong class='reserved'>return</strong> 1;
+<a id='L217' name='L217'></a> 217     <em class='brace'>}</em>
+<a id='L218' name='L218'></a> 218 
+<a id='L219' name='L219'></a> 219   <a href='../D/11251.html' title='Multiple defined in 2 places.'>RETURN_IF_FAIL</a> (<a href='../Y/22956.html' title='Multiple used in 11 places.'>pthread_attr_getschedpolicy</a>, <a href='../Y/10555.html' title='Multiple used in 1022 places.'>attr</a>, &amp;<a href='../Y/22517.html' title='Multiple used in 47 places.'>policy</a>);
+<a id='L220' name='L220'></a> 220   <strong class='reserved'>if</strong> (<a href='../Y/22517.html' title='Multiple used in 47 places.'>policy</a> != <a href='../D/13567.html' title='Multiple defined in 2 places.'>SCHED_RR</a>)
+<a id='L221' name='L221'></a> 221     <em class='brace'>{</em>
+<a id='L222' name='L222'></a> 222       <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("failed to set SCHED_RR (%d != %d)\n", <a href='../Y/22517.html' title='Multiple used in 47 places.'>policy</a>, <a href='../D/13567.html' title='Multiple defined in 2 places.'>SCHED_RR</a>);
+<a id='L223' name='L223'></a> 223       <strong class='reserved'>return</strong> 1;
+<a id='L224' name='L224'></a> 224     <em class='brace'>}</em>
+<a id='L225' name='L225'></a> 225 
+<a id='L226' name='L226'></a> 226   <a href='../D/11251.html' title='Multiple defined in 2 places.'>RETURN_IF_FAIL</a> (<a href='../Y/22955.html' title='Multiple used in 6 places.'>pthread_attr_getschedparam</a>, <a href='../Y/10555.html' title='Multiple used in 1022 places.'>attr</a>, &amp;<a href='../Y/22178.html' title='Multiple used in 113 places.'>param</a>);
+<a id='L227' name='L227'></a> 227   <strong class='reserved'>if</strong> (<a href='../Y/22178.html' title='Multiple used in 113 places.'>param</a>.<a href='../S/977.html#L47' title='Defined at 47 in posix/sched.h.'>sched_priority</a> != 42)
+<a id='L228' name='L228'></a> 228     <em class='brace'>{</em>
+<a id='L229' name='L229'></a> 229       <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("failed to set sched_priority (%d != %d)\n",
+<a id='L230' name='L230'></a> 230           <a href='../Y/22178.html' title='Multiple used in 113 places.'>param</a>.<a href='../S/977.html#L47' title='Defined at 47 in posix/sched.h.'>sched_priority</a>, 42);
+<a id='L231' name='L231'></a> 231       <strong class='reserved'>return</strong> 1;
+<a id='L232' name='L232'></a> 232     <em class='brace'>}</em>
+<a id='L233' name='L233'></a> 233 
+<a id='L234' name='L234'></a> 234   <strong class='reserved'>return</strong> 0;
+<a id='L235' name='L235'></a> 235 <em class='brace'>}</em>
+<a id='L236' name='L236'></a> 236 
+<a id='L237' name='L237'></a> 237 <strong class='reserved'>static</strong> <strong class='reserved'>int</strong>
+<a id='L238' name='L238'></a> 238 <a href='../S/18389.html#L371' title='Referred from 371 in nptl/tst-default-attr.c.'>do_sched_test</a> (<strong class='reserved'>void</strong>)
+<a id='L239' name='L239'></a> 239 <em class='brace'>{</em>
+<a id='L240' name='L240'></a> 240   <a href='../D/35089.html' title='Multiple defined in 4 places.'>pthread_attr_t</a> <a href='../Y/10555.html' title='Multiple used in 1022 places.'>attr</a>;
+<a id='L241' name='L241'></a> 241 
+<a id='L242' name='L242'></a> 242   <a href='../D/11251.html' title='Multiple defined in 2 places.'>RETURN_IF_FAIL</a> (<a href='../S/17100.html#L81' title='Defined at 81 in sysdeps/htl/pthread.h.'>pthread_attr_init</a>, &amp;<a href='../Y/10555.html' title='Multiple used in 1022 places.'>attr</a>);
+<a id='L243' name='L243'></a> 243 
+<a id='L244' name='L244'></a> 244   <em class='comment'>/* Scheduling policy.  Note that we don't always test these since it's</em>
+<a id='L245' name='L245'></a> 245 <em class='comment'>     possible that the user the tests run as don't have the appropriate</em>
+<a id='L246' name='L246'></a> 246 <em class='comment'>     privileges.  */</em>
+<a id='L247' name='L247'></a> 247   <a href='../D/11251.html' title='Multiple defined in 2 places.'>RETURN_IF_FAIL</a> (<a href='../Y/22965.html' title='Multiple used in 12 places.'>pthread_attr_setinheritsched</a>, &amp;<a href='../Y/10555.html' title='Multiple used in 1022 places.'>attr</a>, <a href='../D/10342.html' title='Multiple defined in 4 places.'>PTHREAD_EXPLICIT_SCHED</a>);
+<a id='L248' name='L248'></a> 248   <a href='../D/11251.html' title='Multiple defined in 2 places.'>RETURN_IF_FAIL</a> (<a href='../Y/22967.html' title='Multiple used in 14 places.'>pthread_attr_setschedpolicy</a>, &amp;<a href='../Y/10555.html' title='Multiple used in 1022 places.'>attr</a>, <a href='../D/13567.html' title='Multiple defined in 2 places.'>SCHED_RR</a>);
+<a id='L249' name='L249'></a> 249 
+<a id='L250' name='L250'></a> 250   <strong class='reserved'>struct</strong> <a href='../S/186.html#L23' title='Defined at 23 in bits/types/struct_sched_param.h.'>sched_param</a> <a href='../Y/22178.html' title='Multiple used in 113 places.'>param</a>;
+<a id='L251' name='L251'></a> 251   <a href='../Y/22178.html' title='Multiple used in 113 places.'>param</a>.<a href='../S/977.html#L47' title='Defined at 47 in posix/sched.h.'>sched_priority</a> = 42;
+<a id='L252' name='L252'></a> 252   <a href='../D/11251.html' title='Multiple defined in 2 places.'>RETURN_IF_FAIL</a> (<a href='../Y/22966.html' title='Multiple used in 8 places.'>pthread_attr_setschedparam</a>, &amp;<a href='../Y/10555.html' title='Multiple used in 1022 places.'>attr</a>, &amp;<a href='../Y/22178.html' title='Multiple used in 113 places.'>param</a>);
+<a id='L253' name='L253'></a> 253 
+<a id='L254' name='L254'></a> 254   <strong class='reserved'>int</strong> <a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a> = <a href='../S/18389.html#L90' title='Defined at 90 in nptl/tst-default-attr.c.'>run_threads</a> (&amp;<a href='../Y/10555.html' title='Multiple used in 1022 places.'>attr</a>);
+<a id='L255' name='L255'></a> 255 
+<a id='L256' name='L256'></a> 256   <strong class='reserved'>if</strong> (<a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a> == <a href='../D/3685.html' title='Multiple defined in 2 places.'>EPERM</a>)
+<a id='L257' name='L257'></a> 257     <em class='brace'>{</em>
+<a id='L258' name='L258'></a> 258       <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("Skipping Scheduler Attributes test: %s\n", <a href='../S/1932.html#L22' title='Defined at 22 in string/strerror.c.'>strerror</a> (<a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a>));
+<a id='L259' name='L259'></a> 259       <strong class='reserved'>return</strong> 0;
+<a id='L260' name='L260'></a> 260     <em class='brace'>}</em>
+<a id='L261' name='L261'></a> 261   <strong class='reserved'>else</strong> <strong class='reserved'>if</strong> (<a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a> != 0)
+<a id='L262' name='L262'></a> 262     <strong class='reserved'>return</strong> <a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a>;
+<a id='L263' name='L263'></a> 263 
+<a id='L264' name='L264'></a> 264   <strong class='reserved'>return</strong> 0;
+<a id='L265' name='L265'></a> 265 <em class='brace'>}</em>
+<a id='L266' name='L266'></a> 266 
+<a id='L267' name='L267'></a> 267 <strong class='reserved'>static</strong> <strong class='reserved'>int</strong>
+<a id='L268' name='L268'></a> 268 <a href='../S/18389.html#L366' title='Referred from 366 in nptl/tst-default-attr.c.'>verify_guardsize_result</a> (<a href='../D/35089.html' title='Multiple defined in 4 places.'>pthread_attr_t</a> *<a href='../Y/10555.html' title='Multiple used in 1022 places.'>attr</a>)
+<a id='L269' name='L269'></a> 269 <em class='brace'>{</em>
+<a id='L270' name='L270'></a> 270   <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/15861.html' title='Multiple used in 107 places.'>guard</a>;
+<a id='L271' name='L271'></a> 271 
+<a id='L272' name='L272'></a> 272   <a href='../D/11251.html' title='Multiple defined in 2 places.'>RETURN_IF_FAIL</a> (<a href='../S/17187.html#L23' title='Defined at 23 in sysdeps/htl/pt-attr-getguardsize.c.'>pthread_attr_getguardsize</a>, <a href='../Y/10555.html' title='Multiple used in 1022 places.'>attr</a>, &amp;<a href='../Y/15861.html' title='Multiple used in 107 places.'>guard</a>);
+<a id='L273' name='L273'></a> 273 
+<a id='L274' name='L274'></a> 274   <strong class='reserved'>if</strong> (<a href='../Y/15863.html' title='Multiple used in 98 places.'>guardsize</a> != <a href='../Y/15861.html' title='Multiple used in 107 places.'>guard</a>)
+<a id='L275' name='L275'></a> 275     <em class='brace'>{</em>
+<a id='L276' name='L276'></a> 276       <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("failed to set guardsize (%zu, %zu)\n", <a href='../Y/15863.html' title='Multiple used in 98 places.'>guardsize</a>, <a href='../Y/15861.html' title='Multiple used in 107 places.'>guard</a>);
+<a id='L277' name='L277'></a> 277       <strong class='reserved'>return</strong> 1;
+<a id='L278' name='L278'></a> 278     <em class='brace'>}</em>
+<a id='L279' name='L279'></a> 279 
+<a id='L280' name='L280'></a> 280   <strong class='reserved'>return</strong> 0;
+<a id='L281' name='L281'></a> 281 <em class='brace'>}</em>
+<a id='L282' name='L282'></a> 282 
+<a id='L283' name='L283'></a> 283 <strong class='reserved'>static</strong> <strong class='reserved'>int</strong>
+<a id='L284' name='L284'></a> 284 <a href='../S/18389.html#L367' title='Referred from 367 in nptl/tst-default-attr.c.'>do_guardsize_test</a> (<strong class='reserved'>void</strong>)
+<a id='L285' name='L285'></a> 285 <em class='brace'>{</em>
+<a id='L286' name='L286'></a> 286   <strong class='reserved'>long</strong> <strong class='reserved'>int</strong> <a href='../Y/22170.html' title='Multiple used in 151 places.'>pagesize</a> = <a href='../S/1082.html#L56' title='Defined at 56 in posix/glob.c.'>sysconf</a> (<a href='../D/20206.html' title='Multiple defined in 4 places.'>_SC_PAGESIZE</a>);
+<a id='L287' name='L287'></a> 287   <a href='../D/35089.html' title='Multiple defined in 4 places.'>pthread_attr_t</a> <a href='../Y/10555.html' title='Multiple used in 1022 places.'>attr</a>;
+<a id='L288' name='L288'></a> 288 
+<a id='L289' name='L289'></a> 289   <strong class='reserved'>if</strong> (<a href='../Y/22170.html' title='Multiple used in 151 places.'>pagesize</a> &lt; 0)
+<a id='L290' name='L290'></a> 290     <em class='brace'>{</em>
+<a id='L291' name='L291'></a> 291       <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("sysconf failed: %s\n", <a href='../S/1932.html#L22' title='Defined at 22 in string/strerror.c.'>strerror</a> (<a href='../D/30023.html' title='Multiple defined in 13 places.'>errno</a>));
+<a id='L292' name='L292'></a> 292       <strong class='reserved'>return</strong> 1;
+<a id='L293' name='L293'></a> 293     <em class='brace'>}</em>
+<a id='L294' name='L294'></a> 294 
+<a id='L295' name='L295'></a> 295   <a href='../D/11251.html' title='Multiple defined in 2 places.'>RETURN_IF_FAIL</a> (<a href='../Y/22985.html' title='Multiple used in 8 places.'>pthread_getattr_default_np</a>, &amp;<a href='../Y/10555.html' title='Multiple used in 1022 places.'>attr</a>);
+<a id='L296' name='L296'></a> 296 
+<a id='L297' name='L297'></a> 297   <em class='comment'>/* Increase default guardsize by a page.  */</em>
+<a id='L298' name='L298'></a> 298   <a href='../D/11251.html' title='Multiple defined in 2 places.'>RETURN_IF_FAIL</a> (<a href='../S/17187.html#L23' title='Defined at 23 in sysdeps/htl/pt-attr-getguardsize.c.'>pthread_attr_getguardsize</a>, &amp;<a href='../Y/10555.html' title='Multiple used in 1022 places.'>attr</a>, &amp;<a href='../Y/15863.html' title='Multiple used in 98 places.'>guardsize</a>);
+<a id='L299' name='L299'></a> 299   <a href='../Y/15863.html' title='Multiple used in 98 places.'>guardsize</a> += <a href='../Y/22170.html' title='Multiple used in 151 places.'>pagesize</a>;
+<a id='L300' name='L300'></a> 300   <a href='../D/11251.html' title='Multiple defined in 2 places.'>RETURN_IF_FAIL</a> (<a href='../S/17163.html#L23' title='Defined at 23 in sysdeps/htl/pt-attr-setguardsize.c.'>pthread_attr_setguardsize</a>, &amp;<a href='../Y/10555.html' title='Multiple used in 1022 places.'>attr</a>, <a href='../Y/15863.html' title='Multiple used in 98 places.'>guardsize</a>);
+<a id='L301' name='L301'></a> 301   <a href='../D/11251.html' title='Multiple defined in 2 places.'>RETURN_IF_FAIL</a> (<a href='../S/18389.html#L90' title='Defined at 90 in nptl/tst-default-attr.c.'>run_threads</a>, &amp;<a href='../Y/10555.html' title='Multiple used in 1022 places.'>attr</a>);
+<a id='L302' name='L302'></a> 302 
+<a id='L303' name='L303'></a> 303   <strong class='reserved'>return</strong> 0;
+<a id='L304' name='L304'></a> 304 <em class='brace'>}</em>
+<a id='L305' name='L305'></a> 305 
+<a id='L306' name='L306'></a> 306 <strong class='reserved'>static</strong> <strong class='reserved'>int</strong>
+<a id='L307' name='L307'></a> 307 <a href='../S/18389.html#L362' title='Referred from 362 in nptl/tst-default-attr.c.'>verify_stacksize_result</a> (<a href='../D/35089.html' title='Multiple defined in 4 places.'>pthread_attr_t</a> *<a href='../Y/10555.html' title='Multiple used in 1022 places.'>attr</a>)
+<a id='L308' name='L308'></a> 308 <em class='brace'>{</em>
+<a id='L309' name='L309'></a> 309   <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/26025.html' title='Multiple used in 187 places.'>stack</a>;
+<a id='L310' name='L310'></a> 310 
+<a id='L311' name='L311'></a> 311   <a href='../D/11251.html' title='Multiple defined in 2 places.'>RETURN_IF_FAIL</a> (<a href='../Y/22961.html' title='Multiple used in 7 places.'>pthread_attr_getstacksize</a>, <a href='../Y/10555.html' title='Multiple used in 1022 places.'>attr</a>, &amp;<a href='../Y/26025.html' title='Multiple used in 187 places.'>stack</a>);
+<a id='L312' name='L312'></a> 312 
+<a id='L313' name='L313'></a> 313   <strong class='reserved'>if</strong> (<a href='../Y/26060.html' title='Multiple used in 144 places.'>stacksize</a> != <a href='../Y/26025.html' title='Multiple used in 187 places.'>stack</a>)
+<a id='L314' name='L314'></a> 314     <em class='brace'>{</em>
+<a id='L315' name='L315'></a> 315       <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("failed to set default stacksize (%zu, %zu)\n", <a href='../Y/26060.html' title='Multiple used in 144 places.'>stacksize</a>, <a href='../Y/26025.html' title='Multiple used in 187 places.'>stack</a>);
+<a id='L316' name='L316'></a> 316       <strong class='reserved'>return</strong> 1;
+<a id='L317' name='L317'></a> 317     <em class='brace'>}</em>
+<a id='L318' name='L318'></a> 318 
+<a id='L319' name='L319'></a> 319   <strong class='reserved'>return</strong> 0;
+<a id='L320' name='L320'></a> 320 <em class='brace'>}</em>
+<a id='L321' name='L321'></a> 321 
+<a id='L322' name='L322'></a> 322 <strong class='reserved'>static</strong> <strong class='reserved'>int</strong>
+<a id='L323' name='L323'></a> 323 <a href='../S/18389.html#L363' title='Referred from 363 in nptl/tst-default-attr.c.'>do_stacksize_test</a> (<strong class='reserved'>void</strong>)
+<a id='L324' name='L324'></a> 324 <em class='brace'>{</em>
+<a id='L325' name='L325'></a> 325   <strong class='reserved'>long</strong> <strong class='reserved'>int</strong> <a href='../Y/22170.html' title='Multiple used in 151 places.'>pagesize</a> = <a href='../S/1082.html#L56' title='Defined at 56 in posix/glob.c.'>sysconf</a> (<a href='../D/20206.html' title='Multiple defined in 4 places.'>_SC_PAGESIZE</a>);
+<a id='L326' name='L326'></a> 326   <a href='../D/35089.html' title='Multiple defined in 4 places.'>pthread_attr_t</a> <a href='../Y/10555.html' title='Multiple used in 1022 places.'>attr</a>;
+<a id='L327' name='L327'></a> 327 
+<a id='L328' name='L328'></a> 328   <strong class='reserved'>if</strong> (<a href='../Y/22170.html' title='Multiple used in 151 places.'>pagesize</a> &lt; 0)
+<a id='L329' name='L329'></a> 329     <em class='brace'>{</em>
+<a id='L330' name='L330'></a> 330       <a href='../D/34978.html' title='Multiple defined in 4 places.'>printf</a> ("sysconf failed: %s\n", <a href='../S/1932.html#L22' title='Defined at 22 in string/strerror.c.'>strerror</a> (<a href='../D/30023.html' title='Multiple defined in 13 places.'>errno</a>));
+<a id='L331' name='L331'></a> 331       <strong class='reserved'>return</strong> 1;
+<a id='L332' name='L332'></a> 332     <em class='brace'>}</em>
+<a id='L333' name='L333'></a> 333 
+<a id='L334' name='L334'></a> 334   <em class='comment'>/* Perturb the size by a page so that we're not aligned on the 64K boundary.</em>
+<a id='L335' name='L335'></a> 335 <em class='comment'>     pthread_create does this perturbation on x86 to avoid causing the 64k</em>
+<a id='L336' name='L336'></a> 336 <em class='comment'>     aliasing conflict.  We want to prevent pthread_create from doing that</em>
+<a id='L337' name='L337'></a> 337 <em class='comment'>     since it is not consistent for all architectures.  */</em>
+<a id='L338' name='L338'></a> 338   <a href='../Y/26060.html' title='Multiple used in 144 places.'>stacksize</a> += <a href='../Y/22170.html' title='Multiple used in 151 places.'>pagesize</a>;
+<a id='L339' name='L339'></a> 339 
+<a id='L340' name='L340'></a> 340   <a href='../D/11251.html' title='Multiple defined in 2 places.'>RETURN_IF_FAIL</a> (<a href='../S/17100.html#L81' title='Defined at 81 in sysdeps/htl/pthread.h.'>pthread_attr_init</a>, &amp;<a href='../Y/10555.html' title='Multiple used in 1022 places.'>attr</a>);
+<a id='L341' name='L341'></a> 341 
+<a id='L342' name='L342'></a> 342   <em class='comment'>/* Run twice to ensure that we don't give a false positive.  */</em>
+<a id='L343' name='L343'></a> 343   <a href='../D/11251.html' title='Multiple defined in 2 places.'>RETURN_IF_FAIL</a> (<a href='../Y/22971.html' title='Multiple used in 35 places.'>pthread_attr_setstacksize</a>, &amp;<a href='../Y/10555.html' title='Multiple used in 1022 places.'>attr</a>, <a href='../Y/26060.html' title='Multiple used in 144 places.'>stacksize</a>);
+<a id='L344' name='L344'></a> 344   <a href='../D/11251.html' title='Multiple defined in 2 places.'>RETURN_IF_FAIL</a> (<a href='../S/18389.html#L90' title='Defined at 90 in nptl/tst-default-attr.c.'>run_threads</a>, &amp;<a href='../Y/10555.html' title='Multiple used in 1022 places.'>attr</a>);
+<a id='L345' name='L345'></a> 345   <a href='../Y/26060.html' title='Multiple used in 144 places.'>stacksize</a> *= 2;
+<a id='L346' name='L346'></a> 346   <a href='../D/11251.html' title='Multiple defined in 2 places.'>RETURN_IF_FAIL</a> (<a href='../Y/22971.html' title='Multiple used in 35 places.'>pthread_attr_setstacksize</a>, &amp;<a href='../Y/10555.html' title='Multiple used in 1022 places.'>attr</a>, <a href='../Y/26060.html' title='Multiple used in 144 places.'>stacksize</a>);
+<a id='L347' name='L347'></a> 347   <a href='../D/11251.html' title='Multiple defined in 2 places.'>RETURN_IF_FAIL</a> (<a href='../S/18389.html#L90' title='Defined at 90 in nptl/tst-default-attr.c.'>run_threads</a>, &amp;<a href='../Y/10555.html' title='Multiple used in 1022 places.'>attr</a>);
+<a id='L348' name='L348'></a> 348   <strong class='reserved'>return</strong> 0;
+<a id='L349' name='L349'></a> 349 <em class='brace'>}</em>
+<a id='L350' name='L350'></a> 350 
+<a id='L351' name='L351'></a> 351 <em class='comment'>/* We test each attribute separately because sched and affinity tests may need</em>
+<a id='L352' name='L352'></a> 352 <em class='comment'>   additional user privileges that may not be available during the test run.</em>
+<a id='L353' name='L353'></a> 353 <em class='comment'>   Each attribute test is a set of two functions, viz. a function to set the</em>
+<a id='L354' name='L354'></a> 354 <em class='comment'>   default attribute (do_foo_test) and another to verify its result</em>
+<a id='L355' name='L355'></a> 355 <em class='comment'>   (verify_foo_result).  Each test spawns a thread and checks (1) if the</em>
+<a id='L356' name='L356'></a> 356 <em class='comment'>   attribute values were applied correctly and (2) if the change in the default</em>
+<a id='L357' name='L357'></a> 357 <em class='comment'>   value reflected.  */</em>
+<a id='L358' name='L358'></a> 358 <strong class='reserved'>static</strong> <strong class='reserved'>int</strong>
+<a id='L359' name='L359'></a> 359 <a href='../R/18782.html' title='Multiple referred from 1850 places.'>do_test</a> (<strong class='reserved'>void</strong>)
+<a id='L360' name='L360'></a> 360 <em class='brace'>{</em>
+<a id='L361' name='L361'></a> 361   <a href='../Y/23144.html' title='Multiple used in 3983 places.'>puts</a> ("stacksize test");
+<a id='L362' name='L362'></a> 362   <a href='../Y/28656.html' title='Multiple used in 8 places.'>verify_result</a> = <a href='../S/18389.html#L307' title='Defined at 307 in nptl/tst-default-attr.c.'>verify_stacksize_result</a>;
+<a id='L363' name='L363'></a> 363   <a href='../D/11251.html' title='Multiple defined in 2 places.'>RETURN_IF_FAIL</a> (<a href='../S/18389.html#L323' title='Defined at 323 in nptl/tst-default-attr.c.'>do_stacksize_test</a>);
+<a id='L364' name='L364'></a> 364 
+<a id='L365' name='L365'></a> 365   <a href='../Y/23144.html' title='Multiple used in 3983 places.'>puts</a> ("guardsize test");
+<a id='L366' name='L366'></a> 366   <a href='../Y/28656.html' title='Multiple used in 8 places.'>verify_result</a> = <a href='../S/18389.html#L268' title='Defined at 268 in nptl/tst-default-attr.c.'>verify_guardsize_result</a>;
+<a id='L367' name='L367'></a> 367   <a href='../D/11251.html' title='Multiple defined in 2 places.'>RETURN_IF_FAIL</a> (<a href='../S/18389.html#L284' title='Defined at 284 in nptl/tst-default-attr.c.'>do_guardsize_test</a>);
+<a id='L368' name='L368'></a> 368 
+<a id='L369' name='L369'></a> 369   <a href='../Y/23144.html' title='Multiple used in 3983 places.'>puts</a> ("sched test");
+<a id='L370' name='L370'></a> 370   <a href='../Y/28656.html' title='Multiple used in 8 places.'>verify_result</a> = <a href='../S/18389.html#L207' title='Defined at 207 in nptl/tst-default-attr.c.'>verify_sched_result</a>;
+<a id='L371' name='L371'></a> 371   <a href='../D/11251.html' title='Multiple defined in 2 places.'>RETURN_IF_FAIL</a> (<a href='../S/18389.html#L238' title='Defined at 238 in nptl/tst-default-attr.c.'>do_sched_test</a>);
+<a id='L372' name='L372'></a> 372 
+<a id='L373' name='L373'></a> 373   <a href='../Y/23144.html' title='Multiple used in 3983 places.'>puts</a> ("affinity test");
+<a id='L374' name='L374'></a> 374   <a href='../Y/28656.html' title='Multiple used in 8 places.'>verify_result</a> = <a href='../S/18389.html#L164' title='Defined at 164 in nptl/tst-default-attr.c.'>verify_affinity_result</a>;
+<a id='L375' name='L375'></a> 375   <a href='../D/11251.html' title='Multiple defined in 2 places.'>RETURN_IF_FAIL</a> (<a href='../S/18389.html#L179' title='Defined at 179 in nptl/tst-default-attr.c.'>do_affinity_test</a>);
+<a id='L376' name='L376'></a> 376 
+<a id='L377' name='L377'></a> 377   <a href='../Y/23144.html' title='Multiple used in 3983 places.'>puts</a> ("detach test");
+<a id='L378' name='L378'></a> 378   <a href='../Y/28656.html' title='Multiple used in 8 places.'>verify_result</a> = <a href='../S/18389.html#L135' title='Defined at 135 in nptl/tst-default-attr.c.'>verify_detach_result</a>;
+<a id='L379' name='L379'></a> 379   <a href='../D/11251.html' title='Multiple defined in 2 places.'>RETURN_IF_FAIL</a> (<a href='../S/18389.html#L151' title='Defined at 151 in nptl/tst-default-attr.c.'>do_detach_test</a>);
+<a id='L380' name='L380'></a> 380 
+<a id='L381' name='L381'></a> 381   <strong class='reserved'>return</strong> 0;
+<a id='L382' name='L382'></a> 382 <em class='brace'>}</em>
+<a id='L383' name='L383'></a> 383 
+<a id='L384' name='L384'></a> 384 <em class='sharp'>#define</em> <a href='../R/8619.html' title='Multiple referred from 7 places.'>TEST_FUNCTION</a> <a href='../D/29701.html' title='Multiple defined in 1421 places.'>do_test</a> ()
+<a id='L385' name='L385'></a> 385 <em class='sharp'>#include</em> "../test-skeleton.c"
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L49'>[^]</a><a href='#L359'>[v]</a><a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

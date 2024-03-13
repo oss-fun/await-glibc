@@ -1,0 +1,206 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>sysdeps/sparc/sparc64/memmove.S</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18977.html'>sysdeps</a>/<a href='../files/19227.html'>sparc</a>/<a href='../files/19240.html'>sparc64</a>/memmove.S</h2>
+<em class='comment'>/* [&lt;][&gt;][^][v][top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* Copy memory to memory until the specified number of bytes</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   has been copied.  Overlap is handled correctly.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'>   For SPARC V9.</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'>   Copyright (C) 2017-2022 Free Software Foundation, Inc.</em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'></em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'></em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'></em>
+<a id='L17' name='L17'></a>  17 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L18' name='L18'></a>  18 <em class='comment'>   License along with the GNU C Library; if not, see</em>
+<a id='L19' name='L19'></a>  19 <em class='comment'>   &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L20' name='L20'></a>  20 
+<a id='L21' name='L21'></a>  21 <em class='sharp'>#include</em> &lt;<a href='../I/5967.html'>sysdep.h</a>&gt;
+<a id='L22' name='L22'></a>  22 
+<a id='L23' name='L23'></a>  23 <em class='sharp'>#ifndef</em> <a href='../D/17486.html' title='Multiple defined in 43 places.'>XCC</a>
+<a id='L24' name='L24'></a>  24 <em class='sharp'># define</em> <a href='../R/9775.html' title='Multiple referred from 23 places.'>XCC</a>    xcc
+<a id='L25' name='L25'></a>  25     .register   %g2, #scratch
+<a id='L26' name='L26'></a>  26 <em class='sharp'>#endif</em>
+<a id='L27' name='L27'></a>  27 
+<a id='L28' name='L28'></a>  28 <a href='../D/3651.html' title='Multiple defined in 54 places.'>ENTRY</a>(<a href='../R/21818.html' title='Multiple referred from 164 places.'>memmove</a>)
+<a id='L29' name='L29'></a>  29     mov %o0, %g2    <em class='comment'>/* Save pointer to destination  */</em>
+<a id='L30' name='L30'></a>  30     cmp %o1, %o0    <em class='comment'>/* if from address is &gt;= to use forward copy  */</em>
+<a id='L31' name='L31'></a>  31     bgeu,a  %XCC, 2f    <em class='comment'>/* else use backward if ...  */</em>
+<a id='L32' name='L32'></a>  32      cmp    %o2, 17     <em class='comment'>/* delay slot, for small counts copy bytes  */</em>
+<a id='L33' name='L33'></a>  33 
+<a id='L34' name='L34'></a>  34     sub %o0, %o1, %o4   <em class='comment'>/* get difference of two addresses  */</em>
+<a id='L35' name='L35'></a>  35     cmp %o2, %o4    <em class='comment'>/* compare size and difference of addresses  */</em>
+<a id='L36' name='L36'></a>  36     bgu %XCC, .Lovbc    <em class='comment'>/* if size is bigger, have to do overlapped copy  */</em>
+<a id='L37' name='L37'></a>  37      cmp    %o2, 17     <em class='comment'>/* delay slot, for small counts copy bytes  */</em>
+<a id='L38' name='L38'></a>  38 <em class='comment'>/*</em>
+<a id='L39' name='L39'></a>  39 <em class='comment'> * normal, copy forwards</em>
+<a id='L40' name='L40'></a>  40 <em class='comment'> */</em>
+<a id='L41' name='L41'></a>  41 2:  ble %XCC, .Ldbytecp
+<a id='L42' name='L42'></a>  42      andcc  %o1, 3, %o5 <em class='comment'>/* is src word aligned  */</em>
+<a id='L43' name='L43'></a>  43     bz,pn   %icc, .Laldst
+<a id='L44' name='L44'></a>  44      cmp    %o5, 2      <em class='comment'>/* is src half-word aligned  */</em>
+<a id='L45' name='L45'></a>  45     be,pn   %icc, .Ls2alg
+<a id='L46' name='L46'></a>  46      cmp    %o5, 3      <em class='comment'>/* src is byte aligned  */</em>
+<a id='L47' name='L47'></a>  47     ldub    [%o1], %o3  <em class='comment'>/* move 1 or 3 bytes to align it  */</em>
+<a id='L48' name='L48'></a>  48     inc 1, %o1
+<a id='L49' name='L49'></a>  49     stb %o3, [%o0]  <em class='comment'>/* move a byte to align src  */</em>
+<a id='L50' name='L50'></a>  50     inc 1, %o0
+<a id='L51' name='L51'></a>  51     bne,pn  %icc, .Ls2alg
+<a id='L52' name='L52'></a>  52      dec    %o2
+<a id='L53' name='L53'></a>  53     b   .Lald       <em class='comment'>/* now go align dest  */</em>
+<a id='L54' name='L54'></a>  54      andcc  %o0, 3, %o5
+<a id='L55' name='L55'></a>  55 
+<a id='L56' name='L56'></a>  56 .Ls2alg:
+<a id='L57' name='L57'></a>  57     lduh    [%o1], %o3  <em class='comment'>/* know src is 2 byte aligned  */</em>
+<a id='L58' name='L58'></a>  58     inc 2, %o1
+<a id='L59' name='L59'></a>  59     srl %o3, 8, %o4
+<a id='L60' name='L60'></a>  60     stb %o4, [%o0]  <em class='comment'>/* have to do bytes,  */</em>
+<a id='L61' name='L61'></a>  61     stb %o3, [%o0 + 1]  <em class='comment'>/* don't know dst alingment  */</em>
+<a id='L62' name='L62'></a>  62     inc 2, %o0
+<a id='L63' name='L63'></a>  63     dec 2, %o2
+<a id='L64' name='L64'></a>  64 
+<a id='L65' name='L65'></a>  65 .Laldst:
+<a id='L66' name='L66'></a>  66     andcc   %o0, 3, %o5 <em class='comment'>/* align the destination address  */</em>
+<a id='L67' name='L67'></a>  67 .Lald:  bz,pn   %icc, .Lw4cp
+<a id='L68' name='L68'></a>  68      cmp    %o5, 2
+<a id='L69' name='L69'></a>  69     bz,pn   %icc, .Lw2cp
+<a id='L70' name='L70'></a>  70      cmp    %o5, 3
+<a id='L71' name='L71'></a>  71 .Lw3cp:
+<a id='L72' name='L72'></a>  72     lduw    [%o1], %o4
+<a id='L73' name='L73'></a>  73     inc 4, %o1
+<a id='L74' name='L74'></a>  74     srl %o4, 24, %o5
+<a id='L75' name='L75'></a>  75     stb %o5, [%o0]
+<a id='L76' name='L76'></a>  76     bne,pt  %icc, .Lw1cp
+<a id='L77' name='L77'></a>  77      inc    %o0
+<a id='L78' name='L78'></a>  78     dec 1, %o2
+<a id='L79' name='L79'></a>  79     andn    %o2, 3, %o3 <em class='comment'>/* i3 is aligned word count  */</em>
+<a id='L80' name='L80'></a>  80     dec 4, %o3      <em class='comment'>/* avoid reading beyond tail of src  */</em>
+<a id='L81' name='L81'></a>  81     sub %o1, %o0, %o1   <em class='comment'>/* i1 gets the difference  */</em>
+<a id='L82' name='L82'></a>  82 
+<a id='L83' name='L83'></a>  83 1:  sll %o4, 8, %g1 <em class='comment'>/* save residual bytes  */</em>
+<a id='L84' name='L84'></a>  84     lduw    [%o1+%o0], %o4
+<a id='L85' name='L85'></a>  85     deccc   4, %o3
+<a id='L86' name='L86'></a>  86     srl %o4, 24, %o5    <em class='comment'>/* merge with residual  */</em>
+<a id='L87' name='L87'></a>  87     or  %o5, %g1, %g1
+<a id='L88' name='L88'></a>  88     st  %g1, [%o0]
+<a id='L89' name='L89'></a>  89     bnz,pt  %XCC, 1b
+<a id='L90' name='L90'></a>  90      inc    4, %o0
+<a id='L91' name='L91'></a>  91     sub %o1, 3, %o1 <em class='comment'>/* used one byte of last word read  */</em>
+<a id='L92' name='L92'></a>  92     and %o2, 3, %o2
+<a id='L93' name='L93'></a>  93     b   7f
+<a id='L94' name='L94'></a>  94      inc    4, %o2
+<a id='L95' name='L95'></a>  95 
+<a id='L96' name='L96'></a>  96 .Lw1cp:
+<a id='L97' name='L97'></a>  97     srl %o4, 8, %o5
+<a id='L98' name='L98'></a>  98     sth %o5, [%o0]
+<a id='L99' name='L99'></a>  99     inc 2, %o0
+<a id='L100' name='L100'></a> 100     dec 3, %o2
+<a id='L101' name='L101'></a> 101     andn    %o2, 3, %o3
+<a id='L102' name='L102'></a> 102     dec 4, %o3      <em class='comment'>/* avoid reading beyond tail of src  */</em>
+<a id='L103' name='L103'></a> 103     sub %o1, %o0, %o1   <em class='comment'>/* i1 gets the difference  */</em>
+<a id='L104' name='L104'></a> 104 
+<a id='L105' name='L105'></a> 105 2:  sll %o4, 24, %g1    <em class='comment'>/* save residual bytes  */</em>
+<a id='L106' name='L106'></a> 106     lduw    [%o1+%o0], %o4
+<a id='L107' name='L107'></a> 107     deccc   4, %o3
+<a id='L108' name='L108'></a> 108     srl %o4, 8, %o5 <em class='comment'>/* merge with residual  */</em>
+<a id='L109' name='L109'></a> 109     or  %o5, %g1, %g1
+<a id='L110' name='L110'></a> 110     st  %g1, [%o0]
+<a id='L111' name='L111'></a> 111     bnz,pt  %XCC, 2b
+<a id='L112' name='L112'></a> 112      inc    4, %o0
+<a id='L113' name='L113'></a> 113     sub %o1, 1, %o1 <em class='comment'>/* used three bytes of last word read  */</em>
+<a id='L114' name='L114'></a> 114     and %o2, 3, %o2
+<a id='L115' name='L115'></a> 115     b   7f
+<a id='L116' name='L116'></a> 116     inc 4, %o2
+<a id='L117' name='L117'></a> 117 
+<a id='L118' name='L118'></a> 118 .Lw2cp:
+<a id='L119' name='L119'></a> 119     lduw    [%o1], %o4
+<a id='L120' name='L120'></a> 120     inc 4, %o1
+<a id='L121' name='L121'></a> 121     srl %o4, 16, %o5
+<a id='L122' name='L122'></a> 122     sth %o5, [%o0]
+<a id='L123' name='L123'></a> 123     inc 2, %o0
+<a id='L124' name='L124'></a> 124     dec 2, %o2
+<a id='L125' name='L125'></a> 125     andn    %o2, 3, %o3 <em class='comment'>/* i3 is aligned word count  */</em>
+<a id='L126' name='L126'></a> 126     dec 4, %o3      <em class='comment'>/* avoid reading beyond tail of src  */</em>
+<a id='L127' name='L127'></a> 127     sub %o1, %o0, %o1   <em class='comment'>/* i1 gets the difference  */</em>
+<a id='L128' name='L128'></a> 128 
+<a id='L129' name='L129'></a> 129 3:  sll %o4, 16, %g1    <em class='comment'>/* save residual bytes  */</em>
+<a id='L130' name='L130'></a> 130     lduw    [%o1+%o0], %o4
+<a id='L131' name='L131'></a> 131     deccc   4, %o3
+<a id='L132' name='L132'></a> 132     srl %o4, 16, %o5    <em class='comment'>/* merge with residual  */</em>
+<a id='L133' name='L133'></a> 133     or  %o5, %g1, %g1
+<a id='L134' name='L134'></a> 134     st  %g1, [%o0]
+<a id='L135' name='L135'></a> 135     bnz,pt  %XCC, 3b
+<a id='L136' name='L136'></a> 136      inc    4, %o0
+<a id='L137' name='L137'></a> 137     sub %o1, 2, %o1 <em class='comment'>/* used two bytes of last word read  */</em>
+<a id='L138' name='L138'></a> 138     and %o2, 3, %o2
+<a id='L139' name='L139'></a> 139     b   7f
+<a id='L140' name='L140'></a> 140      inc    4, %o2
+<a id='L141' name='L141'></a> 141 
+<a id='L142' name='L142'></a> 142 .Lw4cp:
+<a id='L143' name='L143'></a> 143     andn    %o2, 3, %o3 <em class='comment'>/* i3 is aligned word count  */</em>
+<a id='L144' name='L144'></a> 144     sub %o1, %o0, %o1   <em class='comment'>/* i1 gets the difference  */</em>
+<a id='L145' name='L145'></a> 145 
+<a id='L146' name='L146'></a> 146 1:  lduw    [%o1+%o0], %o4  <em class='comment'>/* read from address  */</em>
+<a id='L147' name='L147'></a> 147     deccc   4, %o3      <em class='comment'>/* decrement count  */</em>
+<a id='L148' name='L148'></a> 148     st  %o4, [%o0]  <em class='comment'>/* write at destination address  */</em>
+<a id='L149' name='L149'></a> 149     bg,pt   %XCC, 1b
+<a id='L150' name='L150'></a> 150      inc    4, %o0      <em class='comment'>/* increment to address  */</em>
+<a id='L151' name='L151'></a> 151     b   7f
+<a id='L152' name='L152'></a> 152      and    %o2, 3, %o2 <em class='comment'>/* number of leftover bytes, if any  */</em>
+<a id='L153' name='L153'></a> 153 
+<a id='L154' name='L154'></a> 154 <em class='comment'>/*</em>
+<a id='L155' name='L155'></a> 155 <em class='comment'> * differenced byte copy, works with any alignment</em>
+<a id='L156' name='L156'></a> 156 <em class='comment'> */</em>
+<a id='L157' name='L157'></a> 157 .Ldbytecp:
+<a id='L158' name='L158'></a> 158     b   7f
+<a id='L159' name='L159'></a> 159      sub    %o1, %o0, %o1   <em class='comment'>/* i1 gets the difference  */</em>
+<a id='L160' name='L160'></a> 160 
+<a id='L161' name='L161'></a> 161 4:  stb %o4, [%o0]  <em class='comment'>/* write to address  */</em>
+<a id='L162' name='L162'></a> 162     inc %o0     <em class='comment'>/* inc to address  */</em>
+<a id='L163' name='L163'></a> 163 7:  deccc   %o2     <em class='comment'>/* decrement count  */</em>
+<a id='L164' name='L164'></a> 164     bge,a   %XCC, 4b    <em class='comment'>/* loop till done  */</em>
+<a id='L165' name='L165'></a> 165      ldub   [%o1+%o0], %o4  <em class='comment'>/* read from address  */</em>
+<a id='L166' name='L166'></a> 166     retl
+<a id='L167' name='L167'></a> 167      mov    %g2, %o0    <em class='comment'>/* return pointer to destination  */</em>
+<a id='L168' name='L168'></a> 168 
+<a id='L169' name='L169'></a> 169 <em class='comment'>/*</em>
+<a id='L170' name='L170'></a> 170 <em class='comment'> * an overlapped copy that must be done "backwards"</em>
+<a id='L171' name='L171'></a> 171 <em class='comment'> */</em>
+<a id='L172' name='L172'></a> 172 .Lovbc:
+<a id='L173' name='L173'></a> 173     add %o1, %o2, %o1   <em class='comment'>/* get to end of source space  */</em>
+<a id='L174' name='L174'></a> 174     add %o0, %o2, %o0   <em class='comment'>/* get to end of destination space  */</em>
+<a id='L175' name='L175'></a> 175     sub %o1, %o0, %o1   <em class='comment'>/* i1 gets the difference  */</em>
+<a id='L176' name='L176'></a> 176 
+<a id='L177' name='L177'></a> 177 5:  dec %o0     <em class='comment'>/* decrement to address  */</em>
+<a id='L178' name='L178'></a> 178     ldub    [%o1+%o0], %o3  <em class='comment'>/* read a byte  */</em>
+<a id='L179' name='L179'></a> 179     deccc   %o2     <em class='comment'>/* decrement count  */</em>
+<a id='L180' name='L180'></a> 180     bg,pt   %XCC, 5b    <em class='comment'>/* loop until done  */</em>
+<a id='L181' name='L181'></a> 181      stb    %o3, [%o0]  <em class='comment'>/* write byte  */</em>
+<a id='L182' name='L182'></a> 182     retl
+<a id='L183' name='L183'></a> 183      mov    %g2, %o0    <em class='comment'>/* return pointer to destination  */</em>
+<a id='L184' name='L184'></a> 184 END(memmove)
+<a id='L185' name='L185'></a> 185 
+<a id='L186' name='L186'></a> 186 libc_hidden_builtin_def (memmove)
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;][^][v]<a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

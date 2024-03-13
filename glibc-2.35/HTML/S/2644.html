@@ -1,0 +1,114 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>elf/dl-iteratephdr.c</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18868.html'>elf</a>/dl-iteratephdr.c</h2>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L25'>[^]</a><a href='#L31'>[v]</a>[top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<h2 class='header'>DEFINITIONS</h2>
+This source file includes following definitions.
+<ol>
+<li><a href='#L25' title='Defined at 25.'>cancel_handler</a></li>
+<li><a href='#L31' title='Defined at 31.'>__dl_iterate_phdr</a></li>
+</ol>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* Get loaded objects program headers.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   Copyright (C) 2001-2022 Free Software Foundation, Inc.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'></em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   modify it under the terms of the GNU Lesser General Public License as</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   published by the Free Software Foundation; either version 2.1 of the</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'>   License, or (at your option) any later version.</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'></em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'></em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   License along with the GNU C Library; see the file COPYING.LIB.  If</em>
+<a id='L17' name='L17'></a>  17 <em class='comment'>   not, see &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L18' name='L18'></a>  18 
+<a id='L19' name='L19'></a>  19 <em class='sharp'>#include</em> &lt;<a href='../I/116.html'>errno.h</a>&gt;
+<a id='L20' name='L20'></a>  20 <em class='sharp'>#include</em> &lt;<a href='../I/5906.html'>ldsodefs.h</a>&gt;
+<a id='L21' name='L21'></a>  21 <em class='sharp'>#include</em> &lt;stddef.h&gt;
+<a id='L22' name='L22'></a>  22 <em class='sharp'>#include</em> &lt;<a href='../I/6496.html'>libc-lock.h</a>&gt;
+<a id='L23' name='L23'></a>  23 
+<a id='L24' name='L24'></a>  24 <strong class='reserved'>static</strong> <strong class='reserved'>void</strong>
+<a id='L25' name='L25'></a>  25 <a href='../R/17764.html' title='Multiple referred from 5 places.'>cancel_handler</a> (<strong class='reserved'>void</strong> *<a href='../D/27755.html' title='Multiple defined in 3 places.'>arg</a> <strong class='reserved'>__attribute__</strong>((<a href='../S/2757.html#L20' title='Defined at 20 in elf/tst-tlsalign-vars.c.'>unused</a>)))
+<a id='L26' name='L26'></a>  26 <em class='brace'>{</em>
+<a id='L27' name='L27'></a>  27   <a href='../D/25838.html' title='Multiple defined in 4 places.'>__rtld_lock_unlock_recursive</a> (<a href='../D/5057.html' title='Multiple defined in 6 places.'>GL</a>(<a href='../Y/12912.html' title='Multiple used in 7 places.'>dl_load_write_lock</a>));
+<a id='L28' name='L28'></a>  28 <em class='brace'>}</em>
+<a id='L29' name='L29'></a>  29 
+<a id='L30' name='L30'></a>  30 <strong class='reserved'>int</strong>
+<a id='L31' name='L31'></a>  31 <a href='../R/13910.html' title='Multiple referred from 7 places.'>__dl_iterate_phdr</a> (<strong class='reserved'>int</strong> (*<a href='../D/28475.html' title='Multiple defined in 10 places.'>callback</a>) (<strong class='reserved'>struct</strong> <a href='../S/2902.html#L155' title='Defined at 155 in elf/link.h.'>dl_phdr_info</a> *<a href='../Y/16784.html' title='Multiple used in 728 places.'>info</a>,
+<a id='L32' name='L32'></a>  32                     <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../D/36819.html' title='Multiple defined in 18 places.'>size</a>, <strong class='reserved'>void</strong> *<a href='../D/29309.html' title='Multiple defined in 3 places.'>data</a>), <strong class='reserved'>void</strong> *<a href='../D/29309.html' title='Multiple defined in 3 places.'>data</a>)
+<a id='L33' name='L33'></a>  33 <em class='brace'>{</em>
+<a id='L34' name='L34'></a>  34   <strong class='reserved'>struct</strong> <a href='../D/32945.html' title='Multiple defined in 4 places.'>link_map</a> *<a href='../D/32486.html' title='Multiple defined in 3 places.'>l</a>;
+<a id='L35' name='L35'></a>  35   <strong class='reserved'>struct</strong> <a href='../S/2902.html#L155' title='Defined at 155 in elf/link.h.'>dl_phdr_info</a> <a href='../Y/16784.html' title='Multiple used in 728 places.'>info</a>;
+<a id='L36' name='L36'></a>  36   <strong class='reserved'>int</strong> <a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a> = 0;
+<a id='L37' name='L37'></a>  37 
+<a id='L38' name='L38'></a>  38   <em class='comment'>/* Make sure nobody modifies the list of loaded objects.  */</em>
+<a id='L39' name='L39'></a>  39   <a href='../D/25835.html' title='Multiple defined in 4 places.'>__rtld_lock_lock_recursive</a> (<a href='../D/5057.html' title='Multiple defined in 6 places.'>GL</a>(<a href='../Y/12912.html' title='Multiple used in 7 places.'>dl_load_write_lock</a>));
+<a id='L40' name='L40'></a>  40   <a href='../D/24556.html' title='Multiple defined in 5 places.'>__libc_cleanup_push</a> (<a href='../D/28504.html' title='Multiple defined in 3 places.'>cancel_handler</a>, <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>);
+<a id='L41' name='L41'></a>  41 
+<a id='L42' name='L42'></a>  42   <em class='comment'>/* We have to determine the namespace of the caller since this determines</em>
+<a id='L43' name='L43'></a>  43 <em class='comment'>     which namespace is reported.  */</em>
+<a id='L44' name='L44'></a>  44   <a href='../D/36825.html' title='Multiple defined in 5 places.'>size_t</a> <a href='../Y/20934.html' title='Multiple used in 19 places.'>nloaded</a> = <a href='../D/5057.html' title='Multiple defined in 6 places.'>GL</a>(<a href='../Y/12920.html' title='Multiple used in 103 places.'>dl_ns</a>)[0].<a href='../Y/9381.html' title='Multiple used in 13 places.'>_ns_nloaded</a>;
+<a id='L45' name='L45'></a>  45   <a href='../S/1466.html#L46' title='Defined at 46 in dlfcn/dlfcn.h.'>Lmid_t</a> <a href='../Y/21179.html' title='Multiple used in 174 places.'>ns</a> = 0;
+<a id='L46' name='L46'></a>  46 <em class='sharp'>#ifdef</em> <a href='../D/13935.html' title='Multiple defined in 2 places.'>SHARED</a>
+<a id='L47' name='L47'></a>  47   <strong class='reserved'>const</strong> <strong class='reserved'>void</strong> *<a href='../Y/11233.html' title='Multiple used in 70 places.'>caller</a> = <a href='../D/11247.html' title='Multiple defined in 4 places.'>RETURN_ADDRESS</a> (0);
+<a id='L48' name='L48'></a>  48   <strong class='reserved'>for</strong> (<a href='../S/1466.html#L46' title='Defined at 46 in dlfcn/dlfcn.h.'>Lmid_t</a> <a href='../D/28982.html' title='Multiple defined in 8 places.'>cnt</a> = <a href='../D/5057.html' title='Multiple defined in 6 places.'>GL</a>(<a href='../Y/12919.html' title='Multiple used in 16 places.'>dl_nns</a>) - 1; <a href='../D/28982.html' title='Multiple defined in 8 places.'>cnt</a> &gt; 0; --<a href='../D/28982.html' title='Multiple defined in 8 places.'>cnt</a>)
+<a id='L49' name='L49'></a>  49     <strong class='reserved'>for</strong> (<strong class='reserved'>struct</strong> <a href='../D/32945.html' title='Multiple defined in 4 places.'>link_map</a> *<a href='../D/32486.html' title='Multiple defined in 3 places.'>l</a> = <a href='../D/5057.html' title='Multiple defined in 6 places.'>GL</a>(<a href='../Y/12920.html' title='Multiple used in 103 places.'>dl_ns</a>)[<a href='../D/28982.html' title='Multiple defined in 8 places.'>cnt</a>].<a href='../Y/9379.html' title='Multiple used in 72 places.'>_ns_loaded</a>; <a href='../D/32486.html' title='Multiple defined in 3 places.'>l</a>; <a href='../D/32486.html' title='Multiple defined in 3 places.'>l</a> = <a href='../D/32486.html' title='Multiple defined in 3 places.'>l</a>-&gt;<a href='../Y/17631.html' title='Multiple used in 80 places.'>l_next</a>)
+<a id='L50' name='L50'></a>  50       <em class='brace'>{</em>
+<a id='L51' name='L51'></a>  51     <em class='comment'>/* We have to count the total number of loaded objects.  */</em>
+<a id='L52' name='L52'></a>  52     <a href='../Y/20934.html' title='Multiple used in 19 places.'>nloaded</a> += <a href='../D/5057.html' title='Multiple defined in 6 places.'>GL</a>(<a href='../Y/12920.html' title='Multiple used in 103 places.'>dl_ns</a>)[<a href='../D/28982.html' title='Multiple defined in 8 places.'>cnt</a>].<a href='../Y/9381.html' title='Multiple used in 13 places.'>_ns_nloaded</a>;
+<a id='L53' name='L53'></a>  53 
+<a id='L54' name='L54'></a>  54     <strong class='reserved'>if</strong> (<a href='../Y/11233.html' title='Multiple used in 70 places.'>caller</a> &gt;= (<strong class='reserved'>const</strong> <strong class='reserved'>void</strong> *) <a href='../D/32486.html' title='Multiple defined in 3 places.'>l</a>-&gt;<a href='../Y/17626.html' title='Multiple used in 46 places.'>l_map_start</a>
+<a id='L55' name='L55'></a>  55         &amp;&amp; <a href='../Y/11233.html' title='Multiple used in 70 places.'>caller</a> &lt; (<strong class='reserved'>const</strong> <strong class='reserved'>void</strong> *) <a href='../D/32486.html' title='Multiple defined in 3 places.'>l</a>-&gt;<a href='../Y/17625.html' title='Multiple used in 28 places.'>l_map_end</a>
+<a id='L56' name='L56'></a>  56         &amp;&amp; (<a href='../D/32486.html' title='Multiple defined in 3 places.'>l</a>-&gt;<a href='../Y/17589.html' title='Multiple used in 12 places.'>l_contiguous</a>
+<a id='L57' name='L57'></a>  57         || <a href='../S/2546.html#L64' title='Defined at 64 in elf/dl-addr-obj.c.'>_dl_addr_inside_object</a> (<a href='../D/32486.html' title='Multiple defined in 3 places.'>l</a>, (<a href='../D/4051.html' title='Multiple defined in 85 places.'>ElfW</a>(<a href='../Y/109.html' title='Multiple used in 497 places.'>Addr</a>)) <a href='../Y/11233.html' title='Multiple used in 70 places.'>caller</a>)))
+<a id='L58' name='L58'></a>  58       <a href='../Y/21179.html' title='Multiple used in 174 places.'>ns</a> = <a href='../D/28982.html' title='Multiple defined in 8 places.'>cnt</a>;
+<a id='L59' name='L59'></a>  59       <em class='brace'>}</em>
+<a id='L60' name='L60'></a>  60 <em class='sharp'>#endif</em>
+<a id='L61' name='L61'></a>  61 
+<a id='L62' name='L62'></a>  62   <strong class='reserved'>for</strong> (<a href='../D/32486.html' title='Multiple defined in 3 places.'>l</a> = <a href='../D/5057.html' title='Multiple defined in 6 places.'>GL</a>(<a href='../Y/12920.html' title='Multiple used in 103 places.'>dl_ns</a>)[<a href='../Y/21179.html' title='Multiple used in 174 places.'>ns</a>].<a href='../Y/9379.html' title='Multiple used in 72 places.'>_ns_loaded</a>; <a href='../D/32486.html' title='Multiple defined in 3 places.'>l</a> != <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>; <a href='../D/32486.html' title='Multiple defined in 3 places.'>l</a> = <a href='../D/32486.html' title='Multiple defined in 3 places.'>l</a>-&gt;<a href='../Y/17631.html' title='Multiple used in 80 places.'>l_next</a>)
+<a id='L63' name='L63'></a>  63     <em class='brace'>{</em>
+<a id='L64' name='L64'></a>  64       <a href='../Y/16784.html' title='Multiple used in 728 places.'>info</a>.<a href='../Y/13016.html' title='Multiple used in 5 places.'>dlpi_addr</a> = <a href='../D/32486.html' title='Multiple defined in 3 places.'>l</a>-&gt;<a href='../Y/17644.html' title='Multiple used in 30 places.'>l_real</a>-&gt;<a href='../Y/17583.html' title='Multiple used in 345 places.'>l_addr</a>;
+<a id='L65' name='L65'></a>  65       <a href='../Y/16784.html' title='Multiple used in 728 places.'>info</a>.<a href='../Y/13018.html' title='Multiple used in 4 places.'>dlpi_name</a> = <a href='../D/32486.html' title='Multiple defined in 3 places.'>l</a>-&gt;<a href='../Y/17644.html' title='Multiple used in 30 places.'>l_real</a>-&gt;<a href='../Y/17628.html' title='Multiple used in 198 places.'>l_name</a>;
+<a id='L66' name='L66'></a>  66       <a href='../Y/16784.html' title='Multiple used in 728 places.'>info</a>.<a href='../Y/13019.html' title='Multiple used in 4 places.'>dlpi_phdr</a> = <a href='../D/32486.html' title='Multiple defined in 3 places.'>l</a>-&gt;<a href='../Y/17644.html' title='Multiple used in 30 places.'>l_real</a>-&gt;<a href='../Y/17638.html' title='Multiple used in 35 places.'>l_phdr</a>;
+<a id='L67' name='L67'></a>  67       <a href='../Y/16784.html' title='Multiple used in 728 places.'>info</a>.<a href='../Y/13020.html' title='Multiple used in 6 places.'>dlpi_phnum</a> = <a href='../D/32486.html' title='Multiple defined in 3 places.'>l</a>-&gt;<a href='../Y/17644.html' title='Multiple used in 30 places.'>l_real</a>-&gt;<a href='../Y/17640.html' title='Multiple used in 27 places.'>l_phnum</a>;
+<a id='L68' name='L68'></a>  68       <a href='../Y/16784.html' title='Multiple used in 728 places.'>info</a>.<a href='../Y/13017.html' title='Multiple used in 5 places.'>dlpi_adds</a> = <a href='../D/5057.html' title='Multiple defined in 6 places.'>GL</a>(<a href='../Y/12909.html' title='Multiple used in 5 places.'>dl_load_adds</a>);
+<a id='L69' name='L69'></a>  69       <a href='../Y/16784.html' title='Multiple used in 728 places.'>info</a>.<a href='../Y/13021.html' title='Multiple used in 7 places.'>dlpi_subs</a> = <a href='../D/5057.html' title='Multiple defined in 6 places.'>GL</a>(<a href='../Y/12909.html' title='Multiple used in 5 places.'>dl_load_adds</a>) - <a href='../Y/20934.html' title='Multiple used in 19 places.'>nloaded</a>;
+<a id='L70' name='L70'></a>  70       <a href='../Y/16784.html' title='Multiple used in 728 places.'>info</a>.<a href='../Y/13022.html' title='Multiple used in 3 places.'>dlpi_tls_data</a> = <a href='../D/9283.html' title='Multiple defined in 14 places.'>NULL</a>;
+<a id='L71' name='L71'></a>  71       <a href='../Y/16784.html' title='Multiple used in 728 places.'>info</a>.<a href='../Y/13023.html' title='Multiple used in 3 places.'>dlpi_tls_modid</a> = <a href='../D/32486.html' title='Multiple defined in 3 places.'>l</a>-&gt;<a href='../Y/17644.html' title='Multiple used in 30 places.'>l_real</a>-&gt;<a href='../Y/17675.html' title='Multiple used in 66 places.'>l_tls_modid</a>;
+<a id='L72' name='L72'></a>  72       <strong class='reserved'>if</strong> (<a href='../Y/16784.html' title='Multiple used in 728 places.'>info</a>.<a href='../Y/13023.html' title='Multiple used in 3 places.'>dlpi_tls_modid</a> != 0)
+<a id='L73' name='L73'></a>  73     <a href='../Y/16784.html' title='Multiple used in 728 places.'>info</a>.<a href='../Y/13022.html' title='Multiple used in 3 places.'>dlpi_tls_data</a> = <a href='../D/5109.html' title='Multiple defined in 6 places.'>GLRO</a>(<a href='../Y/12964.html' title='Multiple used in 2 places.'>dl_tls_get_addr_soft</a>) (<a href='../D/32486.html' title='Multiple defined in 3 places.'>l</a>-&gt;<a href='../Y/17644.html' title='Multiple used in 30 places.'>l_real</a>);
+<a id='L74' name='L74'></a>  74       <a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a> = <a href='../D/28475.html' title='Multiple defined in 10 places.'>callback</a> (&amp;<a href='../Y/16784.html' title='Multiple used in 728 places.'>info</a>, <strong class='reserved'>sizeof</strong> (<strong class='reserved'>struct</strong> <a href='../S/2902.html#L155' title='Defined at 155 in elf/link.h.'>dl_phdr_info</a>), <a href='../D/29309.html' title='Multiple defined in 3 places.'>data</a>);
+<a id='L75' name='L75'></a>  75       <strong class='reserved'>if</strong> (<a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a>)
+<a id='L76' name='L76'></a>  76     <strong class='reserved'>break</strong>;
+<a id='L77' name='L77'></a>  77     <em class='brace'>}</em>
+<a id='L78' name='L78'></a>  78 
+<a id='L79' name='L79'></a>  79   <em class='comment'>/* Release the lock.  */</em>
+<a id='L80' name='L80'></a>  80   <a href='../D/24555.html' title='Multiple defined in 5 places.'>__libc_cleanup_pop</a> (0);
+<a id='L81' name='L81'></a>  81   <a href='../D/25838.html' title='Multiple defined in 4 places.'>__rtld_lock_unlock_recursive</a> (<a href='../D/5057.html' title='Multiple defined in 6 places.'>GL</a>(<a href='../Y/12912.html' title='Multiple used in 7 places.'>dl_load_write_lock</a>));
+<a id='L82' name='L82'></a>  82 
+<a id='L83' name='L83'></a>  83   <strong class='reserved'>return</strong> <a href='../D/36053.html' title='Multiple defined in 45 places.'>ret</a>;
+<a id='L84' name='L84'></a>  84 <em class='brace'>}</em>
+<a id='L85' name='L85'></a>  85 <a href='../D/31513.html' title='Multiple defined in 35 places.'>hidden_def</a> (<a href='../S/2644.html#L31' title='Defined at 31 in elf/dl-iteratephdr.c.'>__dl_iterate_phdr</a>)
+<a id='L86' name='L86'></a>  86 
+<a id='L87' name='L87'></a>  87 <a href='../D/39088.html' title='Multiple defined in 375 places.'>weak_alias</a> (<a href='../S/2644.html#L31' title='Defined at 31 in elf/dl-iteratephdr.c.'>__dl_iterate_phdr</a>, <a href='../S/12130.html#L247' title='Defined at 247 in sysdeps/generic/unwind-dw2-fde-glibc.c.'>dl_iterate_phdr</a>);
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L25'>[^]</a><a href='#L31'>[v]</a><a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

@@ -1,0 +1,136 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>sysdeps/alpha/alphaev67/strrchr.S</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18977.html'>sysdeps</a>/<a href='../files/18985.html'>alpha</a>/<a href='../files/18988.html'>alphaev67</a>/strrchr.S</h2>
+<em class='comment'>/* [&lt;][&gt;][^][v][top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* Copyright (C) 2000-2022 Free Software Foundation, Inc.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   EV67 optimized by Rick Gorton &lt;rick.gorton@alpha-processor.com&gt;.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'></em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'></em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'></em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   License along with the GNU C Library.  If not, see</em>
+<a id='L17' name='L17'></a>  17 <em class='comment'>   &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L18' name='L18'></a>  18 
+<a id='L19' name='L19'></a>  19 <em class='comment'>/* Return the address of the last occurrence of a given character</em>
+<a id='L20' name='L20'></a>  20 <em class='comment'>   within a null-terminated string, or null if it is not found.  */</em>
+<a id='L21' name='L21'></a>  21 
+<a id='L22' name='L22'></a>  22 <em class='sharp'>#include</em> &lt;<a href='../I/5967.html'>sysdep.h</a>&gt;
+<a id='L23' name='L23'></a>  23 
+<a id='L24' name='L24'></a>  24     .arch ev6
+<a id='L25' name='L25'></a>  25     .set noreorder
+<a id='L26' name='L26'></a>  26     .set noat
+<a id='L27' name='L27'></a>  27 
+<a id='L28' name='L28'></a>  28 <a href='../D/3651.html' title='Multiple defined in 54 places.'>ENTRY</a>(<a href='../R/24779.html' title='Multiple referred from 96 places.'>strrchr</a>)
+<a id='L29' name='L29'></a>  29 <em class='sharp'>#ifdef</em> <a href='../D/10267.html' title='Multiple defined in 3 places.'>PROF</a>
+<a id='L30' name='L30'></a>  30     ldgp    gp, 0(pv)
+<a id='L31' name='L31'></a>  31     lda AT, _mcount
+<a id='L32' name='L32'></a>  32     jsr AT, (AT), _mcount
+<a id='L33' name='L33'></a>  33     .prologue 1
+<a id='L34' name='L34'></a>  34 <em class='sharp'>#else</em>
+<a id='L35' name='L35'></a>  35     .prologue 0
+<a id='L36' name='L36'></a>  36 <em class='sharp'>#endif</em>
+<a id='L37' name='L37'></a>  37 
+<a id='L38' name='L38'></a>  38     and a1, 0xff, t2    # E : 00000000000000ch
+<a id='L39' name='L39'></a>  39     insbl   a1, 1, t4   # U : 000000000000ch00
+<a id='L40' name='L40'></a>  40     insbl   a1, 2, t5   # U : 0000000000ch0000
+<a id='L41' name='L41'></a>  41     ldq_u   t0, 0(a0)   # L : load first quadword Latency=3
+<a id='L42' name='L42'></a>  42 
+<a id='L43' name='L43'></a>  43     mov zero, t6    # E : t6 is last match aligned addr
+<a id='L44' name='L44'></a>  44     or  t2, t4, a1  # E : 000000000000chch
+<a id='L45' name='L45'></a>  45     sll t5, 8, t3   # U : 00000000ch000000
+<a id='L46' name='L46'></a>  46     mov zero, t8    # E : t8 is last match byte compare mask
+<a id='L47' name='L47'></a>  47 
+<a id='L48' name='L48'></a>  48     andnot  a0, 7, v0   # E : align source addr
+<a id='L49' name='L49'></a>  49     or  t5, t3, t3  # E : 00000000chch0000
+<a id='L50' name='L50'></a>  50     sll a1, 32, t2  # U : 0000chch00000000
+<a id='L51' name='L51'></a>  51     sll a1, 48, t4  # U : chch000000000000
+<a id='L52' name='L52'></a>  52 
+<a id='L53' name='L53'></a>  53     or  t4, a1, a1  # E : chch00000000chch
+<a id='L54' name='L54'></a>  54     or  t2, t3, t2  # E : 0000chchchch0000
+<a id='L55' name='L55'></a>  55     or  a1, t2, a1  # E : chchchchchchchch
+<a id='L56' name='L56'></a>  56     lda t5, -1      # E : build garbage mask
+<a id='L57' name='L57'></a>  57 
+<a id='L58' name='L58'></a>  58     cmpbge  zero, t0, t1    # E : bits set iff byte == zero
+<a id='L59' name='L59'></a>  59     mskqh   t5, a0, t4  # E : Complete garbage mask
+<a id='L60' name='L60'></a>  60     xor t0, a1, t2  # E : make bytes == c zero
+<a id='L61' name='L61'></a>  61     cmpbge  zero, t4, t4    # E : bits set iff byte is garbage
+<a id='L62' name='L62'></a>  62 
+<a id='L63' name='L63'></a>  63     cmpbge  zero, t2, t3    # E : bits set iff byte == c
+<a id='L64' name='L64'></a>  64     andnot  t1, t4, t1  # E : clear garbage from null test
+<a id='L65' name='L65'></a>  65     andnot  t3, t4, t3  # E : clear garbage from char test
+<a id='L66' name='L66'></a>  66     bne t1, $eos    # U : did we already hit the terminator?
+<a id='L67' name='L67'></a>  67 
+<a id='L68' name='L68'></a>  68     <em class='comment'>/* Character search main loop */</em>
+<a id='L69' name='L69'></a>  69 $loop:
+<a id='L70' name='L70'></a>  70     ldq t0, 8(v0)   # L : load next quadword
+<a id='L71' name='L71'></a>  71     cmovne  t3, v0, t6  # E : save previous comparisons match
+<a id='L72' name='L72'></a>  72     nop         #   : Latency=2, extra map slot (keep nop with cmov)
+<a id='L73' name='L73'></a>  73     nop
+<a id='L74' name='L74'></a>  74 
+<a id='L75' name='L75'></a>  75     cmovne  t3, t3, t8  # E : Latency=2, extra map slot
+<a id='L76' name='L76'></a>  76     nop         #   : keep with cmovne
+<a id='L77' name='L77'></a>  77     addq    v0, 8, v0   # E :
+<a id='L78' name='L78'></a>  78     xor t0, a1, t2  # E :
+<a id='L79' name='L79'></a>  79 
+<a id='L80' name='L80'></a>  80     cmpbge  zero, t0, t1    # E : bits set iff byte == zero
+<a id='L81' name='L81'></a>  81     cmpbge  zero, t2, t3    # E : bits set iff byte == c
+<a id='L82' name='L82'></a>  82     beq t1, $loop   # U : if we havnt seen a null, loop
+<a id='L83' name='L83'></a>  83     nop
+<a id='L84' name='L84'></a>  84 
+<a id='L85' name='L85'></a>  85     <em class='comment'>/* Mask out character matches after terminator */</em>
+<a id='L86' name='L86'></a>  86 $eos:
+<a id='L87' name='L87'></a>  87     negq    t1, t4      # E : isolate first null byte match
+<a id='L88' name='L88'></a>  88     and t1, t4, t4  # E :
+<a id='L89' name='L89'></a>  89     subq    t4, 1, t5   # E : build a mask of the bytes upto...
+<a id='L90' name='L90'></a>  90     or  t4, t5, t4  # E : ... and including the null
+<a id='L91' name='L91'></a>  91 
+<a id='L92' name='L92'></a>  92     and t3, t4, t3  # E : mask out char matches after null
+<a id='L93' name='L93'></a>  93     cmovne  t3, t3, t8  # E : save it, if match found Latency=2, extra map slot
+<a id='L94' name='L94'></a>  94     nop         #   : Keep with cmovne
+<a id='L95' name='L95'></a>  95     nop
+<a id='L96' name='L96'></a>  96 
+<a id='L97' name='L97'></a>  97     cmovne  t3, v0, t6  # E :
+<a id='L98' name='L98'></a>  98     nop         #   : Keep with cmovne
+<a id='L99' name='L99'></a>  99     <em class='comment'>/* Locate the address of the last matched character */</em>
+<a id='L100' name='L100'></a> 100     ctlz    t8, t2      # U0 : Latency=3 (0x40 for t8=0)
+<a id='L101' name='L101'></a> 101     nop
+<a id='L102' name='L102'></a> 102 
+<a id='L103' name='L103'></a> 103     cmoveq  t8, 0x3f, t2    # E : Compensate for case when no match is seen
+<a id='L104' name='L104'></a> 104     nop         # E : hide the cmov latency (2) behind ctlz latency
+<a id='L105' name='L105'></a> 105     lda t5, 0x3f($31)   # E :
+<a id='L106' name='L106'></a> 106     subq    t5, t2, t5  # E : Normalize leading zero count
+<a id='L107' name='L107'></a> 107 
+<a id='L108' name='L108'></a> 108     addq    t6, t5, v0  # E : and add to quadword address
+<a id='L109' name='L109'></a> 109     ret         # L0 : Latency=3
+<a id='L110' name='L110'></a> 110     nop
+<a id='L111' name='L111'></a> 111     nop
+<a id='L112' name='L112'></a> 112 
+<a id='L113' name='L113'></a> 113 END(strrchr)
+<a id='L114' name='L114'></a> 114 
+<a id='L115' name='L115'></a> 115 weak_alias (strrchr, rindex)
+<a id='L116' name='L116'></a> 116 libc_hidden_builtin_def (strrchr)
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;][^][v]<a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

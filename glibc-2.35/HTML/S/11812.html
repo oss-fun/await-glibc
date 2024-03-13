@@ -1,0 +1,75 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>sysdeps/unix/sysv/linux/statx_cp.c</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18977.html'>sysdeps</a>/<a href='../files/19246.html'>unix</a>/<a href='../files/19257.html'>sysv</a>/<a href='../files/19258.html'>linux</a>/statx_cp.c</h2>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L27'>[^]</a>[v][top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<h2 class='header'>DEFINITIONS</h2>
+This source file includes following definitions.
+<ol>
+<li><a href='#L27' title='Defined at 27.'>__cp_stat64_statx</a></li>
+</ol>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* Struct statx to stat/stat64 conversion for Linux.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   Copyright (C) 2018-2022 Free Software Foundation, Inc.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'></em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'></em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'></em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   License along with the GNU C Library.  If not, see</em>
+<a id='L17' name='L17'></a>  17 <em class='comment'>   &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L18' name='L18'></a>  18 
+<a id='L19' name='L19'></a>  19 <em class='sharp'>#include</em> &lt;stddef.h&gt;
+<a id='L20' name='L20'></a>  20 <em class='sharp'>#include</em> &lt;<a href='../I/1973.html'>string.h</a>&gt;
+<a id='L21' name='L21'></a>  21 <em class='sharp'>#include</em> &lt;<a href='../I/167.html'>sys/stat.h</a>&gt;
+<a id='L22' name='L22'></a>  22 
+<a id='L23' name='L23'></a>  23 <em class='sharp'>#include</em> &lt;<a href='12070.html'>statx_cp.h</a>&gt;
+<a id='L24' name='L24'></a>  24 
+<a id='L25' name='L25'></a>  25 <em class='sharp'>#if</em> !<strong class='reserved'>defined</strong>(<a href='../D/21994.html' title='Multiple defined in 16 places.'>__NR_fstat64</a>) || !<strong class='reserved'>defined</strong>(<a href='../D/21995.html' title='Multiple defined in 16 places.'>__NR_fstatat64</a>)
+<a id='L26' name='L26'></a>  26 <strong class='reserved'>void</strong>
+<a id='L27' name='L27'></a>  27 <a href='../R/13856.html' title='Multiple referred from 5 places.'>__cp_stat64_statx</a> (<strong class='reserved'>struct</strong> <a href='../D/37013.html' title='Multiple defined in 18 places.'>stat64</a> *<a href='../Y/27480.html' title='Multiple used in 509 places.'>to</a>, <strong class='reserved'>struct</strong> <a href='../D/37032.html' title='Multiple defined in 5 places.'>statx</a> *<a href='../Y/15029.html' title='Multiple used in 605 places.'>from</a>)
+<a id='L28' name='L28'></a>  28 <em class='brace'>{</em>
+<a id='L29' name='L29'></a>  29   <a href='../D/33462.html' title='Multiple defined in 30 places.'>memset</a> (<a href='../Y/27480.html' title='Multiple used in 509 places.'>to</a>, 0, <strong class='reserved'>sizeof</strong> (<strong class='reserved'>struct</strong> <a href='../D/37013.html' title='Multiple defined in 18 places.'>stat64</a>));
+<a id='L30' name='L30'></a>  30   <a href='../Y/27480.html' title='Multiple used in 509 places.'>to</a>-&gt;<a href='../D/36978.html' title='Multiple defined in 2 places.'>st_dev</a> = ((<a href='../Y/15029.html' title='Multiple used in 605 places.'>from</a>-&gt;<a href='../Y/26400.html' title='Multiple used in 9 places.'>stx_dev_minor</a> &amp; 0xff) | (<a href='../Y/15029.html' title='Multiple used in 605 places.'>from</a>-&gt;<a href='../Y/26399.html' title='Multiple used in 8 places.'>stx_dev_major</a> &lt;&lt; 8)
+<a id='L31' name='L31'></a>  31         | ((<a href='../Y/15029.html' title='Multiple used in 605 places.'>from</a>-&gt;<a href='../Y/26400.html' title='Multiple used in 9 places.'>stx_dev_minor</a> &amp; ~0xff) &lt;&lt; 12));
+<a id='L32' name='L32'></a>  32   <a href='../Y/27480.html' title='Multiple used in 509 places.'>to</a>-&gt;<a href='../Y/26011.html' title='Multiple used in 93 places.'>st_rdev</a> = ((<a href='../Y/15029.html' title='Multiple used in 605 places.'>from</a>-&gt;<a href='../Y/26408.html' title='Multiple used in 8 places.'>stx_rdev_minor</a> &amp; 0xff) | (<a href='../Y/15029.html' title='Multiple used in 605 places.'>from</a>-&gt;<a href='../Y/26407.html' title='Multiple used in 8 places.'>stx_rdev_major</a> &lt;&lt; 8)
+<a id='L33' name='L33'></a>  33          | ((<a href='../Y/15029.html' title='Multiple used in 605 places.'>from</a>-&gt;<a href='../Y/26408.html' title='Multiple used in 8 places.'>stx_rdev_minor</a> &amp; ~0xff) &lt;&lt; 12));
+<a id='L34' name='L34'></a>  34   <a href='../Y/27480.html' title='Multiple used in 509 places.'>to</a>-&gt;<a href='../Y/25993.html' title='Multiple used in 172 places.'>st_ino</a> = <a href='../Y/15029.html' title='Multiple used in 605 places.'>from</a>-&gt;<a href='../Y/26402.html' title='Multiple used in 9 places.'>stx_ino</a>;
+<a id='L35' name='L35'></a>  35   <a href='../Y/27480.html' title='Multiple used in 509 places.'>to</a>-&gt;<a href='../Y/25994.html' title='Multiple used in 275 places.'>st_mode</a> = <a href='../Y/15029.html' title='Multiple used in 605 places.'>from</a>-&gt;<a href='../Y/26404.html' title='Multiple used in 8 places.'>stx_mode</a>;
+<a id='L36' name='L36'></a>  36   <a href='../Y/27480.html' title='Multiple used in 509 places.'>to</a>-&gt;<a href='../Y/26001.html' title='Multiple used in 87 places.'>st_nlink</a> = <a href='../Y/15029.html' title='Multiple used in 605 places.'>from</a>-&gt;<a href='../Y/26406.html' title='Multiple used in 7 places.'>stx_nlink</a>;
+<a id='L37' name='L37'></a>  37   <a href='../Y/27480.html' title='Multiple used in 509 places.'>to</a>-&gt;<a href='../Y/26022.html' title='Multiple used in 91 places.'>st_uid</a> = <a href='../Y/15029.html' title='Multiple used in 605 places.'>from</a>-&gt;<a href='../Y/26410.html' title='Multiple used in 6 places.'>stx_uid</a>;
+<a id='L38' name='L38'></a>  38   <a href='../Y/27480.html' title='Multiple used in 509 places.'>to</a>-&gt;<a href='../Y/25990.html' title='Multiple used in 87 places.'>st_gid</a> = <a href='../Y/15029.html' title='Multiple used in 605 places.'>from</a>-&gt;<a href='../Y/26401.html' title='Multiple used in 6 places.'>stx_gid</a>;
+<a id='L39' name='L39'></a>  39   <a href='../Y/27480.html' title='Multiple used in 509 places.'>to</a>-&gt;<a href='../D/36976.html' title='Multiple defined in 25 places.'>st_atime</a> = <a href='../Y/15029.html' title='Multiple used in 605 places.'>from</a>-&gt;<a href='../Y/26392.html' title='Multiple used in 9 places.'>stx_atime</a>.<a href='../Y/27976.html' title='Multiple used in 803 places.'>tv_sec</a>;
+<a id='L40' name='L40'></a>  40   <a href='../Y/27480.html' title='Multiple used in 509 places.'>to</a>-&gt;<a href='../Y/25972.html' title='Multiple used in 105 places.'>st_atim</a>.<a href='../Y/27975.html' title='Multiple used in 531 places.'>tv_nsec</a> = <a href='../Y/15029.html' title='Multiple used in 605 places.'>from</a>-&gt;<a href='../Y/26392.html' title='Multiple used in 9 places.'>stx_atime</a>.<a href='../Y/27975.html' title='Multiple used in 531 places.'>tv_nsec</a>;
+<a id='L41' name='L41'></a>  41   <a href='../Y/27480.html' title='Multiple used in 509 places.'>to</a>-&gt;<a href='../D/36979.html' title='Multiple defined in 25 places.'>st_mtime</a> = <a href='../Y/15029.html' title='Multiple used in 605 places.'>from</a>-&gt;<a href='../Y/26405.html' title='Multiple used in 12 places.'>stx_mtime</a>.<a href='../Y/27976.html' title='Multiple used in 803 places.'>tv_sec</a>;
+<a id='L42' name='L42'></a>  42   <a href='../Y/27480.html' title='Multiple used in 509 places.'>to</a>-&gt;<a href='../Y/25995.html' title='Multiple used in 113 places.'>st_mtim</a>.<a href='../Y/27975.html' title='Multiple used in 531 places.'>tv_nsec</a> = <a href='../Y/15029.html' title='Multiple used in 605 places.'>from</a>-&gt;<a href='../Y/26405.html' title='Multiple used in 12 places.'>stx_mtime</a>.<a href='../Y/27975.html' title='Multiple used in 531 places.'>tv_nsec</a>;
+<a id='L43' name='L43'></a>  43   <a href='../Y/27480.html' title='Multiple used in 509 places.'>to</a>-&gt;<a href='../D/36977.html' title='Multiple defined in 25 places.'>st_ctime</a> = <a href='../Y/15029.html' title='Multiple used in 605 places.'>from</a>-&gt;<a href='../Y/26398.html' title='Multiple used in 10 places.'>stx_ctime</a>.<a href='../Y/27976.html' title='Multiple used in 803 places.'>tv_sec</a>;
+<a id='L44' name='L44'></a>  44   <a href='../Y/27480.html' title='Multiple used in 509 places.'>to</a>-&gt;<a href='../Y/25981.html' title='Multiple used in 105 places.'>st_ctim</a>.<a href='../Y/27975.html' title='Multiple used in 531 places.'>tv_nsec</a> = <a href='../Y/15029.html' title='Multiple used in 605 places.'>from</a>-&gt;<a href='../Y/26398.html' title='Multiple used in 10 places.'>stx_ctime</a>.<a href='../Y/27975.html' title='Multiple used in 531 places.'>tv_nsec</a>;
+<a id='L45' name='L45'></a>  45   <a href='../Y/27480.html' title='Multiple used in 509 places.'>to</a>-&gt;<a href='../Y/26016.html' title='Multiple used in 381 places.'>st_size</a> = <a href='../Y/15029.html' title='Multiple used in 605 places.'>from</a>-&gt;<a href='../Y/26409.html' title='Multiple used in 10 places.'>stx_size</a>;
+<a id='L46' name='L46'></a>  46   <a href='../Y/27480.html' title='Multiple used in 509 places.'>to</a>-&gt;<a href='../Y/25980.html' title='Multiple used in 100 places.'>st_blocks</a> = <a href='../Y/15029.html' title='Multiple used in 605 places.'>from</a>-&gt;<a href='../Y/26396.html' title='Multiple used in 6 places.'>stx_blocks</a>;
+<a id='L47' name='L47'></a>  47   <a href='../Y/27480.html' title='Multiple used in 509 places.'>to</a>-&gt;<a href='../Y/25979.html' title='Multiple used in 80 places.'>st_blksize</a> = <a href='../Y/15029.html' title='Multiple used in 605 places.'>from</a>-&gt;<a href='../Y/26395.html' title='Multiple used in 6 places.'>stx_blksize</a>;
+<a id='L48' name='L48'></a>  48 <em class='brace'>}</em>
+<a id='L49' name='L49'></a>  49 <em class='sharp'>#endif</em>
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;][^]<a href='#L27'>[v]</a><a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

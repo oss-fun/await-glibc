@@ -1,0 +1,168 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>stdlib/mul.c</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18969.html'>stdlib</a>/mul.c</h2>
+<em class='comment'>/* [&lt;][&gt;]<a href='#L45'>[^]</a>[v][top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<h2 class='header'>DEFINITIONS</h2>
+This source file includes following definitions.
+<ol>
+<li><a href='#L45' title='Defined at 45.'>mpn_mul</a></li>
+</ol>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* mpn_mul -- Multiply two natural numbers.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'></em>
+<a id='L3' name='L3'></a>   3 <em class='comment'>Copyright (C) 1991-2022 Free Software Foundation, Inc.</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'></em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>This file is part of the GNU MP Library.</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'></em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>The GNU MP Library is free software; you can redistribute it and/or modify</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'>it under the terms of the GNU Lesser General Public License as published by</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'>the Free Software Foundation; either version 2.1 of the License, or (at your</em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>option) any later version.</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'></em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>The GNU MP Library is distributed in the hope that it will be useful, but</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'>WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'>or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public</em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>License for more details.</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'></em>
+<a id='L17' name='L17'></a>  17 <em class='comment'>You should have received a copy of the GNU Lesser General Public License</em>
+<a id='L18' name='L18'></a>  18 <em class='comment'>along with the GNU MP Library; see the file COPYING.LIB.  If not, see</em>
+<a id='L19' name='L19'></a>  19 <em class='comment'>&lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L20' name='L20'></a>  20 
+<a id='L21' name='L21'></a>  21 <em class='sharp'>#include</em> &lt;<a href='../I/1859.html'>gmp.h</a>&gt;
+<a id='L22' name='L22'></a>  22 <em class='sharp'>#include</em> "<a href='6770.html'>gmp-impl.h</a>"
+<a id='L23' name='L23'></a>  23 
+<a id='L24' name='L24'></a>  24 <em class='comment'>/* Multiply the natural numbers u (pointed to by UP, with USIZE limbs)</em>
+<a id='L25' name='L25'></a>  25 <em class='comment'>   and v (pointed to by VP, with VSIZE limbs), and store the result at</em>
+<a id='L26' name='L26'></a>  26 <em class='comment'>   PRODP.  USIZE + VSIZE limbs are always stored, but if the input</em>
+<a id='L27' name='L27'></a>  27 <em class='comment'>   operands are normalized.  Return the most significant limb of the</em>
+<a id='L28' name='L28'></a>  28 <em class='comment'>   result.</em>
+<a id='L29' name='L29'></a>  29 <em class='comment'></em>
+<a id='L30' name='L30'></a>  30 <em class='comment'>   NOTE: The space pointed to by PRODP is overwritten before finished</em>
+<a id='L31' name='L31'></a>  31 <em class='comment'>   with U and V, so overlap is an error.</em>
+<a id='L32' name='L32'></a>  32 <em class='comment'></em>
+<a id='L33' name='L33'></a>  33 <em class='comment'>   Argument constraints:</em>
+<a id='L34' name='L34'></a>  34 <em class='comment'>   1. USIZE &gt;= VSIZE.</em>
+<a id='L35' name='L35'></a>  35 <em class='comment'>   2. PRODP != UP and PRODP != VP, i.e. the destination</em>
+<a id='L36' name='L36'></a>  36 <em class='comment'>      must be distinct from the multiplier and the multiplicand.  */</em>
+<a id='L37' name='L37'></a>  37 
+<a id='L38' name='L38'></a>  38 <em class='comment'>/* If KARATSUBA_THRESHOLD is not already defined, define it to a</em>
+<a id='L39' name='L39'></a>  39 <em class='comment'>   value which is good on most machines.  */</em>
+<a id='L40' name='L40'></a>  40 <em class='sharp'>#ifndef</em> <a href='../D/6924.html' title='Multiple defined in 4 places.'>KARATSUBA_THRESHOLD</a>
+<a id='L41' name='L41'></a>  41 <em class='sharp'>#define</em> <a href='../R/4138.html' title='Multiple referred from 8 places.'>KARATSUBA_THRESHOLD</a> 32
+<a id='L42' name='L42'></a>  42 <em class='sharp'>#endif</em>
+<a id='L43' name='L43'></a>  43 
+<a id='L44' name='L44'></a>  44 <a href='../D/33608.html' title='Multiple defined in 3 places.'>mp_limb_t</a>
+<a id='L45' name='L45'></a>  45 <a href='../R/21972.html' title='Multiple referred from 3 places.'>mpn_mul</a> (<a href='../S/6736.html#L64' title='Defined at 64 in stdlib/gmp.h.'>mp_ptr</a> <a href='../Y/22828.html' title='Multiple used in 92 places.'>prodp</a>,
+<a id='L46' name='L46'></a>  46      <a href='../S/6736.html#L65' title='Defined at 65 in stdlib/gmp.h.'>mp_srcptr</a> <a href='../D/38754.html' title='Multiple defined in 5 places.'>up</a>, <a href='../S/6736.html#L66' title='Defined at 66 in stdlib/gmp.h.'>mp_size_t</a> <a href='../Y/28475.html' title='Multiple used in 25 places.'>usize</a>,
+<a id='L47' name='L47'></a>  47      <a href='../S/6736.html#L65' title='Defined at 65 in stdlib/gmp.h.'>mp_srcptr</a> <a href='../S/15656.html#L25' title='Defined at 25 in sysdeps/x86_64/add_n.S.'>vp</a>, <a href='../S/6736.html#L66' title='Defined at 66 in stdlib/gmp.h.'>mp_size_t</a> <a href='../Y/28773.html' title='Multiple used in 34 places.'>vsize</a>)
+<a id='L48' name='L48'></a>  48 <em class='brace'>{</em>
+<a id='L49' name='L49'></a>  49   <a href='../S/6736.html#L64' title='Defined at 64 in stdlib/gmp.h.'>mp_ptr</a> <a href='../Y/22824.html' title='Multiple used in 2 places.'>prod_endp</a> = <a href='../Y/22828.html' title='Multiple used in 92 places.'>prodp</a> + <a href='../Y/28475.html' title='Multiple used in 25 places.'>usize</a> + <a href='../Y/28773.html' title='Multiple used in 34 places.'>vsize</a> - 1;
+<a id='L50' name='L50'></a>  50   <a href='../D/33608.html' title='Multiple defined in 3 places.'>mp_limb_t</a> <a href='../S/15656.html#L27' title='Defined at 27 in sysdeps/x86_64/add_n.S.'>cy</a>;
+<a id='L51' name='L51'></a>  51   <a href='../S/6736.html#L64' title='Defined at 64 in stdlib/gmp.h.'>mp_ptr</a> <a href='../Y/27860.html' title='Multiple used in 38 places.'>tspace</a>;
+<a id='L52' name='L52'></a>  52   <a href='../S/6770.html#L54' title='Defined at 54 in stdlib/gmp-impl.h.'>TMP_DECL</a> (<a href='../Y/18963.html' title='Multiple used in 36 places.'>marker</a>);
+<a id='L53' name='L53'></a>  53 
+<a id='L54' name='L54'></a>  54   <strong class='reserved'>if</strong> (<a href='../Y/28773.html' title='Multiple used in 34 places.'>vsize</a> &lt; <a href='../D/6924.html' title='Multiple defined in 4 places.'>KARATSUBA_THRESHOLD</a>)
+<a id='L55' name='L55'></a>  55     <em class='brace'>{</em>
+<a id='L56' name='L56'></a>  56       <em class='comment'>/* Handle simple cases with traditional multiplication.</em>
+<a id='L57' name='L57'></a>  57 <em class='comment'></em>
+<a id='L58' name='L58'></a>  58 <em class='comment'>     This is the most critical code of the entire function.  All</em>
+<a id='L59' name='L59'></a>  59 <em class='comment'>     multiplies rely on this, both small and huge.  Small ones arrive</em>
+<a id='L60' name='L60'></a>  60 <em class='comment'>     here immediately.  Huge ones arrive here as this is the base case</em>
+<a id='L61' name='L61'></a>  61 <em class='comment'>     for Karatsuba's recursive algorithm below.  */</em>
+<a id='L62' name='L62'></a>  62       <a href='../S/6736.html#L66' title='Defined at 66 in stdlib/gmp.h.'>mp_size_t</a> <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>;
+<a id='L63' name='L63'></a>  63       <a href='../D/33608.html' title='Multiple defined in 3 places.'>mp_limb_t</a> <a href='../Y/12403.html' title='Multiple used in 65 places.'>cy_limb</a>;
+<a id='L64' name='L64'></a>  64       <a href='../D/33608.html' title='Multiple defined in 3 places.'>mp_limb_t</a> <a href='../Y/28536.html' title='Multiple used in 27 places.'>v_limb</a>;
+<a id='L65' name='L65'></a>  65 
+<a id='L66' name='L66'></a>  66       <strong class='reserved'>if</strong> (<a href='../Y/28773.html' title='Multiple used in 34 places.'>vsize</a> == 0)
+<a id='L67' name='L67'></a>  67     <strong class='reserved'>return</strong> 0;
+<a id='L68' name='L68'></a>  68 
+<a id='L69' name='L69'></a>  69       <em class='comment'>/* Multiply by the first limb in V separately, as the result can be</em>
+<a id='L70' name='L70'></a>  70 <em class='comment'>     stored (not added) to PROD.  We also avoid a loop for zeroing.  */</em>
+<a id='L71' name='L71'></a>  71       <a href='../Y/28536.html' title='Multiple used in 27 places.'>v_limb</a> = <a href='../S/15656.html#L25' title='Defined at 25 in sysdeps/x86_64/add_n.S.'>vp</a>[0];
+<a id='L72' name='L72'></a>  72       <strong class='reserved'>if</strong> (<a href='../Y/28536.html' title='Multiple used in 27 places.'>v_limb</a> &lt;= 1)
+<a id='L73' name='L73'></a>  73     <em class='brace'>{</em>
+<a id='L74' name='L74'></a>  74       <strong class='reserved'>if</strong> (<a href='../Y/28536.html' title='Multiple used in 27 places.'>v_limb</a> == 1)
+<a id='L75' name='L75'></a>  75         <a href='../S/6770.html#L125' title='Defined at 125 in stdlib/gmp-impl.h.'>MPN_COPY</a> (<a href='../Y/22828.html' title='Multiple used in 92 places.'>prodp</a>, <a href='../D/38754.html' title='Multiple defined in 5 places.'>up</a>, <a href='../Y/28475.html' title='Multiple used in 25 places.'>usize</a>);
+<a id='L76' name='L76'></a>  76       <strong class='reserved'>else</strong>
+<a id='L77' name='L77'></a>  77         <a href='../S/6770.html#L128' title='Defined at 128 in stdlib/gmp-impl.h.'>MPN_ZERO</a> (<a href='../Y/22828.html' title='Multiple used in 92 places.'>prodp</a>, <a href='../Y/28475.html' title='Multiple used in 25 places.'>usize</a>);
+<a id='L78' name='L78'></a>  78       <a href='../Y/12403.html' title='Multiple used in 65 places.'>cy_limb</a> = 0;
+<a id='L79' name='L79'></a>  79     <em class='brace'>}</em>
+<a id='L80' name='L80'></a>  80       <strong class='reserved'>else</strong>
+<a id='L81' name='L81'></a>  81     <a href='../Y/12403.html' title='Multiple used in 65 places.'>cy_limb</a> = <a href='../D/33647.html' title='Multiple defined in 2 places.'>mpn_mul_1</a> (<a href='../Y/22828.html' title='Multiple used in 92 places.'>prodp</a>, <a href='../D/38754.html' title='Multiple defined in 5 places.'>up</a>, <a href='../Y/28475.html' title='Multiple used in 25 places.'>usize</a>, <a href='../Y/28536.html' title='Multiple used in 27 places.'>v_limb</a>);
+<a id='L82' name='L82'></a>  82 
+<a id='L83' name='L83'></a>  83       <a href='../Y/22828.html' title='Multiple used in 92 places.'>prodp</a>[<a href='../Y/28475.html' title='Multiple used in 25 places.'>usize</a>] = <a href='../Y/12403.html' title='Multiple used in 65 places.'>cy_limb</a>;
+<a id='L84' name='L84'></a>  84       <a href='../Y/22828.html' title='Multiple used in 92 places.'>prodp</a>++;
+<a id='L85' name='L85'></a>  85 
+<a id='L86' name='L86'></a>  86       <em class='comment'>/* For each iteration in the outer loop, multiply one limb from</em>
+<a id='L87' name='L87'></a>  87 <em class='comment'>     U with one limb from V, and add it to PROD.  */</em>
+<a id='L88' name='L88'></a>  88       <strong class='reserved'>for</strong> (<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> = 1; <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a> &lt; <a href='../Y/28773.html' title='Multiple used in 34 places.'>vsize</a>; <a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>++)
+<a id='L89' name='L89'></a>  89     <em class='brace'>{</em>
+<a id='L90' name='L90'></a>  90       <a href='../Y/28536.html' title='Multiple used in 27 places.'>v_limb</a> = <a href='../S/15656.html#L25' title='Defined at 25 in sysdeps/x86_64/add_n.S.'>vp</a>[<a href='../Y/16287.html' title='Multiple used in 11682 places.'>i</a>];
+<a id='L91' name='L91'></a>  91       <strong class='reserved'>if</strong> (<a href='../Y/28536.html' title='Multiple used in 27 places.'>v_limb</a> &lt;= 1)
+<a id='L92' name='L92'></a>  92         <em class='brace'>{</em>
+<a id='L93' name='L93'></a>  93           <a href='../Y/12403.html' title='Multiple used in 65 places.'>cy_limb</a> = 0;
+<a id='L94' name='L94'></a>  94           <strong class='reserved'>if</strong> (<a href='../Y/28536.html' title='Multiple used in 27 places.'>v_limb</a> == 1)
+<a id='L95' name='L95'></a>  95         <a href='../Y/12403.html' title='Multiple used in 65 places.'>cy_limb</a> = <a href='../D/33629.html' title='Multiple defined in 2 places.'>mpn_add_n</a> (<a href='../Y/22828.html' title='Multiple used in 92 places.'>prodp</a>, <a href='../Y/22828.html' title='Multiple used in 92 places.'>prodp</a>, <a href='../D/38754.html' title='Multiple defined in 5 places.'>up</a>, <a href='../Y/28475.html' title='Multiple used in 25 places.'>usize</a>);
+<a id='L96' name='L96'></a>  96         <em class='brace'>}</em>
+<a id='L97' name='L97'></a>  97       <strong class='reserved'>else</strong>
+<a id='L98' name='L98'></a>  98         <a href='../Y/12403.html' title='Multiple used in 65 places.'>cy_limb</a> = <a href='../D/33630.html' title='Multiple defined in 2 places.'>mpn_addmul_1</a> (<a href='../Y/22828.html' title='Multiple used in 92 places.'>prodp</a>, <a href='../D/38754.html' title='Multiple defined in 5 places.'>up</a>, <a href='../Y/28475.html' title='Multiple used in 25 places.'>usize</a>, <a href='../Y/28536.html' title='Multiple used in 27 places.'>v_limb</a>);
+<a id='L99' name='L99'></a>  99 
+<a id='L100' name='L100'></a> 100       <a href='../Y/22828.html' title='Multiple used in 92 places.'>prodp</a>[<a href='../Y/28475.html' title='Multiple used in 25 places.'>usize</a>] = <a href='../Y/12403.html' title='Multiple used in 65 places.'>cy_limb</a>;
+<a id='L101' name='L101'></a> 101       <a href='../Y/22828.html' title='Multiple used in 92 places.'>prodp</a>++;
+<a id='L102' name='L102'></a> 102     <em class='brace'>}</em>
+<a id='L103' name='L103'></a> 103       <strong class='reserved'>return</strong> <a href='../Y/12403.html' title='Multiple used in 65 places.'>cy_limb</a>;
+<a id='L104' name='L104'></a> 104     <em class='brace'>}</em>
+<a id='L105' name='L105'></a> 105 
+<a id='L106' name='L106'></a> 106   <a href='../S/6770.html#L56' title='Defined at 56 in stdlib/gmp-impl.h.'>TMP_MARK</a> (<a href='../Y/18963.html' title='Multiple used in 36 places.'>marker</a>);
+<a id='L107' name='L107'></a> 107 
+<a id='L108' name='L108'></a> 108   <a href='../Y/27860.html' title='Multiple used in 38 places.'>tspace</a> = (<a href='../S/6736.html#L64' title='Defined at 64 in stdlib/gmp.h.'>mp_ptr</a>) <a href='../S/6770.html#L55' title='Defined at 55 in stdlib/gmp-impl.h.'>TMP_ALLOC</a> (2 * <a href='../Y/28773.html' title='Multiple used in 34 places.'>vsize</a> * <a href='../D/983.html' title='Multiple defined in 3 places.'>BYTES_PER_MP_LIMB</a>);
+<a id='L109' name='L109'></a> 109   <a href='../S/6770.html#L166' title='Defined at 166 in stdlib/gmp-impl.h.'>MPN_MUL_N_RECURSE</a> (<a href='../Y/22828.html' title='Multiple used in 92 places.'>prodp</a>, <a href='../D/38754.html' title='Multiple defined in 5 places.'>up</a>, <a href='../S/15656.html#L25' title='Defined at 25 in sysdeps/x86_64/add_n.S.'>vp</a>, <a href='../Y/28773.html' title='Multiple used in 34 places.'>vsize</a>, <a href='../Y/27860.html' title='Multiple used in 38 places.'>tspace</a>);
+<a id='L110' name='L110'></a> 110 
+<a id='L111' name='L111'></a> 111   <a href='../Y/22828.html' title='Multiple used in 92 places.'>prodp</a> += <a href='../Y/28773.html' title='Multiple used in 34 places.'>vsize</a>;
+<a id='L112' name='L112'></a> 112   <a href='../D/38754.html' title='Multiple defined in 5 places.'>up</a> += <a href='../Y/28773.html' title='Multiple used in 34 places.'>vsize</a>;
+<a id='L113' name='L113'></a> 113   <a href='../Y/28475.html' title='Multiple used in 25 places.'>usize</a> -= <a href='../Y/28773.html' title='Multiple used in 34 places.'>vsize</a>;
+<a id='L114' name='L114'></a> 114   <strong class='reserved'>if</strong> (<a href='../Y/28475.html' title='Multiple used in 25 places.'>usize</a> &gt;= <a href='../Y/28773.html' title='Multiple used in 34 places.'>vsize</a>)
+<a id='L115' name='L115'></a> 115     <em class='brace'>{</em>
+<a id='L116' name='L116'></a> 116       <a href='../S/6736.html#L64' title='Defined at 64 in stdlib/gmp.h.'>mp_ptr</a> <a href='../Y/27711.html' title='Multiple used in 432 places.'>tp</a> = (<a href='../S/6736.html#L64' title='Defined at 64 in stdlib/gmp.h.'>mp_ptr</a>) <a href='../S/6770.html#L55' title='Defined at 55 in stdlib/gmp-impl.h.'>TMP_ALLOC</a> (2 * <a href='../Y/28773.html' title='Multiple used in 34 places.'>vsize</a> * <a href='../D/983.html' title='Multiple defined in 3 places.'>BYTES_PER_MP_LIMB</a>);
+<a id='L117' name='L117'></a> 117       <strong class='reserved'>do</strong>
+<a id='L118' name='L118'></a> 118     <em class='brace'>{</em>
+<a id='L119' name='L119'></a> 119       <a href='../S/6770.html#L166' title='Defined at 166 in stdlib/gmp-impl.h.'>MPN_MUL_N_RECURSE</a> (<a href='../Y/27711.html' title='Multiple used in 432 places.'>tp</a>, <a href='../D/38754.html' title='Multiple defined in 5 places.'>up</a>, <a href='../S/15656.html#L25' title='Defined at 25 in sysdeps/x86_64/add_n.S.'>vp</a>, <a href='../Y/28773.html' title='Multiple used in 34 places.'>vsize</a>, <a href='../Y/27860.html' title='Multiple used in 38 places.'>tspace</a>);
+<a id='L120' name='L120'></a> 120       <a href='../S/15656.html#L27' title='Defined at 27 in sysdeps/x86_64/add_n.S.'>cy</a> = <a href='../D/33629.html' title='Multiple defined in 2 places.'>mpn_add_n</a> (<a href='../Y/22828.html' title='Multiple used in 92 places.'>prodp</a>, <a href='../Y/22828.html' title='Multiple used in 92 places.'>prodp</a>, <a href='../Y/27711.html' title='Multiple used in 432 places.'>tp</a>, <a href='../Y/28773.html' title='Multiple used in 34 places.'>vsize</a>);
+<a id='L121' name='L121'></a> 121       <a href='../D/33628.html' title='Multiple defined in 2 places.'>mpn_add_1</a> (<a href='../Y/22828.html' title='Multiple used in 92 places.'>prodp</a> + <a href='../Y/28773.html' title='Multiple used in 34 places.'>vsize</a>, <a href='../Y/27711.html' title='Multiple used in 432 places.'>tp</a> + <a href='../Y/28773.html' title='Multiple used in 34 places.'>vsize</a>, <a href='../Y/28773.html' title='Multiple used in 34 places.'>vsize</a>, <a href='../S/15656.html#L27' title='Defined at 27 in sysdeps/x86_64/add_n.S.'>cy</a>);
+<a id='L122' name='L122'></a> 122       <a href='../Y/22828.html' title='Multiple used in 92 places.'>prodp</a> += <a href='../Y/28773.html' title='Multiple used in 34 places.'>vsize</a>;
+<a id='L123' name='L123'></a> 123       <a href='../D/38754.html' title='Multiple defined in 5 places.'>up</a> += <a href='../Y/28773.html' title='Multiple used in 34 places.'>vsize</a>;
+<a id='L124' name='L124'></a> 124       <a href='../Y/28475.html' title='Multiple used in 25 places.'>usize</a> -= <a href='../Y/28773.html' title='Multiple used in 34 places.'>vsize</a>;
+<a id='L125' name='L125'></a> 125     <em class='brace'>}</em>
+<a id='L126' name='L126'></a> 126       <strong class='reserved'>while</strong> (<a href='../Y/28475.html' title='Multiple used in 25 places.'>usize</a> &gt;= <a href='../Y/28773.html' title='Multiple used in 34 places.'>vsize</a>);
+<a id='L127' name='L127'></a> 127     <em class='brace'>}</em>
+<a id='L128' name='L128'></a> 128 
+<a id='L129' name='L129'></a> 129   <em class='comment'>/* True: usize &lt; vsize.  */</em>
+<a id='L130' name='L130'></a> 130 
+<a id='L131' name='L131'></a> 131   <em class='comment'>/* Make life simple: Recurse.  */</em>
+<a id='L132' name='L132'></a> 132 
+<a id='L133' name='L133'></a> 133   <strong class='reserved'>if</strong> (<a href='../Y/28475.html' title='Multiple used in 25 places.'>usize</a> != 0)
+<a id='L134' name='L134'></a> 134     <em class='brace'>{</em>
+<a id='L135' name='L135'></a> 135       <a href='../D/33646.html' title='Multiple defined in 2 places.'>mpn_mul</a> (<a href='../Y/27860.html' title='Multiple used in 38 places.'>tspace</a>, <a href='../S/15656.html#L25' title='Defined at 25 in sysdeps/x86_64/add_n.S.'>vp</a>, <a href='../Y/28773.html' title='Multiple used in 34 places.'>vsize</a>, <a href='../D/38754.html' title='Multiple defined in 5 places.'>up</a>, <a href='../Y/28475.html' title='Multiple used in 25 places.'>usize</a>);
+<a id='L136' name='L136'></a> 136       <a href='../S/15656.html#L27' title='Defined at 27 in sysdeps/x86_64/add_n.S.'>cy</a> = <a href='../D/33629.html' title='Multiple defined in 2 places.'>mpn_add_n</a> (<a href='../Y/22828.html' title='Multiple used in 92 places.'>prodp</a>, <a href='../Y/22828.html' title='Multiple used in 92 places.'>prodp</a>, <a href='../Y/27860.html' title='Multiple used in 38 places.'>tspace</a>, <a href='../Y/28773.html' title='Multiple used in 34 places.'>vsize</a>);
+<a id='L137' name='L137'></a> 137       <a href='../D/33628.html' title='Multiple defined in 2 places.'>mpn_add_1</a> (<a href='../Y/22828.html' title='Multiple used in 92 places.'>prodp</a> + <a href='../Y/28773.html' title='Multiple used in 34 places.'>vsize</a>, <a href='../Y/27860.html' title='Multiple used in 38 places.'>tspace</a> + <a href='../Y/28773.html' title='Multiple used in 34 places.'>vsize</a>, <a href='../Y/28475.html' title='Multiple used in 25 places.'>usize</a>, <a href='../S/15656.html#L27' title='Defined at 27 in sysdeps/x86_64/add_n.S.'>cy</a>);
+<a id='L138' name='L138'></a> 138     <em class='brace'>}</em>
+<a id='L139' name='L139'></a> 139 
+<a id='L140' name='L140'></a> 140   <a href='../S/6770.html#L57' title='Defined at 57 in stdlib/gmp-impl.h.'>TMP_FREE</a> (<a href='../Y/18963.html' title='Multiple used in 36 places.'>marker</a>);
+<a id='L141' name='L141'></a> 141   <strong class='reserved'>return</strong> *<a href='../Y/22824.html' title='Multiple used in 2 places.'>prod_endp</a>;
+<a id='L142' name='L142'></a> 142 <em class='brace'>}</em>
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;][^]<a href='#L45'>[v]</a><a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

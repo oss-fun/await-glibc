@@ -1,0 +1,591 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>sysdeps/i386/i686/multiarch/strcat-ssse3.S</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18977.html'>sysdeps</a>/<a href='../files/19041.html'>i386</a>/<a href='../files/19046.html'>i686</a>/<a href='../files/19049.html'>multiarch</a>/strcat-ssse3.S</h2>
+<em class='comment'>/* [&lt;][&gt;][^][v][top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* strcat with SSSE3</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   Copyright (C) 2011-2022 Free Software Foundation, Inc.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L4' name='L4'></a>   4 <em class='comment'></em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L9' name='L9'></a>   9 <em class='comment'></em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L14' name='L14'></a>  14 <em class='comment'></em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   License along with the GNU C Library; if not, see</em>
+<a id='L17' name='L17'></a>  17 <em class='comment'>   &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L18' name='L18'></a>  18 
+<a id='L19' name='L19'></a>  19 
+<a id='L20' name='L20'></a>  20 <em class='sharp'>#if</em> <a href='../D/6753.html' title='Multiple defined in 3 places.'>IS_IN</a> (<a href='../D/32623.html' title='Multiple defined in 2 places.'>libc</a>)
+<a id='L21' name='L21'></a>  21 
+<a id='L22' name='L22'></a>  22 <em class='sharp'># include</em> &lt;<a href='../I/5967.html'>sysdep.h</a>&gt;
+<a id='L23' name='L23'></a>  23 
+<a id='L24' name='L24'></a>  24 <em class='sharp'># define</em> CFI_PUSH(REG)  \
+<a id='L25' name='L25'></a>  25     cfi_adjust_cfa_offset (4);  \
+<a id='L26' name='L26'></a>  26     cfi_rel_offset (REG, 0)
+<a id='L27' name='L27'></a>  27 
+<a id='L28' name='L28'></a>  28 <em class='sharp'># define</em> CFI_POP(REG)   \
+<a id='L29' name='L29'></a>  29     cfi_adjust_cfa_offset (-4); \
+<a id='L30' name='L30'></a>  30     cfi_restore (REG)
+<a id='L31' name='L31'></a>  31 
+<a id='L32' name='L32'></a>  32 <em class='sharp'># define</em> <a href='../R/6543.html' title='Multiple referred from 6 places.'>PUSH</a>(REG) pushl REG; CFI_PUSH (REG)
+<a id='L33' name='L33'></a>  33 <em class='sharp'># define</em> <a href='../S/6755.html#L173' title='Referred from 173 in stdlib/qsort.c.'>POP</a>(REG) popl REG; CFI_POP (REG)
+<a id='L34' name='L34'></a>  34 
+<a id='L35' name='L35'></a>  35 <em class='sharp'># ifndef</em> <a href='../D/14855.html' title='Multiple defined in 33 places.'>STRCAT</a>
+<a id='L36' name='L36'></a>  36 <em class='sharp'>#  define</em> <a href='../R/8063.html' title='Multiple referred from 11 places.'>STRCAT</a>  __strcat_ssse3
+<a id='L37' name='L37'></a>  37 <em class='sharp'># endif</em>
+<a id='L38' name='L38'></a>  38 
+<a id='L39' name='L39'></a>  39 <em class='sharp'># define</em> PARMS  4
+<a id='L40' name='L40'></a>  40 <em class='sharp'># define</em> STR1  PARMS+4
+<a id='L41' name='L41'></a>  41 <em class='sharp'># define</em> <a href='../S/18686.html#L65' title='Referred from 65 in nptl/tst-audit-threads.c.'>STR2</a>  STR1+4
+<a id='L42' name='L42'></a>  42 
+<a id='L43' name='L43'></a>  43 <em class='sharp'># ifdef</em> <a href='../D/16780.html' title='Multiple defined in 7 places.'>USE_AS_STRNCAT</a>
+<a id='L44' name='L44'></a>  44 <em class='sharp'>#  define</em> <a href='../R/4270.html' title='Multiple referred from 8 places.'>LEN</a> STR2+8
+<a id='L45' name='L45'></a>  45 <em class='sharp'># endif</em>
+<a id='L46' name='L46'></a>  46 
+<a id='L47' name='L47'></a>  47 <em class='sharp'># define</em> <a href='../R/9232.html' title='Multiple referred from 188 places.'>USE_AS_STRCAT</a>
+<a id='L48' name='L48'></a>  48 
+<a id='L49' name='L49'></a>  49 .text
+<a id='L50' name='L50'></a>  50 <a href='../D/3651.html' title='Multiple defined in 54 places.'>ENTRY</a> (<a href='../R/8063.html' title='Multiple referred from 11 places.'>STRCAT</a>)
+<a id='L51' name='L51'></a>  51     PUSH    (%edi)
+<a id='L52' name='L52'></a>  52     mov STR1(%esp), %edi
+<a id='L53' name='L53'></a>  53     mov %edi, %edx
+<a id='L54' name='L54'></a>  54 
+<a id='L55' name='L55'></a>  55 <em class='sharp'># define</em> <a href='../R/6819.html' title='Multiple referred from 15 places.'>RETURN</a>  jmp L(StartStrcpyPart)
+<a id='L56' name='L56'></a>  56 <em class='sharp'># include</em> "strlen-sse2.S"
+<a id='L57' name='L57'></a>  57 
+<a id='L58' name='L58'></a>  58 L(StartStrcpyPart):
+<a id='L59' name='L59'></a>  59     mov STR2(%esp), %ecx
+<a id='L60' name='L60'></a>  60     lea (%edi, %eax), %edx
+<a id='L61' name='L61'></a>  61 <em class='sharp'># ifdef</em> <a href='../D/16780.html' title='Multiple defined in 7 places.'>USE_AS_STRNCAT</a>
+<a id='L62' name='L62'></a>  62     PUSH    (%ebx)
+<a id='L63' name='L63'></a>  63     mov LEN(%esp), %ebx
+<a id='L64' name='L64'></a>  64     test    %ebx, %ebx
+<a id='L65' name='L65'></a>  65     jz  L(StrncatExit0)
+<a id='L66' name='L66'></a>  66     cmp $8, %ebx
+<a id='L67' name='L67'></a>  67     jbe L(StrncatExit8Bytes)
+<a id='L68' name='L68'></a>  68 <em class='sharp'># endif</em>
+<a id='L69' name='L69'></a>  69     cmpb    $0, (%ecx)
+<a id='L70' name='L70'></a>  70     jz  L(Exit1)
+<a id='L71' name='L71'></a>  71     cmpb    $0, 1(%ecx)
+<a id='L72' name='L72'></a>  72     jz  L(Exit2)
+<a id='L73' name='L73'></a>  73     cmpb    $0, 2(%ecx)
+<a id='L74' name='L74'></a>  74     jz  L(Exit3)
+<a id='L75' name='L75'></a>  75     cmpb    $0, 3(%ecx)
+<a id='L76' name='L76'></a>  76     jz  L(Exit4)
+<a id='L77' name='L77'></a>  77     cmpb    $0, 4(%ecx)
+<a id='L78' name='L78'></a>  78     jz  L(Exit5)
+<a id='L79' name='L79'></a>  79     cmpb    $0, 5(%ecx)
+<a id='L80' name='L80'></a>  80     jz  L(Exit6)
+<a id='L81' name='L81'></a>  81     cmpb    $0, 6(%ecx)
+<a id='L82' name='L82'></a>  82     jz  L(Exit7)
+<a id='L83' name='L83'></a>  83     cmpb    $0, 7(%ecx)
+<a id='L84' name='L84'></a>  84     jz  L(Exit8)
+<a id='L85' name='L85'></a>  85     cmpb    $0, 8(%ecx)
+<a id='L86' name='L86'></a>  86     jz  L(Exit9)
+<a id='L87' name='L87'></a>  87 <em class='sharp'># ifdef</em> <a href='../D/16780.html' title='Multiple defined in 7 places.'>USE_AS_STRNCAT</a>
+<a id='L88' name='L88'></a>  88     cmp $16, %ebx
+<a id='L89' name='L89'></a>  89     jb  L(StrncatExit15Bytes)
+<a id='L90' name='L90'></a>  90 <em class='sharp'># endif</em>
+<a id='L91' name='L91'></a>  91     cmpb    $0, 9(%ecx)
+<a id='L92' name='L92'></a>  92     jz  L(Exit10)
+<a id='L93' name='L93'></a>  93     cmpb    $0, 10(%ecx)
+<a id='L94' name='L94'></a>  94     jz  L(Exit11)
+<a id='L95' name='L95'></a>  95     cmpb    $0, 11(%ecx)
+<a id='L96' name='L96'></a>  96     jz  L(Exit12)
+<a id='L97' name='L97'></a>  97     cmpb    $0, 12(%ecx)
+<a id='L98' name='L98'></a>  98     jz  L(Exit13)
+<a id='L99' name='L99'></a>  99     cmpb    $0, 13(%ecx)
+<a id='L100' name='L100'></a> 100     jz  L(Exit14)
+<a id='L101' name='L101'></a> 101     cmpb    $0, 14(%ecx)
+<a id='L102' name='L102'></a> 102     jz  L(Exit15)
+<a id='L103' name='L103'></a> 103     cmpb    $0, 15(%ecx)
+<a id='L104' name='L104'></a> 104     jz  L(Exit16)
+<a id='L105' name='L105'></a> 105 <em class='sharp'># ifdef</em> <a href='../D/16780.html' title='Multiple defined in 7 places.'>USE_AS_STRNCAT</a>
+<a id='L106' name='L106'></a> 106     cmp $16, %ebx
+<a id='L107' name='L107'></a> 107     je  L(StrncatExit16)
+<a id='L108' name='L108'></a> 108 
+<a id='L109' name='L109'></a> 109 <em class='sharp'>#  define</em> RETURN1   \
+<a id='L110' name='L110'></a> 110     POP (%ebx); \
+<a id='L111' name='L111'></a> 111     POP (%edi); \
+<a id='L112' name='L112'></a> 112     ret;    \
+<a id='L113' name='L113'></a> 113     CFI_PUSH    (%ebx); \
+<a id='L114' name='L114'></a> 114     CFI_PUSH    (%edi)
+<a id='L115' name='L115'></a> 115 <em class='sharp'>#  define</em> <a href='../R/9239.html' title='Multiple referred from 414 places.'>USE_AS_STRNCPY</a>
+<a id='L116' name='L116'></a> 116 <em class='sharp'># else</em>
+<a id='L117' name='L117'></a> 117 <em class='sharp'>#  define</em> RETURN1  POP (%edi); ret; CFI_PUSH (%edi)
+<a id='L118' name='L118'></a> 118 <em class='sharp'># endif</em>
+<a id='L119' name='L119'></a> 119 <em class='sharp'># include</em> "strcpy-ssse3.S"
+<a id='L120' name='L120'></a> 120     .p2align 4
+<a id='L121' name='L121'></a> 121 L(CopyFrom1To16Bytes):
+<a id='L122' name='L122'></a> 122     add %esi, %edx
+<a id='L123' name='L123'></a> 123     add %esi, %ecx
+<a id='L124' name='L124'></a> 124 
+<a id='L125' name='L125'></a> 125     POP (%esi)
+<a id='L126' name='L126'></a> 126     test    %al, %al
+<a id='L127' name='L127'></a> 127     jz  L(ExitHigh)
+<a id='L128' name='L128'></a> 128     test    $0x01, %al
+<a id='L129' name='L129'></a> 129     jnz L(Exit1)
+<a id='L130' name='L130'></a> 130     test    $0x02, %al
+<a id='L131' name='L131'></a> 131     jnz L(Exit2)
+<a id='L132' name='L132'></a> 132     test    $0x04, %al
+<a id='L133' name='L133'></a> 133     jnz L(Exit3)
+<a id='L134' name='L134'></a> 134     test    $0x08, %al
+<a id='L135' name='L135'></a> 135     jnz L(Exit4)
+<a id='L136' name='L136'></a> 136     test    $0x10, %al
+<a id='L137' name='L137'></a> 137     jnz L(Exit5)
+<a id='L138' name='L138'></a> 138     test    $0x20, %al
+<a id='L139' name='L139'></a> 139     jnz L(Exit6)
+<a id='L140' name='L140'></a> 140     test    $0x40, %al
+<a id='L141' name='L141'></a> 141     jnz L(Exit7)
+<a id='L142' name='L142'></a> 142     movlpd  (%ecx), %xmm0
+<a id='L143' name='L143'></a> 143     movlpd  %xmm0, (%edx)
+<a id='L144' name='L144'></a> 144     movl    %edi, %eax
+<a id='L145' name='L145'></a> 145     RETURN1
+<a id='L146' name='L146'></a> 146 
+<a id='L147' name='L147'></a> 147     .p2align 4
+<a id='L148' name='L148'></a> 148 L(ExitHigh):
+<a id='L149' name='L149'></a> 149     test    $0x01, %ah
+<a id='L150' name='L150'></a> 150     jnz L(Exit9)
+<a id='L151' name='L151'></a> 151     test    $0x02, %ah
+<a id='L152' name='L152'></a> 152     jnz L(Exit10)
+<a id='L153' name='L153'></a> 153     test    $0x04, %ah
+<a id='L154' name='L154'></a> 154     jnz L(Exit11)
+<a id='L155' name='L155'></a> 155     test    $0x08, %ah
+<a id='L156' name='L156'></a> 156     jnz L(Exit12)
+<a id='L157' name='L157'></a> 157     test    $0x10, %ah
+<a id='L158' name='L158'></a> 158     jnz L(Exit13)
+<a id='L159' name='L159'></a> 159     test    $0x20, %ah
+<a id='L160' name='L160'></a> 160     jnz L(Exit14)
+<a id='L161' name='L161'></a> 161     test    $0x40, %ah
+<a id='L162' name='L162'></a> 162     jnz L(Exit15)
+<a id='L163' name='L163'></a> 163     movlpd  (%ecx), %xmm0
+<a id='L164' name='L164'></a> 164     movlpd  8(%ecx), %xmm1
+<a id='L165' name='L165'></a> 165     movlpd  %xmm0, (%edx)
+<a id='L166' name='L166'></a> 166     movlpd  %xmm1, 8(%edx)
+<a id='L167' name='L167'></a> 167     movl    %edi, %eax
+<a id='L168' name='L168'></a> 168     RETURN1
+<a id='L169' name='L169'></a> 169 
+<a id='L170' name='L170'></a> 170     .p2align 4
+<a id='L171' name='L171'></a> 171 L(StrncatExit1):
+<a id='L172' name='L172'></a> 172     movb    %bh, 1(%edx)
+<a id='L173' name='L173'></a> 173 L(Exit1):
+<a id='L174' name='L174'></a> 174     movb    (%ecx), %al
+<a id='L175' name='L175'></a> 175     movb    %al, (%edx)
+<a id='L176' name='L176'></a> 176     movl    %edi, %eax
+<a id='L177' name='L177'></a> 177     RETURN1
+<a id='L178' name='L178'></a> 178 
+<a id='L179' name='L179'></a> 179     .p2align 4
+<a id='L180' name='L180'></a> 180 L(StrncatExit2):
+<a id='L181' name='L181'></a> 181     movb    %bh, 2(%edx)
+<a id='L182' name='L182'></a> 182 L(Exit2):
+<a id='L183' name='L183'></a> 183     movw    (%ecx), %ax
+<a id='L184' name='L184'></a> 184     movw    %ax, (%edx)
+<a id='L185' name='L185'></a> 185     movl    %edi, %eax
+<a id='L186' name='L186'></a> 186     RETURN1
+<a id='L187' name='L187'></a> 187 
+<a id='L188' name='L188'></a> 188     .p2align 4
+<a id='L189' name='L189'></a> 189 L(StrncatExit3):
+<a id='L190' name='L190'></a> 190     movb    %bh, 3(%edx)
+<a id='L191' name='L191'></a> 191 L(Exit3):
+<a id='L192' name='L192'></a> 192     movw    (%ecx), %ax
+<a id='L193' name='L193'></a> 193     movw    %ax, (%edx)
+<a id='L194' name='L194'></a> 194     movb    2(%ecx), %al
+<a id='L195' name='L195'></a> 195     movb    %al, 2(%edx)
+<a id='L196' name='L196'></a> 196     movl    %edi, %eax
+<a id='L197' name='L197'></a> 197     RETURN1
+<a id='L198' name='L198'></a> 198 
+<a id='L199' name='L199'></a> 199     .p2align 4
+<a id='L200' name='L200'></a> 200 L(StrncatExit4):
+<a id='L201' name='L201'></a> 201     movb    %bh, 4(%edx)
+<a id='L202' name='L202'></a> 202 L(Exit4):
+<a id='L203' name='L203'></a> 203     movl    (%ecx), %eax
+<a id='L204' name='L204'></a> 204     movl    %eax, (%edx)
+<a id='L205' name='L205'></a> 205     movl    %edi, %eax
+<a id='L206' name='L206'></a> 206     RETURN1
+<a id='L207' name='L207'></a> 207 
+<a id='L208' name='L208'></a> 208     .p2align 4
+<a id='L209' name='L209'></a> 209 L(StrncatExit5):
+<a id='L210' name='L210'></a> 210     movb    %bh, 5(%edx)
+<a id='L211' name='L211'></a> 211 L(Exit5):
+<a id='L212' name='L212'></a> 212     movl    (%ecx), %eax
+<a id='L213' name='L213'></a> 213     movl    %eax, (%edx)
+<a id='L214' name='L214'></a> 214     movb    4(%ecx), %al
+<a id='L215' name='L215'></a> 215     movb    %al, 4(%edx)
+<a id='L216' name='L216'></a> 216     movl    %edi, %eax
+<a id='L217' name='L217'></a> 217     RETURN1
+<a id='L218' name='L218'></a> 218 
+<a id='L219' name='L219'></a> 219     .p2align 4
+<a id='L220' name='L220'></a> 220 L(StrncatExit6):
+<a id='L221' name='L221'></a> 221     movb    %bh, 6(%edx)
+<a id='L222' name='L222'></a> 222 L(Exit6):
+<a id='L223' name='L223'></a> 223     movl    (%ecx), %eax
+<a id='L224' name='L224'></a> 224     movl    %eax, (%edx)
+<a id='L225' name='L225'></a> 225     movw    4(%ecx), %ax
+<a id='L226' name='L226'></a> 226     movw    %ax, 4(%edx)
+<a id='L227' name='L227'></a> 227     movl    %edi, %eax
+<a id='L228' name='L228'></a> 228     RETURN1
+<a id='L229' name='L229'></a> 229 
+<a id='L230' name='L230'></a> 230     .p2align 4
+<a id='L231' name='L231'></a> 231 L(StrncatExit7):
+<a id='L232' name='L232'></a> 232     movb    %bh, 7(%edx)
+<a id='L233' name='L233'></a> 233 L(Exit7):
+<a id='L234' name='L234'></a> 234     movl    (%ecx), %eax
+<a id='L235' name='L235'></a> 235     movl    %eax, (%edx)
+<a id='L236' name='L236'></a> 236     movl    3(%ecx), %eax
+<a id='L237' name='L237'></a> 237     movl    %eax, 3(%edx)
+<a id='L238' name='L238'></a> 238     movl    %edi, %eax
+<a id='L239' name='L239'></a> 239     RETURN1
+<a id='L240' name='L240'></a> 240 
+<a id='L241' name='L241'></a> 241     .p2align 4
+<a id='L242' name='L242'></a> 242 L(StrncatExit8):
+<a id='L243' name='L243'></a> 243     movb    %bh, 8(%edx)
+<a id='L244' name='L244'></a> 244 L(Exit8):
+<a id='L245' name='L245'></a> 245     movlpd  (%ecx), %xmm0
+<a id='L246' name='L246'></a> 246     movlpd  %xmm0, (%edx)
+<a id='L247' name='L247'></a> 247     movl    %edi, %eax
+<a id='L248' name='L248'></a> 248     RETURN1
+<a id='L249' name='L249'></a> 249 
+<a id='L250' name='L250'></a> 250     .p2align 4
+<a id='L251' name='L251'></a> 251 L(StrncatExit9):
+<a id='L252' name='L252'></a> 252     movb    %bh, 9(%edx)
+<a id='L253' name='L253'></a> 253 L(Exit9):
+<a id='L254' name='L254'></a> 254     movlpd  (%ecx), %xmm0
+<a id='L255' name='L255'></a> 255     movlpd  %xmm0, (%edx)
+<a id='L256' name='L256'></a> 256     movb    8(%ecx), %al
+<a id='L257' name='L257'></a> 257     movb    %al, 8(%edx)
+<a id='L258' name='L258'></a> 258     movl    %edi, %eax
+<a id='L259' name='L259'></a> 259     RETURN1
+<a id='L260' name='L260'></a> 260 
+<a id='L261' name='L261'></a> 261     .p2align 4
+<a id='L262' name='L262'></a> 262 L(StrncatExit10):
+<a id='L263' name='L263'></a> 263     movb    %bh, 10(%edx)
+<a id='L264' name='L264'></a> 264 L(Exit10):
+<a id='L265' name='L265'></a> 265     movlpd  (%ecx), %xmm0
+<a id='L266' name='L266'></a> 266     movlpd  %xmm0, (%edx)
+<a id='L267' name='L267'></a> 267     movw    8(%ecx), %ax
+<a id='L268' name='L268'></a> 268     movw    %ax, 8(%edx)
+<a id='L269' name='L269'></a> 269     movl    %edi, %eax
+<a id='L270' name='L270'></a> 270     RETURN1
+<a id='L271' name='L271'></a> 271 
+<a id='L272' name='L272'></a> 272     .p2align 4
+<a id='L273' name='L273'></a> 273 L(StrncatExit11):
+<a id='L274' name='L274'></a> 274     movb    %bh, 11(%edx)
+<a id='L275' name='L275'></a> 275 L(Exit11):
+<a id='L276' name='L276'></a> 276     movlpd  (%ecx), %xmm0
+<a id='L277' name='L277'></a> 277     movlpd  %xmm0, (%edx)
+<a id='L278' name='L278'></a> 278     movl    7(%ecx), %eax
+<a id='L279' name='L279'></a> 279     movl    %eax, 7(%edx)
+<a id='L280' name='L280'></a> 280     movl    %edi, %eax
+<a id='L281' name='L281'></a> 281     RETURN1
+<a id='L282' name='L282'></a> 282 
+<a id='L283' name='L283'></a> 283     .p2align 4
+<a id='L284' name='L284'></a> 284 L(StrncatExit12):
+<a id='L285' name='L285'></a> 285     movb    %bh, 12(%edx)
+<a id='L286' name='L286'></a> 286 L(Exit12):
+<a id='L287' name='L287'></a> 287     movlpd  (%ecx), %xmm0
+<a id='L288' name='L288'></a> 288     movlpd  %xmm0, (%edx)
+<a id='L289' name='L289'></a> 289     movl    8(%ecx), %eax
+<a id='L290' name='L290'></a> 290     movl    %eax, 8(%edx)
+<a id='L291' name='L291'></a> 291     movl    %edi, %eax
+<a id='L292' name='L292'></a> 292     RETURN1
+<a id='L293' name='L293'></a> 293 
+<a id='L294' name='L294'></a> 294     .p2align 4
+<a id='L295' name='L295'></a> 295 L(StrncatExit13):
+<a id='L296' name='L296'></a> 296     movb    %bh, 13(%edx)
+<a id='L297' name='L297'></a> 297 L(Exit13):
+<a id='L298' name='L298'></a> 298     movlpd  (%ecx), %xmm0
+<a id='L299' name='L299'></a> 299     movlpd  %xmm0, (%edx)
+<a id='L300' name='L300'></a> 300     movlpd  5(%ecx), %xmm0
+<a id='L301' name='L301'></a> 301     movlpd  %xmm0, 5(%edx)
+<a id='L302' name='L302'></a> 302     movl    %edi, %eax
+<a id='L303' name='L303'></a> 303     RETURN1
+<a id='L304' name='L304'></a> 304 
+<a id='L305' name='L305'></a> 305     .p2align 4
+<a id='L306' name='L306'></a> 306 L(StrncatExit14):
+<a id='L307' name='L307'></a> 307     movb    %bh, 14(%edx)
+<a id='L308' name='L308'></a> 308 L(Exit14):
+<a id='L309' name='L309'></a> 309     movlpd  (%ecx), %xmm0
+<a id='L310' name='L310'></a> 310     movlpd  %xmm0, (%edx)
+<a id='L311' name='L311'></a> 311     movlpd  6(%ecx), %xmm0
+<a id='L312' name='L312'></a> 312     movlpd  %xmm0, 6(%edx)
+<a id='L313' name='L313'></a> 313     movl    %edi, %eax
+<a id='L314' name='L314'></a> 314     RETURN1
+<a id='L315' name='L315'></a> 315 
+<a id='L316' name='L316'></a> 316     .p2align 4
+<a id='L317' name='L317'></a> 317 L(StrncatExit15):
+<a id='L318' name='L318'></a> 318     movb    %bh, 15(%edx)
+<a id='L319' name='L319'></a> 319 L(Exit15):
+<a id='L320' name='L320'></a> 320     movlpd  (%ecx), %xmm0
+<a id='L321' name='L321'></a> 321     movlpd  %xmm0, (%edx)
+<a id='L322' name='L322'></a> 322     movlpd  7(%ecx), %xmm0
+<a id='L323' name='L323'></a> 323     movlpd  %xmm0, 7(%edx)
+<a id='L324' name='L324'></a> 324     movl    %edi, %eax
+<a id='L325' name='L325'></a> 325     RETURN1
+<a id='L326' name='L326'></a> 326 
+<a id='L327' name='L327'></a> 327     .p2align 4
+<a id='L328' name='L328'></a> 328 L(StrncatExit16):
+<a id='L329' name='L329'></a> 329     movb    %bh, 16(%edx)
+<a id='L330' name='L330'></a> 330 L(Exit16):
+<a id='L331' name='L331'></a> 331     movlpd  (%ecx), %xmm0
+<a id='L332' name='L332'></a> 332     movlpd  8(%ecx), %xmm1
+<a id='L333' name='L333'></a> 333     movlpd  %xmm0, (%edx)
+<a id='L334' name='L334'></a> 334     movlpd  %xmm1, 8(%edx)
+<a id='L335' name='L335'></a> 335     movl    %edi, %eax
+<a id='L336' name='L336'></a> 336     RETURN1
+<a id='L337' name='L337'></a> 337 
+<a id='L338' name='L338'></a> 338 <em class='sharp'># ifdef</em> <a href='../D/16782.html' title='Multiple defined in 19 places.'>USE_AS_STRNCPY</a>
+<a id='L339' name='L339'></a> 339 
+<a id='L340' name='L340'></a> 340     CFI_PUSH(%esi)
+<a id='L341' name='L341'></a> 341 
+<a id='L342' name='L342'></a> 342     .p2align 4
+<a id='L343' name='L343'></a> 343 L(CopyFrom1To16BytesCase2):
+<a id='L344' name='L344'></a> 344     add $16, %ebx
+<a id='L345' name='L345'></a> 345     add %esi, %ecx
+<a id='L346' name='L346'></a> 346     lea (%esi, %edx), %esi
+<a id='L347' name='L347'></a> 347     lea -9(%ebx), %edx
+<a id='L348' name='L348'></a> 348     and $1&lt;&lt;7, %dh
+<a id='L349' name='L349'></a> 349     or  %al, %dh
+<a id='L350' name='L350'></a> 350     test    %dh, %dh
+<a id='L351' name='L351'></a> 351     lea (%esi), %edx
+<a id='L352' name='L352'></a> 352     POP (%esi)
+<a id='L353' name='L353'></a> 353     jz  L(ExitHighCase2)
+<a id='L354' name='L354'></a> 354 
+<a id='L355' name='L355'></a> 355     test    $0x01, %al
+<a id='L356' name='L356'></a> 356     jnz L(Exit1)
+<a id='L357' name='L357'></a> 357     cmp $1, %ebx
+<a id='L358' name='L358'></a> 358     je  L(StrncatExit1)
+<a id='L359' name='L359'></a> 359     test    $0x02, %al
+<a id='L360' name='L360'></a> 360     jnz L(Exit2)
+<a id='L361' name='L361'></a> 361     cmp $2, %ebx
+<a id='L362' name='L362'></a> 362     je  L(StrncatExit2)
+<a id='L363' name='L363'></a> 363     test    $0x04, %al
+<a id='L364' name='L364'></a> 364     jnz L(Exit3)
+<a id='L365' name='L365'></a> 365     cmp $3, %ebx
+<a id='L366' name='L366'></a> 366     je  L(StrncatExit3)
+<a id='L367' name='L367'></a> 367     test    $0x08, %al
+<a id='L368' name='L368'></a> 368     jnz L(Exit4)
+<a id='L369' name='L369'></a> 369     cmp $4, %ebx
+<a id='L370' name='L370'></a> 370     je  L(StrncatExit4)
+<a id='L371' name='L371'></a> 371     test    $0x10, %al
+<a id='L372' name='L372'></a> 372     jnz L(Exit5)
+<a id='L373' name='L373'></a> 373     cmp $5, %ebx
+<a id='L374' name='L374'></a> 374     je  L(StrncatExit5)
+<a id='L375' name='L375'></a> 375     test    $0x20, %al
+<a id='L376' name='L376'></a> 376     jnz L(Exit6)
+<a id='L377' name='L377'></a> 377     cmp $6, %ebx
+<a id='L378' name='L378'></a> 378     je  L(StrncatExit6)
+<a id='L379' name='L379'></a> 379     test    $0x40, %al
+<a id='L380' name='L380'></a> 380     jnz L(Exit7)
+<a id='L381' name='L381'></a> 381     cmp $7, %ebx
+<a id='L382' name='L382'></a> 382     je  L(StrncatExit7)
+<a id='L383' name='L383'></a> 383     movlpd  (%ecx), %xmm0
+<a id='L384' name='L384'></a> 384     movlpd  %xmm0, (%edx)
+<a id='L385' name='L385'></a> 385     lea 7(%edx), %eax
+<a id='L386' name='L386'></a> 386     cmpb    $1, (%eax)
+<a id='L387' name='L387'></a> 387     sbb $-1, %eax
+<a id='L388' name='L388'></a> 388     xor %cl, %cl
+<a id='L389' name='L389'></a> 389     movb    %cl, (%eax)
+<a id='L390' name='L390'></a> 390     movl    %edi, %eax
+<a id='L391' name='L391'></a> 391     RETURN1
+<a id='L392' name='L392'></a> 392 
+<a id='L393' name='L393'></a> 393     .p2align 4
+<a id='L394' name='L394'></a> 394 L(ExitHighCase2):
+<a id='L395' name='L395'></a> 395     test    $0x01, %ah
+<a id='L396' name='L396'></a> 396     jnz L(Exit9)
+<a id='L397' name='L397'></a> 397     cmp $9, %ebx
+<a id='L398' name='L398'></a> 398     je  L(StrncatExit9)
+<a id='L399' name='L399'></a> 399     test    $0x02, %ah
+<a id='L400' name='L400'></a> 400     jnz L(Exit10)
+<a id='L401' name='L401'></a> 401     cmp $10, %ebx
+<a id='L402' name='L402'></a> 402     je  L(StrncatExit10)
+<a id='L403' name='L403'></a> 403     test    $0x04, %ah
+<a id='L404' name='L404'></a> 404     jnz L(Exit11)
+<a id='L405' name='L405'></a> 405     cmp $11, %ebx
+<a id='L406' name='L406'></a> 406     je  L(StrncatExit11)
+<a id='L407' name='L407'></a> 407     test    $0x8, %ah
+<a id='L408' name='L408'></a> 408     jnz L(Exit12)
+<a id='L409' name='L409'></a> 409     cmp $12, %ebx
+<a id='L410' name='L410'></a> 410     je  L(StrncatExit12)
+<a id='L411' name='L411'></a> 411     test    $0x10, %ah
+<a id='L412' name='L412'></a> 412     jnz L(Exit13)
+<a id='L413' name='L413'></a> 413     cmp $13, %ebx
+<a id='L414' name='L414'></a> 414     je  L(StrncatExit13)
+<a id='L415' name='L415'></a> 415     test    $0x20, %ah
+<a id='L416' name='L416'></a> 416     jnz L(Exit14)
+<a id='L417' name='L417'></a> 417     cmp $14, %ebx
+<a id='L418' name='L418'></a> 418     je  L(StrncatExit14)
+<a id='L419' name='L419'></a> 419     test    $0x40, %ah
+<a id='L420' name='L420'></a> 420     jnz L(Exit15)
+<a id='L421' name='L421'></a> 421     cmp $15, %ebx
+<a id='L422' name='L422'></a> 422     je  L(StrncatExit15)
+<a id='L423' name='L423'></a> 423     movlpd  (%ecx), %xmm0
+<a id='L424' name='L424'></a> 424     movlpd  %xmm0, (%edx)
+<a id='L425' name='L425'></a> 425     movlpd  8(%ecx), %xmm1
+<a id='L426' name='L426'></a> 426     movlpd  %xmm1, 8(%edx)
+<a id='L427' name='L427'></a> 427     movl    %edi, %eax
+<a id='L428' name='L428'></a> 428     RETURN1
+<a id='L429' name='L429'></a> 429 
+<a id='L430' name='L430'></a> 430     CFI_PUSH(%esi)
+<a id='L431' name='L431'></a> 431 
+<a id='L432' name='L432'></a> 432 L(CopyFrom1To16BytesCase2OrCase3):
+<a id='L433' name='L433'></a> 433     test    %eax, %eax
+<a id='L434' name='L434'></a> 434     jnz L(CopyFrom1To16BytesCase2)
+<a id='L435' name='L435'></a> 435 
+<a id='L436' name='L436'></a> 436     .p2align 4
+<a id='L437' name='L437'></a> 437 L(CopyFrom1To16BytesCase3):
+<a id='L438' name='L438'></a> 438     add $16, %ebx
+<a id='L439' name='L439'></a> 439     add %esi, %edx
+<a id='L440' name='L440'></a> 440     add %esi, %ecx
+<a id='L441' name='L441'></a> 441 
+<a id='L442' name='L442'></a> 442     POP (%esi)
+<a id='L443' name='L443'></a> 443 
+<a id='L444' name='L444'></a> 444     cmp $8, %ebx
+<a id='L445' name='L445'></a> 445     ja  L(ExitHighCase3)
+<a id='L446' name='L446'></a> 446     cmp $1, %ebx
+<a id='L447' name='L447'></a> 447     je  L(StrncatExit1)
+<a id='L448' name='L448'></a> 448     cmp $2, %ebx
+<a id='L449' name='L449'></a> 449     je  L(StrncatExit2)
+<a id='L450' name='L450'></a> 450     cmp $3, %ebx
+<a id='L451' name='L451'></a> 451     je  L(StrncatExit3)
+<a id='L452' name='L452'></a> 452     cmp $4, %ebx
+<a id='L453' name='L453'></a> 453     je  L(StrncatExit4)
+<a id='L454' name='L454'></a> 454     cmp $5, %ebx
+<a id='L455' name='L455'></a> 455     je  L(StrncatExit5)
+<a id='L456' name='L456'></a> 456     cmp $6, %ebx
+<a id='L457' name='L457'></a> 457     je  L(StrncatExit6)
+<a id='L458' name='L458'></a> 458     cmp $7, %ebx
+<a id='L459' name='L459'></a> 459     je  L(StrncatExit7)
+<a id='L460' name='L460'></a> 460     movlpd  (%ecx), %xmm0
+<a id='L461' name='L461'></a> 461     movlpd  %xmm0, (%edx)
+<a id='L462' name='L462'></a> 462     movb    %bh, 8(%edx)
+<a id='L463' name='L463'></a> 463     movl    %edi, %eax
+<a id='L464' name='L464'></a> 464     RETURN1
+<a id='L465' name='L465'></a> 465 
+<a id='L466' name='L466'></a> 466     .p2align 4
+<a id='L467' name='L467'></a> 467 L(ExitHighCase3):
+<a id='L468' name='L468'></a> 468     cmp $9, %ebx
+<a id='L469' name='L469'></a> 469     je  L(StrncatExit9)
+<a id='L470' name='L470'></a> 470     cmp $10, %ebx
+<a id='L471' name='L471'></a> 471     je  L(StrncatExit10)
+<a id='L472' name='L472'></a> 472     cmp $11, %ebx
+<a id='L473' name='L473'></a> 473     je  L(StrncatExit11)
+<a id='L474' name='L474'></a> 474     cmp $12, %ebx
+<a id='L475' name='L475'></a> 475     je  L(StrncatExit12)
+<a id='L476' name='L476'></a> 476     cmp $13, %ebx
+<a id='L477' name='L477'></a> 477     je  L(StrncatExit13)
+<a id='L478' name='L478'></a> 478     cmp $14, %ebx
+<a id='L479' name='L479'></a> 479     je  L(StrncatExit14)
+<a id='L480' name='L480'></a> 480     cmp $15, %ebx
+<a id='L481' name='L481'></a> 481     je  L(StrncatExit15)
+<a id='L482' name='L482'></a> 482     movlpd  (%ecx), %xmm0
+<a id='L483' name='L483'></a> 483     movlpd  %xmm0, (%edx)
+<a id='L484' name='L484'></a> 484     movlpd  8(%ecx), %xmm1
+<a id='L485' name='L485'></a> 485     movlpd  %xmm1, 8(%edx)
+<a id='L486' name='L486'></a> 486     movb    %bh, 16(%edx)
+<a id='L487' name='L487'></a> 487     movl    %edi, %eax
+<a id='L488' name='L488'></a> 488     RETURN1
+<a id='L489' name='L489'></a> 489 
+<a id='L490' name='L490'></a> 490     .p2align 4
+<a id='L491' name='L491'></a> 491 L(StrncatExit0):
+<a id='L492' name='L492'></a> 492     movl    %edi, %eax
+<a id='L493' name='L493'></a> 493     RETURN1
+<a id='L494' name='L494'></a> 494 
+<a id='L495' name='L495'></a> 495     .p2align 4
+<a id='L496' name='L496'></a> 496 L(StrncatExit15Bytes):
+<a id='L497' name='L497'></a> 497     cmp $9, %ebx
+<a id='L498' name='L498'></a> 498     je  L(StrncatExit9)
+<a id='L499' name='L499'></a> 499     cmpb    $0, 9(%ecx)
+<a id='L500' name='L500'></a> 500     jz  L(Exit10)
+<a id='L501' name='L501'></a> 501     cmp $10, %ebx
+<a id='L502' name='L502'></a> 502     je  L(StrncatExit10)
+<a id='L503' name='L503'></a> 503     cmpb    $0, 10(%ecx)
+<a id='L504' name='L504'></a> 504     jz  L(Exit11)
+<a id='L505' name='L505'></a> 505     cmp $11, %ebx
+<a id='L506' name='L506'></a> 506     je  L(StrncatExit11)
+<a id='L507' name='L507'></a> 507     cmpb    $0, 11(%ecx)
+<a id='L508' name='L508'></a> 508     jz  L(Exit12)
+<a id='L509' name='L509'></a> 509     cmp $12, %ebx
+<a id='L510' name='L510'></a> 510     je  L(StrncatExit12)
+<a id='L511' name='L511'></a> 511     cmpb    $0, 12(%ecx)
+<a id='L512' name='L512'></a> 512     jz  L(Exit13)
+<a id='L513' name='L513'></a> 513     cmp $13, %ebx
+<a id='L514' name='L514'></a> 514     je  L(StrncatExit13)
+<a id='L515' name='L515'></a> 515     cmpb    $0, 13(%ecx)
+<a id='L516' name='L516'></a> 516     jz  L(Exit14)
+<a id='L517' name='L517'></a> 517     cmp $14, %ebx
+<a id='L518' name='L518'></a> 518     je  L(StrncatExit14)
+<a id='L519' name='L519'></a> 519     movlpd  (%ecx), %xmm0
+<a id='L520' name='L520'></a> 520     movlpd  %xmm0, (%edx)
+<a id='L521' name='L521'></a> 521     movlpd  7(%ecx), %xmm0
+<a id='L522' name='L522'></a> 522     movlpd  %xmm0, 7(%edx)
+<a id='L523' name='L523'></a> 523     lea 14(%edx), %eax
+<a id='L524' name='L524'></a> 524     cmpb    $1, (%eax)
+<a id='L525' name='L525'></a> 525     sbb $-1, %eax
+<a id='L526' name='L526'></a> 526     movb    %bh, (%eax)
+<a id='L527' name='L527'></a> 527     movl    %edi, %eax
+<a id='L528' name='L528'></a> 528     RETURN1
+<a id='L529' name='L529'></a> 529 
+<a id='L530' name='L530'></a> 530     .p2align 4
+<a id='L531' name='L531'></a> 531 L(StrncatExit8Bytes):
+<a id='L532' name='L532'></a> 532     cmpb    $0, (%ecx)
+<a id='L533' name='L533'></a> 533     jz  L(Exit1)
+<a id='L534' name='L534'></a> 534     cmp $1, %ebx
+<a id='L535' name='L535'></a> 535     je  L(StrncatExit1)
+<a id='L536' name='L536'></a> 536     cmpb    $0, 1(%ecx)
+<a id='L537' name='L537'></a> 537     jz  L(Exit2)
+<a id='L538' name='L538'></a> 538     cmp $2, %ebx
+<a id='L539' name='L539'></a> 539     je  L(StrncatExit2)
+<a id='L540' name='L540'></a> 540     cmpb    $0, 2(%ecx)
+<a id='L541' name='L541'></a> 541     jz  L(Exit3)
+<a id='L542' name='L542'></a> 542     cmp $3, %ebx
+<a id='L543' name='L543'></a> 543     je  L(StrncatExit3)
+<a id='L544' name='L544'></a> 544     cmpb    $0, 3(%ecx)
+<a id='L545' name='L545'></a> 545     jz  L(Exit4)
+<a id='L546' name='L546'></a> 546     cmp $4, %ebx
+<a id='L547' name='L547'></a> 547     je  L(StrncatExit4)
+<a id='L548' name='L548'></a> 548     cmpb    $0, 4(%ecx)
+<a id='L549' name='L549'></a> 549     jz  L(Exit5)
+<a id='L550' name='L550'></a> 550     cmp $5, %ebx
+<a id='L551' name='L551'></a> 551     je  L(StrncatExit5)
+<a id='L552' name='L552'></a> 552     cmpb    $0, 5(%ecx)
+<a id='L553' name='L553'></a> 553     jz  L(Exit6)
+<a id='L554' name='L554'></a> 554     cmp $6, %ebx
+<a id='L555' name='L555'></a> 555     je  L(StrncatExit6)
+<a id='L556' name='L556'></a> 556     cmpb    $0, 6(%ecx)
+<a id='L557' name='L557'></a> 557     jz  L(Exit7)
+<a id='L558' name='L558'></a> 558     cmp $7, %ebx
+<a id='L559' name='L559'></a> 559     je  L(StrncatExit7)
+<a id='L560' name='L560'></a> 560     movlpd  (%ecx), %xmm0
+<a id='L561' name='L561'></a> 561     movlpd  %xmm0, (%edx)
+<a id='L562' name='L562'></a> 562     lea 7(%edx), %eax
+<a id='L563' name='L563'></a> 563     cmpb    $1, (%eax)
+<a id='L564' name='L564'></a> 564     sbb $-1, %eax
+<a id='L565' name='L565'></a> 565     movb    %bh, (%eax)
+<a id='L566' name='L566'></a> 566     movl    %edi, %eax
+<a id='L567' name='L567'></a> 567     RETURN1
+<a id='L568' name='L568'></a> 568 
+<a id='L569' name='L569'></a> 569 <em class='sharp'># endif</em>
+<a id='L570' name='L570'></a> 570 END (STRCAT)
+<a id='L571' name='L571'></a> 571 <em class='sharp'>#endif</em>
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;][^][v]<a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>

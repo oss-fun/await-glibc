@@ -1,0 +1,293 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+<title>sysdeps/alpha/divq.S</title>
+<meta name='robots' content='noindex,nofollow' />
+<meta name='generator' content='GLOBAL-6.6.12' />
+<meta http-equiv='Content-Style-Type' content='text/css' />
+<link rel='stylesheet' type='text/css' href='../style.css' />
+</head>
+<body>
+<a id='TOP' name='TOP'></a><h2 class='header'><a href='../mains.html'>root</a>/<a href='../files/18977.html'>sysdeps</a>/<a href='../files/18985.html'>alpha</a>/divq.S</h2>
+<em class='comment'>/* [&lt;][&gt;][^][v][top]<a href='#BOTTOM'>[bottom]</a><a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+<hr />
+<pre>
+<a id='L1' name='L1'></a>   1 <em class='comment'>/* Copyright (C) 2004-2022 Free Software Foundation, Inc.</em>
+<a id='L2' name='L2'></a>   2 <em class='comment'>   This file is part of the GNU C Library.</em>
+<a id='L3' name='L3'></a>   3 <em class='comment'></em>
+<a id='L4' name='L4'></a>   4 <em class='comment'>   The GNU C Library is free software; you can redistribute it and/or</em>
+<a id='L5' name='L5'></a>   5 <em class='comment'>   modify it under the terms of the GNU Lesser General Public</em>
+<a id='L6' name='L6'></a>   6 <em class='comment'>   License as published by the Free Software Foundation; either</em>
+<a id='L7' name='L7'></a>   7 <em class='comment'>   version 2.1 of the License, or (at your option) any later version.</em>
+<a id='L8' name='L8'></a>   8 <em class='comment'></em>
+<a id='L9' name='L9'></a>   9 <em class='comment'>   The GNU C Library is distributed in the hope that it will be useful,</em>
+<a id='L10' name='L10'></a>  10 <em class='comment'>   but WITHOUT ANY WARRANTY; without even the implied warranty of</em>
+<a id='L11' name='L11'></a>  11 <em class='comment'>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</em>
+<a id='L12' name='L12'></a>  12 <em class='comment'>   Lesser General Public License for more details.</em>
+<a id='L13' name='L13'></a>  13 <em class='comment'></em>
+<a id='L14' name='L14'></a>  14 <em class='comment'>   You should have received a copy of the GNU Lesser General Public</em>
+<a id='L15' name='L15'></a>  15 <em class='comment'>   License along with the GNU C Library.  If not, see</em>
+<a id='L16' name='L16'></a>  16 <em class='comment'>   &lt;https://www.gnu.org/licenses/&gt;.  */</em>
+<a id='L17' name='L17'></a>  17 
+<a id='L18' name='L18'></a>  18 <em class='sharp'>#include</em> "<a href='16888.html'>div_libc.h</a>"
+<a id='L19' name='L19'></a>  19 
+<a id='L20' name='L20'></a>  20 
+<a id='L21' name='L21'></a>  21 <em class='comment'>/* 64-bit signed long divide.  These are not normal C functions.  Argument</em>
+<a id='L22' name='L22'></a>  22 <em class='comment'>   registers are t10 and t11, the result goes in t12.  Only t12 and AT may</em>
+<a id='L23' name='L23'></a>  23 <em class='comment'>   be clobbered.</em>
+<a id='L24' name='L24'></a>  24 <em class='comment'></em>
+<a id='L25' name='L25'></a>  25 <em class='comment'>   Theory of operation here is that we can use the FPU divider for virtually</em>
+<a id='L26' name='L26'></a>  26 <em class='comment'>   all operands that we see: all dividend values between -2**53 and 2**53-1</em>
+<a id='L27' name='L27'></a>  27 <em class='comment'>   can be computed directly.  Note that divisor values need not be checked</em>
+<a id='L28' name='L28'></a>  28 <em class='comment'>   against that range because the rounded fp value will be close enough such</em>
+<a id='L29' name='L29'></a>  29 <em class='comment'>   that the quotient is &lt; 1, which will properly be truncated to zero when we</em>
+<a id='L30' name='L30'></a>  30 <em class='comment'>   convert back to integer.</em>
+<a id='L31' name='L31'></a>  31 <em class='comment'></em>
+<a id='L32' name='L32'></a>  32 <em class='comment'>   When the dividend is outside the range for which we can compute exact</em>
+<a id='L33' name='L33'></a>  33 <em class='comment'>   results, we use the fp quotent as an estimate from which we begin refining</em>
+<a id='L34' name='L34'></a>  34 <em class='comment'>   an exact integral value.  This reduces the number of iterations in the</em>
+<a id='L35' name='L35'></a>  35 <em class='comment'>   shift-and-subtract loop significantly.</em>
+<a id='L36' name='L36'></a>  36 <em class='comment'></em>
+<a id='L37' name='L37'></a>  37 <em class='comment'>   The FPCR save/restore is due to the fact that the EV6 _will_ set FPCR_INE</em>
+<a id='L38' name='L38'></a>  38 <em class='comment'>   for cvttq/c even without /sui being set.  It will not, however, properly</em>
+<a id='L39' name='L39'></a>  39 <em class='comment'>   raise the exception, so we don't have to worry about FPCR_INED being clear</em>
+<a id='L40' name='L40'></a>  40 <em class='comment'>   and so dying by SIGFPE.  */</em>
+<a id='L41' name='L41'></a>  41 
+<a id='L42' name='L42'></a>  42     .text
+<a id='L43' name='L43'></a>  43     .align  4
+<a id='L44' name='L44'></a>  44     .globl  __divq
+<a id='L45' name='L45'></a>  45     .type   __divq, @funcnoplt
+<a id='L46' name='L46'></a>  46     .usepv  __divq, no
+<a id='L47' name='L47'></a>  47 
+<a id='L48' name='L48'></a>  48     cfi_startproc
+<a id='L49' name='L49'></a>  49     cfi_return_column (RA)
+<a id='L50' name='L50'></a>  50 __divq:
+<a id='L51' name='L51'></a>  51     lda sp, -FRAME(sp)
+<a id='L52' name='L52'></a>  52     cfi_def_cfa_offset (FRAME)
+<a id='L53' name='L53'></a>  53     CALL_MCOUNT
+<a id='L54' name='L54'></a>  54 
+<a id='L55' name='L55'></a>  55     <em class='comment'>/* Get the fp divide insn issued as quickly as possible.  After</em>
+<a id='L56' name='L56'></a>  56 <em class='comment'>       that's done, we have at least 22 cycles until its results are</em>
+<a id='L57' name='L57'></a>  57 <em class='comment'>       ready -- all the time in the world to figure out how we're</em>
+<a id='L58' name='L58'></a>  58 <em class='comment'>       going to use the results.  */</em>
+<a id='L59' name='L59'></a>  59     stt $f0, 0(sp)
+<a id='L60' name='L60'></a>  60     excb
+<a id='L61' name='L61'></a>  61     beq Y, DIVBYZERO
+<a id='L62' name='L62'></a>  62 
+<a id='L63' name='L63'></a>  63     stt $f1, 8(sp)
+<a id='L64' name='L64'></a>  64     stt $f3, 48(sp)
+<a id='L65' name='L65'></a>  65     cfi_rel_offset ($f0, 0)
+<a id='L66' name='L66'></a>  66     cfi_rel_offset ($f1, 8)
+<a id='L67' name='L67'></a>  67     cfi_rel_offset ($f3, 48)
+<a id='L68' name='L68'></a>  68     mf_fpcr $f3
+<a id='L69' name='L69'></a>  69 
+<a id='L70' name='L70'></a>  70     _ITOFT2 X, $f0, 16, Y, $f1, 24
+<a id='L71' name='L71'></a>  71     cvtqt   $f0, $f0
+<a id='L72' name='L72'></a>  72     cvtqt   $f1, $f1
+<a id='L73' name='L73'></a>  73     divt/c  $f0, $f1, $f0
+<a id='L74' name='L74'></a>  74 
+<a id='L75' name='L75'></a>  75     <em class='comment'>/* Check to see if X fit in the double as an exact value.  */</em>
+<a id='L76' name='L76'></a>  76     sll X, (64-53), AT
+<a id='L77' name='L77'></a>  77     ldt $f1, 8(sp)
+<a id='L78' name='L78'></a>  78     sra AT, (64-53), AT
+<a id='L79' name='L79'></a>  79     cmpeq   X, AT, AT
+<a id='L80' name='L80'></a>  80     beq AT, $x_big
+<a id='L81' name='L81'></a>  81 
+<a id='L82' name='L82'></a>  82     <em class='comment'>/* If we get here, we're expecting exact results from the division.</em>
+<a id='L83' name='L83'></a>  83 <em class='comment'>       Do nothing else besides convert and clean up.  */</em>
+<a id='L84' name='L84'></a>  84     cvttq/c $f0, $f0
+<a id='L85' name='L85'></a>  85     excb
+<a id='L86' name='L86'></a>  86     mt_fpcr $f3
+<a id='L87' name='L87'></a>  87     _FTOIT  $f0, RV, 16
+<a id='L88' name='L88'></a>  88 
+<a id='L89' name='L89'></a>  89     ldt $f0, 0(sp)
+<a id='L90' name='L90'></a>  90     ldt $f3, 48(sp)
+<a id='L91' name='L91'></a>  91     cfi_restore ($f1)
+<a id='L92' name='L92'></a>  92     cfi_remember_state
+<a id='L93' name='L93'></a>  93     cfi_restore ($f0)
+<a id='L94' name='L94'></a>  94     cfi_restore ($f3)
+<a id='L95' name='L95'></a>  95     cfi_def_cfa_offset (0)
+<a id='L96' name='L96'></a>  96     lda sp, FRAME(sp)
+<a id='L97' name='L97'></a>  97     ret $31, (RA), 1
+<a id='L98' name='L98'></a>  98 
+<a id='L99' name='L99'></a>  99     .align  4
+<a id='L100' name='L100'></a> 100     cfi_restore_state
+<a id='L101' name='L101'></a> 101 $x_big:
+<a id='L102' name='L102'></a> 102     <em class='comment'>/* If we get here, X is large enough that we don't expect exact</em>
+<a id='L103' name='L103'></a> 103 <em class='comment'>       results, and neither X nor Y got mis-translated for the fp</em>
+<a id='L104' name='L104'></a> 104 <em class='comment'>       division.  Our task is to take the fp result, figure out how</em>
+<a id='L105' name='L105'></a> 105 <em class='comment'>       far it's off from the correct result and compute a fixup.  */</em>
+<a id='L106' name='L106'></a> 106     stq t0, 16(sp)
+<a id='L107' name='L107'></a> 107     stq t1, 24(sp)
+<a id='L108' name='L108'></a> 108     stq t2, 32(sp)
+<a id='L109' name='L109'></a> 109     stq t5, 40(sp)
+<a id='L110' name='L110'></a> 110     cfi_rel_offset (t0, 16)
+<a id='L111' name='L111'></a> 111     cfi_rel_offset (t1, 24)
+<a id='L112' name='L112'></a> 112     cfi_rel_offset (t2, 32)
+<a id='L113' name='L113'></a> 113     cfi_rel_offset (t5, 40)
+<a id='L114' name='L114'></a> 114 
+<a id='L115' name='L115'></a> 115 <em class='sharp'>#define</em> <a href='../R/6586.html' title='Multiple referred from 196 places.'>Q</a>   RV      <em class='comment'>/* quotient */</em>
+<a id='L116' name='L116'></a> 116 <em class='sharp'>#define</em> <a href='../R/6600.html' title='Multiple referred from 1178 places.'>R</a>   t0      <em class='comment'>/* remainder */</em>
+<a id='L117' name='L117'></a> 117 <em class='sharp'>#define</em> SY  t1      <em class='comment'>/* scaled Y */</em>
+<a id='L118' name='L118'></a> 118 <em class='sharp'>#define</em> <a href='../R/7446.html' title='Multiple referred from 403 places.'>S</a>   t2      <em class='comment'>/* scalar */</em>
+<a id='L119' name='L119'></a> 119 <em class='sharp'>#define</em> QY  t3      <em class='comment'>/* Q*Y */</em>
+<a id='L120' name='L120'></a> 120 
+<a id='L121' name='L121'></a> 121     <em class='comment'>/* The fixup code below can only handle unsigned values.  */</em>
+<a id='L122' name='L122'></a> 122     or  X, Y, AT
+<a id='L123' name='L123'></a> 123     mov $31, t5
+<a id='L124' name='L124'></a> 124     blt AT, $fix_sign_in
+<a id='L125' name='L125'></a> 125 $fix_sign_in_ret1:
+<a id='L126' name='L126'></a> 126     cvttq/c $f0, $f0
+<a id='L127' name='L127'></a> 127 
+<a id='L128' name='L128'></a> 128     _FTOIT  $f0, Q, 8
+<a id='L129' name='L129'></a> 129     .align  3
+<a id='L130' name='L130'></a> 130 $fix_sign_in_ret2:
+<a id='L131' name='L131'></a> 131     ldt $f0, 0(sp)
+<a id='L132' name='L132'></a> 132     stq t3, 0(sp)
+<a id='L133' name='L133'></a> 133     cfi_restore ($f0)
+<a id='L134' name='L134'></a> 134     cfi_rel_offset (t3, 0)
+<a id='L135' name='L135'></a> 135 
+<a id='L136' name='L136'></a> 136     mulq    Q, Y, QY
+<a id='L137' name='L137'></a> 137     excb
+<a id='L138' name='L138'></a> 138     stq t4, 8(sp)
+<a id='L139' name='L139'></a> 139     mt_fpcr $f3
+<a id='L140' name='L140'></a> 140     cfi_rel_offset (t4, 8)
+<a id='L141' name='L141'></a> 141 
+<a id='L142' name='L142'></a> 142     subq    QY, X, R
+<a id='L143' name='L143'></a> 143     mov Y, SY
+<a id='L144' name='L144'></a> 144     mov 1, S
+<a id='L145' name='L145'></a> 145     bgt R, $q_high
+<a id='L146' name='L146'></a> 146 
+<a id='L147' name='L147'></a> 147 $q_high_ret:
+<a id='L148' name='L148'></a> 148     subq    X, QY, R
+<a id='L149' name='L149'></a> 149     mov Y, SY
+<a id='L150' name='L150'></a> 150     mov 1, S
+<a id='L151' name='L151'></a> 151     bgt R, $q_low
+<a id='L152' name='L152'></a> 152 
+<a id='L153' name='L153'></a> 153 $q_low_ret:
+<a id='L154' name='L154'></a> 154     ldq t0, 16(sp)
+<a id='L155' name='L155'></a> 155     ldq t1, 24(sp)
+<a id='L156' name='L156'></a> 156     ldq t2, 32(sp)
+<a id='L157' name='L157'></a> 157     bne t5, $fix_sign_out
+<a id='L158' name='L158'></a> 158 
+<a id='L159' name='L159'></a> 159 $fix_sign_out_ret:
+<a id='L160' name='L160'></a> 160     ldq t3, 0(sp)
+<a id='L161' name='L161'></a> 161     ldq t4, 8(sp)
+<a id='L162' name='L162'></a> 162     ldq t5, 40(sp)
+<a id='L163' name='L163'></a> 163     ldt $f3, 48(sp)
+<a id='L164' name='L164'></a> 164     lda sp, FRAME(sp)
+<a id='L165' name='L165'></a> 165     cfi_remember_state
+<a id='L166' name='L166'></a> 166     cfi_restore (t0)
+<a id='L167' name='L167'></a> 167     cfi_restore (t1)
+<a id='L168' name='L168'></a> 168     cfi_restore (t2)
+<a id='L169' name='L169'></a> 169     cfi_restore (t3)
+<a id='L170' name='L170'></a> 170     cfi_restore (t4)
+<a id='L171' name='L171'></a> 171     cfi_restore (t5)
+<a id='L172' name='L172'></a> 172     cfi_restore ($f3)
+<a id='L173' name='L173'></a> 173     cfi_def_cfa_offset (0)
+<a id='L174' name='L174'></a> 174     ret $31, (RA), 1
+<a id='L175' name='L175'></a> 175 
+<a id='L176' name='L176'></a> 176     .align  4
+<a id='L177' name='L177'></a> 177     cfi_restore_state
+<a id='L178' name='L178'></a> 178     <em class='comment'>/* The quotient that we computed was too large.  We need to reduce</em>
+<a id='L179' name='L179'></a> 179 <em class='comment'>       it by S such that Y*S &gt;= R.  Obviously the closer we get to the</em>
+<a id='L180' name='L180'></a> 180 <em class='comment'>       correct value the better, but overshooting high is ok, as we'll</em>
+<a id='L181' name='L181'></a> 181 <em class='comment'>       fix that up later.  */</em>
+<a id='L182' name='L182'></a> 182 0:
+<a id='L183' name='L183'></a> 183     addq    SY, SY, SY
+<a id='L184' name='L184'></a> 184     addq    S, S, S
+<a id='L185' name='L185'></a> 185 $q_high:
+<a id='L186' name='L186'></a> 186     cmpult  SY, R, AT
+<a id='L187' name='L187'></a> 187     bne AT, 0b
+<a id='L188' name='L188'></a> 188 
+<a id='L189' name='L189'></a> 189     subq    Q, S, Q
+<a id='L190' name='L190'></a> 190     unop
+<a id='L191' name='L191'></a> 191     subq    QY, SY, QY
+<a id='L192' name='L192'></a> 192     br  $q_high_ret
+<a id='L193' name='L193'></a> 193 
+<a id='L194' name='L194'></a> 194     .align  4
+<a id='L195' name='L195'></a> 195     <em class='comment'>/* The quotient that we computed was too small.  Divide Y by the</em>
+<a id='L196' name='L196'></a> 196 <em class='comment'>       current remainder (R) and add that to the existing quotient (Q).</em>
+<a id='L197' name='L197'></a> 197 <em class='comment'>       The expectation, of course, is that R is much smaller than X.  */</em>
+<a id='L198' name='L198'></a> 198     <em class='comment'>/* Begin with a shift-up loop.  Compute S such that Y*S &gt;= R.  We</em>
+<a id='L199' name='L199'></a> 199 <em class='comment'>       already have a copy of Y in SY and the value 1 in S.  */</em>
+<a id='L200' name='L200'></a> 200 0:
+<a id='L201' name='L201'></a> 201     addq    SY, SY, SY
+<a id='L202' name='L202'></a> 202     addq    S, S, S
+<a id='L203' name='L203'></a> 203 $q_low:
+<a id='L204' name='L204'></a> 204     cmpult  SY, R, AT
+<a id='L205' name='L205'></a> 205     bne AT, 0b
+<a id='L206' name='L206'></a> 206 
+<a id='L207' name='L207'></a> 207     <em class='comment'>/* Shift-down and subtract loop.  Each iteration compares our scaled</em>
+<a id='L208' name='L208'></a> 208 <em class='comment'>       Y (SY) with the remainder (R); if SY &lt;= R then X is divisible by</em>
+<a id='L209' name='L209'></a> 209 <em class='comment'>       Y's scalar (S) so add it to the quotient (Q).  */</em>
+<a id='L210' name='L210'></a> 210 2:  addq    Q, S, t3
+<a id='L211' name='L211'></a> 211     srl S, 1, S
+<a id='L212' name='L212'></a> 212     cmpule  SY, R, AT
+<a id='L213' name='L213'></a> 213     subq    R, SY, t4
+<a id='L214' name='L214'></a> 214 
+<a id='L215' name='L215'></a> 215     cmovne  AT, t3, Q
+<a id='L216' name='L216'></a> 216     cmovne  AT, t4, R
+<a id='L217' name='L217'></a> 217     srl SY, 1, SY
+<a id='L218' name='L218'></a> 218     bne S, 2b
+<a id='L219' name='L219'></a> 219 
+<a id='L220' name='L220'></a> 220     br  $q_low_ret
+<a id='L221' name='L221'></a> 221 
+<a id='L222' name='L222'></a> 222     .align  4
+<a id='L223' name='L223'></a> 223 $fix_sign_in:
+<a id='L224' name='L224'></a> 224     <em class='comment'>/* If we got here, then X|Y is negative.  Need to adjust everything</em>
+<a id='L225' name='L225'></a> 225 <em class='comment'>       such that we're doing unsigned division in the fixup loop.  */</em>
+<a id='L226' name='L226'></a> 226     <em class='comment'>/* T5 records the changes we had to make:</em>
+<a id='L227' name='L227'></a> 227 <em class='comment'>        bit 0:  set if result should be negative.</em>
+<a id='L228' name='L228'></a> 228 <em class='comment'>        bit 2:  set if X was negated.</em>
+<a id='L229' name='L229'></a> 229 <em class='comment'>        bit 3:  set if Y was negated.</em>
+<a id='L230' name='L230'></a> 230 <em class='comment'>    */</em>
+<a id='L231' name='L231'></a> 231     xor X, Y, AT
+<a id='L232' name='L232'></a> 232     cmplt   AT, 0, t5
+<a id='L233' name='L233'></a> 233     cmplt   X, 0, AT
+<a id='L234' name='L234'></a> 234     negq    X, t0
+<a id='L235' name='L235'></a> 235 
+<a id='L236' name='L236'></a> 236     s4addq  AT, t5, t5
+<a id='L237' name='L237'></a> 237     cmovne  AT, t0, X
+<a id='L238' name='L238'></a> 238     cmplt   Y, 0, AT
+<a id='L239' name='L239'></a> 239     negq    Y, t0
+<a id='L240' name='L240'></a> 240 
+<a id='L241' name='L241'></a> 241     s8addq  AT, t5, t5
+<a id='L242' name='L242'></a> 242     cmovne  AT, t0, Y
+<a id='L243' name='L243'></a> 243     unop
+<a id='L244' name='L244'></a> 244     blbc    t5, $fix_sign_in_ret1
+<a id='L245' name='L245'></a> 245 
+<a id='L246' name='L246'></a> 246     cvttq/c $f0, $f0
+<a id='L247' name='L247'></a> 247     _FTOIT  $f0, Q, 8
+<a id='L248' name='L248'></a> 248     .align  3
+<a id='L249' name='L249'></a> 249     negq    Q, Q
+<a id='L250' name='L250'></a> 250     br  $fix_sign_in_ret2
+<a id='L251' name='L251'></a> 251 
+<a id='L252' name='L252'></a> 252     .align  4
+<a id='L253' name='L253'></a> 253 $fix_sign_out:
+<a id='L254' name='L254'></a> 254     <em class='comment'>/* Now we get to undo what we did above.  */</em>
+<a id='L255' name='L255'></a> 255     <em class='comment'>/* ??? Is this really faster than just increasing the size of</em>
+<a id='L256' name='L256'></a> 256 <em class='comment'>       the stack frame and storing X and Y in memory?  */</em>
+<a id='L257' name='L257'></a> 257     and t5, 8, AT
+<a id='L258' name='L258'></a> 258     negq    Y, t4
+<a id='L259' name='L259'></a> 259     cmovne  AT, t4, Y
+<a id='L260' name='L260'></a> 260 
+<a id='L261' name='L261'></a> 261     and t5, 4, AT
+<a id='L262' name='L262'></a> 262     negq    X, t4
+<a id='L263' name='L263'></a> 263     cmovne  AT, t4, X
+<a id='L264' name='L264'></a> 264 
+<a id='L265' name='L265'></a> 265     negq    RV, t4
+<a id='L266' name='L266'></a> 266     cmovlbs t5, t4, RV
+<a id='L267' name='L267'></a> 267 
+<a id='L268' name='L268'></a> 268     br  $fix_sign_out_ret
+<a id='L269' name='L269'></a> 269 
+<a id='L270' name='L270'></a> 270     cfi_endproc
+<a id='L271' name='L271'></a> 271     .size   __divq, .-__divq
+<a id='L272' name='L272'></a> 272 
+<a id='L273' name='L273'></a> 273     DO_DIVBYZERO
+</pre>
+<hr />
+<a id='BOTTOM' name='BOTTOM'></a>
+<em class='comment'>/* [&lt;][&gt;][^][v]<a href='#TOP'>[top]</a>[bottom]<a href='../mains.html'>[index]</a><a href='../help.html'>[help]</a> */</em>
+</body>
+</html>
