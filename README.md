@@ -5,6 +5,8 @@ mkdir local
 
 cd glibc-2.35/build
 ../configure --prefix=/$HOME/await-glibc/local
+make -j16
+make install
 ```
 
 
