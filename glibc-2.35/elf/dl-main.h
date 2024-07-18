@@ -72,6 +72,12 @@ struct dl_main_state
 {
   struct audit_list audit_list;
 
+	/* exec from file descritor */
+	const char *exec_fd;
+
+	/* link from file descriptor */
+	const char *library_path_fds;
+
   /* The library search path.  */
   const char *library_path;
 
@@ -99,6 +105,8 @@ struct dl_main_state
 
   /* True if information about versions has to be printed.  */
   bool version_info;
+
+	bool capsicum;
 };
 
 /* Helper function to invoke _dl_init_paths with the right arguments

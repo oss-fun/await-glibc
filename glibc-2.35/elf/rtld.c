@@ -301,8 +301,10 @@ static void
 dl_main_state_init (struct dl_main_state *state)
 {
   audit_list_init (&state->audit_list);
+	state->exec_fd = NULL;
   state->library_path = NULL;
   state->library_path_source = NULL;
+	state->library_path_fds = NULL;
   state->preloadlist = NULL;
   state->preloadarg = NULL;
   state->glibc_hwcaps_prepend = NULL;
@@ -348,6 +350,7 @@ struct rtld_global _rtld_global =
     }
   };
 /* If we would use strong_alias here the compiler would see a
+		odl_debug_printf("loader->l_info[DT_RUNPATH]:%d\n");
    non-hidden definition.  This would undo the effect of the previous
    declaration.  So spell out what strong_alias does plus add the
    visibility attribute.  */
@@ -1097,9 +1100,9 @@ static void
 rtld_chain_load (struct link_map *main_map, char *argv0)
 {
   /* The dynamic loader run against itself.  */
-  const char *rtld_soname
-    = ((const char *) D_PTR (&GL(dl_rtld_map), l_info[DT_STRTAB])
-       + GL(dl_rtld_map).l_info[DT_SONAME]->d_un.d_val);
+  const char *rtld_soname = (
+			(const char *) D_PTR (&GL(dl_rtld_map), l_info[DT_STRTAB])
+			+ GL(dl_rtld_map).l_info[DT_SONAME]->d_un.d_val);
   if (main_map->l_info[DT_SONAME] != NULL
       && strcmp (rtld_soname,
 		 ((const char *) D_PTR (main_map, l_info[DT_STRTAB])
@@ -1347,7 +1350,7 @@ dl_main (const ElfW(Phdr) *phdr,
 
   const char *ld_so_name = _dl_argv[0];
   if (*user_entry == (ElfW(Addr)) ENTRY_POINT)
-    {
+  {
       /* Ho ho.  We are not the program interpreter!  We are the program
 	 itself!  This means someone ran ld.so as a command.  Well, that
 	 might be convenient to do sometimes.  We support it by
@@ -1363,164 +1366,176 @@ dl_main (const ElfW(Phdr) *phdr,
 	 pay attention to its PT_INTERP command (we are the interpreter
 	 ourselves).  This is an easy way to test a new ld.so before
 	 installing it.  */
-      rtld_is_main = true;
+		rtld_is_main = true;
 
-      char *argv0 = NULL;
+		char *argv0 = NULL;
 
-      /* Note the place where the dynamic linker actually came from.  */
-      GL(dl_rtld_map).l_name = rtld_progname;
+		/* Note the place where the dynamic linker actually came from.  */
+		GL(dl_rtld_map).l_name = rtld_progname;
 
-      while (_dl_argc > 1)
-	if (! strcmp (_dl_argv[1], "--list"))
-	  {
-	    if (state.mode != rtld_mode_help)
-	      {
-	       state.mode = rtld_mode_list;
-		/* This means do no dependency analysis.  */
-		GLRO(dl_lazy) = -1;
-	      }
+		while (_dl_argc > 1)
+			if (! strcmp (_dl_argv[1], "--list"))
+			{
+				if (state.mode != rtld_mode_help)
+				{
+					state.mode = rtld_mode_list;
+					/* This means do no dependency analysis.  */
+					GLRO(dl_lazy) = -1;
+				}
 
-	    ++_dl_skip_args;
-	    --_dl_argc;
-	    ++_dl_argv;
-	  }
-	else if (! strcmp (_dl_argv[1], "--verify"))
-	  {
-	    if (state.mode != rtld_mode_help)
-	      state.mode = rtld_mode_verify;
+				++_dl_skip_args;
+				--_dl_argc;
+				++_dl_argv;
+			}
+			else if (! strcmp (_dl_argv[1], "--verify"))
+			{
+				if (state.mode != rtld_mode_help)
+					state.mode = rtld_mode_verify;
 
-	    ++_dl_skip_args;
-	    --_dl_argc;
-	    ++_dl_argv;
-	  }
-	else if (! strcmp (_dl_argv[1], "--inhibit-cache"))
-	  {
-	    GLRO(dl_inhibit_cache) = 1;
-	    ++_dl_skip_args;
-	    --_dl_argc;
-	    ++_dl_argv;
-	  }
-	else if (! strcmp (_dl_argv[1], "--library-path")
-		 && _dl_argc > 2)
-	  {
-	    state.library_path = _dl_argv[2];
-	    state.library_path_source = "--library-path";
+				++_dl_skip_args;
+				--_dl_argc;
+				++_dl_argv;
+			}
+			else if (! strcmp (_dl_argv[1], "--inhibit-cache"))
+			{
+				GLRO(dl_inhibit_cache) = 1;
+				++_dl_skip_args;
+				--_dl_argc;
+				++_dl_argv;
+			}
+			else if (! strcmp (_dl_argv[1], "--library-path") && _dl_argc > 2)
+			{
+				state.library_path = _dl_argv[2];
+				state.library_path_source = "--library-path";
 
-	    _dl_skip_args += 2;
-	    _dl_argc -= 2;
-	    _dl_argv += 2;
-	  }
-	else if (! strcmp (_dl_argv[1], "--inhibit-rpath")
-		 && _dl_argc > 2)
-	  {
-	    GLRO(dl_inhibit_rpath) = _dl_argv[2];
+				_dl_skip_args += 2;
+				_dl_argc -= 2;
+				_dl_argv += 2;
+			}
+			else if (! strcmp (_dl_argv[1], "--inhibit-rpath") && _dl_argc > 2)
+			{
+				GLRO(dl_inhibit_rpath) = _dl_argv[2];
 
-	    _dl_skip_args += 2;
-	    _dl_argc -= 2;
-	    _dl_argv += 2;
-	  }
-	else if (! strcmp (_dl_argv[1], "--audit") && _dl_argc > 2)
-	  {
-	    audit_list_add_string (&state.audit_list, _dl_argv[2]);
+				_dl_skip_args += 2;
+				_dl_argc -= 2;
+				_dl_argv += 2;
+			}
+			else if (! strcmp (_dl_argv[1], "--audit") && _dl_argc > 2)
+			{
+				audit_list_add_string (&state.audit_list, _dl_argv[2]);
 
-	    _dl_skip_args += 2;
-	    _dl_argc -= 2;
-	    _dl_argv += 2;
-	  }
-	else if (! strcmp (_dl_argv[1], "--preload") && _dl_argc > 2)
-	  {
-	    state.preloadarg = _dl_argv[2];
-	    _dl_skip_args += 2;
-	    _dl_argc -= 2;
-	    _dl_argv += 2;
-	  }
-	else if (! strcmp (_dl_argv[1], "--argv0") && _dl_argc > 2)
-	  {
-	    argv0 = _dl_argv[2];
+				_dl_skip_args += 2;
+				_dl_argc -= 2;
+				_dl_argv += 2;
+			}
+			else if (! strcmp (_dl_argv[1], "--preload") && _dl_argc > 2)
+			{
+				state.preloadarg = _dl_argv[2];
+				_dl_skip_args += 2;
+				_dl_argc -= 2;
+				_dl_argv += 2;
+			}
+			else if (! strcmp (_dl_argv[1], "--argv0") && _dl_argc > 2)
+			{
+				argv0 = _dl_argv[2];
 
-	    _dl_skip_args += 2;
-	    _dl_argc -= 2;
-	    _dl_argv += 2;
-	  }
-	else if (strcmp (_dl_argv[1], "--glibc-hwcaps-prepend") == 0
-		 && _dl_argc > 2)
-	  {
-	    state.glibc_hwcaps_prepend = _dl_argv[2];
-	    _dl_skip_args += 2;
-	    _dl_argc -= 2;
-	    _dl_argv += 2;
-	  }
-	else if (strcmp (_dl_argv[1], "--glibc-hwcaps-mask") == 0
-		 && _dl_argc > 2)
-	  {
-	    state.glibc_hwcaps_mask = _dl_argv[2];
-	    _dl_skip_args += 2;
-	    _dl_argc -= 2;
-	    _dl_argv += 2;
-	  }
-#if HAVE_TUNABLES
-	else if (! strcmp (_dl_argv[1], "--list-tunables"))
-	  {
-	    state.mode = rtld_mode_list_tunables;
-
-	    ++_dl_skip_args;
-	    --_dl_argc;
-	    ++_dl_argv;
-	  }
-#endif
-	else if (! strcmp (_dl_argv[1], "--list-diagnostics"))
-	  {
-	    state.mode = rtld_mode_list_diagnostics;
-
-	    ++_dl_skip_args;
-	    --_dl_argc;
-	    ++_dl_argv;
-	  }
-	else if (strcmp (_dl_argv[1], "--help") == 0)
-	  {
-	    state.mode = rtld_mode_help;
-	    --_dl_argc;
-	    ++_dl_argv;
-	  }
-	else if (strcmp (_dl_argv[1], "--version") == 0)
-	  _dl_version ();
-	else if (_dl_argv[1][0] == '-' && _dl_argv[1][1] == '-')
-	  {
-	   if (_dl_argv[1][1] == '\0')
-	     /* End of option list.  */
-	     break;
-	   else
-	     /* Unrecognized option.  */
-	     _dl_usage (ld_so_name, _dl_argv[1]);
-	  }
-	else
-	  break;
+				_dl_skip_args += 2;
+				_dl_argc -= 2;
+				_dl_argv += 2;
+			}
+			else if (strcmp (_dl_argv[1], "--glibc-hwcaps-prepend") == 0 && _dl_argc > 2)
+			{
+				state.glibc_hwcaps_prepend = _dl_argv[2];
+				_dl_skip_args += 2;
+				_dl_argc -= 2;
+				_dl_argv += 2;
+			}
+			else if (strcmp (_dl_argv[1], "--glibc-hwcaps-mask") == 0 && _dl_argc > 2)
+			{
+				state.glibc_hwcaps_mask = _dl_argv[2];
+				_dl_skip_args += 2;
+				_dl_argc -= 2;
+				_dl_argv += 2;
+			}
+			/* for runcap */
+			else if (strcmp( _dl_argv[1], "--") == 0 && _dl_argc > 2)
+			{
+				state.exec_fd = _dl_argv[2];
+				_dl_skip_args += 2;
+				_dl_argc -= 2;
+				_dl_argv += 2;
+			}
+			else if (strcmp( _dl_argv[1], "--library-path-fds") == 0 && _dl_argc > 2)
+			{
+				state.library_path_fds = _dl_argv[2];
+				_dl_skip_args += 2;
+				_dl_argc -= 2;
+				_dl_argv += 2;
+			}
 
 #if HAVE_TUNABLES
-      if (__glibc_unlikely (state.mode == rtld_mode_list_tunables))
-	{
-	  __tunables_print ();
-	  _exit (0);
-	}
+			else if (! strcmp (_dl_argv[1], "--list-tunables"))
+			{
+				state.mode = rtld_mode_list_tunables;
+
+				++_dl_skip_args;
+				--_dl_argc;
+				++_dl_argv;
+			}
+#endif
+			else if (! strcmp (_dl_argv[1], "--list-diagnostics"))
+			{
+				state.mode = rtld_mode_list_diagnostics;
+
+				++_dl_skip_args;
+				--_dl_argc;
+				++_dl_argv;
+			}
+			else if (strcmp (_dl_argv[1], "--help") == 0)
+			{
+				state.mode = rtld_mode_help;
+				--_dl_argc;
+				++_dl_argv;
+			}
+			else if (strcmp (_dl_argv[1], "--version") == 0)
+				_dl_version ();
+		
+			else if (_dl_argv[1][0] == '-' && _dl_argv[1][1] == '-')
+			{
+				if (_dl_argv[1][1] == '\0')
+				 /* End of option list.  */
+					break;
+				else
+				 /* Unrecognized option.  */
+					_dl_usage (ld_so_name, _dl_argv[1]);
+			}
+			else
+				break;
+
+#if HAVE_TUNABLES
+		if (__glibc_unlikely (state.mode == rtld_mode_list_tunables))
+		{
+			__tunables_print ();
+			_exit (0);
+		}
 #endif
 
-      if (state.mode == rtld_mode_list_diagnostics)
-	_dl_print_diagnostics (_environ);
+		if (state.mode == rtld_mode_list_diagnostics)
+			_dl_print_diagnostics (_environ);
 
-      /* If we have no further argument the program was called incorrectly.
-	 Grant the user some education.  */
-      if (_dl_argc < 2)
-	{
-	  if (state.mode == rtld_mode_help)
+		/* If we have no further argument the program was called incorrectly.
+		Grant the user some education.  */
+		if (_dl_argc < 2)
+		{
+			if (state.mode == rtld_mode_help)
 	    /* --help without an executable is not an error.  */
-	    _dl_help (ld_so_name, &state);
-	  else
-	    _dl_usage (ld_so_name, NULL);
-	}
-
-      ++_dl_skip_args;
-      --_dl_argc;
-      ++_dl_argv;
+				_dl_help (ld_so_name, &state);
+			else
+				_dl_usage (ld_so_name, NULL);
+		}
+		++_dl_skip_args;
+		--_dl_argc;
+		++_dl_argv;
 
       /* The initialization of _dl_stack_flags done below assumes the
 	 executable's PT_GNU_STACK may have been honored by the kernel, and
@@ -1534,92 +1549,88 @@ dl_main (const ElfW(Phdr) *phdr,
 	 load the program below unless it has a PT_GNU_STACK indicating
 	 nonexecutable stack is ok.  */
 
-      for (const ElfW(Phdr) *ph = phdr; ph < &phdr[phnum]; ++ph)
-	if (ph->p_type == PT_GNU_STACK)
-	  {
-	    GL(dl_stack_flags) = ph->p_flags;
-	    break;
-	  }
+		for (const ElfW(Phdr) *ph = phdr; ph < &phdr[phnum]; ++ph)
+			if (ph->p_type == PT_GNU_STACK)
+			{
+				GL(dl_stack_flags) = ph->p_flags;
+				break;
+			}
 
-      if (__glibc_unlikely (state.mode == rtld_mode_verify
-			    || state.mode == rtld_mode_help))
-	{
-	  const char *objname;
-	  const char *err_str = NULL;
-	  struct map_args args;
-	  bool malloced;
+		if (__glibc_unlikely (state.mode == rtld_mode_verify || state.mode == rtld_mode_help))
+		{
+			const char *objname;
+			const char *err_str = NULL;
+			struct map_args args;
+			bool malloced;
 
-	  args.str = rtld_progname;
-	  args.loader = NULL;
-	  args.mode = __RTLD_OPENEXEC;
-	  (void) _dl_catch_error (&objname, &err_str, &malloced, map_doit,
-				  &args);
-	  if (__glibc_unlikely (err_str != NULL))
-	    {
-	      /* We don't free the returned string, the programs stops
-		 anyway.  */
-	      if (state.mode == rtld_mode_help)
-		/* Mask the failure to load the main object.  The help
-		   message contains less information in this case.  */
-		_dl_help (ld_so_name, &state);
-	      else
-		_exit (EXIT_FAILURE);
-	    }
-	}
-      else
-	{
-	  RTLD_TIMING_VAR (start);
-	  rtld_timer_start (&start);
-	  _dl_map_object (NULL, rtld_progname, lt_executable, 0,
-			  __RTLD_OPENEXEC, LM_ID_BASE);
-	  rtld_timer_stop (&load_time, start);
-	}
+			args.str = rtld_progname;
+			args.loader = NULL;
+			args.mode = __RTLD_OPENEXEC;
+			(void) _dl_catch_error (&objname, &err_str, &malloced, map_doit, &args);
 
-      /* Now the map for the main executable is available.  */
-      main_map = GL(dl_ns)[LM_ID_BASE]._ns_loaded;
+			if (__glibc_unlikely (err_str != NULL))
+			{
+			/* We don't free the returned string, the programs stops
+	 anyway.  */
+				if (state.mode == rtld_mode_help)
+	/* Mask the failure to load the main object.  The help
+		 message contains less information in this case.  */
+					_dl_help (ld_so_name, &state);
+				else
+					_exit (EXIT_FAILURE);
+			}
+		}
+		else
+		{
+			RTLD_TIMING_VAR (start);
+			rtld_timer_start (&start);
+			_dl_map_object (NULL, rtld_progname, lt_executable, 0, __RTLD_OPENEXEC, LM_ID_BASE);
+			rtld_timer_stop (&load_time, start);
+		}
 
-      if (__glibc_likely (state.mode == rtld_mode_normal))
-	rtld_chain_load (main_map, argv0);
+		/* Now the map for the main executable is available.  */
+		main_map = GL(dl_ns)[LM_ID_BASE]._ns_loaded;
 
-      phdr = main_map->l_phdr;
-      phnum = main_map->l_phnum;
-      /* We overwrite here a pointer to a malloc()ed string.  But since
-	 the malloc() implementation used at this point is the dummy
-	 implementations which has no real free() function it does not
-	 makes sense to free the old string first.  */
-      main_map->l_name = (char *) "";
-      *user_entry = main_map->l_entry;
+		if (__glibc_likely (state.mode == rtld_mode_normal)) rtld_chain_load (main_map, argv0);
 
-      /* Set bit indicating this is the main program map.  */
-      main_map->l_main_map = 1;
+		phdr = main_map->l_phdr;
+		phnum = main_map->l_phnum;
+		/* We overwrite here a pointer to a malloc()ed string.  But since
+ the malloc() implementation used at this point is the dummy
+ implementations which has no real free() function it does not
+ makes sense to free the old string first.  */
+		main_map->l_name = (char *) "";
+		*user_entry = main_map->l_entry;
+
+		/* Set bit indicating this is the main program map.  */
+		main_map->l_main_map = 1;
 
 #ifdef HAVE_AUX_VECTOR
       /* Adjust the on-stack auxiliary vector so that it looks like the
 	 binary was executed directly.  */
-      for (ElfW(auxv_t) *av = auxv; av->a_type != AT_NULL; av++)
-	switch (av->a_type)
-	  {
-	  case AT_PHDR:
-	    av->a_un.a_val = (uintptr_t) phdr;
-	    break;
-	  case AT_PHNUM:
-	    av->a_un.a_val = phnum;
-	    break;
-	  case AT_ENTRY:
-	    av->a_un.a_val = *user_entry;
-	    break;
-	  case AT_EXECFN:
-	    av->a_un.a_val = (uintptr_t) _dl_argv[0];
-	    break;
-	  }
+		for (ElfW(auxv_t) *av = auxv; av->a_type != AT_NULL; av++)
+			switch (av->a_type)
+			{
+				case AT_PHDR:
+					av->a_un.a_val = (uintptr_t) phdr;
+					break;
+				case AT_PHNUM:
+					av->a_un.a_val = phnum;
+					break;
+				case AT_ENTRY:
+					av->a_un.a_val = *user_entry;
+					break;
+				case AT_EXECFN:
+					av->a_un.a_val = (uintptr_t) _dl_argv[0];
+					break;
+			}
 #endif
 
-      /* Set the argv[0] string now that we've processed the executable.  */
-      if (argv0 != NULL)
-        _dl_argv[0] = argv0;
-    }
-  else
-    {
+		/* Set the argv[0] string now that we've processed the executable.  */
+		if (argv0 != NULL) _dl_argv[0] = argv0;
+	}
+	else
+	{
       /* Create a link_map for the executable itself.
 	 This will be what dlopen on "" returns.  */
       main_map = _dl_new_object ((char *) "", "", lt_executable, NULL,
@@ -2822,6 +2833,15 @@ process_envvars (struct dl_main_state *state)
 	    }
 	  break;
 
+	case 19:
+		if (memcmp (envline, "LD_LIBRARY_PATH_FDS", 19) == 0)
+		{
+			state->capsicum = true; 
+			state->library_path = &envline[20];
+			state->library_path_source = "LD_LIBRARY_PATH_FDS";
+		}
+
+		break;
 	case 20:
 	  /* The mode of the dynamic linker can be set.  */
 	  if (memcmp (envline, "TRACE_LOADED_OBJECTS", 20) == 0)
