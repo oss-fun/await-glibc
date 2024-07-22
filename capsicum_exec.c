@@ -49,7 +49,7 @@ void main(){
 		libs[i] = calloc(PATH_MAX_LEN, sizeof(char));
 		libs[i] = NULL;
 	}
-	libs[0] = "/lib32";
+	libs[0] = "/home/materialofmouse/await-glibc/local/lib";
 	libs[1] = "/usr/lib";
 	libs[2] = "/usr/local/lib";
 	libs[3] = "/tmp";

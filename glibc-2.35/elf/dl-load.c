@@ -611,24 +611,57 @@ static bool cache_rpath(struct link_map *l, struct r_search_path_struct *sp,
 			l, what);
 }
 
-void _dl_init_openat_paths(const char* llpf){
-	_dl_debug_printf("in _dl_init_openat_paths\n");
-	
-	char* tp;
-	int fd;
 
-	tp = strdup(llpf);
-	tp = strtok(tp, ":");
-	fd = atoi(tp);
-	while ( tp != NULL){
-		if (fd > 0){
-			_dl_debug_printf("[DEBUG] openat %s, status: %d\n", tp, fd);
-			tp = strtok(NULL, ":");
-		} else {
-			_dl_debug_printf("[ERROR] PATH open path: %s\n", tp);
-			break;
+int *openat_paths;
+void _dl_init_openat_paths(const char* llpf){
+	if (llpf == NULL) {
+    _dl_debug_printf("[ERROR] llpf is NULL\n");
+    return;
+  }
+	
+  char* tp = strdup(llpf);
+  if (tp == NULL) {
+    _dl_debug_printf("[ERROR] Failed to allocate memory\n");
+    return;
+  }
+  
+	int fd;
+	int cnt = 0;
+  char *token = strtok(tp, ":");
+	while (token != NULL) {
+		_dl_debug_printf("token: %s\n", token);
+		
+		char *endptr;
+		fd = _dl_strtoul(token, &endptr);
+		if (endptr == token){
+			_dl_debug_printf("error in strtol\n");
 		}
+		if (fd > 0) {
+			_dl_debug_printf("token is valid. fd: %d\n", fd);
+
+			// 新しいサイズで配列を再割り当て
+			int *new_paths = realloc(openat_paths, sizeof(int*) * (cnt + 1));
+			if (new_paths == NULL) {
+				_dl_debug_printf("[ERROR] Memory reallocation failed\n");
+				return;  // エラー処理を適切に行う
+			}
+			openat_paths = new_paths;
+
+			// 新しい要素に値を代入
+			openat_paths[cnt] = fd;
+
+			//free(new_paths);
+			// カウントを増やす
+			cnt++;
+		}
+
+		token = strtok(NULL, ":");	
 	}
+	_dl_debug_printf("end _dl_init_openat_paths\n");
+	free(tp);  // Don't forget to free the allocated memory
+	
+	int i;
+	for (i = 0; i < cnt; i++) _dl_debug_printf("in _dl_init_openat_path: index:%d : value:%d\n", i, openat_paths[i]);
 }
 
 void _dl_init_paths(const char *llp, const char *source,
@@ -1436,7 +1469,7 @@ static int open_verify(const char *name, int fd, struct filebuf *fbp,
 	int errval = 0;
 	
 
-	_dl_debug_printf("in open_verify: name%s\n", name);
+	_dl_debug_printf("in open_verify: name:%s\n", name);
 #ifdef SHARED
 	/* Give the auditing libraries a chance.  */
 	if (__glibc_unlikely(GLRO(dl_naudit) > 0)) {
@@ -1653,7 +1686,7 @@ static int open_path(const char *name, size_t namelen, int mode,
 	const char *current_what = NULL;
 	int any = 0;
 	
-	_dl_printf("in open_path: name:%s\n", name);
+	_dl_debug_printf("in open_path: name:%s\n", name);
 
 	if (__glibc_unlikely(dirs == NULL))
 		/* We're called before _dl_init_paths when loading the main executable
@@ -1967,15 +2000,34 @@ struct link_map *_dl_map_object(struct link_map *loader, const char *name,
 				}
 
 				if (cached != NULL) {
-					fd =
-						open_verify(cached, -1, &fb, loader ?: GL(dl_ns)[nsid]._ns_loaded,
-								LA_SER_CONFIG, mode, &found_other_class, false);
-					_dl_debug_printf("in dl_map_object: num=7, fd:%d\n", fd);
-					_dl_debug_printf("in dl_map_object: num=7, cached:%s\n", cached);
-					if (__glibc_likely(fd != -1))
-						realname = cached;
-					else
-						free(cached);
+					if (openat_paths != NULL){
+						_dl_debug_printf("line 2004: openat_paths[0] = %d\n", openat_paths[1]);
+						for (int *fd_ptr = openat_paths; *fd_ptr != -1; fd_ptr++) {
+							int _fd = *fd_ptr;
+							_dl_debug_printf("line 2007: fd:%d\n",_fd);
+							fd = openat(_fd, name, O_RDONLY); 
+							_dl_debug_printf("line 2009: fd:%d\n",fd);
+							if (fd != -1) break;
+						}
+						fd = open_verify(cached, fd, &fb, loader ?: GL(dl_ns)[nsid]._ns_loaded,LA_SER_CONFIG, mode, &found_other_class, false);
+						_dl_debug_printf("in dl_map_object: num=7, fd:%d\n", fd);
+						_dl_debug_printf("in dl_map_object: num=7, cached:%s\n", cached);
+						if (__glibc_likely(fd != -1))
+							realname = cached;
+						else
+							free(cached);
+					}
+					else{
+						fd =
+							open_verify(cached, -1, &fb, loader ?: GL(dl_ns)[nsid]._ns_loaded,
+									LA_SER_CONFIG, mode, &found_other_class, false);
+						_dl_debug_printf("in dl_map_object: num=7, fd:%d\n", fd);
+						_dl_debug_printf("in dl_map_object: num=7, cached:%s\n", cached);
+						if (__glibc_likely(fd != -1))
+							realname = cached;
+						else
+							free(cached);
+					}
 				}
 			}
 		}
@@ -2001,24 +2053,12 @@ struct link_map *_dl_map_object(struct link_map *loader, const char *name,
 		if (realname == NULL)
 			fd = -1;
 		else {
-			// for runcap
-			if (GL(dl_openat_dirs) != NULL){
-				_dl_debug_printf("dl_openat_dirs != NULL\n");
-				fd = open_verify(realname, -1, &fb, loader ?: GL(dl_ns)[nsid]._ns_loaded,
-						0, mode, &found_other_class, true);
-				
-				_dl_debug_printf("in dl_map_object: num=10, fd:%d\n", fd);
-				_dl_debug_printf("in dl_map_object: num=10, realname:%s\n", realname);
-				if (__glibc_unlikely(fd == -1)) free(realname);
-			}
-			else {
-				fd = open_verify(realname, -1, &fb, loader ?: GL(dl_ns)[nsid]._ns_loaded,
-						0, mode, &found_other_class, true);
-				_dl_debug_printf("in dl_map_object: num=10, fd:%d\n", fd);
-				_dl_debug_printf("in dl_map_object: num=10, realname:%s\n", realname);
-				if (__glibc_unlikely(fd == -1)) free(realname);
-			}
-		}
+			fd = open_verify(realname, -1, &fb, loader ?: GL(dl_ns)[nsid]._ns_loaded,
+					0, mode, &found_other_class, true);
+			_dl_debug_printf("in dl_map_object: num=10, fd:%d\n", fd);
+			_dl_debug_printf("in dl_map_object: num=10, realname:%s\n", realname);
+			if (__glibc_unlikely(fd == -1)) free(realname);
+	}
 	}
 
 #ifdef SHARED

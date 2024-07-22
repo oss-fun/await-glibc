@@ -125,7 +125,7 @@ elf_get_dynamic_info (struct link_map *l, bool bootstrap,
 	      || (info[VERSYMIDX (DT_FLAGS_1)]->d_un.d_val & ~DF_1_NOW) == 0);
       /* Flags must not be set for ld.so.  */
       assert (info[DT_FLAGS] == NULL
-	      || (info[DT_FLAGS]->d_un.d_val & ~DF_BIND_NOW) == 0);
+				|| (info[DT_FLAGS]->d_un.d_val & ~(DF_BIND_NOW | DF_STATIC_TLS)) == 0);
     }
   else
     {
