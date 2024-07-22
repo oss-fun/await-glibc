@@ -1587,12 +1587,20 @@ dl_main (const ElfW(Phdr) *phdr,
 					_exit (EXIT_FAILURE);
 			}
 		}
-		//else if (state.capsicum){
-			//RTLD_TIMING_VAR(start);
-			//rtld_timer_start (&start);
-			//_dl_map_object_from_fd (NULL, rtld_progname, lt_executable, 0, __RTLD_OPENEXEC, LM_ID_BASE);
-			//rtld_timer_stop (&load_time, start);
-		//}
+		else if (state.capsicum){
+			char *endptr;
+			int fd = _dl_strtoul(state.exec_fd,&endptr);
+			if (endptr == token){
+				_dl_debug_printf("error in strtol\n");
+			}
+			if (fd > 0) {
+				_dl_debug_printf("token is valid. fd: %d\n", fd);
+			}
+			RTLD_TIMING_VAR(start);
+			rtld_timer_start (&start);
+			_dl_map_object_from_fd (NULL, rtld_progname, lt_executable, 0, __RTLD_OPENEXEC, LM_ID_BASE);
+			rtld_timer_stop (&load_time, start);
+		}
 		else
 		{
 			RTLD_TIMING_VAR (start);

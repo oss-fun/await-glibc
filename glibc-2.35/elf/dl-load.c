@@ -1480,15 +1480,17 @@ static int open_verify(const char *name, int fd, struct filebuf *fbp,
 		if (fd != -1 && name != original_name && strcmp(name, original_name)) {
 			/* An audit library changed what we're supposed to open,
 				 so FD no longer matches it.  */
+			_dl_debug_printf("in open_verify: close\n");
 			__close_nocancel(fd);
 			fd = -1;
 		}
 	}
 #endif
 
-	if (fd == -1) /* Open the file.  We always open files read-only.  */
+	if (fd == -1){ /* Open the file.  We always open files read-only.  */
 		fd = __open64_nocancel(name, O_RDONLY | O_CLOEXEC);
-
+		_dl_debug_printf("in open_verify: open\n");
+	}
 	if (fd != -1) {
 		ElfW(Ehdr) * ehdr;
 		ElfW(Phdr) * phdr, *ph;
