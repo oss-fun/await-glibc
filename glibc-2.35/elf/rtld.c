@@ -1342,7 +1342,7 @@ dl_main (const ElfW(Phdr) *phdr,
 
   /* Process the environment variable which control the behaviour.  */
   process_envvars (&state);
-	if(state.library_path_fds != NULL && DL_DEBUG_LIBS)
+	if(state.library_path_fds != NULL && __glibc_unlikely(GLRO(dl_debug_mask) & DL_DEBUG_LIBS))
 		_dl_debug_printf("state.library_path_fds: %s\n", state.library_path_fds);
 #ifndef HAVE_INLINED_SYSCALLS
   /* Set up a flag which tells we are just starting.  */
@@ -1589,10 +1589,10 @@ dl_main (const ElfW(Phdr) *phdr,
 			char* binary_fd = strdup(state.exec_fd);
 			char *endptr;
 			int fd = _dl_strtoul(binary_fd, &endptr);
-			if (endptr == binary_fd && DL_DEBUG_LIBS){
+			if (endptr == binary_fd && __glibc_unlikely(GLRO(dl_debug_mask) & DL_DEBUG_LIBS)){
 				_dl_debug_printf("error in strtol\n");
 			}
-			if (fd > 0 && DL_DEBUG_LIBS) {
+			if (fd > 0 && __glibc_unlikely(GLRO(dl_debug_mask) & DL_DEBUG_LIBS)) {
 				_dl_debug_printf("exec_fd is valid. fd: %d\n", fd);
 			}
 			GL(dl_exec_fd) = fd;
@@ -2862,7 +2862,6 @@ process_envvars (struct dl_main_state *state)
 
 		if (memcmp (envline, "LIBRARY_PATH_FDS", 16) == 0)
 			{
-				_dl_printf("LD_LIBRARY_PATH_FDS\n");
 				state->capsicum = true; 
 				state->library_path_fds = &envline[17];
 				state->library_path_source = "LD_LIBRARY_PATH_FDS";
