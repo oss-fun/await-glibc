@@ -558,7 +558,6 @@ _dl_start (void *arg)
   /* Read our own dynamic section and fill in the info array.  */
   bootstrap_map.l_ld = (void *) bootstrap_map.l_addr + elf_machine_dynamic ();
   bootstrap_map.l_ld_readonly = DL_RO_DYN_SECTION;
-	_dl_debug_printf("before elf_get_dynamic_info:561\n");
   elf_get_dynamic_info (&bootstrap_map, true, false);
 
 #if NO_TLS_OFFSET != 0
@@ -1343,7 +1342,7 @@ dl_main (const ElfW(Phdr) *phdr,
 
   /* Process the environment variable which control the behaviour.  */
   process_envvars (&state);
-	if(state.library_path_fds != NULL)
+	if(state.library_path_fds != NULL && DL_DEBUG_LIBS)
 		_dl_debug_printf("state.library_path_fds: %s\n", state.library_path_fds);
 #ifndef HAVE_INLINED_SYSCALLS
   /* Set up a flag which tells we are just starting.  */
@@ -1353,7 +1352,6 @@ dl_main (const ElfW(Phdr) *phdr,
   const char *ld_so_name = _dl_argv[0];
   if (*user_entry == (ElfW(Addr)) ENTRY_POINT)
   {
-		_dl_printf("direct exec mode\n");
       /* Ho ho.  We are not the program interpreter!  We are the program
 	 itself!  This means someone ran ld.so as a command.  Well, that
 	 might be convenient to do sometimes.  We support it by
@@ -1588,18 +1586,17 @@ dl_main (const ElfW(Phdr) *phdr,
 			}
 		}
 		else if (state.capsicum){
-			_dl_debug_printf("line 1591: capsicum true\n");
 			char* binary_fd = strdup(state.exec_fd);
 			char *endptr;
 			int fd = _dl_strtoul(binary_fd, &endptr);
-			if (endptr == binary_fd){
+			if (endptr == binary_fd && DL_DEBUG_LIBS){
 				_dl_debug_printf("error in strtol\n");
 			}
-			if (fd > 0) {
+			if (fd > 0 && DL_DEBUG_LIBS) {
 				_dl_debug_printf("exec_fd is valid. fd: %d\n", fd);
 			}
 			GL(dl_exec_fd) = fd;
-			_dl_debug_printf("GL(dl_exec_fd): %d\n", GL(dl_exec_fd));
+			//_dl_debug_printf("GL(dl_exec_fd): %d\n", GL(dl_exec_fd));
 			RTLD_TIMING_VAR(start);
 			rtld_timer_start (&start);
 			_dl_map_object (NULL, rtld_progname, lt_executable, 0, __RTLD_OPENEXEC, LM_ID_BASE);
@@ -1609,7 +1606,7 @@ dl_main (const ElfW(Phdr) *phdr,
 		{
 			RTLD_TIMING_VAR (start);
 			rtld_timer_start (&start);
-			_dl_debug_printf("in dl_main, call _dl_map_object\n");
+			//_dl_debug_printf("in dl_main, call _dl_map_object\n");
 			_dl_map_object (NULL, rtld_progname, lt_executable, 0, __RTLD_OPENEXEC, LM_ID_BASE);
 			rtld_timer_stop (&load_time, start);
 		}
