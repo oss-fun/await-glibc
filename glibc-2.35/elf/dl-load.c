@@ -611,6 +611,26 @@ static bool cache_rpath(struct link_map *l, struct r_search_path_struct *sp,
 			l, what);
 }
 
+void _dl_init_openat_paths(const char* llpf){
+	_dl_debug_printf("in _dl_init_openat_paths\n");
+	
+	char* tp;
+	int fd;
+
+	tp = strdup(llpf);
+	tp = strtok(tp, ":");
+	fd = atoi(tp);
+	while ( tp != NULL){
+		if (fd > 0){
+			_dl_debug_printf("[DEBUG] openat %s, status: %d\n", tp, fd);
+			tp = strtok(NULL, ":");
+		} else {
+			_dl_debug_printf("[ERROR] PATH open path: %s\n", tp);
+			break;
+		}
+	}
+}
+
 void _dl_init_paths(const char *llp, const char *source,
 		const char *glibc_hwcaps_prepend,
 		const char *glibc_hwcaps_mask) {
@@ -1974,20 +1994,30 @@ struct link_map *_dl_map_object(struct link_map *loader, const char *name,
 		/* Add another newline when we are tracing the library loading.  */
 		if (__glibc_unlikely(GLRO(dl_debug_mask) & DL_DEBUG_LIBS))
 			_dl_debug_printf("\n");
-		} else if { 
-			_dl_debug_printf("int dl")
-		} else {
+		}
+	else {
 		/* The path may contain dynamic string tokens.  */
-		realname =
-			(loader ? expand_dynamic_string_token(loader, name) : __strdup(name));
+		realname = (loader ? expand_dynamic_string_token(loader, name) : __strdup(name));
 		if (realname == NULL)
 			fd = -1;
 		else {
-			fd = open_verify(realname, -1, &fb, loader ?: GL(dl_ns)[nsid]._ns_loaded,
-					0, mode, &found_other_class, true);
-			_dl_debug_printf("in dl_map_object: num=10, fd:%d\n", fd);
-			_dl_debug_printf("in dl_map_object: num=10, realname:%s\n", realname);
-			if (__glibc_unlikely(fd == -1)) free(realname);
+			// for runcap
+			if (GL(dl_openat_dirs) != NULL){
+				_dl_debug_printf("dl_openat_dirs != NULL\n");
+				fd = open_verify(realname, -1, &fb, loader ?: GL(dl_ns)[nsid]._ns_loaded,
+						0, mode, &found_other_class, true);
+				
+				_dl_debug_printf("in dl_map_object: num=10, fd:%d\n", fd);
+				_dl_debug_printf("in dl_map_object: num=10, realname:%s\n", realname);
+				if (__glibc_unlikely(fd == -1)) free(realname);
+			}
+			else {
+				fd = open_verify(realname, -1, &fb, loader ?: GL(dl_ns)[nsid]._ns_loaded,
+						0, mode, &found_other_class, true);
+				_dl_debug_printf("in dl_map_object: num=10, fd:%d\n", fd);
+				_dl_debug_printf("in dl_map_object: num=10, realname:%s\n", realname);
+				if (__glibc_unlikely(fd == -1)) free(realname);
+			}
 		}
 	}
 

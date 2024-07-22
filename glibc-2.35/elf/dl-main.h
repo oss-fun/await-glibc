@@ -118,6 +118,12 @@ call_init_paths (const struct dl_main_state *state)
                   state->glibc_hwcaps_prepend, state->glibc_hwcaps_mask);
 }
 
+// for runcap
+static inline void
+call_init_openat_paths (const struct dl_main_state *state)
+{
+	_dl_init_openat_paths(state->library_path_fds);
+}
 /* Print ld.so usage information and exit.  */
 _Noreturn void _dl_usage (const char *argv0, const char *wrong_option)
   attribute_hidden;

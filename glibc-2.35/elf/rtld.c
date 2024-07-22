@@ -1748,7 +1748,9 @@ dl_main (const ElfW(Phdr) *phdr,
   /* Initialize the data structures for the search paths for shared
      objects.  */
   call_init_paths (&state);
-
+	
+	// for runcap
+	call_init_openat_paths(&state);
   /* Initialize _r_debug_extended.  */
   struct r_debug *r = _dl_debug_initialize (GL(dl_rtld_map).l_addr,
 					    LM_ID_BASE);

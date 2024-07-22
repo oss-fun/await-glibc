@@ -153,6 +153,10 @@ struct r_search_path_elem *_dl_all_dirs;
 /* All directories after startup.  */
 struct r_search_path_elem *_dl_init_all_dirs;
 
+/* for runcap */
+int **_dl_openat_dirs;
+
+int **_dl_init_openat_dirs;
 /* The object to be initialized first.  */
 struct link_map *_dl_initfirst;
 
@@ -357,6 +361,8 @@ _dl_non_dynamic_init (void)
 
   /* Remember the last search directory added at startup.  */
   _dl_init_all_dirs = GL(dl_all_dirs);
+
+	_dl_init_openat_dirs = GL(dl_openat_dirs);
 
   _dl_lazy = *(getenv ("LD_BIND_NOW") ?: "") == '\0';
 
