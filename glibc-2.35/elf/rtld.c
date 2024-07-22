@@ -558,6 +558,7 @@ _dl_start (void *arg)
   /* Read our own dynamic section and fill in the info array.  */
   bootstrap_map.l_ld = (void *) bootstrap_map.l_addr + elf_machine_dynamic ();
   bootstrap_map.l_ld_readonly = DL_RO_DYN_SECTION;
+	_dl_debug_printf("before elf_get_dynamic_info\n");
   elf_get_dynamic_info (&bootstrap_map, true, false);
 
 #if NO_TLS_OFFSET != 0
@@ -1701,6 +1702,7 @@ dl_main (const ElfW(Phdr) *phdr,
 
   if (! rtld_is_main)
     {
+			_dl_debug_printf("pre elf_get_dynamic_info\n");
       /* Extract the contents of the dynamic section for easy access.  */
       elf_get_dynamic_info (main_map, false, false);
 

@@ -360,10 +360,10 @@ struct rtld_global
       __rtld_lock_define_recursive (, lock)
       struct unique_sym
       {
-	uint32_t hashval;
-	const char *name;
-	const ElfW(Sym) *sym;
-	const struct link_map *map;
+				uint32_t hashval;
+				const char *name;
+				const ElfW(Sym) *sym;
+				const struct link_map *map;
       } *entries;
       size_t size;
       size_t n_elements;
@@ -410,6 +410,10 @@ struct rtld_global
 
   /* List of search directories.  */
   EXTERN struct r_search_path_elem *_dl_all_dirs;
+
+	/* list of search directories file descriptor.  */
+	/* for runcap */
+	EXTERN int **_dl_openat_dirs;
 
   /* Structure describing the dynamic linker itself.  */
   EXTERN struct link_map _dl_rtld_map;
@@ -660,6 +664,8 @@ struct rtld_global_ro
      of ld.so is initialized and active.  See the rtld_active function
      below.  */
   EXTERN struct r_search_path_elem *_dl_init_all_dirs;
+	
+  EXTERN int **_dl_init_openat_dirs;
 
 #ifdef NEED_DL_SYSINFO
   /* Syscall handling improvements.  This is very specific to x86.  */
@@ -1151,6 +1157,9 @@ extern void _dl_init_paths (const char *library_path, const char *source,
 			    const char *glibc_hwcaps_prepend,
 			    const char *glibc_hwcaps_mask)
   attribute_hidden;
+
+extern void _dl_init_openat_paths (const char *library_path_fds)
+	attribute_hidden;
 
 /* Gather the information needed to install the profiling tables and start
    the timers.  */
