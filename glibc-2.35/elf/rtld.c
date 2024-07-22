@@ -1342,7 +1342,8 @@ dl_main (const ElfW(Phdr) *phdr,
 
   /* Process the environment variable which control the behaviour.  */
   process_envvars (&state);
-
+	if(state.library_path_fds != NULL)
+		_dl_debug_printf("state.library_path_fds: %s\n", state.library_path_fds);
 #ifndef HAVE_INLINED_SYSCALLS
   /* Set up a flag which tells we are just starting.  */
   _dl_starting_up = 1;
@@ -1351,6 +1352,7 @@ dl_main (const ElfW(Phdr) *phdr,
   const char *ld_so_name = _dl_argv[0];
   if (*user_entry == (ElfW(Addr)) ENTRY_POINT)
   {
+		_dl_printf("direct exec mode\n");
       /* Ho ho.  We are not the program interpreter!  We are the program
 	 itself!  This means someone ran ld.so as a command.  Well, that
 	 might be convenient to do sometimes.  We support it by
@@ -1369,6 +1371,8 @@ dl_main (const ElfW(Phdr) *phdr,
 		rtld_is_main = true;
 
 		char *argv0 = NULL;
+		
+		
 
 		/* Note the place where the dynamic linker actually came from.  */
 		GL(dl_rtld_map).l_name = rtld_progname;
@@ -1468,6 +1472,8 @@ dl_main (const ElfW(Phdr) *phdr,
 			else if (strcmp( _dl_argv[1], "--library-path-fds") == 0 && _dl_argc > 2)
 			{
 				state.library_path_fds = _dl_argv[2];
+				state.library_path_source = "--library-path-fds";
+				
 				_dl_skip_args += 2;
 				_dl_argc -= 2;
 				_dl_argv += 2;
@@ -1580,10 +1586,17 @@ dl_main (const ElfW(Phdr) *phdr,
 					_exit (EXIT_FAILURE);
 			}
 		}
+		//else if (state.capsicum){
+			//RTLD_TIMING_VAR(start);
+			//rtld_timer_start (&start);
+			//_dl_map_object_from_fd (NULL, rtld_progname, lt_executable, 0, __RTLD_OPENEXEC, LM_ID_BASE);
+			//rtld_timer_stop (&load_time, start);
+		//}
 		else
 		{
 			RTLD_TIMING_VAR (start);
 			rtld_timer_start (&start);
+			_dl_debug_printf("in dl_main, call _dl_map_object\n");
 			_dl_map_object (NULL, rtld_progname, lt_executable, 0, __RTLD_OPENEXEC, LM_ID_BASE);
 			rtld_timer_stop (&load_time, start);
 		}
@@ -1627,7 +1640,7 @@ dl_main (const ElfW(Phdr) *phdr,
 #endif
 
 		/* Set the argv[0] string now that we've processed the executable.  */
-		if (argv0 != NULL) _dl_argv[0] = argv0;
+	if (argv0 != NULL) _dl_argv[0] = argv0;
 	}
 	else
 	{
@@ -2716,6 +2729,7 @@ process_envvars (struct dl_main_state *state)
 	  /* Debugging of the dynamic linker?  */
 	  if (memcmp (envline, "DEBUG", 5) == 0)
 	    {
+				_dl_printf("DEBUG\n");
 	      process_dl_debug (state, &envline[6]);
 	      break;
 	    }
@@ -2830,18 +2844,18 @@ process_envvars (struct dl_main_state *state)
 	      GLRO(dl_verbose) = 1;
 	      GLRO(dl_debug_mask) |= DL_DEBUG_PRELINK;
 	      GLRO(dl_trace_prelink) = &envline[17];
+				break;
 	    }
-	  break;
 
-	case 19:
-		if (memcmp (envline, "LD_LIBRARY_PATH_FDS", 19) == 0)
-		{
-			state->capsicum = true; 
-			state->library_path = &envline[20];
-			state->library_path_source = "LD_LIBRARY_PATH_FDS";
-		}
+		if (memcmp (envline, "LIBRARY_PATH_FDS", 16) == 0)
+			{
+				_dl_printf("LD_LIBRARY_PATH_FDS\n");
+				state->capsicum = true; 
+				state->library_path_fds = &envline[17];
+				state->library_path_source = "LD_LIBRARY_PATH_FDS";
+				break;
+			}
 
-		break;
 	case 20:
 	  /* The mode of the dynamic linker can be set.  */
 	  if (memcmp (envline, "TRACE_LOADED_OBJECTS", 20) == 0)
