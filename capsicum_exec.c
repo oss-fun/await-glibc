@@ -40,8 +40,15 @@ void main(){
 	extern char **environ;
 
 	char *binary = "/bin/echo";
+	int binary_fd = NULL;
+	binary_fd = open(binary, O_RDONLY);
+	
+	char *c_binary_fd;
+	c_binary_fd = malloc(10);
+	snprintf(c_binary_fd, 3, "%d", binary_fd);
+	printf("c_binary_fd: %s\n", c_binary_fd);
 	char *rtld = "./local/lib/ld-linux-x86-64.so.2";
-	char *argv[] = {rtld, "/bin/echo", "hello", NULL};
+	char *argv[] = {rtld, "--", c_binary_fd, "/bin/echo", "hello", NULL};
 
 	char *libs[4];
 	int i;
@@ -56,8 +63,5 @@ void main(){
 	char* lib_fds = open_lib_path(libs, 4);
 	setenv("LD_LIBRARY_PATH_FDS", lib_fds, 1);
 	
-	int test_fd = openat(3, "libc.so.6", O_RDONLY);
-	printf("opened test_fd: %d\n", test_fd);
-
 	execve(rtld, argv, environ);
 }

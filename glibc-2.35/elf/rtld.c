@@ -1588,17 +1588,21 @@ dl_main (const ElfW(Phdr) *phdr,
 			}
 		}
 		else if (state.capsicum){
+			_dl_debug_printf("line 1591: capsicum true\n");
+			char* binary_fd = strdup(state.exec_fd);
 			char *endptr;
-			int fd = _dl_strtoul(state.exec_fd,&endptr);
-			if (endptr == token){
+			int fd = _dl_strtoul(binary_fd, &endptr);
+			if (endptr == binary_fd){
 				_dl_debug_printf("error in strtol\n");
 			}
 			if (fd > 0) {
-				_dl_debug_printf("token is valid. fd: %d\n", fd);
+				_dl_debug_printf("exec_fd is valid. fd: %d\n", fd);
 			}
+			GL(dl_exec_fd) = fd;
+			_dl_debug_printf("GL(dl_exec_fd): %d\n", GL(dl_exec_fd));
 			RTLD_TIMING_VAR(start);
 			rtld_timer_start (&start);
-			_dl_map_object_from_fd (NULL, rtld_progname, lt_executable, 0, __RTLD_OPENEXEC, LM_ID_BASE);
+			_dl_map_object (NULL, rtld_progname, lt_executable, 0, __RTLD_OPENEXEC, LM_ID_BASE);
 			rtld_timer_stop (&load_time, start);
 		}
 		else

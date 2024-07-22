@@ -2055,12 +2055,23 @@ struct link_map *_dl_map_object(struct link_map *loader, const char *name,
 		if (realname == NULL)
 			fd = -1;
 		else {
-			fd = open_verify(realname, -1, &fb, loader ?: GL(dl_ns)[nsid]._ns_loaded,
-					0, mode, &found_other_class, true);
-			_dl_debug_printf("in dl_map_object: num=10, fd:%d\n", fd);
-			_dl_debug_printf("in dl_map_object: num=10, realname:%s\n", realname);
-			if (__glibc_unlikely(fd == -1)) free(realname);
-	}
+			if (GL(dl_exec_fd) > 0){
+				_dl_debug_printf("line 2059: GL(dl_exec_fd): %d\n", GL(dl_exec_fd));
+				fd = open_verify(realname, GL(dl_exec_fd), &fb, loader ?: GL(dl_ns)[nsid]._ns_loaded,
+						0, mode, &found_other_class, true);
+				_dl_debug_printf("in dl_map_object: num=10, fd:%d\n", fd);
+				_dl_debug_printf("in dl_map_object: num=10, realname:%s\n", realname);
+				if (__glibc_unlikely(fd == -1)) free(realname);
+
+			}
+			else {
+				fd = open_verify(realname, -1, &fb, loader ?: GL(dl_ns)[nsid]._ns_loaded,
+						0, mode, &found_other_class, true);
+				_dl_debug_printf("in dl_map_object: num=11, fd:%d\n", fd);
+				_dl_debug_printf("in dl_map_object: num=11, realname:%s\n", realname);
+				if (__glibc_unlikely(fd == -1)) free(realname);
+			}
+		}
 	}
 
 #ifdef SHARED

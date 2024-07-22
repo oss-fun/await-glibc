@@ -414,7 +414,7 @@ struct rtld_global
 	/* list of search directories file descriptor.  */
 	/* for runcap */
 	EXTERN int **_dl_openat_dirs;
-
+	EXTERN int _dl_exec_fd;
   /* Structure describing the dynamic linker itself.  */
   EXTERN struct link_map _dl_rtld_map;
 #ifdef SHARED

@@ -157,6 +157,9 @@ struct r_search_path_elem *_dl_init_all_dirs;
 int **_dl_openat_dirs;
 
 int **_dl_init_openat_dirs;
+
+int _dl_exec_fd;
+
 /* The object to be initialized first.  */
 struct link_map *_dl_initfirst;
 
