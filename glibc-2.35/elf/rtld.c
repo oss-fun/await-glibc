@@ -1589,8 +1589,8 @@ dl_main (const ElfW(Phdr) *phdr,
 			char* binary_fd = strdup(state.exec_fd);
 			char *endptr;
 			int fd = _dl_strtoul(binary_fd, &endptr);
-			if (endptr == binary_fd && __glibc_unlikely(GLRO(dl_debug_mask) & DL_DEBUG_LIBS)){
-				_dl_debug_printf("error in strtol\n");
+			if (endptr == binary_fd){
+				if (__glibc_unlikely(GLRO(dl_debug_mask) & DL_DEBUG_LIBS)) _dl_debug_printf("error in strtol\n");
 			}
 			if (fd > 0 && __glibc_unlikely(GLRO(dl_debug_mask) & DL_DEBUG_LIBS)) {
 				_dl_debug_printf("exec_fd is valid. fd: %d\n", fd);

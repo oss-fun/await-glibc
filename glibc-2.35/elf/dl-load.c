@@ -614,35 +614,35 @@ static bool cache_rpath(struct link_map *l, struct r_search_path_struct *sp,
 
 int *openat_paths;
 void _dl_init_openat_paths(const char* llpf){
-	if (llpf == NULL && __glibc_unlikely(GLRO(dl_debug_mask) & DL_DEBUG_LIBS)) {
-    _dl_debug_printf("[ERROR] llpf is NULL\n");
+	if (llpf == NULL ) {
+		if (__glibc_unlikely(GLRO(dl_debug_mask) & DL_DEBUG_LIBS)) _dl_debug_printf("[ERROR] llpf is NULL\n");
     return;
   }
 	
   char* tp = strdup(llpf);
-  if (tp == NULL && __glibc_unlikely(GLRO(dl_debug_mask) & DL_DEBUG_LIBS)) {
-    _dl_debug_printf("[ERROR] Failed to allocate memory\n");
+  if (tp == NULL){
+		if (__glibc_unlikely(GLRO(dl_debug_mask) & DL_DEBUG_LIBS)) _dl_debug_printf("[ERROR] Failed to allocate memory\n");
     return;
   }
   
 	int fd;
 	int cnt = 0;
   char *token = strtok(tp, ":");
-	while (token != NULL && __glibc_unlikely(GLRO(dl_debug_mask) & DL_DEBUG_LIBS)) {
-		_dl_debug_printf("token: %s\n", token);
+	while (token != NULL ){
+		if (__glibc_unlikely(GLRO(dl_debug_mask) & DL_DEBUG_LIBS)) _dl_debug_printf("token: %s\n", token);
 		
 		char *endptr;
 		fd = _dl_strtoul(token, &endptr);
-		if (endptr == token && __glibc_unlikely(GLRO(dl_debug_mask) & DL_DEBUG_LIBS)){
-			_dl_debug_printf("error in strtol\n");
+		if (endptr == token){
+			if (__glibc_unlikely(GLRO(dl_debug_mask) & DL_DEBUG_LIBS)) _dl_debug_printf("error in strtol\n");
 		}
-		if (fd > 0 &&__glibc_unlikely(GLRO(dl_debug_mask) &  DL_DEBUG_LIBS)) {
-			_dl_debug_printf("token is valid. fd: %d\n", fd);
+		if (fd > 0 ) {
+			if (__glibc_unlikely(GLRO(dl_debug_mask) &  DL_DEBUG_LIBS)) _dl_debug_printf("token is valid. fd: %d\n", fd);
 
 			// 新しいサイズで配列を再割り当て
 			int *new_paths = realloc(openat_paths, sizeof(int*) * (cnt + 1));
-			if (new_paths == NULL && __glibc_unlikely(GLRO(dl_debug_mask) & DL_DEBUG_LIBS)) {
-				_dl_debug_printf("[ERROR] Memory reallocation failed\n");
+			if (new_paths == NULL){
+				if (__glibc_unlikely(GLRO(dl_debug_mask) & DL_DEBUG_LIBS)) _dl_debug_printf("[ERROR] Memory reallocation failed\n");
 				return;  // エラー処理を適切に行う
 			}
 			openat_paths = new_paths;
