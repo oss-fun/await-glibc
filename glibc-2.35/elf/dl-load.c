@@ -873,6 +873,7 @@ struct link_map *_dl_map_object_from_fd(const char *name, const char *origname, 
 		struct link_map *loader, int l_type, int mode,
 		void **stack_endp, Lmid_t nsid) 
 {
+	_dl_debug_printf("in _dl_map_object_from_fd name:%s, fd:%d\n",name, fd);
 
 	struct link_map *l = NULL;
 	const ElfW(Ehdr) * header;
@@ -1823,6 +1824,7 @@ struct link_map *_dl_map_object(struct link_map *loader, const char *name,
 	assert(nsid >= 0);
 	assert(nsid < GL(dl_nns));
 
+	_dl_debug_printf("in _dl_map_object\n");
 	/* Look for this name among those already loaded.  */
 	for (l = GL(dl_ns)[nsid]._ns_loaded; l; l = l->l_next) {
 		/* If the requested name matches the soname of a loaded object,
@@ -1882,6 +1884,20 @@ struct link_map *_dl_map_object(struct link_map *loader, const char *name,
 			_dl_debug_printf("find library=%s [%lu]; searching\n", name, nsid);
 
 		fd = -1;
+		_dl_debug_printf("pre openat_paths check\n");
+		if (openat_paths != NULL){
+			_dl_debug_printf("in dl_map_object: openat_paths\n");
+			for (int *fd_ptr = openat_paths; *fd_ptr != -1; fd_ptr++) {
+				int _fd = *fd_ptr;
+				fd = openat(_fd, name, O_RDONLY); 
+				if (fd != -1) break;
+			}
+			fd = open_verify(name, fd, &fb, loader ?: GL(dl_ns)[nsid]._ns_loaded,LA_SER_CONFIG, mode, &found_other_class, false);
+			_dl_debug_printf("in dl_map_object: try link with openat. fd:%d name:%s\n", fd, name);
+			if (fd != -1){
+				_dl_debug_printf("in dl_map_object: try link with openat. fd:%d name:%s\n", fd, name);
+			}
+		}
 
 		/* When the object has the RUNPATH information we don't use any
 			 RPATHs.  */
@@ -1898,7 +1914,7 @@ struct link_map *_dl_map_object(struct link_map *loader, const char *name,
 				if (cache_rpath(l, &l->l_rpath_dirs, DT_RPATH, "RPATH")) {
 					fd = open_path(name, namelen, mode, &l->l_rpath_dirs, &realname, &fb,
 							loader, LA_SER_RUNPATH, &found_other_class);
-					if (__glibc_unlikely(GLRO(dl_debug_mask) & DL_DEBUG_LIBS)) _dl_debug_printf("in dl_map_object: num=1, fd:%d\n", fd);
+					_dl_debug_printf("in dl_map_object: num=1, fd:%d\n", fd);
 					if (fd != -1) break;
 
 					did_main_map |= l == main_map;
@@ -1912,7 +1928,7 @@ struct link_map *_dl_map_object(struct link_map *loader, const char *name,
 				fd = open_path(name, namelen, mode, &main_map->l_rpath_dirs, &realname,
 						&fb, loader ?: main_map, LA_SER_RUNPATH,
 						&found_other_class);
-				if (__glibc_unlikely(GLRO(dl_debug_mask) & DL_DEBUG_LIBS)) _dl_debug_printf("in dl_map_object: num=2, fd:%d\n", fd);
+				_dl_debug_printf("in dl_map_object: num=2, fd:%d\n", fd);
 			}
 			/* Also try DT_RUNPATH in the executable for LD_AUDIT dlopen
 				 call.  */
@@ -1924,7 +1940,7 @@ struct link_map *_dl_map_object(struct link_map *loader, const char *name,
 					fd =
 						open_path(name, namelen, mode, &l_rpath_dirs, &realname, &fb,
 								loader ?: main_map, LA_SER_RUNPATH, &found_other_class);
-					if (__glibc_unlikely(GLRO(dl_debug_mask) & DL_DEBUG_LIBS)) _dl_debug_printf("in dl_map_object: num=3, fd:%d\n", fd);
+					_dl_debug_printf("in dl_map_object: num=3, fd:%d\n", fd);
 				}
 			}
 		}
@@ -1935,7 +1951,7 @@ struct link_map *_dl_map_object(struct link_map *loader, const char *name,
 					loader ?: GL(dl_ns)[LM_ID_BASE]._ns_loaded, LA_SER_LIBPATH,
 					&found_other_class);
 
-					if (__glibc_unlikely(GLRO(dl_debug_mask) & DL_DEBUG_LIBS)) _dl_debug_printf("in dl_map_object: num=4, fd:%d\n", fd);
+			_dl_debug_printf("in dl_map_object: num=4, fd:%d\n", fd);
 		}
 		
 		/* Try the LD_LIBRAYR_PATH_FDS environment variable */
@@ -1947,7 +1963,7 @@ struct link_map *_dl_map_object(struct link_map *loader, const char *name,
 			fd = open_path(name, namelen, mode, &loader->l_runpath_dirs, &realname,
 					&fb, loader, LA_SER_RUNPATH, &found_other_class);
 			
-					if (__glibc_unlikely(GLRO(dl_debug_mask) & DL_DEBUG_LIBS)) _dl_debug_printf("in dl_map_object: num=5, fd:%d\n", fd);
+				_dl_debug_printf("in dl_map_object: num=5, fd:%d\n", fd);
 		}
 
 		if (fd == -1) {
@@ -1956,7 +1972,7 @@ struct link_map *_dl_map_object(struct link_map *loader, const char *name,
 				fd =
 					open_verify(realname, fd, &fb, loader ?: GL(dl_ns)[nsid]._ns_loaded,
 							LA_SER_CONFIG, mode, &found_other_class, false);
-				if (__glibc_unlikely(GLRO(dl_debug_mask) & DL_DEBUG_LIBS)) _dl_debug_printf("in dl_map_object: num=6, fd:%d\n", fd);
+				_dl_debug_printf("in dl_map_object: num=6, fd:%d\n", fd);
 				if (fd == -1) free(realname);
 			}
 		}
@@ -1999,35 +2015,15 @@ struct link_map *_dl_map_object(struct link_map *loader, const char *name,
 				}
 
 				if (cached != NULL) {
-					if (openat_paths != NULL){
-						for (int *fd_ptr = openat_paths; *fd_ptr != -1; fd_ptr++) {
-							int _fd = *fd_ptr;
-							fd = openat(_fd, name, O_RDONLY); 
-							if (fd != -1) break;
-						}
-						fd = open_verify(cached, fd, &fb, loader ?: GL(dl_ns)[nsid]._ns_loaded,LA_SER_CONFIG, mode, &found_other_class, false);
-						if (__glibc_unlikely(GLRO(dl_debug_mask) & DL_DEBUG_LIBS)) {
-							_dl_debug_printf("in dl_map_object: num=7, fd:%d\n", fd);
-							_dl_debug_printf("in dl_map_object: num=7, cached:%s\n", cached);
-						}
-						if (__glibc_likely(fd != -1))
-							realname = cached;
-						else
-							free(cached);
-					}
-					else{
-						fd =
-							open_verify(cached, -1, &fb, loader ?: GL(dl_ns)[nsid]._ns_loaded,
-									LA_SER_CONFIG, mode, &found_other_class, false);
-						if (__glibc_unlikely(GLRO(dl_debug_mask) & DL_DEBUG_LIBS)) {
-							_dl_debug_printf("in dl_map_object: num=7, fd:%d\n", fd);
-							_dl_debug_printf("in dl_map_object: num=7, cached:%s\n", cached);
-						}
-						if (__glibc_likely(fd != -1))
-							realname = cached;
-						else
-							free(cached);
-					}
+					fd =
+						open_verify(cached, -1, &fb, loader ?: GL(dl_ns)[nsid]._ns_loaded,
+								LA_SER_CONFIG, mode, &found_other_class, false);
+					_dl_debug_printf("in dl_map_object: num=7, fd:%d\n", fd);
+					_dl_debug_printf("in dl_map_object: num=7, cached:%s\n", cached);
+					if (__glibc_likely(fd != -1))
+						realname = cached;
+					else
+						free(cached);
 				}
 			}
 		}
@@ -2054,23 +2050,17 @@ struct link_map *_dl_map_object(struct link_map *loader, const char *name,
 			fd = -1;
 		else {
 			if (GL(dl_exec_fd) > 0){
-				if (__glibc_unlikely(GLRO(dl_debug_mask) & DL_DEBUG_LIBS)) _dl_debug_printf("line 2059: GL(dl_exec_fd): %d\n", GL(dl_exec_fd));
+				_dl_debug_printf("line 2055: GL(dl_exec_fd): %d\n", GL(dl_exec_fd));
 				fd = open_verify(realname, GL(dl_exec_fd), &fb, loader ?: GL(dl_ns)[nsid]._ns_loaded,
 						0, mode, &found_other_class, true);
-				if (__glibc_unlikely(GLRO(dl_debug_mask) & DL_DEBUG_LIBS)) {
-					_dl_debug_printf("in dl_map_object: num=10, fd:%d\n", fd);
-					_dl_debug_printf("in dl_map_object: num=10, realname:%s\n", realname);
-				}
+				_dl_debug_printf("in dl_map_object: num=10, fd:%d\n", fd);
+				_dl_debug_printf("in dl_map_object: num=10, realname:%s\n", realname);
 				if (__glibc_unlikely(fd == -1)) free(realname);
-
-			}
-			else {
+			} else {
 				fd = open_verify(realname, -1, &fb, loader ?: GL(dl_ns)[nsid]._ns_loaded,
 						0, mode, &found_other_class, true);
-				if (__glibc_unlikely(GLRO(dl_debug_mask) & DL_DEBUG_LIBS)) {
-					_dl_debug_printf("in dl_map_object: num=11, fd:%d\n", fd);
-					_dl_debug_printf("in dl_map_object: num=11, realname:%s\n", realname);
-				}
+				_dl_debug_printf("in dl_map_object: num=11, fd:%d\n", fd);
+				_dl_debug_printf("in dl_map_object: num=11, realname:%s\n", realname);
 				if (__glibc_unlikely(fd == -1)) free(realname);
 			}
 		}
