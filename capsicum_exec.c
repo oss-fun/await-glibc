@@ -47,7 +47,7 @@ void main(){
 	c_binary_fd = malloc(10);
 	snprintf(c_binary_fd, 3, "%d", binary_fd);
 	printf("c_binary_fd: %s\n", c_binary_fd);
-	char *rtld = "./local/lib/ld-linux-x86-64.so.2";
+	char *rtld = "/home/materialofmouse/await-glibc/local/lib/ld-linux-x86-64.so.2";
 	char *argv[] = {rtld, "--", c_binary_fd, "/bin/echo", "hello", NULL};
 
 	char *libs[4];

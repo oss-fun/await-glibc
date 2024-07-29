@@ -1893,6 +1893,7 @@ struct link_map *_dl_map_object(struct link_map *loader, const char *name,
 				if (fd != -1) break;
 			}
 			fd = open_verify(name, fd, &fb, loader ?: GL(dl_ns)[nsid]._ns_loaded,LA_SER_CONFIG, mode, &found_other_class, false);
+			if (fd > 0) realname = strdupa(name);
 			_dl_debug_printf("in dl_map_object: try link with openat. fd:%d name:%s\n", fd, name);
 			if (fd != -1){
 				_dl_debug_printf("in dl_map_object: try link with openat. fd:%d name:%s\n", fd, name);
