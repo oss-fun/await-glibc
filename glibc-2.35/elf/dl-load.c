@@ -1465,6 +1465,8 @@ static int open_verify(const char *name, int fd, struct filebuf *fbp,
 	/* Initialize it to make the compiler happy.  */
 	const char *errstring = NULL;
 	int errval = 0;
+
+	_dl_debug_printf("in open_verify name:%s, fd:%d\n", name, fd);
 	
 
 	if (__glibc_unlikely(GLRO(dl_debug_mask) & DL_DEBUG_LIBS)) _dl_debug_printf("in open_verify: name:%s\n", name);
