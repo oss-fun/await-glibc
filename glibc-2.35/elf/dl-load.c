@@ -1895,6 +1895,7 @@ struct link_map *_dl_map_object(struct link_map *loader, const char *name,
 				if (fd != -1) break;
 			}
 			if (fd > 0) {
+				_dl_debug_printf("opened name:%s from fd:%d\n", name, fd);
 				fd = open_verify(name, fd, &fb, loader ?: GL(dl_ns)[nsid]._ns_loaded,LA_SER_CONFIG, mode, &found_other_class, false);
 				realname = strdupa(name);
 			}
