@@ -16,13 +16,16 @@
    License along with the GNU C Library; if not, see
    <https://www.gnu.org/licenses/>.  */
 
+#include <errno.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <stdarg.h>
 #include <sysdep-cancel.h>
+//#include <stdio.h>
 #include <shlib-compat.h>
 
+#define MAX_PREOPEN_DIRS 128
 /* Open FILE with access OFLAG.  If O_CREAT or O_TMPFILE is in OFLAG,
    a third argument is the file protection.  */
 int
@@ -38,8 +41,40 @@ __libc_open64 (const char *file, int oflag, ...)
       va_end (arg);
     }
 
-  return SYSCALL_CANCEL (openat, AT_FDCWD, file, oflag | O_LARGEFILE,
-			 mode);
+	// for runcap
+	int preopen_dirs[MAX_PREOPEN_DIRS];
+	int cnt = 0;
+	char *preopen_fds = getenv("PREOPOEN_FDS");
+	if (preopen_fds){
+		char *token = strtok(preopen_fds, ":");
+		while (token && cnt < MAX_PREOPEN_DIRS) {
+			cnt++;
+			char *endptr;
+			char *buff = token;
+			long int fd = strtol(buff, &endptr, 10);
+			
+			if (*endptr != '\0' || fd < 0 || fd > INT_MAX) {
+				continue;
+			}
+			else preopen_dirs[cnt] = (int)fd;
+
+			token = strtok(NULL, ":");
+		}
+	}
+
+	int last_errno = 0;
+	int i, fd;
+	for (i = 0; i < cnt; i++){
+		fd = SYSCALL_CANCEL (openat, preopen_dirs[i], file, oflag | O_LARGEFILE, mode);
+		last_errno = errno;
+		if (fd != -1) return fd;
+		//printf("try preopen. path:%s, fd:%d\n",file, fd);
+
+	}
+	fd = SYSCALL_CANCEL(open, file, oflag | O_LARGEFILE, mode);
+	if (fd == -1 && last_errno != 0 ) errno = last_errno;
+
+	return fd;
 }
 
 strong_alias (__libc_open64, __open64)

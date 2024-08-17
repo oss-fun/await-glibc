@@ -41,7 +41,7 @@ __libc_open64 (const char *file, int oflag)
       mode = va_arg (arg, int);
       va_end (arg);
     }
-
+	
   __set_errno (ENOSYS);
   return -1;
 }
