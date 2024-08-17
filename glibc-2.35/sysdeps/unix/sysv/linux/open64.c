@@ -45,10 +45,11 @@ __libc_open64 (const char *file, int oflag, ...)
 	// for runcap
 	int preopen_dirs[MAX_PREOPEN_DIRS];
 	int cnt = 0;
-	char *preopen_fds = getenv("PREOPOEN_FDS");
+	char *preopen_fds = getenv("PREOPEN_FDS");
 	if (preopen_fds){
 		char *token = strtok(preopen_fds, ":");
 		while (token && cnt < MAX_PREOPEN_DIRS) {
+			INLINE_SYSCALL_CALL(write, "token\n", 6);
 			cnt++;
 			char *endptr;
 			char *buff = token;
@@ -67,9 +68,9 @@ __libc_open64 (const char *file, int oflag, ...)
 	int i, fd;
 	for (i = 0; i < cnt; i++){
 		fd = SYSCALL_CANCEL (openat, preopen_dirs[i], file, oflag | O_LARGEFILE, mode);
+		INLINE_SYSCALL_CALL(write, 2, "try preopen\n", 11);
 		last_errno = errno;
 		if (fd != -1) return fd;
-		//printf("try preopen. path:%s, fd:%d\n",file, fd);
 
 	}
 	fd = SYSCALL_CANCEL(open, file, oflag | O_LARGEFILE, mode);
