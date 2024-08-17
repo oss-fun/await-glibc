@@ -33,6 +33,7 @@ __libc_open64 (const char *file, int oflag, ...)
 {
   int mode = 0;
 
+	INLINE_SYSCALL_CALL (write, 2, "open64_preopen\n", 16);
   if (__OPEN_NEEDS_MODE (oflag))
     {
       va_list arg;
