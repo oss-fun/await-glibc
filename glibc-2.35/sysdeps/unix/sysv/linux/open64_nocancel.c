@@ -22,10 +22,10 @@
 #include <stdarg.h>
 #include <not-cancel.h>
 
+
 int
 __open64_nocancel (const char *file, int oflag, ...)
 {
-	INLINE_SYSCALL_CALL (write, 2, "open64_nocancel\n", 18);
   int mode = 0;
   if (__OPEN_NEEDS_MODE (oflag))
     {

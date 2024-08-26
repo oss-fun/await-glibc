@@ -22,18 +22,26 @@
 #include <fcntl.h>
 #include <stdarg.h>
 #include <sysdep-cancel.h>
-//#include <stdio.h>
 #include <shlib-compat.h>
 
 #define MAX_PREOPEN_DIRS 128
+#define MAX_PREOPEN_PATH_LEN 128
 /* Open FILE with access OFLAG.  If O_CREAT or O_TMPFILE is in OFLAG,
    a third argument is the file protection.  */
+
+void debug_print(const char *message) {
+    size_t len = strlen(message);
+    INLINE_SYSCALL_CALL(write, 2, message, len);
+    INLINE_SYSCALL_CALL (write, 2, "\n", 2);
+}
+	
 int
 __libc_open64 (const char *file, int oflag, ...)
 {
-  int mode = 0;
+  int mode = 0666;
 
-	INLINE_SYSCALL_CALL (write, 2, "open64_preopen\n", 16);
+  INLINE_SYSCALL_CALL (write, 2, "open64_preopen: ", 16);
+  debug_print(file);
   if (__OPEN_NEEDS_MODE (oflag))
     {
       va_list arg;
@@ -46,11 +54,14 @@ __libc_open64 (const char *file, int oflag, ...)
 	int preopen_dirs[MAX_PREOPEN_DIRS];
 	int cnt = 0;
 	char *preopen_fds = getenv("PREOPEN_FDS");
+	if (preopen_fds != NULL){
+		debug_print(preopen_fds);
+	}
+	else INLINE_SYSCALL_CALL(write, 2, "preopen_fds:null\n", 18);
+
 	if (preopen_fds){
 		char *token = strtok(preopen_fds, ":");
 		while (token && cnt < MAX_PREOPEN_DIRS) {
-			INLINE_SYSCALL_CALL(write, "token\n", 6);
-			cnt++;
 			char *endptr;
 			char *buff = token;
 			long int fd = strtol(buff, &endptr, 10);
@@ -58,21 +69,50 @@ __libc_open64 (const char *file, int oflag, ...)
 			if (*endptr != '\0' || fd < 0 || fd > INT_MAX) {
 				continue;
 			}
-			else preopen_dirs[cnt] = (int)fd;
-
+			else {
+				preopen_dirs[cnt] = (int)fd;
+				cnt++;
+			}
 			token = strtok(NULL, ":");
 		}
 	}
 
+	char *preopen_path = getenv("PREOPEN_PATH");
+	if (preopen_path != NULL){
+		debug_print(preopen_path);
+	}
+	else INLINE_SYSCALL_CALL(write, 2, "preopen_path:null\n",19);
+	
+	cnt = 0;
+	char preopen_paths[MAX_PREOPEN_DIRS][MAX_PREOPEN_PATH_LEN];
+	if (preopen_path){
+		char *token = strtok(preopen_path, ":");
+		while (token && cnt < MAX_PREOPEN_DIRS) {
+			strncpy(preopen_paths[cnt], token, MAX_PREOPEN_PATH_LEN-1);
+			
+			debug_print(preopen_paths[cnt]);
+			token = strtok(NULL, ":");
+			cnt++;
+		}
+	}
+	
+	char resolv_path[MAX_PREOPEN_PATH_LEN];
+	realpath(file,resolv_path);
+	debug_print(resolv_path);
 	int last_errno = 0;
 	int i, fd;
 	for (i = 0; i < cnt; i++){
-		fd = SYSCALL_CANCEL (openat, preopen_dirs[i], file, oflag | O_LARGEFILE, mode);
-		INLINE_SYSCALL_CALL(write, 2, "try preopen\n", 11);
+		if (oflag & O_CREAT) {
+			fd = SYSCALL_CANCEL (openat, preopen_dirs[i], file, oflag , mode);
+		} else {
+			fd = SYSCALL_CANCEL (openat, preopen_dirs[i], file, oflag);
+		}
+		INLINE_SYSCALL_CALL(write, 2, "try preopen\n", 13);
 		last_errno = errno;
 		if (fd != -1) return fd;
 
 	}
+	INLINE_SYSCALL_CALL (write, 2, "normal open\n", 13);
 	fd = SYSCALL_CANCEL(open, file, oflag | O_LARGEFILE, mode);
 	if (fd == -1 && last_errno != 0 ) errno = last_errno;
 
