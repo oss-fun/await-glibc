@@ -615,13 +615,13 @@ static bool cache_rpath(struct link_map *l, struct r_search_path_struct *sp,
 int *openat_paths;
 void _dl_init_openat_paths(const char* llpf){
 	if (llpf == NULL ) {
-		if (__glibc_unlikely(GLRO(dl_debug_mask) & DL_DEBUG_LIBS)) _dl_debug_printf("[ERROR] llpf is NULL\n");
+		if (__glibc_unlikely(GLRO(dl_debug_mask) & DL_DEBUG_RUNCAP)) _dl_debug_printf("[ERROR] llpf is NULL\n");
     return;
   }
 	
   char* tp = strdup(llpf);
   if (tp == NULL){
-		if (__glibc_unlikely(GLRO(dl_debug_mask) & DL_DEBUG_LIBS)) _dl_debug_printf("[ERROR] Failed to allocate memory\n");
+		if (__glibc_unlikely(GLRO(dl_debug_mask) & DL_DEBUG_RUNCAP)) _dl_debug_printf("[ERROR] Failed to allocate memory\n");
     return;
   }
   
@@ -629,20 +629,20 @@ void _dl_init_openat_paths(const char* llpf){
 	int cnt = 0;
   char *token = strtok(tp, ":");
 	while (token != NULL ){
-		if (__glibc_unlikely(GLRO(dl_debug_mask) & DL_DEBUG_LIBS)) _dl_debug_printf("token: %s\n", token);
+		if (__glibc_unlikely(GLRO(dl_debug_mask) & DL_DEBUG_RUNCAP)) _dl_debug_printf("token: %s\n", token);
 		
 		char *endptr;
 		fd = _dl_strtoul(token, &endptr);
 		if (endptr == token){
-			if (__glibc_unlikely(GLRO(dl_debug_mask) & DL_DEBUG_LIBS)) _dl_debug_printf("error in strtol\n");
+			if (__glibc_unlikely(GLRO(dl_debug_mask) & DL_DEBUG_RUNCAP)) _dl_debug_printf("error in strtol\n");
 		}
 		if (fd > 0 ) {
-			if (__glibc_unlikely(GLRO(dl_debug_mask) &  DL_DEBUG_LIBS)) _dl_debug_printf("token is valid. fd: %d\n", fd);
+			if (__glibc_unlikely(GLRO(dl_debug_mask) &  DL_DEBUG_RUNCAP)) _dl_debug_printf("token is valid. fd: %d\n", fd);
 
 			// 新しいサイズで配列を再割り当て
 			int *new_paths = realloc(openat_paths, sizeof(int*) * (cnt + 1));
 			if (new_paths == NULL){
-				if (__glibc_unlikely(GLRO(dl_debug_mask) & DL_DEBUG_LIBS)) _dl_debug_printf("[ERROR] Memory reallocation failed\n");
+				if (__glibc_unlikely(GLRO(dl_debug_mask) & DL_DEBUG_RUNCAP)) _dl_debug_printf("[ERROR] Memory reallocation failed\n");
 				return;  // エラー処理を適切に行う
 			}
 			openat_paths = new_paths;
@@ -873,7 +873,8 @@ struct link_map *_dl_map_object_from_fd(const char *name, const char *origname, 
 		struct link_map *loader, int l_type, int mode,
 		void **stack_endp, Lmid_t nsid) 
 {
-	_dl_debug_printf("in _dl_map_object_from_fd name:%s, fd:%d\n",name, fd);
+	if (__glibc_unlikely(GLRO(dl_debug_mask) & DL_DEBUG_RUNCAP))
+		_dl_debug_printf("in _dl_map_object_from_fd name:%s, fd:%d\n",name, fd);
 
 	struct link_map *l = NULL;
 	const ElfW(Ehdr) * header;
@@ -1466,10 +1467,12 @@ static int open_verify(const char *name, int fd, struct filebuf *fbp,
 	const char *errstring = NULL;
 	int errval = 0;
 
-	_dl_debug_printf("in open_verify name:%s, fd:%d\n", name, fd);
+	if (__glibc_unlikely(GLRO(dl_debug_mask) & DL_DEBUG_RUNCAP)) 
+		_dl_debug_printf("in open_verify name:%s, fd:%d\n", name, fd);
 	
 
-	if (__glibc_unlikely(GLRO(dl_debug_mask) & DL_DEBUG_LIBS)) _dl_debug_printf("in open_verify: name:%s\n", name);
+	if (__glibc_unlikely(GLRO(dl_debug_mask) & DL_DEBUG_RUNCAP)) 
+		_dl_debug_printf("in open_verify: name:%s\n", name);
 #ifdef SHARED
 	/* Give the auditing libraries a chance.  */
 	if (__glibc_unlikely(GLRO(dl_naudit) > 0)) {
@@ -1480,7 +1483,8 @@ static int open_verify(const char *name, int fd, struct filebuf *fbp,
 		if (fd != -1 && name != original_name && strcmp(name, original_name)) {
 			/* An audit library changed what we're supposed to open,
 				 so FD no longer matches it.  */
-			if (__glibc_unlikely(GLRO(dl_debug_mask) & DL_DEBUG_LIBS)) _dl_debug_printf("in open_verify: close\n");
+			if (__glibc_unlikely(GLRO(dl_debug_mask) & DL_DEBUG_RUNCAP)) 
+				_dl_debug_printf("in open_verify: close\n");
 			__close_nocancel(fd);
 			fd = -1;
 		}
@@ -1489,7 +1493,8 @@ static int open_verify(const char *name, int fd, struct filebuf *fbp,
 
 	if (fd == -1){ /* Open the file.  We always open files read-only.  */
 		fd = __open64_nocancel(name, O_RDONLY | O_CLOEXEC);
-		if (__glibc_unlikely(GLRO(dl_debug_mask) & DL_DEBUG_LIBS)) _dl_debug_printf("in open_verify: open\n");
+		if (__glibc_unlikely(GLRO(dl_debug_mask) & DL_DEBUG_RUNCAP)) 
+			_dl_debug_printf("in open_verify: open\n");
 	}
 	if (fd != -1) {
 		ElfW(Ehdr) * ehdr;

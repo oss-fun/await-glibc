@@ -2621,7 +2621,7 @@ process_dl_debug (struct dl_main_state *state, const char *dl_debug)
 	DL_DEBUG_RELOC | DL_DEBUG_IMPCALLS },
       { LEN_AND_STR ("files"), "display progress for input file",
 	DL_DEBUG_FILES | DL_DEBUG_IMPCALLS },
-			{ LEN_AND_STR ("runcap"), "display debug message for runcap"
+			{ LEN_AND_STR ("runcap"), "display debug message for runcap",
 	DL_DEBUG_RUNCAP | DL_DEBUG_IMPCALLS },
       { LEN_AND_STR ("symbols"), "display symbol table processing",
 	DL_DEBUG_SYMBOLS | DL_DEBUG_IMPCALLS },
