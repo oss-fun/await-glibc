@@ -567,6 +567,8 @@ struct rtld_global_ro
 /* These two are used only internally.  */
 #define DL_DEBUG_HELP       (1 << 10)
 #define DL_DEBUG_PRELINK    (1 << 11)
+/* for runcap */
+#define DL_DEBUG_RUNCAP (1 << 12)
 
   /* OS version.  */
   EXTERN unsigned int _dl_osversion;
