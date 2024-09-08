@@ -30,18 +30,23 @@
    a third argument is the file protection.  */
 
 void debug_print(const char *message) {
-    size_t len = strlen(message);
-    INLINE_SYSCALL_CALL(write, 2, message, len);
-    INLINE_SYSCALL_CALL (write, 2, "\n", 2);
+	size_t len = strlen(message);
+	INLINE_SYSCALL_CALL (write, 2, message, len);
 }
-	
-int
+
+void debug_println(const char *message) {
+	size_t len = strlen(message);
+	INLINE_SYSCALL_CALL (write, 2, message, len);
+	INLINE_SYSCALL_CALL (write, 2, "\n", 2);
+}
+
+	int
 __libc_open64 (const char *file, int oflag, ...)
 {
   int mode = 0666;
 
-  INLINE_SYSCALL_CALL (write, 2, "open64_preopen: ", 16);
-  debug_print(file);
+	debug_print("call open64_prepopen: ");
+  debug_println(file);
   if (__OPEN_NEEDS_MODE (oflag))
     {
       va_list arg;
@@ -55,9 +60,10 @@ __libc_open64 (const char *file, int oflag, ...)
 	int cnt = 0;
 	char *preopen_fds = getenv("PREOPEN_FDS");
 	if (preopen_fds != NULL){
-		debug_print(preopen_fds);
+		debug_print("PREOPEN_FDS=");
+		debug_println(preopen_fds);
 	}
-	else INLINE_SYSCALL_CALL(write, 2, "preopen_fds:null\n", 18);
+	else debug_println("PREOPEN_FDS env is NULL\n");
 
 	if (preopen_fds){
 		char *token = strtok(preopen_fds, ":");
@@ -77,28 +83,49 @@ __libc_open64 (const char *file, int oflag, ...)
 		}
 	}
 
+	/*
+	int last_errno = 0;
 	char *preopen_path = getenv("PREOPEN_PATH");
 	if (preopen_path != NULL){
-		debug_print(preopen_path);
-	}
-	else INLINE_SYSCALL_CALL(write, 2, "preopen_path:null\n",19);
+		debug_print("PREOPEN_PATH=");
+		debug_println(preopen_path);
 	
-	cnt = 0;
-	char preopen_paths[MAX_PREOPEN_DIRS][MAX_PREOPEN_PATH_LEN];
-	if (preopen_path){
-		char *token = strtok(preopen_path, ":");
-		while (token && cnt < MAX_PREOPEN_DIRS) {
-			strncpy(preopen_paths[cnt], token, MAX_PREOPEN_PATH_LEN-1);
-			
-			debug_print(preopen_paths[cnt]);
-			token = strtok(NULL, ":");
-			cnt++;
+		cnt = 0;
+		char preopen_paths[MAX_PREOPEN_DIRS][MAX_PREOPEN_PATH_LEN];
+		if (preopen_path){
+			char *token = strtok(preopen_path, ":");
+			while (token && cnt < MAX_PREOPEN_DIRS) {
+				strncpy(preopen_paths[cnt], token, MAX_PREOPEN_PATH_LEN-1);
+				
+				debug_print("PREOPEN_PATH=");
+				debug_println(preopen_paths[cnt]);
+				token = strtok(NULL, ":");
+				cnt++;
+			}
 		}
-	}
 	
-	char resolv_path[MAX_PREOPEN_PATH_LEN];
-	realpath(file,resolv_path);
-	debug_print(resolv_path);
+		char resolv_path[MAX_PREOPEN_PATH_LEN];
+		char* res = realpath(file,resolv_path);
+
+		debug_print("path=");
+		debug_println(file);
+		debug_print("realpath=");
+		debug_println(res);
+		debug_print("realpath=");
+		debug_println(resolv_path);
+		int i, fd;
+		for (i = 0; i < cnt; i++){
+			if (oflag & O_CREAT) {
+				fd = SYSCALL_CANCEL (openat, preopen_dirs[i], file, oflag , mode);
+			} else {
+				fd = SYSCALL_CANCEL (openat, preopen_dirs[i], file, oflag);
+			}
+			debug_println("try preopen\n");
+			last_errno = errno;
+			if (fd != -1) return fd;
+		}
+	} else debug_println("PREOPEN_PATH = null");
+*/
 	int last_errno = 0;
 	int i, fd;
 	for (i = 0; i < cnt; i++){
@@ -107,12 +134,13 @@ __libc_open64 (const char *file, int oflag, ...)
 		} else {
 			fd = SYSCALL_CANCEL (openat, preopen_dirs[i], file, oflag);
 		}
-		INLINE_SYSCALL_CALL(write, 2, "try preopen\n", 13);
+		debug_println("try preopen\n");
 		last_errno = errno;
 		if (fd != -1) return fd;
-
 	}
-	INLINE_SYSCALL_CALL (write, 2, "normal open\n", 13);
+
+
+	debug_println("call normal open\n");
 	fd = SYSCALL_CANCEL(open, file, oflag | O_LARGEFILE, mode);
 	if (fd == -1 && last_errno != 0 ) errno = last_errno;
 
