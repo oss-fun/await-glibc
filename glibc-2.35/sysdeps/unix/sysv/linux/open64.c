@@ -30,11 +30,13 @@
    a third argument is the file protection.  */
 
 void debug_print(const char *message) {
+	return;
 	size_t len = strlen(message);
 	INLINE_SYSCALL_CALL (write, 2, message, len);
 }
 
 void debug_println(const char *message) {
+	return;
 	size_t len = strlen(message);
 	INLINE_SYSCALL_CALL (write, 2, message, len);
 	INLINE_SYSCALL_CALL (write, 2, "\n", 2);
