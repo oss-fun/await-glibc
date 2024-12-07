@@ -5,10 +5,8 @@ RUN apt update \
 
 RUN mkdir /app
 COPY ./glibc-2.35 /app/glibc-2.35
-COPY ./build.sh /app/build.sh
+COPY ./builder/build.sh /app/build.sh
 RUN chmod +x /app/build.sh
-
-VOLUME /output
 
 RUN mkdir /app/glibc-2.35/build
 
