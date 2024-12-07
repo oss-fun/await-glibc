@@ -22,6 +22,7 @@
 #include <stdarg.h>
 #include <not-cancel.h>
 
+
 int
 __open64_nocancel (const char *file, int oflag, ...)
 {

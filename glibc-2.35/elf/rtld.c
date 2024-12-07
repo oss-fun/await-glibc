@@ -2621,6 +2621,8 @@ process_dl_debug (struct dl_main_state *state, const char *dl_debug)
 	DL_DEBUG_RELOC | DL_DEBUG_IMPCALLS },
       { LEN_AND_STR ("files"), "display progress for input file",
 	DL_DEBUG_FILES | DL_DEBUG_IMPCALLS },
+			{ LEN_AND_STR ("runcap"), "display debug message for runcap",
+	DL_DEBUG_RUNCAP | DL_DEBUG_IMPCALLS },
       { LEN_AND_STR ("symbols"), "display symbol table processing",
 	DL_DEBUG_SYMBOLS | DL_DEBUG_IMPCALLS },
       { LEN_AND_STR ("bindings"), "display information about symbol binding",
@@ -2631,7 +2633,7 @@ process_dl_debug (struct dl_main_state *state, const char *dl_debug)
 	DL_DEBUG_SCOPES },
       { LEN_AND_STR ("all"), "all previous options combined",
 	DL_DEBUG_LIBS | DL_DEBUG_RELOC | DL_DEBUG_FILES | DL_DEBUG_SYMBOLS
-	| DL_DEBUG_BINDINGS | DL_DEBUG_VERSIONS | DL_DEBUG_IMPCALLS
+	| DL_DEBUG_BINDINGS | DL_DEBUG_VERSIONS | DL_DEBUG_RUNCAP | DL_DEBUG_IMPCALLS
 	| DL_DEBUG_SCOPES },
       { LEN_AND_STR ("statistics"), "display relocation statistics",
 	DL_DEBUG_STATISTICS },
