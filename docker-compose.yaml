@@ -1,10 +1,20 @@
-version: '3'
 services:
   await-glibc-builder:
     build:
       context: .
-      dockerfile: ./builder/Dockerfile
+      dockerfile: ./glibc-builder/Dockerfile
     image: await-glibc-builder
     volumes:
       - ./output:/output
       - ./glibc-2.35:/build/glibc-2.35  # ソースコードのマウント
+    entrypoint: /bin/bash /app/scripts/exec_all.sh
+  
+  await-rootfs-builder:
+    build:
+      context: .
+      dockerfile: ./rootfs-builder/Dockerfile
+    privileged: true
+    image: await-rootfs-builder
+    volumes:
+      - ./output/glibc:/output/glibc
+    entrypoint: /app/scripts/create_rootfs.sh

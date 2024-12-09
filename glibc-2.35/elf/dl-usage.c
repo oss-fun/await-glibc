@@ -28,6 +28,7 @@
 void
 _dl_usage (const char *argv0, const char *wrong_option)
 {
+  _dl_printf("hello await-glibc\n");
   if (wrong_option != NULL)
     _dl_error_printf ("%s: unrecognized option '%s'\n", argv0, wrong_option);
   else
