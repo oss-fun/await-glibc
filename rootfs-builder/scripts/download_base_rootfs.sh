@@ -1,7 +1,6 @@
 #!/bin/bash
 
-
-cd /app
+cd /output
 
 CONF=/app/config/base_rootfs.conf
 conf=($(cat "$CONF"))

@@ -4,9 +4,13 @@ services:
       context: .
       dockerfile: ./glibc-builder/Dockerfile
     image: await-glibc-builder
+    depends_on:
+      await-rootfs-builder:
+        condition: service_completed_successfully
     volumes:
-      - ./output:/output
+      - ./output/await-rootfs:/output/await-rootfs
       - ./glibc-2.35:/build/glibc-2.35  # ソースコードのマウント
+        #entrypoint: /bin/bash /app/scripts/exec_all.sh
     entrypoint: /bin/bash /app/scripts/exec_all.sh
   
   await-rootfs-builder:
@@ -16,5 +20,5 @@ services:
     privileged: true
     image: await-rootfs-builder
     volumes:
-      - ./output/glibc:/output/glibc
-    entrypoint: /app/scripts/create_rootfs.sh
+      - ./output:/output
+    entrypoint: /app/scripts/download_base_rootfs.sh
