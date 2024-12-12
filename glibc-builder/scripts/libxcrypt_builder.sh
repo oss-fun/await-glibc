@@ -23,8 +23,8 @@ cp -r /output/libxcrypt/usr/local/lib/x86_64-linux-gnu/*    /output/await-rootfs
 cp -r /output/libxcrypt/usr/local/include/*                 /output/await-rootfs/usr/local/include/
 
 # debootstrapではman3やman5のディレクトリが生成されないためここで作成する
-mkdir /output/await-rootfs/usr/local/share/man3
-mkdir /output/await-rootfs/usr/local/share/man5
+mkdir /output/await-rootfs/usr/local/share/man/man3
+mkdir /output/await-rootfs/usr/local/share/man/man5
 
 # manのコピー
 cp -r /output/libxcrypt/usr/local/share/man/man3/*          /output/await-rootfs/usr/local/share/man/man3/
