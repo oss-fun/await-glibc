@@ -5,7 +5,7 @@ RUN apt update \
 
 # glibcのビルド環境の作成
 RUN mkdir /app
-COPY ./glibc-2.35 /app/glibc-2.35
+COPY ./glibc-builder/glibc-2.35 /app/glibc-2.35
 COPY ./glibc-builder/scripts /app/scripts
 RUN chmod +x /app/scripts/*.sh
 

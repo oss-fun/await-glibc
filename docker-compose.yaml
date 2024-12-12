@@ -1,4 +1,19 @@
 services:
+  # rootfsをダウンロードするコンテナ
+  await-rootfs-builder:
+    build:
+      context: .
+      dockerfile: ./rootfs-builder/Dockerfile
+    privileged: true
+    image: await-rootfs-builder
+    volumes:
+      - build-output:/output
+    environment:
+      - DIST=jammy
+      - NAME=await-rootfs
+    entrypoint: ["/bin/bash", "/app/scripts/download_rootfs.sh"] 
+
+  # rootfsにglibcをインストールするコンテナ
   await-glibc-builder:
     build:
       context: .
@@ -8,26 +23,33 @@ services:
       await-rootfs-builder:
         condition: service_completed_successfully
     volumes:
-      - ./output/await-rootfs:/output/await-rootfs
-      - ./glibc-2.35:/build/glibc-2.35  # ソースコードのマウント
-    entrypoint: /bin/bash /app/scripts/exec_all.sh
+      - build-output:/output
+      - ./glibc-builder/glibc-2.35:/build/glibc-2.35  # ソースコードのマウント
+    entrypoint: ["/bin/bash", "/app/scripts/exec_all.sh"]
   
-  await-rootfs-builder:
-    build:
-      context: .
-      dockerfile: ./rootfs-builder/Dockerfile
-    privileged: true
-    image: await-rootfs-builder
+  # 成果物を圧縮して配信用ディレクトリに配置するサービス
+  await-rootfs-packager:
+    image: alpine
+    depends_on:
+      await-glibc-builder:
+        condition: service_completed_successfully
     volumes:
-      - ./output:/output
-    entrypoint: /app/scripts/download_base_rootfs.sh
+      - build-output:/input
+      - dist-data:/output
+    command: >
+      sh -c "tar czf /output/await-rootfs.tar.gz -C /input await-rootfs"
   
+  # rootfsを配信する用のサーバー
   await-rootfs-server:
     build:
       context: .
       dockerfile: ./rootfs-server/Dockerfile
     image: await-rootfs-server
     volumes:
-      - ./rootfs-server/data:/app/data
+      - dist-data:/app/data
     ports:
       - 8101:80
+
+volumes:
+  build-output:  # ビルド過程で使用する一時的なボリューム
+  dist-data:     # 配信用のrootfsを格納するボリューム

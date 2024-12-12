@@ -1,15 +1,10 @@
-FROM ubuntu:22.04 AS base
+FROM ubuntu:22.04
 
 RUN apt update \
 		&& apt install -y wget debootstrap
 
 RUN mkdir /app
 WORKDIR /app
-COPY rootfs-builder/config /app/config
-COPY rootfs-builder/scripts /app/scripts
 
-RUN chmod +x /app/scripts/download_base_rootfs.sh 
-ENTRYPOINT /app/scripts/download_base_rootfs.sh
-
-#FROM first_stage AS second_stage
-#RUN chmod +x /app/scripts/create_rootfs.sh
+COPY ./rootfs-builder/scripts /app/scripts
+RUN chmod +x /app/scripts/download_rootfs.sh
