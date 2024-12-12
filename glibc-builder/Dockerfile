@@ -15,5 +15,5 @@ RUN curl -L https://www.busybox.net/downloads/binaries/1.35.0-x86_64-linux-musl/
 RUN chmod +x /app/busybox_LN
 
 # libcryptのビルド環境の作成
-#WORKDIR /app
-#RUN git clone https://github.com/besser82/libxcrypt.git
+WORKDIR /app
+RUN git clone https://github.com/besser82/libxcrypt.git
