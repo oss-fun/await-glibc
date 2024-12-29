@@ -9,3 +9,7 @@ if [ -d /output/await-rootfs ]; then
 fi
 
 debootstrap --arch=amd64 "${DIST}" "${NAME}"
+rm await-rootfs/var/cache/apt/archives/libc-bin_2.35-0ubuntu3_amd64.deb 
+rm await-rootfs/var/cache/apt/archives/libc6_2.35-0ubuntu3_amd64.deb
+rm -rf await-rootfs/dev/*
+
