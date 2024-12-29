@@ -58,6 +58,7 @@ __libc_open64 (const char *file, int oflag, ...)
     }
 
 	// for runcap
+	// preopen_fdsの処理
 	int preopen_dirs[MAX_PREOPEN_DIRS];
 	int cnt = 0;
 	char *preopen_fds = getenv("PREOPEN_FDS");
@@ -67,6 +68,7 @@ __libc_open64 (const char *file, int oflag, ...)
 	}
 	else debug_println("PREOPEN_FDS env is NULL\n");
 
+	// preopen_fdsに指定されたFDを：で区切って、intに変換した後にリストに入れる
 	if (preopen_fds){
 		char *token = strtok(preopen_fds, ":");
 		while (token && cnt < MAX_PREOPEN_DIRS) {
@@ -85,49 +87,53 @@ __libc_open64 (const char *file, int oflag, ...)
 		}
 	}
 
-	/*
+	// preopen_dirsからのopenを試みる
 	int last_errno = 0;
-	char *preopen_path = getenv("PREOPEN_PATH");
-	if (preopen_path != NULL){
-		debug_print("PREOPEN_PATH=");
-		debug_println(preopen_path);
+	int i, fd;
+	for (i = 0; i < cnt; i++){
+		if (oflag & O_CREAT) {
+			fd = SYSCALL_CANCEL (openat, preopen_dirs[i], file, oflag , mode);
+		} else {
+			fd = SYSCALL_CANCEL (openat, preopen_dirs[i], file, oflag);
+		}
+		debug_println("try preopen\n");
+		last_errno = errno;
+		if (fd != -1) return fd;
+	}
 	
-		cnt = 0;
-		char preopen_paths[MAX_PREOPEN_DIRS][MAX_PREOPEN_PATH_LEN];
-		if (preopen_path){
-			char *token = strtok(preopen_path, ":");
-			while (token && cnt < MAX_PREOPEN_DIRS) {
-				strncpy(preopen_paths[cnt], token, MAX_PREOPEN_PATH_LEN-1);
-				
-				debug_print("PREOPEN_PATH=");
-				debug_println(preopen_paths[cnt]);
-				token = strtok(NULL, ":");
+	// preopen_pathの処理
+	// preopen_pathはpreopen_fdsのFDに対応するパス（文字列）
+	char *preopen_paths[MAX_PREOPEN_DIRS];
+	cnt = 0;
+	char *preopen_path = getenv("PREOPEN_PATH");
+	if (preopen_fds != NULL){
+		debug_print("PREOPEN_PATH=");
+		debug_println(preopen_fds);
+	}
+	else debug_println("PREOPEN_PATH env is NULL\n");
+
+	if (preopen_path){
+		char *token = strtok(preopen_path, ":");
+		while (token && cnt < MAX_PREOPEN_DIRS) {
+			char *endptr;
+			char *buff = token;
+			
+			if (*endptr != '\0') {
+				continue;
+			}
+			else {
+				preopen_dirs[cnt] = strdup(buff);
 				cnt++;
 			}
+			token = strtok(NULL, ":");
 		}
-	
-		char resolv_path[MAX_PREOPEN_PATH_LEN];
-		char* res = realpath(file,resolv_path);
+	}
 
-		debug_print("path=");
-		debug_println(file);
-		debug_print("realpath=");
-		debug_println(res);
-		debug_print("realpath=");
-		debug_println(resolv_path);
-		int i, fd;
-		for (i = 0; i < cnt; i++){
-			if (oflag & O_CREAT) {
-				fd = SYSCALL_CANCEL (openat, preopen_dirs[i], file, oflag , mode);
-			} else {
-				fd = SYSCALL_CANCEL (openat, preopen_dirs[i], file, oflag);
-			}
-			debug_println("try preopen\n");
-			last_errno = errno;
-			if (fd != -1) return fd;
-		}
-	} else debug_println("PREOPEN_PATH = null");
-*/
+	// 絶対パスの場合、preopen_pathsに、同一のパスがあるか確認する
+	
+	// パスが入っているものは、preopen_pathsからOpenを試みる
+
+	// 相対パスの場合、preopen_dirsからのopenを試みる
 	int last_errno = 0;
 	int i, fd;
 	for (i = 0; i < cnt; i++){
