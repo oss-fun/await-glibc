@@ -23,7 +23,6 @@
 #include <stdarg.h>
 #include <sysdep-cancel.h>
 #include <shlib-compat.h>
-#include <stdio.h>
 
 #define MAX_LIST_LEN   128
 #define MAX_PATH_LEN   256
@@ -48,13 +47,12 @@ static void debug_println(const char *message) {
 // str : 環境変数で取得した文字列
 static char** get_string_list(char* env_str){
 	int cnt = 0;
-
+	
 	char** result_list = malloc(sizeof(char *) * MAX_LIST_LEN);
 	if (result_list == NULL){
 		return NULL;
 	}
-	
-	debug_println("begin get_string_list");
+ debug_println("begin get_string_list");
 	// preopen_fdsに指定されたFDを：で区切って、intに変換した後にリストに入れる
 	if (env_str){
 		char *token = strtok(env_str, ":");
@@ -176,26 +174,20 @@ int find_matching_preopen_path(const char *file_path, char **preopen_paths, int 
 	return -1;
 }
 
-// for runcap
-// preopen機構の実態
-// PREOPEN_FDS　 コンマ区切りのFDを取得
-// PREOPEN_PATHS コンマ区切りのパスを取得
-// FDSとPATHSは順番が一緒であることを前提にしている
-//
-// file:       open関数自体の引数であるファイルのパス
-// oflag:      open関数に自体の引数にわたってくるファイルOpen時のFlag
-// mode:       oflagでO_CREATE(ファイルの新規作成)が指定されていたときにつけるファイルのパーミッション
+//preopenを試して、ファイルが開けたらそのFDを返す
+// file: open関数自体の引数であるファイルのパス
+// oflag: open関数に自体の引数にわたってくるファイルOpen時のFlag
+// mode: oflagでO_CREATE(ファイルの新規作成)が指定されていたときにつけるファイルのパーミッション
 // last_errno: preopenするときのerrnoを保存する
-static int preopen(const char *file, int oflag, int mode, int *last_errno){
+static int preopen(const char *file, int oflag, mode_t mode, int *last_errno){
 	debug_println("begin preopen");
 	// for runcap
 	// preopen_fdsの処理
 	int preopen_fds[MAX_LIST_LEN];
 	char** preopen_fds_list;
 	int cnt = 0;
-	
-	// PREOPEN_FDSを取得し、NULLであれば通常のOpen関数の処理を実行
 	char *preopen_fds_str = getenv("PREOPEN_FDS");
+	
 	if (preopen_fds_str != NULL){
 		debug_print("PREOPEN_FDS=");
 		debug_println(preopen_fds_str);
@@ -308,7 +300,7 @@ static int preopen(const char *file, int oflag, int mode, int *last_errno){
 	int
 __libc_open64 (const char *file, int oflag, ...)
 {
-	int mode = 0666;
+	mode_t mode = 0666;
 	int fd = -1;
 	int *last_errno = 0;
 
@@ -323,15 +315,15 @@ __libc_open64 (const char *file, int oflag, ...)
 	}
 	
 	fd = preopen(file, oflag, mode, last_errno);
-	if (fd > 0) debug_println("preopen success");
+	debug_print("preopen return fd: ");
+	printf("%s\n",fd)
 	if (fd != -1) return fd;
 	
-	debug_print("call open: ");
-	debug_println(file);
+	debug_println("call normal open");
 	fd = SYSCALL_CANCEL(open, file, oflag | O_LARGEFILE, mode);
 	if (fd == -1 && *last_errno != 0 ) errno = *last_errno;
-	if (fd > 0) debug_println("open success");
-
+	debug_println("syscall open return fd: %d", fd);
+	
 	return fd;
 }
 
