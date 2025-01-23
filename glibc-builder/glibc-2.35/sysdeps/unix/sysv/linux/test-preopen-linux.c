@@ -12,22 +12,28 @@
 
 static int test_preopen(const char *file, int oflag, int mode, int *last_errno) {
 	int res = open(file, oflag, mode, last_errno);
-	if (res > 0) return 0;
-	else return -1;
+	if (res > 0) {
+		printf("open succsess: %d\n",res);
+		return 0;
+	}
+	else {
+		printf("open failed: %d\n",res);
+		return -1;
+	}
 }
-
 
 static int do_test (void) {
 	int fails = 0;
-	const char* test_path[] = {"/tmp", "/tmp/hoge", "/tmp/huga", "/tmp/sample.txt"};
+	const char* test_path[] = {"/tmp", "/tmp/hoge", "/tmp/huga","/tmp/huga/piyo"};
 	int fd, i;
 	char fd_str[256];
 	char path_str[1024];
 	int fd_str_pos = 0;
 	int path_str_pos = 0;
-
+	
 	for (i = 0; i < sizeof(test_path) / sizeof(test_path[0]); i++) {
-		fd = open(test_path[i], O_RDWR | O_CREAT, 0644);
+		fd = open(test_path[i], O_DIRECTORY, 0644);
+		printf("index: %d, Open fd: %d\n", i, fd);
 		if (fd < 0) {
 			printf("Failed to open %s: %s\n", test_path[i], strerror(errno));
 			return 1;
@@ -45,12 +51,13 @@ static int do_test (void) {
 	}
 
 	setenv("PREOPEN_PATHS", path_str, 1);
+	printf("path_str: %s\n", path_str);
 	setenv("PREOPEN_FDS", fd_str, 1);
 
 	fails |= test_preopen ("/tmp/sample.txt", O_RDONLY, 0, 0);
 	fails |= test_preopen ("sample.txt", O_RDONLY, 0, 0);
 	fails |= test_preopen ("hoge/sample.txt", O_RDONLY, 0, 0);
-	fails |= test_preopen ("/etc/passwd", O_RDONLY, 0, 0);
+	fails |= test_preopen ("/tmp/huga/piyo/sample.txt", O_RDONLY, 0, 0);
 	return fails;
 }
 #include "support/test-driver.c"
