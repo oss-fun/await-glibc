@@ -53,11 +53,22 @@ static int do_test (void) {
 	setenv("PREOPEN_PATHS", path_str, 1);
 	printf("path_str: %s\n", path_str);
 	setenv("PREOPEN_FDS", fd_str, 1);
+ int PATHNAME_SIZE = 512;
+	// 変数定義
+	char pathname[PATHNAME_SIZE];  // ファイルパス
+
+	// 変数初期化
+	memset(pathname, '\0', PATHNAME_SIZE);
+
+	// カレントディレクトリ取得
+	getcwd(pathname, PATHNAME_SIZE);
+	fprintf(stdout,"現在のファイルパス:%s\n", pathname);
 
 	fails |= test_preopen ("/tmp/sample.txt", O_RDONLY, 0, 0);
 	fails |= test_preopen ("sample.txt", O_RDONLY, 0, 0);
 	fails |= test_preopen ("hoge/sample.txt", O_RDONLY, 0, 0);
 	fails |= test_preopen ("/tmp/huga/piyo/sample.txt", O_RDONLY, 0, 0);
+	fails |= test_preopen ("/etc/hoge.txt", O_RDONLY, 0, 0);
 	return fails;
 }
 #include "support/test-driver.c"

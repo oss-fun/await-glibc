@@ -116,12 +116,7 @@ static char* get_path_component(const char *path, int n, char *result, size_t re
 	if (path == NULL || result == NULL || result_size == 0) {
 		return NULL;
 	}
-
-	// 絶対パスでない場合はエラー
-	if (path[0] != '/') {
-		return NULL;
-	}
-
+	
 	const char *start = path + 1;  // 最初の'/'をスキップ
 	const char *end;
 	int current = 0;
@@ -212,8 +207,7 @@ int find_matching_preopen_path(const char *file_path, char **preopen_paths, int 
 // file:       open関数自体の引数であるファイルのパス
 // oflag:      open関数に自体の引数にわたってくるファイルOpen時のFlag
 // mode:       oflagでO_CREATE(ファイルの新規作成)が指定されていたときにつけるファイルのパーミッション
-// last_errno: preopenするときのerrnoを保存する
-int preopen(const char *file, int oflag, int mode, int *last_errno){
+int preopen(const char *file, int oflag, int mode){
 #ifdef PREOPEN_DEBUG
 	debug_println("LIBC_DEBUG");
 #endif
@@ -266,39 +260,45 @@ int preopen(const char *file, int oflag, int mode, int *last_errno){
 	}
 
 	// パスのマッチング
-	int path_index = find_matching_preopen_path(file, preopen_paths, cnt);
-	if (path_index >= 0) {
-		DEBUG_PRINTF("file match. file:%s, preopen_dir:%s, fd:%d\n", file, preopen_paths[path_index], preopen_fds[path_index]);
-		// マッチするパスが見つかった場合
-		int fd;
-		if (oflag & O_CREAT) {
-			fd = SYSCALL_CANCEL(openat, preopen_fds[path_index], file, oflag, mode);
-		} else {
-			fd = SYSCALL_CANCEL(openat, preopen_fds[path_index], file, oflag);
-		}
-		if (fd != -1) {
-			DEBUG_PRINTLN("preopen successful");
-			return fd;
-		}
-		return -1;  // マッチするパスが見つからないか、openatが失敗した場合
-	} else DEBUG_PRINTLN("not path index"); 
-
-
+	// 絶対パスの場合の処理
+	if (file[0] == '/') {
+		int path_index = find_matching_preopen_path(file, preopen_paths, cnt);
+		if (path_index >= 0) {
+			DEBUG_PRINTF("file match. file:%s, preopen_dir:%s, fd:%d\n", file, preopen_paths[path_index], preopen_fds[path_index]);
+			// マッチするパスが見つかった場合
+			int fd;
+			if (oflag & O_CREAT) {
+				fd = SYSCALL_CANCEL(openat, preopen_fds[path_index], file, oflag, mode);
+			} else {
+				fd = SYSCALL_CANCEL(openat, preopen_fds[path_index], file, oflag);
+			}
+			// 該当するファイルが見つかり、Openできたとき
+			if (fd != -1) {
+				DEBUG_PRINTLN("abs preopen successful");
+				return fd;
+			}
+			return -1;  // マッチするパスが見つからないか、openatが失敗した場合
+		} else DEBUG_PRINTLN("not path index"); 
+	} else {
 	// パスが入っているものは、preopen_pathsからOpenを試みる
 	// この処理はまだ未実装。必要かどうかも含めて考える必要あり
 	//
-
 	// 相対パスの場合、preopen_fdsからのopenを試みる
-	int i, fd;
-	for (i = 0; i < cnt; i++){
-		if (oflag & O_CREAT) {
-			fd = SYSCALL_CANCEL (openat, preopen_fds[i], file, oflag, mode);
-		} else {
-			fd = SYSCALL_CANCEL (openat, preopen_fds[i], file, oflag);
+		int i, fd;
+		for (i = 0; i < cnt; i++){
+			if (oflag & O_CREAT) {
+				fd = SYSCALL_CANCEL (openat, preopen_fds[i], file, oflag, mode);
+			} else {
+				fd = SYSCALL_CANCEL (openat, preopen_fds[i], file, oflag);
+			}
+			DEBUG_PRINTLN("try preopen\n");
+			if (fd != -1) {
+				DEBUG_PRINTLN("rel preopen successful");
+				return fd;
+			}
 		}
-		DEBUG_PRINTLN("try preopen\n");
-		*last_errno = errno;
-		if (fd != -1) return fd;
+		DEBUG_PRINTLN("rel preopen failed");
+		return -1;
 	}
 	return -1;
 }
@@ -306,9 +306,8 @@ int preopen(const char *file, int oflag, int mode, int *last_errno){
 	int
 __libc_open64 (const char *file, int oflag, ...)
 {
-	int mode = 0666;
+	int mode = 0;
 	int fd = -1;
-	int *last_errno = 0;
 
 	DEBUG_PRINT("call open64_prepopen: ");
 	DEBUG_PRINTLN(file);
@@ -320,17 +319,16 @@ __libc_open64 (const char *file, int oflag, ...)
 		va_end (arg);
 	}
 	
-	fd = preopen(file, oflag, mode, last_errno);
+	fd = preopen(file, oflag, mode);
 	if (fd > 0) {
 		DEBUG_PRINTLN("preopen success");
 		return fd;
 	} else DEBUG_PRINTLN("preopen failed");
 	DEBUG_PRINTLN("--- end preopen");
 
-	DEBUG_PRINT("call open: ");
-	DEBUG_PRINTLN(file);
+	DEBUG_PRINTF("call open: %s\n", file);
 	fd = SYSCALL_CANCEL(openat, AT_FDCWD, file, oflag | O_LARGEFILE, mode);
-
+	if (fd > 0) DEBUG_PRINTLN("open success");
 	return fd;
 }
 

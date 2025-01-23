@@ -1,6 +1,10 @@
 #!/bin/bash
 # rootfsに対してglibcの適用を行う
 
+# glibcのインストール
+cd /app/glibc-2.35/build
+make -j 16 install DESTDIR=/output/await-rootfs
+
 chroot /output/await-rootfs mkdir glibc-old
 chroot /output/await-rootfs bash -c "cp -a /lib/x86_64-linux-gnu/*  glibc-old"
 chroot /output/await-rootfs bash -c "cp -a /usr/local/lib/x86_64-linux-gnu/* glibc-old/"

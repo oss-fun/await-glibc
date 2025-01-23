@@ -35,7 +35,7 @@ int main(int argc, char *argv[]) {
 		exit(1);
 	}
 
-	printf("%d\n", fd);
+	printf("%d\n", preopen_fd);
 
 	// ファイルディスクリプタを閉じずにプログラムを終了
 	// 親プロセスでこのFDを使用することを想定
