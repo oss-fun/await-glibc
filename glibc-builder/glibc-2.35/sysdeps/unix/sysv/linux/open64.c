@@ -322,13 +322,17 @@ __libc_open64 (const char *file, int oflag, ...)
 	fd = preopen(file, oflag, mode);
 	if (fd > 0) {
 		DEBUG_PRINTLN("preopen success");
+		printf("glibc_preopen: %s\n", file);
 		return fd;
 	} else DEBUG_PRINTLN("preopen failed");
 	DEBUG_PRINTLN("--- end preopen");
 
 	DEBUG_PRINTF("call open: %s\n", file);
 	fd = SYSCALL_CANCEL(openat, AT_FDCWD, file, oflag | O_LARGEFILE, mode);
-	if (fd > 0) DEBUG_PRINTLN("open success");
+	if (fd > 0) {
+		DEBUG_PRINTLN("open success");
+		printf("glibc_open: %s\n", file);
+	}
 	return fd;
 }
 
