@@ -65,7 +65,65 @@ static void debug_printf(const char *format, ...) {
 #define DEBUG_PRINT(msg) ((void)0)
 #define DEBUG_PRINTLN(msg) ((void)0)
 #define DEBUG_PRINTF(msg, ...) ((void)0)
-#endif 
+#endif
+
+// DEBUGメッセージを出力するファイルを出力
+static inline int get_debug_fd(void) {
+	// FDが環境変数で指定されているかチェック
+	const char *fd_str = getenv("PREOPEN_DEBUG_FD");
+	if (fd_str) {
+		// 文字列からFDに変換
+		char *endptr;
+		long fd = strtol(fd_str, &endptr, 10);
+		if (*endptr == '\0' && fd > 0) {
+			return (int)fd;
+		}
+	}
+
+	// FDが指定されていない場合は、パスからオープン
+	const char *debug_log_path = getenv("PREOPEN_DEBUG_FILE");
+	if (!debug_log_path) {
+		return -1;
+	}
+
+	return SYSCALL_CANCEL(open, debug_log_path, O_WRONLY | O_APPEND | O_CREAT, 0666);
+}
+
+// DEBUG用ファイルにメッセージを出力
+void debug_log_open(int log_fd, const char *prefix, const char *filepath, int fd) {
+	if (log_fd <= 0) return;
+
+	char buffer[4096] = {0};
+	int len = 0;
+
+	// prefix + ": "
+	int prefix_len = strlen(prefix);
+	memcpy(buffer + len, prefix, prefix_len);
+	len += prefix_len;
+	memcpy(buffer + len, ": ", 2);
+	len += 2;
+
+	// filepath
+	int path_len = strlen(filepath);
+	memcpy(buffer + len, filepath, path_len);
+	len += path_len;
+
+	// status (スペースを含む)
+	if (fd > 0) {
+		memcpy(buffer + len, " success", 8);
+		len += 8;
+	} else {
+		memcpy(buffer + len, " failed", 7);
+		len += 7;
+	}
+
+	// newline
+	buffer[len] = '\n';
+	len += 1;
+
+	// single write
+	INLINE_SYSCALL_CALL(write, log_fd, buffer, len);
+}
 
 // for runcap
 // PREOPEN_FDSやPREOPEN_PATHSなど、環境変数で指定されたカンマ区切りの文字列を、配列に変換する関数
@@ -318,21 +376,17 @@ __libc_open64 (const char *file, int oflag, ...)
 		mode = va_arg (arg, int);
 		va_end (arg);
 	}
-	
-	fd = preopen(file, oflag, mode);
-	if (fd > 0) {
-		DEBUG_PRINTLN("preopen success");
-		printf("glibc_preopen: %s\n", file);
-		return fd;
-	} else DEBUG_PRINTLN("preopen failed");
-	DEBUG_PRINTLN("--- end preopen");
+	int log_fd = get_debug_fd();
 
-	DEBUG_PRINTF("call open: %s\n", file);
+	fd = preopen(file, oflag, mode);
+	debug_log_open(log_fd, "preopen", file, fd);
+	if (fd > 0) return fd;
+
 	fd = SYSCALL_CANCEL(openat, AT_FDCWD, file, oflag | O_LARGEFILE, mode);
-	if (fd > 0) {
-		DEBUG_PRINTLN("open success");
-		printf("glibc_open: %s\n", file);
-	}
+
+	// DEBUG用の処理を追加
+	debug_log_open(log_fd, "open", file, fd);
+	INLINE_SYSCALL_CALL(close, log_fd);
 	return fd;
 }
 
