@@ -77,7 +77,7 @@ static inline int get_debug_fd(void) {
 }
 
 // DEBUG用ファイルにメッセージを出力
-void debug_log_open(int log_fd, const char *prefix, const char *filepath, int fd) {
+void debug_log(int log_fd, const char *prefix, const char *filepath, int fd) {
 	if (log_fd <= 0) return;
 
 	char buffer[4096] = {0};
@@ -504,17 +504,17 @@ __libc_open64 (const char *file, int oflag, ...)
 		mode = va_arg (arg, int);
 		va_end (arg);
 	}
-	//int log_fd = get_debug_fd();
+	int log_fd = get_debug_fd();
 
 	fd = preopen(file, oflag, mode);
-	//debug_log_open(log_fd, "preopen", file, fd);
+	debug_log(log_fd, "preopen", file, fd);
 	if (fd > 0) return fd;
 
 	fd = SYSCALL_CANCEL(openat, AT_FDCWD, file, oflag | O_LARGEFILE, mode);
 
 	// DEBUG用の処理を追加
-	//debug_log_open(log_fd, "open", file, fd);
-	//INLINE_SYSCALL_CALL(close, log_fd);
+	debug_log(log_fd, "open", file, fd);
+	INLINE_SYSCALL_CALL(close, log_fd);
 	return fd;
 }
 

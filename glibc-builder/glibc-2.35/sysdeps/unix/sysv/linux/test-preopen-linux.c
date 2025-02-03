@@ -77,6 +77,20 @@ static int do_test (void) {
 		file_fd_pos += snprintf(file_fd_str + file_fd_pos, sizeof(file_fd_str) - file_fd_pos, "%d", fd);
 		file_str_pos += snprintf(file_str + file_str_pos, sizeof(file_str) - file_str_pos, "%s", test_files[i]);
 	}
+	
+
+	int tmp_fd = open("/tmp/test-preopen-log", O_WRONLY | O_APPEND | O_CREAT, 0644);
+	if (fd < 0) {
+		return -1;
+	}
+
+	// FDを文字列に変換
+	char tmp_fd_str[32];
+	snprintf(tmp_fd_str, sizeof(tmp_fd_str), "%d", tmp_fd);
+
+	// 環境変数にセット
+	if (setenv("PREOPEN_DEBUG_FD", tmp_fd_str, 1) != 0) {
+	}
 
 	setenv("PREOPEN_PATHS", path_str, 1);
 	setenv("PREOPEN_PATH_FDS", path_fd_str, 1);
