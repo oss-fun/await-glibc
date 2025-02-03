@@ -24,7 +24,7 @@ static int test_preopen(const char *file, int oflag, int mode, int *last_errno) 
 
 static int do_test (void) {
 	int fails = 0;
-	const char* test_path[] = {"/tmp", "/tmp/hoge", "/tmp/huga","/tmp/huga/piyo"};
+	const char* test_path[] = {"/tmp", "/tmp/hoge", "/tmp/huga","/tmp/huga/piyo", "/home/materialofmouse/await-glibc/glibc-builder/glibc-2.35/misc"};
 	int fd, i;
 	char fd_str[256];
 	char path_str[1024];
@@ -52,8 +52,8 @@ static int do_test (void) {
 
 	setenv("PREOPEN_PATHS", path_str, 1);
 	printf("path_str: %s\n", path_str);
-	setenv("PREOPEN_FDS", fd_str, 1);
- int PATHNAME_SIZE = 512;
+	setenv("PREOPEN_PATH_FDS", fd_str, 1);
+	int PATHNAME_SIZE = 512;
 	// 変数定義
 	char pathname[PATHNAME_SIZE];  // ファイルパス
 
@@ -64,7 +64,7 @@ static int do_test (void) {
 	getcwd(pathname, PATHNAME_SIZE);
 	fprintf(stdout,"現在のファイルパス:%s\n", pathname);
 
-	fails |= test_preopen ("/tmp/sample.txt", O_RDONLY, 0, 0);
+	fails |= test_preopen ("/tmp/sampleee.txt", O_RDONLY, 0, 0);
 	fails |= test_preopen ("sample.txt", O_RDONLY, 0, 0);
 	fails |= test_preopen ("hoge/sample.txt", O_RDONLY, 0, 0);
 	fails |= test_preopen ("/tmp/huga/piyo/sample.txt", O_RDONLY, 0, 0);
