@@ -486,7 +486,7 @@ int preopen(const char *file, int oflag, int mode){
 	char *test = getenv("PREOPEN_PATH_FDS");
 	DEBUG_PRINTF("PREOPEN_PATH_FDS:%s\n", test);
 
-	DEBUG_PRINTF("---- end preopen\n\n");
+	DEBUG_PRINTF("---- end preopen\n");
 	return -1;
 }
 
