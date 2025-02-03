@@ -23,7 +23,7 @@ static int test_preopen(const char *file, int oflag, int mode, int *last_errno) 
 }
 
 static int do_test (void) {
-	const char* test_files[] = {"/tmp/file/sample.txt", "./file/sample.txt"};
+	const char* test_files[] = {"/tmp/file/sample.txt", "/home/materialofmouse/await-glibc/glibc-builder/glibc-2.35/misc/file/sample.txt"};
 	const char* test_path[] = {"/tmp", "/tmp/hoge", "/tmp/huga","/tmp/huga/piyo", "/home/materialofmouse/await-glibc/glibc-builder/glibc-2.35/misc"};
 	int fails = 0;
 	int fd, i;
@@ -104,6 +104,8 @@ static int do_test (void) {
 	fails |= test_preopen ("hoge/sample.txt", O_RDONLY, 0, 0);
 	fails |= test_preopen ("/tmp/huga/piyo/sample.txt", O_RDONLY, 0, 0);
 	fails |= test_preopen ("/etc/hoge.txt", O_RDONLY, 0, 0);
+	fails |= test_preopen ("/tmp/file/sample.txt", O_RDONLY, 0, 0);
+	fails |= test_preopen ("file/sample.txt", O_RDONLY, 0, 0);
 	return fails;
 }
 #include "support/test-driver.c"

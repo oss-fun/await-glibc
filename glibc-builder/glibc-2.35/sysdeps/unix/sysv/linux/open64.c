@@ -321,6 +321,7 @@ int find_matching_preopen_path(const char *file_path, char **preopen_paths, int 
 // PREOPEN_FILESで指定されたファイルは、PREOPEN_FILE_FDSに対応する
 int preopen_file(const char *file, int oflag, int mode){
 	//PREOPEN_FILE用の変数
+	DEBUG_PRINTF("in preopen_file\n");
 	int cnt = 0;
 	char *preopen_files_str;
 	char *preopen_file_fds_str;
@@ -472,8 +473,8 @@ int preopen(const char *file, int oflag, int mode){
 	DEBUG_PRINTF("try open: %s\n", file);
 	// for runcap
 	int preopen_fd;
-	//preopen_fd = preopen_file(file, oflag, mode);
-	//if (preopen_fd > 0) return preopen_fd;
+	preopen_fd = preopen_file(file, oflag, mode);
+	if (preopen_fd > 0) return preopen_fd;
 
 	preopen_fd = preopen_from_dir(file, oflag, mode);
 	if (preopen_fd > 0) {
