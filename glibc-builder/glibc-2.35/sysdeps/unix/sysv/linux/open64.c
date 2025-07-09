@@ -393,8 +393,8 @@ int preopen_from_dir(const char *file, int oflag, int mode){
 	int preopen_path_fds[MAX_LIST_LEN];
 	DEBUG_PRINTF("in preopen_from_dir\n");
 	// PREOPEN_PATHSで指定されたパスは、PREOPEN_PATH_FDSのFDに対応する
-	// preopenするファイルパスのパスを、PREOPEN_PATHでしたいされたパスと比べる
-	// 最も近い（パスがにている）ものを特定し、それに対応するFDをPREOPEN_PATH_FDSから取り出す
+	// preopenするファイルパスのパスを、PREOPEN_PATHで指定されたパスと比べる
+	// 最も近い（パスが似ている）ものを特定し、対応するFDをPREOPEN_PATH_FDSから取り出す
 	/// PREOPEN_FILESをchar* のリストに変換
 	char *buff = getenv("PREOPEN_PATHS");
 	if (buff != NULL){
