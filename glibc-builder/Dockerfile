@@ -14,7 +14,7 @@ WORKDIR /app
 RUN git clone https://github.com/besser82/libxcrypt.git
 
 # ソースやスクリプト類のコピー
-COPY ./glibc-builder/glibc-2.35 /app/glibc-2.35
+COPY ./glibc-2.35 /app/glibc-2.35
 COPY ./glibc-builder/scripts /app/scripts
 RUN mkdir /app/glibc-2.35/build
 RUN chmod +x /app/scripts/*.sh

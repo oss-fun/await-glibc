@@ -5,7 +5,7 @@ This directory contains the Docker environment and scripts for building a custom
 ## Contents
 
 - `Dockerfile` - Docker image definition for the glibc build environment
-- `glibc-2.35/` - Modified glibc 2.35 source code
+- `../glibc-2.35/` - Modified glibc 2.35 source code (located in project root)
 - `scripts/` - Build and installation scripts
 - `test_code/` - Test programs for validation
 
