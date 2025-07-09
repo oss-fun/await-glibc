@@ -473,18 +473,19 @@ int preopen(const char *file, int oflag, int mode){
 	DEBUG_PRINTF("try open: %s\n", file);
 	// for runcap
 	int preopen_fd;
+	char *test;
 	preopen_fd = preopen_file(file, oflag, mode);
 	if (preopen_fd > 0) return preopen_fd;
 
 	preopen_fd = preopen_from_dir(file, oflag, mode);
 	if (preopen_fd > 0) {
-		char *test = getenv("PREOPEN_PATH_FDS");
+		test = getenv("PREOPEN_PATH_FDS");
 		DEBUG_PRINTF("PREOPEN_PATH_FDS:%s\n", test);
 
 		return preopen_fd;
 	}
 	
-	char *test = getenv("PREOPEN_PATH_FDS");
+	test = getenv("PREOPEN_PATH_FDS");
 	DEBUG_PRINTF("PREOPEN_PATH_FDS:%s\n", test);
 
 	DEBUG_PRINTF("---- end preopen\n");

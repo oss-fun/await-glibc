@@ -3,6 +3,8 @@
 # ログディレクトリの作成（コンテナ内とホスト側両方）
 mkdir -p /logs
 LOG_DIR="/logs"
+# ログリセット
+rm /logs/*
 #HOST_LOG_DIR="/app/logs"
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
 
@@ -16,8 +18,7 @@ print_error() {
 		exit -1
 }
 
-echo --- build glibc ---
-/app/scripts/glibc_builder.sh > "$LOG_DIR/glibc_builder_${TIMESTAMP}.log" 2>&1
+/app/scripts/glibc_builder.sh > "$LOG_DIR/glibc_builder.log" 2>&1
 #cp "$LOG_DIR/glibc_builder_${TIMESTAMP}.log" "$HOST_LOG_DIR/"
 if [ $? -eq 0 ]; then
     print_success "glibc build completed successfully"
@@ -28,8 +29,7 @@ fi
 #/app/scripts/test_preopen.sh
 
 
-echo --- glibc install ---
-/app/scripts/glibc_install.sh > "$LOG_DIR/glibc_install_${TIMESTAMP}.log" 2>&1
+/app/scripts/glibc_install.sh > "$LOG_DIR/glibc_install.log" 2>&1
 cp "$LOG_DIR/glibc_install_${TIMESTAMP}.log" "$HOST_LOG_DIR/"
 if [ $? -eq 0 ]; then
     print_success "glibc install completed successfully"
@@ -37,8 +37,7 @@ else
     print_error "glibc install failed"
 fi
 
-echo --- libxcrypt install ---
-/app/scripts/libxcrypt_builder.sh > "$LOG_DIR/libxcrypt_builder_${TIMESTAMP}.log" 2>&1
+/app/scripts/libxcrypt_builder.sh > "$LOG_DIR/libxcrypt_builder.log" 2>&1
 cp "$LOG_DIR/libxcrypt_builder_${TIMESTAMP}.log" "$HOST_LOG_DIR/"
 if [ $? -eq 0 ]; then
     print_success "libxcrypt install completed successfully"

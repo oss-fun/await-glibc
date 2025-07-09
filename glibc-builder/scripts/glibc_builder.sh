@@ -18,8 +18,8 @@ print_error() {
 
 cd /app/glibc-2.35/build
 
-mkdir -p /output/glibc >> "$LOG_DIR/glibc_builder_mkdir_${TIMESTAMP}.log" 2>&1
-#cp "$LOG_DIR/glibc_builder_mkdir_${TIMESTAMP}.log" "$HOST_LOG_DIR/"
+mkdir -p /output/glibc >> "$LOG_DIR/glibc_builder_mkdir.log" 2>&1
+#cp "$LOG_DIR/glibc_builder_mkdir.log" "$HOST_LOG_DIR/"
 if [ $? -eq 0 ]; then
     print_success "output directory created successfully"
 else
@@ -27,8 +27,8 @@ else
     exit 1
 fi
 
-../configure --exec_prefix="/usr/local" --prefix="/usr/local" --libdir=/lib/x86_64-linux-gnu libc_cv_slibdir=/usr/local/lib/x86_64-linux-gnu --enable-crypt --enable-math --enable-nss --enable-ipc --enable-locales --enable-pthread --disable-sanity-checks >> "$LOG_DIR/glibc_builder_configure_${TIMESTAMP}.log" 2>&1
-#cp "$LOG_DIR/glibc_builder_configure_${TIMESTAMP}.log" "$HOST_LOG_DIR/"
+CFLAGS="-O2 -Wno-error" ../configure --exec_prefix="/usr/local" --prefix="/usr/local" --libdir=/lib/x86_64-linux-gnu libc_cv_slibdir=/usr/local/lib/x86_64-linux-gnu --enable-crypt --enable-math --enable-nss --enable-ipc --enable-locales --enable-pthread --disable-sanity-checks >> "$LOG_DIR/glibc_builder_configure.log" 2>&1
+#cp "$LOG_DIR/glibc_builder_configure.log" "$HOST_LOG_DIR/"
 if [ $? -eq 0 ]; then
     print_success "glibc configure completed successfully"
 else
@@ -36,8 +36,8 @@ else
     exit 1
 fi
 
-make -j 16 >> "$LOG_DIR/glibc_builder_make_${TIMESTAMP}.log" 2>&1
-#cp "$LOG_DIR/glibc_builder_make_${TIMESTAMP}.log" "$HOST_LOG_DIR/"
+CFLAGS="-O2 -Wno-error" make -j 16 >> "$LOG_DIR/glibc_builder_make.log" 2>&1
+#cp "$LOG_DIR/glibc_builder_make.log" "$HOST_LOG_DIR/"
 if [ $? -eq 0 ]; then
     print_success "glibc make completed successfully"
 else
