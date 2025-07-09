@@ -2,10 +2,9 @@
 # FOR DOCKERFILE
 
 # ログディレクトリの作成
-mkdir -p /output/logs
-mkdir -p /app/logs
-LOG_DIR="/output/logs"
-HOST_LOG_DIR="/app/logs"
+mkdir -p /logs
+LOG_DIR="/logs"
+#HOST_LOG_DIR="/app/logs"
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
 
 # 色付きメッセージ用の関数
@@ -15,6 +14,7 @@ print_success() {
 
 print_error() {
     echo -e "\033[31m✗\033[0m $1"
+		exit -1
 }
 
 export LD_LIBRARY_PATH=/output/glibc/usr/lib/x86_64-linux-gnu
@@ -24,7 +24,7 @@ export CFLAGS="-I/output/glibc/usr/include"
 cd /app/libxcrypt
 
 ./autogen.sh >> "$LOG_DIR/libxcrypt_autogen_${TIMESTAMP}.log" 2>&1
-cp "$LOG_DIR/libxcrypt_autogen_${TIMESTAMP}.log" "$HOST_LOG_DIR/"
+#cp "$LOG_DIR/libxcrypt_autogen_${TIMESTAMP}.log" "$HOST_LOG_DIR/"
 if [ $? -eq 0 ]; then
     print_success "autogen.sh completed successfully"
 else
@@ -37,7 +37,7 @@ fi
   --enable-shared \
   --enable-static \
   --enable-xcrypt-compat-files >> "$LOG_DIR/libxcrypt_configure_${TIMESTAMP}.log" 2>&1
-cp "$LOG_DIR/libxcrypt_configure_${TIMESTAMP}.log" "$HOST_LOG_DIR/"
+#cp "$LOG_DIR/libxcrypt_configure_${TIMESTAMP}.log" "$HOST_LOG_DIR/"
 if [ $? -eq 0 ]; then
     print_success "configure completed successfully"
 else
@@ -46,7 +46,7 @@ else
 fi
 
 mkdir /output/libxcrypt >> "$LOG_DIR/libxcrypt_mkdir_${TIMESTAMP}.log" 2>&1
-cp "$LOG_DIR/libxcrypt_mkdir_${TIMESTAMP}.log" "$HOST_LOG_DIR/"
+#cp "$LOG_DIR/libxcrypt_mkdir_${TIMESTAMP}.log" "$HOST_LOG_DIR/"
 if [ $? -eq 0 ]; then
     print_success "output directory created successfully"
 else
@@ -54,7 +54,7 @@ else
     exit 1
 fi
 make -j16 >> "$LOG_DIR/libxcrypt_make_${TIMESTAMP}.log" 2>&1
-cp "$LOG_DIR/libxcrypt_make_${TIMESTAMP}.log" "$HOST_LOG_DIR/"
+#cp "$LOG_DIR/libxcrypt_make_${TIMESTAMP}.log" "$HOST_LOG_DIR/"
 if [ $? -eq 0 ]; then
     print_success "make completed successfully"
 else
@@ -63,7 +63,7 @@ else
 fi
 
 make -j16 install DESTDIR=/output/libxcrypt >> "$LOG_DIR/libxcrypt_install_${TIMESTAMP}.log" 2>&1
-cp "$LOG_DIR/libxcrypt_install_${TIMESTAMP}.log" "$HOST_LOG_DIR/"
+#cp "$LOG_DIR/libxcrypt_install_${TIMESTAMP}.log" "$HOST_LOG_DIR/"
 if [ $? -eq 0 ]; then
     print_success "make install completed successfully"
 else

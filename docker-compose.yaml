@@ -8,6 +8,7 @@ services:
     image: await-rootfs-builder
     volumes:
       - await-glibc-builder-output:/output
+      - ./logs:/logs
     environment:
       - DIST=jammy
       - NAME=await-rootfs
@@ -24,7 +25,8 @@ services:
         condition: service_completed_successfully
     volumes:
       - await-glibc-builder-output:/output
-      - ./glibc-builder/glibc-2.35:/build/glibc-2.35  # ソースコードのマウント
+      - ./logs:/logs
+        # - ./glibc-builder/glibc-2.35:/build/glibc-2.35  # ソースコードのマウント
     entrypoint: ["/bin/bash", "/app/scripts/exec_all.sh"]
   
   # 成果物を圧縮して配信用ディレクトリに配置するサービス
@@ -36,6 +38,7 @@ services:
     volumes:
       - await-glibc-builder-output:/input
       - await-glibc-builder-data:/output
+      - ./logs:/logs
     command: >
       sh -c "cd /input/await-rootfs && find . -print0 | cpio --null --create --format=newc | gzip > /output/await-rootfs.cpio.gz"
       

@@ -1,10 +1,9 @@
 #!/bin/bash
 
 # ログディレクトリの作成（コンテナ内とホスト側両方）
-mkdir -p /output/logs
-mkdir -p /app/logs
-LOG_DIR="/output/logs"
-HOST_LOG_DIR="/app/logs"
+mkdir -p /logs
+LOG_DIR="/logs"
+#HOST_LOG_DIR="/app/logs"
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
 
 # 色付きメッセージ用の関数
@@ -14,11 +13,12 @@ print_success() {
 
 print_error() {
     echo -e "\033[31m✗\033[0m $1"
+		exit -1
 }
 
 echo --- build glibc ---
 /app/scripts/glibc_builder.sh > "$LOG_DIR/glibc_builder_${TIMESTAMP}.log" 2>&1
-cp "$LOG_DIR/glibc_builder_${TIMESTAMP}.log" "$HOST_LOG_DIR/"
+#cp "$LOG_DIR/glibc_builder_${TIMESTAMP}.log" "$HOST_LOG_DIR/"
 if [ $? -eq 0 ]; then
     print_success "glibc build completed successfully"
 else
