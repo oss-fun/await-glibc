@@ -51,7 +51,8 @@ static void debug_printf(const char *format, ...) {
 #define DEBUG_PRINTF(msg, ...) ((void)0)
 #endif
 
-// DEBUGメッセージを出力するファイルを出力
+// DEBUGメッセージを出力するファイルのFDを設定
+// FDまたはファイルパスを用いた指定が可能
 // PREOPEN_DEBUG_FDが指定されているかを確認
 // 指定されていなければ、PREOPEN_DEBUG_FILEを確認
 // この環境変数で指定されたファイルをオープン
@@ -458,22 +459,29 @@ int preopen_from_dir(const char *file, int oflag, int mode){
 	return -1;
 }
 
-// for runcap
 // preopen機構の実態
-// PREOPEN_PATHS コンマ区切りのパスを取得
-// PREOPEN_PATH_FDS コンマ区切りのパスのFDを取得
-// PREOPEN_FILES コンマ区切りのファイルパスを取得
-// PREOPEN_FILE_FDS コンマ区切りのファイルパスのFDを 
+// 概要
+// 1. 開きたいパスをfile引数で受け取る。
+// 2. PREOPEN_*環境変数で指定されたファイルパスとマッチング処理
+// 3. 該当するファイルのFDを返す
+// 4. 該当するファイルが存在しない場合、-1を返す（通常のopenと同じ仕様）
 //
-// file:       open関数自体の引数であるファイルのパス
-// oflag:      open関数に自体の引数にわたってくるファイルOpen時のFlag
-// mode:       oflagでO_CREATE(ファイルの新規作成)が指定されていたときにつけるファイルのパーミッション
+// 環境変数
+// - PREOPEN_PATHS:    コンマ区切りのパスを取得
+// - PREOPEN_PATH_FDS: コンマ区切りのパスのFDを取得
+// - PREOPEN_FILES:    コンマ区切りのファイルパスを取得
+// - PREOPEN_FILE_FDS: コンマ区切りのファイルパスのFDを 
+//
+// 引数
+// - file:   open関数自体の引数であるファイルのパス
+// - oflag:  open関数に自体の引数にわたってくるファイルOpen時のFlag
+// - mode:   oflagでO_CREATE(ファイルの新規作成)が指定されていたときにつけるファイルのパーミッション
 int preopen(const char *file, int oflag, int mode){
 	DEBUG_PRINTF("---- begin preopen\n");
 	DEBUG_PRINTF("try open: %s\n", file);
 	// for runcap
 	int preopen_fd;
-	char *test;
+	char *test __attribute__((unused));
 	preopen_fd = preopen_file(file, oflag, mode);
 	if (preopen_fd > 0) return preopen_fd;
 

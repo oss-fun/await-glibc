@@ -56,6 +56,27 @@ services:
     ports:
       - 8101:80
 
+  # デバッグ用のコンテナ
+  await-debug:
+    build:
+      context: .
+      dockerfile: ./glibc-builder/Dockerfile
+    image: await-glibc-builder
+    depends_on:
+      await-rootfs-builder:
+        condition: service_completed_successfully
+    volumes:
+      - await-glibc-builder-output:/output
+      - ./logs:/logs
+      - ./glibc-2.35:/app/glibc-2.35
+    environment:
+      - PREOPEN_DEBUG=1
+    tty: true
+    stdin_open: true
+    entrypoint: ["/bin/bash"]
+    profiles:
+      - debug
+
 volumes:
   await-glibc-builder-output:  # ビルド過程で使用する一時的なボリューム
   await-glibc-builder-data:     # 配信用のrootfsを格納するボリューム

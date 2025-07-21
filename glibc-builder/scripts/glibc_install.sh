@@ -29,7 +29,7 @@ else
     exit 1
 fi
 
-chroot /output/await-rootfs mkdir glibc-old >> "$LOG_DIR/glibc_install_mkdir.log" 2>&1
+chroot /output/await-rootfs mkdir -p glibc-old >> "$LOG_DIR/glibc_install_mkdir.log" 2>&1
 #cp "$LOG_DIR/glibc_install_mkdir.log" "$HOST_LOG_DIR/"
 if [ $? -eq 0 ]; then
     print_success "glibc-old directory created successfully"
