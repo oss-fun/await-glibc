@@ -18,12 +18,14 @@ log_reset() {
 # それ以降は任意の数の引数を受け取る
 # [時間] [呼び出し元スクリプト] [引数]
 # ↑この形式でファイルに書き出す
-log_message() {
-	local section_name="$1"
-	local log_path="${LOG_DIR}/${section_name}.log"
+run_silent() {
+	local tag="$1"
+	local section_name="$2"
+	local log_path="${LOG_DIR}/tag.log"
+	shift
 	shift
 
-	"$@" 2>&1 | ts '[%Y-%m-%d %H:%M:%S]' >>"$log_path"
+	"$@" 2>&1 | ts '[${tag}] [%Y-%m-%d %H:%M:%S]' >>"$log_path"
 	return $?
 }
 

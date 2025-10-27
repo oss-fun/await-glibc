@@ -14,14 +14,14 @@ export CFLAGS="-I/output/glibc/usr/include"
 cd /app/libxcrypt
 
 # libxcryptのビルドコンフィグ
-log_message "libxcrypt_builder_1" ./autogen.sh
+run_silent "libxcrypt builder" "libxcrypt_builder_1" ./autogen.sh
 if [ $? -eq 0 ]; then
     print_success "autogen.sh completed successfully"
 else
     print_error "autogen.sh failed"
     exit 1
 fi
-log_message "libxcript_builder_2" ./configure --prefix="/usr/local" \
+run_silent "libxcrypt builder" "libxcript_builder_2" ./configure --prefix="/usr/local" \
   --exec-prefix="/usr/local" \
   --libdir=/usr/local/lib/x86_64-linux-gnu \
   --enable-shared \
@@ -34,7 +34,7 @@ else
     exit 1
 fi
 
-log_message "libxcrypt_builder_3" mkdir /output/libxcrypt
+run_silent "libxcrypt builder" "libxcrypt_builder_3" mkdir /output/libxcrypt
 if [ $? -eq 0 ]; then
     print_success "output directory created successfully"
 else
@@ -42,7 +42,7 @@ else
     exit 1
 fi
 
-log_message "libxcrypt_builder_4" make -j16
+run_silent "libxcrypt builder" "libxcrypt_builder_4" make -j16
 if [ $? -eq 0 ]; then
     print_success "make completed successfully"
 else
@@ -50,7 +50,7 @@ else
     exit 1
 fi
 
-log_message "libxcrypt_builder_5" make -j16 install DESTDIR=/output/libxcrypt
+run_silent "libxcrypt builder" "libxcrypt_builder_5" make -j16 install DESTDIR=/output/libxcrypt
 if [ $? -eq 0 ]; then
     print_success "make install completed successfully"
 else
@@ -59,7 +59,7 @@ else
 fi
 
 # ライブラリをrootfsにコピー
-log_message "libxcrypt_builder_6" cp -r /output/libxcrypt/usr/local/lib/x86_64-linux-gnu/* /output/await-rootfs/usr/local/lib/x86_64-linux-gnu/
+run_silent "libxcrypt builder" "libxcrypt_builder_6" cp -r /output/libxcrypt/usr/local/lib/x86_64-linux-gnu/* /output/await-rootfs/usr/local/lib/x86_64-linux-gnu/
 if [ $? -eq 0 ]; then
     print_success "libxcrypt libraries copied successfully"
 else
@@ -67,7 +67,7 @@ else
     exit 1
 fi
 
-log_message "libxcrypt_builder_7" cp -r /output/libxcrypt/usr/local/include/* /output/await-rootfs/usr/local/include/
+run_silent "libxcrypt builder" "libxcrypt_builder_7" cp -r /output/libxcrypt/usr/local/include/* /output/await-rootfs/usr/local/include/
 if [ $? -eq 0 ]; then
     print_success "libxcrypt headers copied successfully"
 else
