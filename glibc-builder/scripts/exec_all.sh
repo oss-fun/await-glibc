@@ -1,46 +1,35 @@
 #!/bin/bash
 
 # ログディレクトリの作成（コンテナ内とホスト側両方）
-mkdir -p /logs
-LOG_DIR="/logs"
-# ログリセット
-rm /logs/*
-#HOST_LOG_DIR="/app/logs"
-TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
+# ログコントローラをインポート
+source /app/scripts/log_controller.sh
+log_reset
+log_init exec_all
 
-# 色付きメッセージ用の関数
-print_success() {
-    echo -e "\033[32m✓\033[0m $1"
-}
-
-print_error() {
-    echo -e "\033[31m✗\033[0m $1"
-		exit -1
-}
-
-/app/scripts/glibc_builder.sh > "$LOG_DIR/glibc_builder.log" 2>&1
-#cp "$LOG_DIR/glibc_builder_${TIMESTAMP}.log" "$HOST_LOG_DIR/"
+log_message "glibc_build" /app/scripts/glibc_builder.sh
 if [ $? -eq 0 ]; then
     print_success "glibc build completed successfully"
 else
     print_error "glibc build failed"
+    exit 1
 fi
 
-#/app/scripts/test_preopen.sh
 
-
-/app/scripts/glibc_install.sh > "$LOG_DIR/glibc_install.log" 2>&1
-cp "$LOG_DIR/glibc_install_${TIMESTAMP}.log" "$HOST_LOG_DIR/"
+log_message "glibc_install" /app/scripts/glibc_install.sh
 if [ $? -eq 0 ]; then
     print_success "glibc install completed successfully"
 else
     print_error "glibc install failed"
+    exit 1
 fi
 
-/app/scripts/libxcrypt_builder.sh > "$LOG_DIR/libxcrypt_builder.log" 2>&1
-cp "$LOG_DIR/libxcrypt_builder_${TIMESTAMP}.log" "$HOST_LOG_DIR/"
+
+log_message "libxcrypt_builder" /app/scripts/libxcrypt_builder.sh
 if [ $? -eq 0 ]; then
-    print_success "libxcrypt install completed successfully"
+    print_success "libxcrypt build completed successfully"
 else
-    print_error "libxcrypt install failed"
+    print_error "libxcrypt build failed"
+    exit 1
 fi
+
+

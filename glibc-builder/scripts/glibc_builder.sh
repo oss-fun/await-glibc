@@ -2,45 +2,19 @@
 # FOR DOCKERFILE
 
 # ログディレクトリの作成（コンテナ内とホスト側両方）
-mkdir -p /logs
-LOG_DIR="/logs"
-#HOST_LOG_DIR="logs"
+source /app/scripts/log_controller.sh
+log_init glibc_builder
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
-
-# 色付きメッセージ用の関数
-print_success() {
-    echo -e "\033[32m✓\033[0m $1"
-}
-
-print_error() {
-    echo -e "\033[31m✗\033[0m $1"
-}
 
 cd /app/glibc-2.35/build
 
-mkdir -p /output/glibc >> "$LOG_DIR/glibc_builder_mkdir.log" 2>&1
-#cp "$LOG_DIR/glibc_builder_mkdir.log" "$HOST_LOG_DIR/"
-if [ $? -eq 0 ]; then
-    print_success "output directory created successfully"
-else
-    print_error "failed to create output directory"
-    exit 1
-fi
 
-CFLAGS="-O2 -Wno-error" ../configure --exec_prefix="/usr/local" --prefix="/usr/local" --libdir=/lib/x86_64-linux-gnu libc_cv_slibdir=/usr/local/lib/x86_64-linux-gnu --enable-crypt --enable-math --enable-nss --enable-ipc --enable-locales --enable-pthread --disable-sanity-checks >> "$LOG_DIR/glibc_builder_configure.log" 2>&1
+log_message "glibc_builder_1" CFLAGS="-O2 -Wno-error" ../configure --exec_prefix="/usr/local" --prefix="/usr/local" --libdir=/lib/x86_64-linux-gnu libc_cv_slibdir=/usr/local/lib/x86_64-linux-gnu --enable-crypt --enable-math --enable-nss --enable-ipc --enable-locales --enable-pthread --disable-sanity-checks
+
 #cp "$LOG_DIR/glibc_builder_configure.log" "$HOST_LOG_DIR/"
-if [ $? -eq 0 ]; then
-    print_success "glibc configure completed successfully"
-else
-    print_error "glibc configure failed"
-    exit 1
-fi
 
-CFLAGS="-O2 -Wno-error" make -j 16 >> "$LOG_DIR/glibc_builder_make.log" 2>&1
+log_message "glibc_builder_2" CFLAGS="-O2 -Wno-error" make -j 16
 #cp "$LOG_DIR/glibc_builder_make.log" "$HOST_LOG_DIR/"
-if [ $? -eq 0 ]; then
-    print_success "glibc make completed successfully"
-else
-    print_error "glibc make failed"
-    exit 1
-fi 
+
+exit 0
+

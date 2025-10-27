@@ -1,7 +1,7 @@
 FROM ubuntu:22.04
 
 RUN apt update \
-		&& apt install -y wget perl gcc make gawk bison python3 git autoconf automake libtool pkg-config curl 
+		&& apt install -y wget perl gcc make gawk bison python3 git autoconf automake libtool pkg-config curl moreutils 
 
 # glibcのビルド環境の作成
 RUN mkdir /app
@@ -12,6 +12,9 @@ RUN chmod +x /app/busybox_LN
 # libcryptのビルド環境の作成
 WORKDIR /app
 RUN git clone https://github.com/besser82/libxcrypt.git
+
+# ビルド時のログディレクトリ作成
+RUN mkdir /logs
 
 # ソースやスクリプト類のコピー
 COPY ./glibc-2.35 /app/glibc-2.35

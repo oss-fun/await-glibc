@@ -2,20 +2,10 @@
 # FOR DOCKERFILE
 
 # ログディレクトリの作成
-mkdir -p /logs
-LOG_DIR="/logs"
-#HOST_LOG_DIR="/app/logs"
+source /app/scripts/log_controller.sh
+log_init libxcrypt_builder
+
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
-
-# 色付きメッセージ用の関数
-print_success() {
-    echo -e "\033[32m✓\033[0m $1"
-}
-
-print_error() {
-    echo -e "\033[31m✗\033[0m $1"
-		exit -1
-}
 
 export LD_LIBRARY_PATH=/output/glibc/usr/lib/x86_64-linux-gnu
 export CC="gcc -L/output/glibc/usr/lib/x86_64-linux-gnu"
@@ -23,21 +13,20 @@ export CFLAGS="-I/output/glibc/usr/include"
 
 cd /app/libxcrypt
 
-./autogen.sh >> "$LOG_DIR/libxcrypt_autogen.log" 2>&1
-#cp "$LOG_DIR/libxcrypt_autogen.log" "$HOST_LOG_DIR/"
+# libxcryptのビルドコンフィグ
+log_message "libxcrypt_builder_1" ./autogen.sh
 if [ $? -eq 0 ]; then
     print_success "autogen.sh completed successfully"
 else
     print_error "autogen.sh failed"
     exit 1
 fi
-./configure --prefix="/usr/local" \
+log_message "libxcript_builder_2" ./configure --prefix="/usr/local" \
   --exec-prefix="/usr/local" \
   --libdir=/usr/local/lib/x86_64-linux-gnu \
   --enable-shared \
   --enable-static \
-  --enable-xcrypt-compat-files >> "$LOG_DIR/libxcrypt_configure.log" 2>&1
-#cp "$LOG_DIR/libxcrypt_configure.log" "$HOST_LOG_DIR/"
+	--enable-xcrypt-compat-files
 if [ $? -eq 0 ]; then
     print_success "configure completed successfully"
 else
@@ -45,16 +34,15 @@ else
     exit 1
 fi
 
-mkdir /output/libxcrypt >> "$LOG_DIR/libxcrypt_mkdir.log" 2>&1
-#cp "$LOG_DIR/libxcrypt_mkdir.log" "$HOST_LOG_DIR/"
+log_message "libxcrypt_builder_3" mkdir /output/libxcrypt
 if [ $? -eq 0 ]; then
     print_success "output directory created successfully"
 else
     print_error "failed to create output directory"
     exit 1
 fi
-make -j16 >> "$LOG_DIR/libxcrypt_make.log" 2>&1
-#cp "$LOG_DIR/libxcrypt_make.log" "$HOST_LOG_DIR/"
+
+log_message "libxcrypt_builder_4" make -j16
 if [ $? -eq 0 ]; then
     print_success "make completed successfully"
 else
@@ -62,8 +50,7 @@ else
     exit 1
 fi
 
-make -j16 install DESTDIR=/output/libxcrypt >> "$LOG_DIR/libxcrypt_install.log" 2>&1
-#cp "$LOG_DIR/libxcrypt_install.log" "$HOST_LOG_DIR/"
+log_message "libxcrypt_builder_5" make -j16 install DESTDIR=/output/libxcrypt
 if [ $? -eq 0 ]; then
     print_success "make install completed successfully"
 else
@@ -72,16 +59,15 @@ else
 fi
 
 # ライブラリをrootfsにコピー
-cp -r /output/libxcrypt/usr/local/lib/x86_64-linux-gnu/*    /output/await-rootfs/usr/local/lib/x86_64-linux-gnu/ >> "$LOG_DIR/libxcrypt_copy_libs.log" 2>&1
-cp "$LOG_DIR/libxcrypt_copy_libs.log" "$HOST_LOG_DIR/"
+log_message "libxcrypt_builder_6" cp -r /output/libxcrypt/usr/local/lib/x86_64-linux-gnu/* /output/await-rootfs/usr/local/lib/x86_64-linux-gnu/
 if [ $? -eq 0 ]; then
     print_success "libxcrypt libraries copied successfully"
 else
     print_error "failed to copy libxcrypt libraries"
     exit 1
 fi
-cp -r /output/libxcrypt/usr/local/include/*                 /output/await-rootfs/usr/local/include/ >> "$LOG_DIR/libxcrypt_copy_headers.log" 2>&1
-cp "$LOG_DIR/libxcrypt_copy_headers.log" "$HOST_LOG_DIR/"
+
+log_message "libxcrypt_builder_7" cp -r /output/libxcrypt/usr/local/include/* /output/await-rootfs/usr/local/include/
 if [ $? -eq 0 ]; then
     print_success "libxcrypt headers copied successfully"
 else
