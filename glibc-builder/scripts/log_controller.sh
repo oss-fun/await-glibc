@@ -21,17 +21,22 @@ log_reset() {
 run_silent() {
 	local tag="$1"
 	local section_name="$2"
-	local log_path="${LOG_DIR}/tag.log"
-	shift
-	shift
+	local log_path="${LOG_DIR}/${tag}.log"
+	shift 2
 
-	"$@" 2>&1 | ts '[${tag}] [%Y-%m-%d %H:%M:%S]' >>"$log_path"
-	return $?
+	echo "$@"
+
+	set -o pipefail
+	"$@" 2>&1 | ts "[$tag] [%Y-%m-%d %H:%M:%S]" >>"$log_path"
+	local status=${PIPESTATUS[0]}
+	set +o pipefail
+
+	return $status
 }
 
 log_error_check() {
 	if [ $? -eq 0 ]; then
-			print_success "$2 completed successfully"
+			print_success "$1 completed successfully"
 	else
 			print_error "$1 failed"
 			exit 1

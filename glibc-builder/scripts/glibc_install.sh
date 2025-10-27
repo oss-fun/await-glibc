@@ -10,90 +10,39 @@ TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
 # glibcのインストール
 cd /app/glibc-2.35/build
 
-log_message "glibc_install" "glibc_install_1" make -j 16 install DESTDIR=/output/await-rootfs
-if [ $? -eq 0 ]; then
-    print_success "glibc install completed successfully"
-else
-    print_error "glibc install failed"
-    exit 1
-fi
+run_silent "glibc_install" "#1 install glibc" make -j 16 install DESTDIR=/output/await-rootfs
+log_error_check "#1 install glibc"
 
-log_message "glibc_install" "glibc_install_2" chroot /output/await-rootfs mkdir -p glibc-old
-if [ $? -eq 0 ]; then
-    print_success "glibc-old directory created successfully"
-else
-    print_error "failed to create glibc-old directory"
-    exit 1
-fi
+run_silent "glibc_install" "#2 create glibc dir" chroot /output/await-rootfs mkdir -p glibc-old
+log_error_check "#2 create glibc dir"
 
-log_message "glibc_install" "glibc_install_3" chroot /output/await-rootfs bash -c "cp -a /lib/x86_64-linux-gnu/*  glibc-old"
-if [ $? -eq 0 ]; then
-    print_success "glibc libraries copied to glibc-old successfully"
-else
-    print_error "failed to copy glibc libraries to glibc-old"
-    exit 1
-fi
+run_silent "glibc_install" "#3 copy old glibc" chroot /output/await-rootfs bash -c "cp -a /lib/x86_64-linux-gnu/*  glibc-old"
+log_error_check "#3 copy old glibc"
 
-log_message "glibc_install" "glibc_install_4" chroot /output/await-rootfs bash -c "cp -a /usr/local/lib/x86_64-linux-gnu/* glibc-old/"
-if [ $? -eq 0 ]; then
-    print_success "local glibc libraries copied to glibc-old successfully"
-else
-    print_error "failed to copy local glibc libraries to glibc-old"
-    exit 1
-fi
+run_silent "glibc_install" "#4 copy old glibc 2" chroot /output/await-rootfs bash -c "cp -a /usr/local/lib/x86_64-linux-gnu/* glibc-old/"
+log_error_check "#4 copy old glibc 2"
 
-log_message "glibc_install" "glibc_install_5" chroot /output/await-rootfs bash -c "cp -a glibc-old/* /usr/local/lib/x86_64-linux-gnu"
-if [ $? -eq 0 ]; then
-    print_success "glibc libraries copied to local directory successfully"
-else
-    print_error "failed to copy glibc libraries to local directory"
-    exit 1
-fi
+chroot /output/await-rootfs bash -c "ls -al glibc-old"
 
-log_message "glibc_install" "glibc_install_6" chroot /output/await-rootfs bash -c 'echo "/usr/local/lib/x86_64-linux-gnu" > ld_conf'
-if [ $? -eq 0 ]; then
-    print_success "ld_conf created successfully"
-else
-    print_error "failed to create ld_conf"
-    exit 1
-fi
+run_silent "glibc_install" "#5 merge old glibc" chroot /output/await-rootfs bash -c "cp -a glibc-old/* /usr/local/lib/x86_64-linux-gnu"
+log_error_check "#5 merge old glibc"
 
-log_message "glibc_install" "glibc_install_7" chroot /output/await-rootfs bash -c "cat /etc/ld.so.conf >> ld_conf"
-if [ $? -eq 0 ]; then
-    print_success "ld.so.conf appended to ld_conf successfully"
-else
-    print_error "failed to append ld.so.conf to ld_conf"
-    exit 1
-fi
+run_silent "glibc_install" "#6 add ldconf " chroot /output/await-rootfs bash -c 'echo "/usr/local/lib/x86_64-linux-gnu" > ld_conf'
+log_error_check "#6 setting ldconf"
 
-log_message "glibc_install" "glibc_install_8" chroot /output/await-rootfs mv ld_conf /etc/ld.so.conf
-if [ $? -eq 0 ]; then
-    print_success "ld_conf moved to /etc/ld.so.conf successfully"
-else
-    print_error "failed to move ld_conf to /etc/ld.so.conf"
-    exit 1
-fi
+run_silent "glibc_install" "#7 merge ldconf" chroot /output/await-rootfs bash -c "cat /etc/ld.so.conf >> ld_conf"
+log_error_check "#7 merge ldconf"
 
-log_message "glibc_install" "glibc_install_9" chroot /output/await-rootfs ldconfig
-if [ $? -eq 0 ]; then
-    print_success "ldconfig completed successfully"
-else
-    print_error "ldconfig failed"
-    exit 1
-fi
+run_silent "glibc_install" "#8 ldconf setting" chroot /output/await-rootfs mv ld_conf /etc/ld.so.conf
+log_error_check "#8 ldconf setting"
 
-log_message "glibc_install" "glibc_install_10" cp /app/busybox_LN /output/await-rootfs/
-if [ $? -eq 0 ]; then
-    print_success "busybox_LN copied successfully"
-else
-    print_error "failed to copy busybox_LN"
-    exit 1
-fi
+run_silent "glibc_install" "#9 do ldconfig" chroot /output/await-rootfs ldconfig
+log_error_check "#9 do ldconfig"
 
-log_message "glibc_install" "glibc_install_11" chroot /output/await-rootfs /busybox_LN -fs /usr/local/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2 /lib64/ld-linux-x86-64.so.2
-if [ $? -eq 0 ]; then
-    print_success "symbolic link created successfully"
-else
-    print_error "failed to create symbolic link"
-    exit 1
+run_silent "glibc_install" "#10 copy busybox" cp /app/busybox_LN /output/await-rootfs/
+log_error_check "#10 copy busybox"
 
+run_silent "glibc_install" "#11 set link to new glibc" chroot /output/await-rootfs /busybox_LN -fs /usr/local/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2 /lib64/ld-linux-x86-64.so.2
+log_error_check "#11 set link to new glibc"
+
+exit 0

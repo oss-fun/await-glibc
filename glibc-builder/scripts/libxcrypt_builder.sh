@@ -14,66 +14,32 @@ export CFLAGS="-I/output/glibc/usr/include"
 cd /app/libxcrypt
 
 # libxcryptのビルドコンフィグ
-run_silent "libxcrypt builder" "libxcrypt_builder_1" ./autogen.sh
-if [ $? -eq 0 ]; then
-    print_success "autogen.sh completed successfully"
-else
-    print_error "autogen.sh failed"
-    exit 1
-fi
-run_silent "libxcrypt builder" "libxcript_builder_2" ./configure --prefix="/usr/local" \
+run_silent "libxcrypt_builder" "#1 libxcrypt autogen" ./autogen.sh
+log_error_check "#1 libxcrypt autogen"
+
+run_silent "libxcrypt_builder" "#2 configure libxcrypt" ./configure --prefix="/usr/local" \
   --exec-prefix="/usr/local" \
   --libdir=/usr/local/lib/x86_64-linux-gnu \
   --enable-shared \
   --enable-static \
 	--enable-xcrypt-compat-files
-if [ $? -eq 0 ]; then
-    print_success "configure completed successfully"
-else
-    print_error "configure failed"
-    exit 1
-fi
+log_error_check "#2 configure libxcrypt"
 
-run_silent "libxcrypt builder" "libxcrypt_builder_3" mkdir /output/libxcrypt
-if [ $? -eq 0 ]; then
-    print_success "output directory created successfully"
-else
-    print_error "failed to create output directory"
-    exit 1
-fi
+run_silent "libxcrypt_builder" "#3 mkdir" mkdir /output/libxcrypt
+log_error_check "#3 mkdir"
 
-run_silent "libxcrypt builder" "libxcrypt_builder_4" make -j16
-if [ $? -eq 0 ]; then
-    print_success "make completed successfully"
-else
-    print_error "make failed"
-    exit 1
-fi
+run_silent "libxcrypt_builder" "#4 build libxcrypt" make -j16
+log_error_check "#4 build libxcrypt"
 
-run_silent "libxcrypt builder" "libxcrypt_builder_5" make -j16 install DESTDIR=/output/libxcrypt
-if [ $? -eq 0 ]; then
-    print_success "make install completed successfully"
-else
-    print_error "make install failed"
-    exit 1
-fi
+run_silent "libxcrypt_builder" "#5 install libxcrypt" make -j16 install DESTDIR=/output/libxcrypt
+log_error_check "#5 install libxcrypt"
 
 # ライブラリをrootfsにコピー
-run_silent "libxcrypt builder" "libxcrypt_builder_6" cp -r /output/libxcrypt/usr/local/lib/x86_64-linux-gnu/* /output/await-rootfs/usr/local/lib/x86_64-linux-gnu/
-if [ $? -eq 0 ]; then
-    print_success "libxcrypt libraries copied successfully"
-else
-    print_error "failed to copy libxcrypt libraries"
-    exit 1
-fi
+run_silent "libxcrypt_builder" "#6 copy libxcrypt" cp -r /output/libxcrypt/usr/local/lib/x86_64-linux-gnu/* /output/await-rootfs/usr/local/lib/x86_64-linux-gnu/
+log_error_check "libxcrypt build task #6"
 
-run_silent "libxcrypt builder" "libxcrypt_builder_7" cp -r /output/libxcrypt/usr/local/include/* /output/await-rootfs/usr/local/include/
-if [ $? -eq 0 ]; then
-    print_success "libxcrypt headers copied successfully"
-else
-    print_error "failed to copy libxcrypt headers"
-    exit 1
-fi
+run_silent "libxcrypt_builder" "#7 copy libxcrypt 2" cp -r /output/libxcrypt/usr/local/include/* /output/await-rootfs/usr/local/include/
+log_error_check "#7 copy libxcrypt 2"
 
 # debootstrapではman3やman5のディレクトリが生成されないためここで作成する
 #mkdir /output/await-rootfs/usr/local/share/man/man3
