@@ -1,0 +1,343 @@
+/* Linux open syscall implementation, LFS.
+   Copyright (C) 1991-2022 Free Software Foundation, Inc.
+   This file is part of the GNU C Library.
+
+   The GNU C Library is free software; you can redistribute it and/or
+   modify it under the terms of the GNU Lesser General Public
+   License as published by the Free Software Foundation; either
+   version 2.1 of the License, or (at your option) any later version.
+
+   The GNU C Library is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+   Lesser General Public License for more details.
+
+   You should have received a copy of the GNU Lesser General Public
+   License along with the GNU C Library; if not, see
+   <https://www.gnu.org/licenses/>.  */
+
+#include <errno.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <stdarg.h>
+#include <sysdep-cancel.h>
+#include <shlib-compat.h>
+
+#define MAX_LIST_LEN   128
+#define MAX_PATH_LEN   256
+/* Open FILE with access OFLAG.  If O_CREAT or O_TMPFILE is in OFLAG,
+   a third argument is the file protection.  */
+
+// for runcap
+static void debug_print(const char *message) {
+	size_t len = strlen(message);
+	INLINE_SYSCALL_CALL (write, 2, message, len);
+}
+
+// for runcap
+static void debug_println(const char *message) {
+	size_t len = strlen(message);
+	INLINE_SYSCALL_CALL (write, 2, message, len);
+	INLINE_SYSCALL_CALL (write, 2, "\n", 2);
+}
+
+// for runcap
+// PREOPEN_FDSやPREOPEN_PATHSなど、環境変数で指定されたカンマ区切りの文字列、配列に変換する関数
+// str : 環境変数で取得した文字列
+static char** get_string_list(char* env_str){
+	int cnt = 0;
+	
+	char** result_list = malloc(sizeof(char *) * MAX_LIST_LEN);
+	if (result_list == NULL){
+		return NULL;
+	}
+ debug_println("begin get_string_list");
+	// preopen_fdsに指定されたFDを：で区切って、intに変換した後にリストに入れる
+	if (env_str){
+		char *token = strtok(env_str, ":");
+		while (token && cnt < MAX_LIST_LEN) {
+			char *buff = token;
+			result_list[cnt] = strdup(buff);
+			if (result_list[cnt] == NULL) {
+				// メモリ確保失敗時の処理を追加
+				for (int i = 0; i < cnt; i++) {
+					free(result_list[i]);
+				}
+				free(result_list);
+				return NULL;
+			}
+			cnt++;
+			token = strtok(NULL, ":");
+		}
+	}
+
+ debug_println("end get_string_list");
+	// NULL終端にしてリストを返す
+	result_list[cnt] = NULL;
+	return result_list;
+}
+
+// n番目のディレクトリ部分を取得する関数
+// 戻り値: 成功時は取得した文字列へのポインタ、失敗時はNULL
+// 引数:
+//   path: 解析するパス
+//   n: 取得したい位置（0から開始）
+//   result: 結果を格納するバッファ
+//   result_size: バッファのサイズ
+static char* get_path_component(const char *path, int n, char *result, size_t result_size) {
+	debug_println("begin get_path_component");
+	if (path == NULL || result == NULL || result_size == 0) {
+		return NULL;
+	}
+
+	// 絶対パスでない場合はエラー
+	if (path[0] != '/') {
+		return NULL;
+	}
+
+	const char *start = path + 1;  // 最初の'/'をスキップ
+	const char *end;
+	int current = 0;
+
+	while (current < n) {
+		start = strchr(start, '/');
+		if (start == NULL) {
+			return NULL;  // n番目のコンポーネントが存在しない
+		}
+		start++;  // '/'をスキップ
+		current++;
+	}
+
+	end = strchr(start, '/');
+	if (end == NULL) {
+		// 最後のコンポーネント
+		if (strlen(start) >= result_size) {
+			return NULL;  // バッファサイズ不足
+		}
+		strncpy(result, start, result_size - 1);
+		result[result_size - 1] = '\0';
+	} else {
+		size_t len = end - start;
+		if (len >= result_size) {
+			return NULL;  // バッファサイズ不足
+		}
+		strncpy(result, start, len);
+		result[len] = '\0';
+	}
+
+	debug_println("end get_path_component");
+	return result;
+}
+
+// パスの比較を行う関数
+// 戻り値: 一致するプリオープンパスのインデックス。見つからない場合は-1
+int find_matching_preopen_path(const char *file_path, char **preopen_paths, int path_count) {
+	debug_println("begin find_matching_preopen_path");
+	char file_component[MAX_PATH_LEN];
+	char preopen_component[MAX_PATH_LEN];
+
+	for (int i = 0; i < path_count; i++) {
+		int depth = 0;
+		bool match = true;
+
+		// パスの各コンポーネントを比較
+		while (1) {
+			// ファイルパスのコンポーネントを取得
+			if (get_path_component(file_path, depth, file_component, 
+						MAX_PATH_LEN) == NULL) {
+				break;
+			}
+
+			// プリオープンパスのコンポーネントを取得
+			if (get_path_component(preopen_paths[i], depth, preopen_component, 
+						MAX_PATH_LEN) == NULL) {
+				match = false;
+				break;
+			}
+
+			// コンポーネントを比較
+			if (strcmp(file_component, preopen_component) != 0) {
+				match = false;
+				break;
+			}
+
+			depth++;
+		}
+
+		if (match) {
+			return i;
+		}
+	}
+
+	debug_println("end find_matching_preopen_path");
+	return -1;
+}
+
+//preopenを試して、ファイルが開けたらそのFDを返す
+// file: open関数自体の引数であるファイルのパス
+// oflag: open関数に自体の引数にわたってくるファイルOpen時のFlag
+// mode: oflagでO_CREATE(ファイルの新規作成)が指定されていたときにつけるファイルのパーミッション
+// last_errno: preopenするときのerrnoを保存する
+static int preopen(const char *file, int oflag, mode_t mode, int *last_errno){
+	debug_println("begin preopen");
+	// for runcap
+	// preopen_fdsの処理
+	int preopen_fds[MAX_LIST_LEN];
+	char** preopen_fds_list;
+	int cnt = 0;
+	char *preopen_fds_str = getenv("PREOPEN_FDS");
+	
+	if (preopen_fds_str != NULL){
+		debug_print("PREOPEN_FDS=");
+		debug_println(preopen_fds_str);
+		// preopen_fds_str がからの場合は処理が正常にできないのでreturn
+		if (strcmp(preopen_fds_str, "")) return -1;
+		preopen_fds_list = get_string_list(preopen_fds_str);
+
+		// fds_listに入っているfdはstringなので、キャストの処理をする
+		while (*preopen_fds_list != NULL) {
+			char *endptr;
+			long int fd = strtol(*preopen_fds_list, &endptr, 10);
+			
+			if (*endptr != '\0') fd = -1;
+
+			preopen_fds[cnt++] = (int)fd;
+			preopen_fds_list++;
+		}
+		free(preopen_fds_list);
+	}
+	else {
+		debug_println("PREOPEN_FDS is NULL");
+		return -1;
+	}
+
+	// preopen_pathの処理
+	// preopen_pathはpreopen_fdsのFDに対応するパス（文字列）
+	char **preopen_paths = NULL;
+	char *preopen_paths_str = getenv("PREOPEN_PATHS");
+	if (preopen_paths_str != NULL){
+		debug_print("PREOPEN_PATHS=");
+		debug_println(preopen_paths_str);
+		// preopen_paths_str がからの場合は処理が正常にできないのでreturn
+		if (strcmp(preopen_paths_str, "")) return -1;
+		preopen_paths = get_string_list(preopen_paths_str);
+	}
+	else {
+		debug_println("PREOPEN_PATHS env is NULL\n");
+		return -1;
+	}
+
+	// 絶対パスの場合、preopen_pathsに、同一のパスがあるか確認する
+	if ( file[0] == '/' ){
+		char target_component[MAX_PATH_LEN];
+		char preopen_component[MAX_PATH_LEN];
+		int path_index = -1;  // マッチしたパスのインデックス
+
+		// 各preopen_pathに対してチェック
+		for (int i = 0; preopen_paths[i] != NULL; i++) {
+			int depth = 0;
+			bool match = true;
+
+			while (1) {
+				if (get_path_component(file, depth, target_component, 
+							MAX_PATH_LEN) == NULL) {
+					break;
+				}
+
+				if (get_path_component(preopen_paths[i], depth, preopen_component, 
+							MAX_PATH_LEN) == NULL) {
+					match = false;
+					break;
+				}
+
+				if (strcmp(target_component, preopen_component) != 0) {
+					match = false;
+					break;
+				}
+				depth++;
+			}
+
+			if (match) {
+				path_index = i;  // マッチしたパスのインデックスを保存
+				break;
+			}
+		}
+
+		// マッチしたパスが見つかった場合（path_index >= 0）
+		if (path_index >= 0) {
+			int fd;
+			if (oflag & O_CREAT) {
+				fd = SYSCALL_CANCEL(openat, preopen_fds[path_index], file, oflag, mode);
+			} else {
+				fd = SYSCALL_CANCEL(openat, preopen_fds[path_index], file, oflag);
+			}
+			debug_println("try preopen abs \n");
+			if (fd != -1) return fd;
+		}
+		return -1;  // マッチするパスが見つからないか、openatが失敗した場合
+	}
+
+	// パスが入っているものは、preopen_pathsからOpenを試みる
+	// この処理はまだ未実装。必要かどうかも含めて考える必要あり
+	//
+
+	// 相対パスの場合、preopen_fdsからのopenを試みる
+	int i, fd;
+	for (i = 0; i < cnt; i++){
+		if (oflag & O_CREAT) {
+			fd = SYSCALL_CANCEL (openat, preopen_fds[i], file, oflag, mode);
+		} else {
+			fd = SYSCALL_CANCEL (openat, preopen_fds[i], file, oflag);
+		}
+		debug_println("try preopen\n");
+		*last_errno = errno;
+		if (fd != -1) return fd;
+	}
+	return -1;
+}
+
+	int
+__libc_open64 (const char *file, int oflag, ...)
+{
+	mode_t mode = 0666;
+	int fd = -1;
+	int *last_errno = 0;
+
+	debug_print("call open64_prepopen: ");
+	debug_println(file);
+	if (__OPEN_NEEDS_MODE (oflag))
+	{
+		va_list arg;
+		va_start (arg, oflag);
+		mode = va_arg (arg, int);
+		va_end (arg);
+	}
+	
+	fd = preopen(file, oflag, mode, last_errno);
+	debug_print("preopen return fd: ");
+	printf("%s\n",fd)
+	if (fd != -1) return fd;
+	
+	debug_println("call normal open");
+	fd = SYSCALL_CANCEL(open, file, oflag | O_LARGEFILE, mode);
+	if (fd == -1 && *last_errno != 0 ) errno = *last_errno;
+	debug_println("syscall open return fd: %d", fd);
+	
+	return fd;
+}
+
+strong_alias (__libc_open64, __open64)
+libc_hidden_weak (__open64)
+weak_alias (__libc_open64, open64)
+
+#ifdef __OFF_T_MATCHES_OFF64_T
+strong_alias (__libc_open64, __libc_open)
+strong_alias (__libc_open64, __open)
+libc_hidden_weak (__open)
+weak_alias (__libc_open64, open)
+#endif
+
+#if OTHER_SHLIB_COMPAT (libpthread, GLIBC_2_1, GLIBC_2_2)
+compat_symbol (libc, __libc_open64, open64, GLIBC_2_2);
+#endif

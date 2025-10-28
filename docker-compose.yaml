@@ -7,7 +7,8 @@ services:
     privileged: true
     image: await-rootfs-builder
     volumes:
-      - build-output:/output
+      - await-glibc-builder-output:/output
+      - ./logs:/logs
     environment:
       - DIST=jammy
       - NAME=await-rootfs
@@ -23,8 +24,9 @@ services:
       await-rootfs-builder:
         condition: service_completed_successfully
     volumes:
-      - build-output:/output
-      - ./glibc-builder/glibc-2.35:/build/glibc-2.35  # ソースコードのマウント
+      - await-glibc-builder-output:/output
+      - ./logs:/logs
+        # - ./glibc-builder/glibc-2.35:/build/glibc-2.35  # ソースコードのマウント
     entrypoint: ["/bin/bash", "/app/scripts/exec_all.sh"]
   
   # 成果物を圧縮して配信用ディレクトリに配置するサービス
@@ -34,22 +36,47 @@ services:
       await-glibc-builder:
         condition: service_completed_successfully
     volumes:
-      - build-output:/input
-      - dist-data:/output
+      - await-glibc-builder-output:/input
+      - await-glibc-builder-data:/output
+      - ./logs:/logs
     command: >
-      sh -c "tar czf /output/await-rootfs.tar.gz -C /input await-rootfs"
-  
+      sh -c "cd /input/await-rootfs && find . -print0 | cpio --null --create --format=newc | gzip > /output/await-rootfs.cpio.gz"
+      
   # rootfsを配信する用のサーバー
   await-rootfs-server:
     build:
       context: .
       dockerfile: ./rootfs-server/Dockerfile
+    depends_on:
+      await-rootfs-packager:
+        condition: service_completed_successfully
     image: await-rootfs-server
     volumes:
-      - dist-data:/app/data
+      - await-glibc-builder-data:/app/data
     ports:
       - 8101:80
 
+  # デバッグ用のコンテナ
+  await-debug:
+    build:
+      context: .
+      dockerfile: ./glibc-builder/Dockerfile
+    image: await-glibc-builder
+    depends_on:
+      await-rootfs-builder:
+        condition: service_completed_successfully
+    volumes:
+      - await-glibc-builder-output:/output
+      - ./logs:/logs
+      - ./glibc-2.35:/app/glibc-2.35
+    environment:
+      - PREOPEN_DEBUG=1
+    tty: true
+    stdin_open: true
+    entrypoint: ["/bin/bash"]
+    profiles:
+      - debug
+
 volumes:
-  build-output:  # ビルド過程で使用する一時的なボリューム
-  dist-data:     # 配信用のrootfsを格納するボリューム
+  await-glibc-builder-output:  # ビルド過程で使用する一時的なボリューム
+  await-glibc-builder-data:     # 配信用のrootfsを格納するボリューム
