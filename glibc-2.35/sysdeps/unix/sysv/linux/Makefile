@@ -126,7 +126,6 @@ tests += tst-clone tst-clone2 tst-clone3 tst-fanotify tst-personality \
   tst-prctl \
   tst-scm_rights \
   tst-epoll \
-	test-preopen-linux \
   # tests
 
 # Test for the symbol version of fcntl that was replaced in glibc 2.28.
@@ -352,7 +351,8 @@ sysdep_routines += xstatconv internal_statvfs \
 		   open_nocancel open64_nocancel \
 		   openat_nocancel openat64_nocancel \
 		   read_nocancel pread64_nocancel \
-		   write_nocancel statx_cp stat_t64_cp
+		   write_nocancel statx_cp stat_t64_cp \
+		   preopen
 
 sysdep_headers += bits/fcntl-linux.h
 
