@@ -439,12 +439,32 @@ int __preopen_from_dir(const char *file, int oflag, int mode) {
 		preopen_path_fds_list++;
 	}
 
-	/* Path matching with absolute path */
-	const char *abs_path = file;
+	/* Remove O_CLOEXEC to allow fd inheritance across exec */
+	int open_flags = oflag & ~O_CLOEXEC;
+
+	/* Handle relative paths: try all PREOPEN_PATH_FDS */
 	if (file[0] != '/') {
-		abs_path_alloc = get_absolute_path(file);
-		abs_path = abs_path_alloc;
+		DEBUG_PRINTF("relative path detected: %s\n", file);
+		for (int i = 0; i < cnt; i++) {
+			DEBUG_PRINTF("trying openat(fd=%d, \"%s\")\n", preopen_path_fds[i], file);
+			int fd;
+			if (open_flags & O_CREAT) {
+				fd = SYSCALL_CANCEL(openat, preopen_path_fds[i], file, open_flags, mode);
+			} else {
+				fd = SYSCALL_CANCEL(openat, preopen_path_fds[i], file, open_flags);
+			}
+			if (fd != -1) {
+				DEBUG_PRINTF("openat preopen successful (relative path)\n");
+				result = fd;
+				goto cleanup;
+			}
+		}
+		DEBUG_PRINTF("no match for relative path\n");
+		goto cleanup;
 	}
+
+	/* Handle absolute paths: match against PREOPEN_PATHS */
+	const char *abs_path = file;
 	/* Remove last component unless opening directory */
 	const char *dir_path = abs_path;
 	if (!(oflag & O_DIRECTORY)) {
@@ -468,10 +488,10 @@ int __preopen_from_dir(const char *file, int oflag, int mode) {
 		DEBUG_PRINTF("relative path: %s\n", rel_path);
 
 		int fd;
-		if (oflag & O_CREAT) {
-			fd = SYSCALL_CANCEL(openat, preopen_path_fds[path_index], rel_path, oflag, mode);
+		if (open_flags & O_CREAT) {
+			fd = SYSCALL_CANCEL(openat, preopen_path_fds[path_index], rel_path, open_flags, mode);
 		} else {
-			fd = SYSCALL_CANCEL(openat, preopen_path_fds[path_index], rel_path, oflag);
+			fd = SYSCALL_CANCEL(openat, preopen_path_fds[path_index], rel_path, open_flags);
 		}
 		if (fd != -1) {
 			DEBUG_PRINTF("openat preopen successful\n");

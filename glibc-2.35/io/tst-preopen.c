@@ -187,16 +187,15 @@ static int do_test (void) {
 	fails |= test_preopen_direct("/tmp/preopen-test/file/sample.txt", O_RDONLY, 0, true);
 	fails |= test_preopen_direct("/tmp/preopen-test/misc/file/sample.txt", O_RDONLY, 0, true);
 
+	/*Test Relative path */
+	fails |= test_preopen_direct("sample.txt", O_RDONLY, 0, true);
 	/* Tests expecting failure (no match) */
 	fails |= test_preopen_direct("/null/hoge.txt", O_RDONLY, 0, false);
 	fails |= test_preopen_direct("/etc/passwd", O_RDONLY, 0, false);
 
 	/* Relative path tests */
 	printf("\n=== Relative Path Tests (may depend on cwd) ===\n");
-	int rel_result = __preopen("sample.txt", O_RDONLY, 0);
-	printf("__preopen(\"sample.txt\") = %d\n", rel_result);
-
-	rel_result = __preopen("file/sample.txt", O_RDONLY, 0);
+	int rel_result = __preopen("file/sample.txt", O_RDONLY, 0);
 	printf("__preopen(\"file/sample.txt\") = %d\n", rel_result);
 
 	printf("\n=== Test Summary ===\n");
