@@ -193,6 +193,15 @@ static char *get_absolute_path(const char *path) {
 	return abs_path;
 }
 
+/* Free a NULL-terminated array of strings allocated by get_string_list. */
+static void free_string_list(char **list) {
+	if (!list) return;
+	for (int i = 0; list[i] != NULL; i++) {
+		free(list[i]);
+	}
+	free(list);
+}
+
 /* Convert colon-separated environment variable string to array.
    Returns NULL-terminated array of strings. */
 static char** get_string_list(char* env_str) {
@@ -315,10 +324,13 @@ static int find_matching_preopen_path(const char *file_path, char **preopen_path
 int __preopen_file(const char *file, int oflag, int mode) {
 	DEBUG_PRINTF("in __preopen_file\n");
 	int cnt = 0;
+	int result = -1;
 	char *preopen_files_str;
 	char *preopen_file_fds_str;
 	char **preopen_files = NULL;
 	char **preopen_file_fds_list = NULL;
+	char **preopen_file_fds_list_orig = NULL;  /* Keep original pointer for free */
+	char *abs_file_alloc = NULL;  /* Track allocated abs_file */
 	int preopen_file_fds[PREOPEN_MAX_LIST_LEN];
 
 	/* Get PREOPEN_FILES as list */
@@ -330,7 +342,7 @@ int __preopen_file(const char *file, int oflag, int mode) {
 		free(preopen_files_str);
 	} else {
 		DEBUG_PRINTF("PREOPEN_FILES is not set\n");
-		return -1;
+		goto cleanup;
 	}
 
 	/* Get PREOPEN_FILE_FDS as list and convert to int */
@@ -339,10 +351,11 @@ int __preopen_file(const char *file, int oflag, int mode) {
 		DEBUG_PRINTF("PREOPEN_FILE_FDS=%s\n", buff);
 		preopen_file_fds_str = strdup(buff);
 		preopen_file_fds_list = get_string_list(preopen_file_fds_str);
+		preopen_file_fds_list_orig = preopen_file_fds_list;  /* Save original pointer */
 		free(preopen_file_fds_str);
 	} else {
 		DEBUG_PRINTF("PREOPEN_FILE_FDS is not set\n");
-		return -1;
+		goto cleanup;
 	}
 
 	while (*preopen_file_fds_list != NULL) {
@@ -355,29 +368,41 @@ int __preopen_file(const char *file, int oflag, int mode) {
 
 	/* Path matching */
 	const char *abs_file = file;
-	if (file[0] != '/') abs_file = get_absolute_path(file);
+	if (file[0] != '/') {
+		abs_file_alloc = get_absolute_path(file);
+		abs_file = abs_file_alloc;
+	}
 	DEBUG_PRINTF("abs_file: %s\n", abs_file);
 
 	int path_index = find_matching_preopen_path(abs_file, preopen_files, cnt);
 	if (path_index >= 0) {
 		DEBUG_PRINTF("preopen file match. file:%s, preopen file:%s, fd:%d\n",
 		             abs_file, preopen_files[path_index], preopen_file_fds[path_index]);
-		int fd = preopen_file_fds[path_index];
+		result = preopen_file_fds[path_index];
 		DEBUG_PRINTF("file preopen successful\n");
-		return fd;
+	} else {
+		DEBUG_PRINTF("file no match\n");
 	}
-	DEBUG_PRINTF("file no match\n");
-	return -1;
+
+cleanup:
+	free_string_list(preopen_files);
+	free_string_list(preopen_file_fds_list_orig);
+	free(abs_file_alloc);
+	return result;
 }
 libc_hidden_def(__preopen_file)
 
 /* Try to open file using PREOPEN_PATHS/PREOPEN_PATH_FDS with openat(). */
 int __preopen_from_dir(const char *file, int oflag, int mode) {
 	int cnt = 0;
+	int result = -1;
 	char *preopen_paths_str;
 	char *preopen_path_fds_str;
 	char **preopen_paths = NULL;
 	char **preopen_path_fds_list = NULL;
+	char **preopen_path_fds_list_orig = NULL;  /* Keep original pointer for free */
+	char *abs_path_alloc = NULL;  /* Track allocated abs_path */
+	char *dir_path_alloc = NULL;  /* Track allocated dir_path from remove_last_component */
 	int preopen_path_fds[PREOPEN_MAX_LIST_LEN];
 	DEBUG_PRINTF("in __preopen_from_dir\n");
 
@@ -390,7 +415,7 @@ int __preopen_from_dir(const char *file, int oflag, int mode) {
 		free(preopen_paths_str);
 	} else {
 		DEBUG_PRINTF("PREOPEN_PATHS is not set\n");
-		return -1;
+		goto cleanup;
 	}
 
 	/* Get PREOPEN_PATH_FDS as list and convert to int */
@@ -399,10 +424,11 @@ int __preopen_from_dir(const char *file, int oflag, int mode) {
 		DEBUG_PRINTF("PREOPEN_PATH_FDS=%s\n", buff);
 		preopen_path_fds_str = strdup(buff);
 		preopen_path_fds_list = get_string_list(preopen_path_fds_str);
+		preopen_path_fds_list_orig = preopen_path_fds_list;  /* Save original pointer */
 		free(preopen_path_fds_str);
 	} else {
 		DEBUG_PRINTF("PREOPEN_PATH_FDS is not set\n");
-		return -1;
+		goto cleanup;
 	}
 
 	while (*preopen_path_fds_list != NULL) {
@@ -415,29 +441,52 @@ int __preopen_from_dir(const char *file, int oflag, int mode) {
 
 	/* Path matching with absolute path */
 	const char *abs_path = file;
-	if (file[0] != '/') abs_path = get_absolute_path(file);
+	if (file[0] != '/') {
+		abs_path_alloc = get_absolute_path(file);
+		abs_path = abs_path_alloc;
+	}
 	/* Remove last component unless opening directory */
-	if (!(oflag & O_DIRECTORY)) abs_path = remove_last_component(abs_path);
+	const char *dir_path = abs_path;
+	if (!(oflag & O_DIRECTORY)) {
+		dir_path_alloc = remove_last_component(abs_path);
+		dir_path = dir_path_alloc;
+	}
 
-	DEBUG_PRINTF("preopen abs_path: %s\n", abs_path);
-	int path_index = find_matching_preopen_path(abs_path, preopen_paths, cnt);
+	DEBUG_PRINTF("preopen dir_path: %s\n", dir_path);
+	int path_index = find_matching_preopen_path(dir_path, preopen_paths, cnt);
 	if (path_index >= 0) {
 		DEBUG_PRINTF("file match. file:%s, preopen_dir:%s, fd:%d\n",
-		             abs_path, preopen_paths[path_index], preopen_path_fds[path_index]);
+		             dir_path, preopen_paths[path_index], preopen_path_fds[path_index]);
+
+		/* Calculate relative path from preopen directory */
+		const char *rel_path = abs_path + strlen(preopen_paths[path_index]);
+		/* Skip leading '/' to make it relative */
+		while (*rel_path == '/') rel_path++;
+		/* If empty (opening the directory itself), use "." */
+		if (*rel_path == '\0') rel_path = ".";
+
+		DEBUG_PRINTF("relative path: %s\n", rel_path);
+
 		int fd;
 		if (oflag & O_CREAT) {
-			fd = SYSCALL_CANCEL(openat, preopen_path_fds[path_index], abs_path, oflag, mode);
+			fd = SYSCALL_CANCEL(openat, preopen_path_fds[path_index], rel_path, oflag, mode);
 		} else {
-			fd = SYSCALL_CANCEL(openat, preopen_path_fds[path_index], abs_path, oflag);
+			fd = SYSCALL_CANCEL(openat, preopen_path_fds[path_index], rel_path, oflag);
 		}
 		if (fd != -1) {
-			DEBUG_PRINTF("abs preopen successful\n");
-			return fd;
+			DEBUG_PRINTF("openat preopen successful\n");
+			result = fd;
 		}
 	} else {
 		DEBUG_PRINTF("not path index\n");
 	}
-	return -1;
+
+cleanup:
+	free_string_list(preopen_paths);
+	free_string_list(preopen_path_fds_list_orig);
+	free(abs_path_alloc);
+	free(dir_path_alloc);
+	return result;
 }
 libc_hidden_def(__preopen_from_dir)
 

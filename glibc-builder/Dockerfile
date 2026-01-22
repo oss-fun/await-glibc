@@ -19,5 +19,4 @@ RUN mkdir /logs
 # ソースやスクリプト類のコピー
 COPY ./glibc-2.35 /app/glibc-2.35
 COPY ./glibc-builder/scripts /app/scripts
-RUN mkdir /app/glibc-2.35/build
 RUN chmod +x /app/scripts/*.sh

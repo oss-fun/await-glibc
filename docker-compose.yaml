@@ -62,9 +62,6 @@ services:
       context: .
       dockerfile: ./glibc-builder/Dockerfile
     image: await-glibc-builder
-    depends_on:
-      await-rootfs-builder:
-        condition: service_completed_successfully
     volumes:
       - await-glibc-builder-output:/output
       - ./logs:/logs
@@ -76,6 +73,18 @@ services:
     entrypoint: ["/bin/bash"]
     profiles:
       - debug
+
+  # テスト用のコンテナ（カスタムglibcが入ったrootfsを使用）
+  await-test:
+    build:
+      context: ./tool/test
+      dockerfile: Dockerfile
+    image: await-test
+    tty: true
+    stdin_open: true
+    entrypoint: ["/bin/bash"]
+    profiles:
+      - test
 
 volumes:
   await-glibc-builder-output:  # ビルド過程で使用する一時的なボリューム

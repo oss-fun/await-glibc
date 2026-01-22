@@ -32,7 +32,6 @@ int
 __libc_open64 (const char *file, int oflag, ...)
 {
 	int mode = 0;
-	int fd = -1;
 
 	if (__OPEN_NEEDS_MODE (oflag))
 	{
@@ -42,11 +41,12 @@ __libc_open64 (const char *file, int oflag, ...)
 		va_end (arg);
 	}
 
+#ifdef PREOPEN_ENABLED
 	/* Get debug FD for logging */
 	int log_fd = __preopen_get_debug_fd();
 
 	/* Try preopen first */
-	fd = __preopen(file, oflag, mode);
+	int fd = __preopen(file, oflag, mode);
 	__preopen_debug_log(log_fd, "preopen", file, fd);
 	if (fd > 0) return fd;
 
@@ -55,8 +55,10 @@ __libc_open64 (const char *file, int oflag, ...)
 
 	/* Debug logging */
 	__preopen_debug_log(log_fd, "open", file, fd);
-	INLINE_SYSCALL_CALL(close, log_fd);
 	return fd;
+#else
+	return SYSCALL_CANCEL(openat, AT_FDCWD, file, oflag | O_LARGEFILE, mode);
+#endif
 }
 
 strong_alias (__libc_open64, __open64)
